@@ -64,5 +64,5 @@ unzip 1.0.0.zip
 cp deployment-1.0.0/docker-compose.yml $MOUNT_DIR/home/pi/
 
 sed -i 's/^#//g' $MOUNT_DIR/etc/ld.so.preload
-exit 1
+
 umount -l $MOUNT_DIR/{dev/pts,dev,sys,proc,boot,}

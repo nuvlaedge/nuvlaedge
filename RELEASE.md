@@ -8,8 +8,9 @@ To create a base image to burn new SD Cards for NuvlaBox on the Raspberry Pi, ru
 
 ```
 sudo su -
+bash image-create.sh
 ```
 
 The resulting `/tmp/raspbian.img` image will contain the image to release and which can be used with tools such as Etcher to bake new SD Cards.
 
-From there, the standard [NuvlaBox Engine](https://docs.nuvla.io/docs/dave/nuvlabox.html#nuvlabox-engine) instructions can be followed to complete the installation and configuration of a NuvlaBox on a Raspberry Pi.
+From there, the standard [NuvlaBox Engine](https://docs.nuvla.io/docs/dave/nuvlabox/nuvlabox-engine.html) instructions can be followed to complete the installation and configuration of a NuvlaBox on a Raspberry Pi.

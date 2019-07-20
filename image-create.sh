@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 IMAGE_URL='https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2019-06-24/2019-06-20-raspbian-buster-lite.zip'
 LOCAL_RASPBIAN_IMAGE='/tmp/raspbian.img'
 
@@ -43,9 +41,6 @@ sed -i 's/^/#/g' $MOUNT_DIR/etc/ld.so.preload
 # prepare for chroot
 cp /usr/bin/qemu-arm-static $MOUNT_DIR/usr/bin/
 
-
-touch $MOUNT_BOOT_DIR/ssh
-
 chroot $MOUNT_DIR apt update -y
 
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -64,5 +59,6 @@ unzip 1.0.0.zip
 cp deployment-1.0.0/docker-compose.yml $MOUNT_DIR/home/pi/
 
 sed -i 's/^#//g' $MOUNT_DIR/etc/ld.so.preload
-
 umount -l $MOUNT_DIR/{dev/pts,dev,sys,proc,boot,}
+
+# TODO: drop the ssh file at the root of the boot partition to enable ssh on the pi

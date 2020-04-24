@@ -21,6 +21,8 @@ then
 fi
 
 
+# START should also mean that user can safely remove the USB drive,
+# since the installation process already has all the necessary information
 if [ "${state}" = "START" ]
 then
   echo default-on > /sys/class/leds/led0/trigger

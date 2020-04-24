@@ -6,9 +6,15 @@ trigger_file="placeholder"
 log() {
   # logging wrapper
   # $1 is the custom log message
+  # $2 is a wall message sent to all logged users
 
   echo "NuvlaBox USB auto-installer: ${1}"
   logger "NuvlaBox USB auto-installer: ${1}"
+
+  if [ ! -z "${2}" ]
+  then
+    wall "${2}"
+  fi
 }
 
 
@@ -64,7 +70,9 @@ install_nuvlabox() {
   nuvlabox_installer_file="/tmp/nuvlabox.installer.$(date +'%s').sh"
   download_nuvlabox_installer "${nuvlabox_installer_file}"
 
-  log "launching the NuvlaBox installer ${nuvlabox_installer_file} ..."
+  log "launching NuvlaBox installer ${nuvlabox_installer_file} ..." "Creating new NuvlaBox, from ${found_trigger_file}"
+  #TODO: double-check this script is in PATH
+  nuvlabox-auto-installer-feedback START
   sh "${nuvlabox_installer_file}"
 }
 
@@ -118,7 +126,8 @@ do
   then
     # This means that this is a partition, from a block device, from a USB drive, and has a mountable filesystem
     # and in that case, it can have a mounted partition in the system
-    log "found mountable USB drive ${block_name} - checking for ${trigger_file}"
+    log "found mountable USB drive ${block_name} - checking for ${trigger_file} file" \
+      "NuvlaBox Auto-installer starting... check progress at /var/log/messages"
     try_install_nuvlabox "${block_name}" &
 
   fi

@@ -21,14 +21,15 @@ log() {
 
 download_nuvlabox_installer() {
   # fetches the latest NuvlaBox installer script from upstream
-  # $1 is the path where to store the installer
+  # $1 is the download URL for the installation script
+  # $2 is the path where to store the installer
 
-  # TODO: fix this URL
-  url=https://nuvla.io/api/cloud-entry-point
+  url="${1}"
+  store_at="${2}"
 
   log "downloading latest NuvlaBox installer from upstream at ${url}"
 
-  wget ${url} -O "${1}"
+  wget ${url} -O "${store_at}"
 }
 
 
@@ -65,15 +66,20 @@ install_nuvlabox() {
     fi
   done
 
+  trigger_file_content=$(cat ${found_trigger_file})
   log "found ${found_trigger_file}. Auto-installing NuvlaBox..."
 
   nuvlabox_installer_file="/tmp/nuvlabox.installer.$(date +'%s').sh"
-  download_nuvlabox_installer "${nuvlabox_installer_file}"
+  download_nuvlabox_installer "$(echo ${trigger_file_content} | jq -r .script)" "${nuvlabox_installer_file}"
 
   log "launching NuvlaBox installer ${nuvlabox_installer_file} ..." "Creating new NuvlaBox, from ${found_trigger_file}"
+
   #TODO: double-check this script is in PATH
   nuvlabox-auto-installer-feedback START
-  sh "${nuvlabox_installer_file}"
+
+  nuvlabox_id=$(python "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}") || \
+            (log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto=installer failed" && \
+             nuvlabox-auto-installer-feedback ERROR && exit 0)
 }
 
 

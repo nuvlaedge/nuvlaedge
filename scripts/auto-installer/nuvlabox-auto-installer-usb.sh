@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # TODO: fix name of the trigger file
-trigger_file="placeholder"
+trigger_file="nuvlabox-installation-trigger-usb"
 
 log() {
   # logging wrapper

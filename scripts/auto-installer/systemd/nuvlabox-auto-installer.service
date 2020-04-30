@@ -1,0 +1,13 @@
+[Unit]
+Description=Systemd service for the NuvlaBox Auto-installer plugin
+After=systemd-udevd.service
+Wants=systemd-udevd.service
+
+[Service]
+Type=simple
+ExecStart=nuvlabox-auto-installer-usb
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

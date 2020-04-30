@@ -28,7 +28,7 @@ download_nuvlabox_installer() {
 
   log "downloading latest NuvlaBox installer from upstream at ${url}"
 
-  wget "${url}" -O "${store_at}"
+  wget --no-check-certificate "${url}" -O "${store_at}"
 }
 
 

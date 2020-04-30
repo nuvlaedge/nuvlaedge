@@ -1,0 +1,2 @@
+cp nuvlabox-auto-installer-usb.service /etc/systemd/system/nuvlabox-auto-installer-usb.service
+chmod 644 /etc/systemd/system/nuvlabox-auto-installer-usb.service

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-trigger_file="nuvlabox-installation-trigger-usb"
+trigger_file="nuvlabox-installation-trigger-usb.nuvla"
 
 log() {
   # logging wrapper
@@ -66,7 +66,8 @@ install_nuvlabox() {
   done
 
   trigger_file_content=$(cat ${found_trigger_file})
-  log "found ${found_trigger_file}. Auto-installing NuvlaBox..."
+  log "found ${found_trigger_file}. Auto-installing NuvlaBox..." \
+      "NuvlaBox Auto-installer starting... check progress at /var/log/messages"
 
   nuvlabox_installer_file="/tmp/nuvlabox.installer.$(date +'%s').sh"
   download_nuvlabox_installer "$(echo ${trigger_file_content} | jq -r .script)" "${nuvlabox_installer_file}"
@@ -135,8 +136,7 @@ do
   then
     # This means that this is a partition, from a block device, from a USB drive, and has a mountable filesystem
     # and in that case, it can have a mounted partition in the system
-    log "found mountable USB drive ${block_name} - checking for ${trigger_file} file" \
-      "NuvlaBox Auto-installer starting... check progress at /var/log/messages"
+    log "found mountable USB drive ${block_name} - checking for ${trigger_file} file"
     try_install_nuvlabox "${block_name}" &
 
   fi

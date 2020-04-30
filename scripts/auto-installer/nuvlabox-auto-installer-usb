@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -x
 
 trigger_file="nuvlabox-installation-trigger-usb.nuvla"
 
@@ -70,20 +70,30 @@ install_nuvlabox() {
       "NuvlaBox Auto-installer starting... check progress at /var/log/messages"
 
   nuvlabox_installer_file="/tmp/nuvlabox.installer.$(date +'%s')"
-  download_nuvlabox_installer "$(echo ${trigger_file_content} | jq -r .script)" "${nuvlabox_installer_file}" || \
-    log "ERR: unable to download NuvlaBox installer $(echo ${trigger_file_content} | jq -r .script)"
+  download_nuvlabox_installer "$(echo ${trigger_file_content} | jq -r .script)" "${nuvlabox_installer_file}"
 
+  if [ $? -ne 0 ]
+  then
+    log "ERR: unable to download NuvlaBox installer $(echo ${trigger_file_content} | jq -r .script)"
+    exit 1
+  fi
 
   log "launching NuvlaBox installer ${nuvlabox_installer_file} ..." "Creating new NuvlaBox, from ${found_trigger_file}"
 
   nuvlabox-auto-installer-feedback START
 
-  ("${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
-                                --nuvlabox-installation-path "/opt/nuvlabox/installation" && \
-        log "NuvlaBox Engine successfully installed" "NuvlaBox Auto-installer succeeded - NuvlaBox Engine successfully installed" && \
-        nuvlabox-auto-installer-feedback SUCCESS) || \
-        (log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto-installer failed" && \
-         nuvlabox-auto-installer-feedback ERROR && exit 1)
+  "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
+                                --nuvlabox-installation-path "/opt/nuvlabox/installation"
+
+  if [ $? -eq 0 ]
+  then
+    log "NuvlaBox Engine successfully installed" "NuvlaBox Auto-installer succeeded - NuvlaBox Engine successfully installed"
+    nuvlabox-auto-installer-feedback SUCCESS
+  else
+    log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto-installer failed"
+    nuvlabox-auto-installer-feedback ERROR
+    exit 1
+  fi
 }
 
 
@@ -115,7 +125,13 @@ try_install_nuvlabox() {
   do
     files=$(ls "${mountpoint}")
     sleep 1
-  done' ||  log "timeout waiting for mountpoint files at ${mountpoint}. Nothing to do" && exit 0
+  done'
+
+  if [ $? -ne 0 ]
+  then
+    log "timeout waiting for mountpoint files at ${mountpoint}. Nothing to do"
+    exit 0
+  fi
 
   install_nuvlabox "${mountpoint}"
 }

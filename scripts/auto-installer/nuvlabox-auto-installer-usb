@@ -28,7 +28,7 @@ download_nuvlabox_installer() {
 
   log "downloading latest NuvlaBox installer from upstream at ${url}"
 
-  wget ${url} -O "${store_at}"
+  wget "${url}" -O "${store_at}"
 }
 
 
@@ -69,15 +69,16 @@ install_nuvlabox() {
   log "found ${found_trigger_file}. Auto-installing NuvlaBox..." \
       "NuvlaBox Auto-installer starting... check progress at /var/log/messages"
 
-  nuvlabox_installer_file="/tmp/nuvlabox.installer.$(date +'%s').sh"
-  download_nuvlabox_installer "$(echo ${trigger_file_content} | jq -r .script)" "${nuvlabox_installer_file}"
+  nuvlabox_installer_file="/tmp/nuvlabox.installer.$(date +'%s')"
+  download_nuvlabox_installer "$(echo ${trigger_file_content} | jq -r .script)" "${nuvlabox_installer_file}" || \
+    log "ERR: unable to download NuvlaBox installer $(echo ${trigger_file_content} | jq -r .script)"
+
 
   log "launching NuvlaBox installer ${nuvlabox_installer_file} ..." "Creating new NuvlaBox, from ${found_trigger_file}"
 
-  #TODO: double-check this script is in PATH
   nuvlabox-auto-installer-feedback START
 
-  python3 "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
+  "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
               --nuvlabox-installation-path "/opt/nuvlabox/installation" || \
         (log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto-installer failed" && \
          nuvlabox-auto-installer-feedback ERROR && exit 0)

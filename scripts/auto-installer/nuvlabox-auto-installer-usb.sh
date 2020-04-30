@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# TODO: fix name of the trigger file
 trigger_file="nuvlabox-installation-trigger-usb"
 
 log() {
@@ -77,9 +76,13 @@ install_nuvlabox() {
   #TODO: double-check this script is in PATH
   nuvlabox-auto-installer-feedback START
 
-  nuvlabox_id=$(python "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}") || \
-            (log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto=installer failed" && \
-             nuvlabox-auto-installer-feedback ERROR && exit 0)
+  python3 "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
+              --nuvlabox-installation-path "/opt/nuvlabox/installation" || \
+        (log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto-installer failed" && \
+         nuvlabox-auto-installer-feedback ERROR && exit 0)
+
+  log "NuvlaBox Engine successfully installed" "NuvlaBox Auto-installer succeeded - NuvlaBox Engine successfully installed"
+  nuvlabox-auto-installer-feedback SUCCESS
 }
 
 

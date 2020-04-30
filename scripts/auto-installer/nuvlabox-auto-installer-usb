@@ -78,12 +78,13 @@ install_nuvlabox() {
     exit 1
   fi
 
+  chmod +x "${nuvlabox_installer_file}"
   log "launching NuvlaBox installer ${nuvlabox_installer_file} ..." "Creating new NuvlaBox, from ${found_trigger_file}"
 
   nuvlabox-auto-installer-feedback START
 
   "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
-                                --nuvlabox-installation-path "/opt/nuvlabox/installation"
+                                --nuvlabox-installation-dir "/opt/nuvlabox/installation"
 
   if [ $? -eq 0 ]
   then

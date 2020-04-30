@@ -78,13 +78,12 @@ install_nuvlabox() {
 
   nuvlabox-auto-installer-feedback START
 
-  "${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
-              --nuvlabox-installation-path "/opt/nuvlabox/installation" || \
+  ("${nuvlabox_installer_file}" --nuvlabox-installation-trigger-json "${trigger_file_content}" \
+                                --nuvlabox-installation-path "/opt/nuvlabox/installation" && \
+        log "NuvlaBox Engine successfully installed" "NuvlaBox Auto-installer succeeded - NuvlaBox Engine successfully installed" && \
+        nuvlabox-auto-installer-feedback SUCCESS) || \
         (log "Failed to install NuvlaBox with ${trigger_file_content}" "NuvlaBox Auto-installer failed" && \
-         nuvlabox-auto-installer-feedback ERROR && exit 0)
-
-  log "NuvlaBox Engine successfully installed" "NuvlaBox Auto-installer succeeded - NuvlaBox Engine successfully installed"
-  nuvlabox-auto-installer-feedback SUCCESS
+         nuvlabox-auto-installer-feedback ERROR && exit 1)
 }
 
 
@@ -102,7 +101,7 @@ try_install_nuvlabox() {
     tries=$((tries+1))
     if [ $tries -gt 30 ]
     then
-      (log "timeout waiting for mountpoint on ${block_device}. Nothing to do" && exit 0)
+      log "timeout waiting for mountpoint on ${block_device}. Nothing to do" && exit 0
     fi
     sleep 2
 
@@ -116,7 +115,7 @@ try_install_nuvlabox() {
   do
     files=$(ls "${mountpoint}")
     sleep 1
-  done' ||  (log "timeout waiting for mountpoint files at ${mountpoint}. Nothing to do" && exit 0)
+  done' ||  log "timeout waiting for mountpoint files at ${mountpoint}. Nothing to do" && exit 0
 
   install_nuvlabox "${mountpoint}"
 }

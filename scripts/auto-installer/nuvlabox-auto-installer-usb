@@ -45,16 +45,9 @@ install_nuvlabox() {
   # in case there is more than one trigger file
   # DEFAULTS
   found_trigger_file=${existing_trigger_files}
-  trigger_file_timestamp=""
+  trigger_file_timestamp=0
   for tf in ${existing_trigger_files}
   do
-    if [ -z ${trigger_file_timestamp} ]
-    then
-      # first file found
-      found_trigger_file="${tf}"
-      continue
-    fi
-
     trigger_file_timestamp_new=$(stat "${tf}" --printf=%Y)
 
     if [ ${trigger_file_timestamp_new} -gt ${trigger_file_timestamp} ]

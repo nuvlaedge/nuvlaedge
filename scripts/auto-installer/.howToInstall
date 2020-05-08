@@ -1,9 +1,0 @@
-# install-requirements.sh
-
-cp nuvlabox-auto-installer-usb /usr/local/bin
-
-chmod +x /usr/local/bin/nuvlabox-auto-installer-usb
-
-# add feedback scripts
-
-# add systemd service

@@ -1,3 +1,0 @@
-cp nuvlabox-auto-installer-feedback /usr/local/bin
-
-chmod +x /usr/local/bin/nuvlabox-auto-installer-feedback

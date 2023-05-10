@@ -3,13 +3,20 @@ name: "UnitTests Common Tools"
 on:
   push:
     branch:
-      - '*'
+      - 'main'
 
     paths-exclude:
       - 'nuvlaedge/agent/'
       - 'nuvlaedge/system-manager/'
       - 'nuvlaedge/on-stop/'
       - 'nuvlaedge/peripherals/managers/'
+  pull_request:
+    paths-exclude:
+      - 'nuvlaedge/agent/'
+      - 'nuvlaedge/system-manager/'
+      - 'nuvlaedge/on-stop/'
+      - 'nuvlaedge/peripherals/managers/'
+
 
 jobs:
   name: "Run UniTests"

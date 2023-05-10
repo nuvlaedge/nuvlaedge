@@ -4,13 +4,19 @@ on:
   push:
     branch:
       - 'main'
-
-    paths-exclude:
-      - 'nuvlaedge/agent/'
-      - 'nuvlaedge/system-manager/'
-      - 'nuvlaedge/on-stop/'
-      - 'nuvlaedge/peripherals/managers/'
+    paths:
+      - 'nuvlaedge/broker/'
+      - 'nuvlaedge/common/'
+      - 'nuvlaedge/models/'
+      - 'nuvlaedge/peripherals/'
+      - '.github/workflows/tests/test-common-lib.yml'
   pull_request:
+    paths:
+      - 'nuvlaedge/broker/'
+      - 'nuvlaedge/common/'
+      - 'nuvlaedge/models/'
+      - 'nuvlaedge/peripherals/'
+      - '.github/workflows/tests/test-common-lib.yml'
   workflow_dispatch:
 
 

@@ -51,7 +51,7 @@ jobs:
 
       - name: Generate requirements for TOX
         run: |
-          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests 
+          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests --with common-lib 
 
       - name: Install Tox
         run: pip install tox

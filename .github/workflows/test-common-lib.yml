@@ -3,7 +3,7 @@ name: "UnitTests Common Tools"
 on:
   push:
     branch:
-      - '**'
+      - 'main'
     paths:
       - 'nuvlaedge/broker/'
       - 'nuvlaedge/common/'

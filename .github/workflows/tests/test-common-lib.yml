@@ -1,0 +1,61 @@
+name: "UnitTests Common Tools"
+
+on:
+  push:
+    branch:
+      - '*'
+
+    paths-exclude:
+      - 'nuvlaedge/agent/'
+      - 'nuvlaedge/system-manager/'
+      - 'nuvlaedge/on-stop/'
+      - 'nuvlaedge/peripherals/managers/'
+
+jobs:
+  name: "Run UniTests"
+  runs-on: "ubuntu-latest"
+
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: SetUp python interpreter
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Load cached poetry
+      uses: actions/cache@v2.1.6
+      with:
+        path: ~/.local
+        key: dotlocal-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Generate requirements for TOX
+      run: |
+        poetry export -f requirements.txt --output requirements.txt --without-hashes --without-urls 
+
+    - name: Install Tox
+      run: pip install tox
+
+    - name: Run UnitTests
+      run: tox
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: Publish Unit Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        files: test-report.xml

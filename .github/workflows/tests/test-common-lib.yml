@@ -11,11 +11,7 @@ on:
       - 'nuvlaedge/on-stop/'
       - 'nuvlaedge/peripherals/managers/'
   pull_request:
-    paths-exclude:
-      - 'nuvlaedge/agent/'
-      - 'nuvlaedge/system-manager/'
-      - 'nuvlaedge/on-stop/'
-      - 'nuvlaedge/peripherals/managers/'
+
 
 
 jobs:

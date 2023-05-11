@@ -1,22 +1,18 @@
-name: "UnitTests Common Tools"
+name: "Test Common Tools"
 
 on:
   push:
     branch:
       - 'main'
     paths:
-      - 'nuvlaedge/broker/'
-      - 'nuvlaedge/common/'
-      - 'nuvlaedge/models/'
-      - 'nuvlaedge/peripherals/'
-      - '.github/workflows/test-common-lib.yml'
+      - 'nuvlaedge/'
+      - 'tests/'
+      - '.github/workflows/functional-unit-tests.yml'
   pull_request:
     paths:
-      - 'nuvlaedge/broker/'
-      - 'nuvlaedge/common/'
-      - 'nuvlaedge/models/'
-      - 'nuvlaedge/peripherals/'
-      - '.github/workflows/test-common-lib.yml'
+      - 'nuvlaedge/'
+      - 'tests/'
+      - '.github/workflows/functional-unit-tests.yml'
   workflow_dispatch:
 
 

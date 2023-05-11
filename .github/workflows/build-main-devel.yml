@@ -1,0 +1,17 @@
+# Builds the python wheel package and the NuvlaEdge base image and publishes
+# it into nuvladev/ dockerhub registry
+
+name: "Build NuvlaEdge Image"
+
+on:
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'nuvlaedge/'
+      - 'Dockerfile'
+
+  pull_request:
+    paths:
+      - 'nuvlaedge/'
+      - 'Dockerfile'

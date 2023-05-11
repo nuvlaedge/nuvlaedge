@@ -1,0 +1,78 @@
+# Releases a new version of the NuvlaEdge
+#
+# Version number should be introduced from and input parameter in the Workflow
+
+name: "NuvlaEdge Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      major_version:
+        description: 'NuvlaEdge new major version'
+        required: true
+
+      minor_version:
+        description: 'NuvlaEdge new minor version'
+        required: true
+
+      patch_version:
+        description: 'NuvlaEdge new patch version'
+        required: true
+
+jobs:
+  check_version:
+    name: 'Version Check'
+    description: 'Checks the parsed version is > than the previous and forms the new one 
+     formats into semver'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get latest release/pre-release
+
+      - name: Compare version and define output
+
+      - name: Output True for check version
+
+  release-package:
+    name: 'Build and release code base'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------
+      # Checkout and Setup Python
+      # ------------------------------------------------
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Do not download forked repos atm
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ------------------------------------------------
+      # Setup Poetry with caches
+      # ------------------------------------------------
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local  # the path depends on the OS
+          key: poetry-${{ runner.os }}-0
+
+      - name: Setup poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      # ------------------------------------------------
+      # Setup environment
+      # ------------------------------------------------
+      - name: L
+
+  release-container:
+    name: 'Release NuvlaEdge container'

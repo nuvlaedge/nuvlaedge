@@ -4,14 +4,22 @@
 name: "Build NuvlaEdge Image"
 
 on:
-  push:
-    branches:
-      - 'main'
-    paths:
-      - 'nuvlaedge/'
-      - 'Dockerfile'
+  workflow_dispatch:
 
-  pull_request:
-    paths:
-      - 'nuvlaedge/'
-      - 'Dockerfile'
+jobs:
+  build-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - run: echo "HelloWorld from build"
+#  push:
+#    branches:
+#      - 'main'
+#    paths:
+#      - 'nuvlaedge/'
+#      - 'Dockerfile'
+#
+#  pull_request:
+#    paths:
+#      - 'nuvlaedge/'
+#      - 'Dockerfile'

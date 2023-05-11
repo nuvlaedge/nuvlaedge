@@ -1,4 +1,4 @@
-name: "Test Common Tools"
+name: 'System Manager UnitTesting'
 
 on:
   push:
@@ -9,14 +9,16 @@ on:
       - 'nuvlaedge/common/'
       - 'nuvlaedge/models/'
       - 'nuvlaedge/peripherals/'
-      - '.github/workflows/common-lib-unit-tests.yml'
+      - 'nuvlaedge/system_manager/'
+      - '.github/workflows/unit-tests-system-manager.yml'
   pull_request:
     paths:
       - 'nuvlaedge/broker/'
       - 'nuvlaedge/common/'
       - 'nuvlaedge/models/'
       - 'nuvlaedge/peripherals/'
-      - '.github/workflows/common-lib-unit-tests.yml'
+      - 'nuvlaedge/system_manager/'
+      - '.github/workflows/unit-tests-system-manager.yml'
   workflow_dispatch:
 
 
@@ -50,7 +52,7 @@ jobs:
 
       - name: Generate requirements for TOX
         run: |
-          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests --with common-lib 
+          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests --with system-manager
 
       - name: Install Tox
         run: pip install tox

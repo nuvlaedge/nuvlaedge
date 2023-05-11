@@ -18,6 +18,13 @@ pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 mock = "^5.0.2"
 
+
+[tool.poetry.group.system_manager.dependencies]
+docker = "^6.1.1"
+kubernetes = "^26.1.0"
+cryptography = "^40.0.2"
+pyopenssl = "^23.1.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

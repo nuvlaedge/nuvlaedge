@@ -5,16 +5,19 @@ on:
     branch:
       - 'main'
     paths:
-      - 'nuvlaedge/'
-      - 'tests/'
-      - '.github/workflows/functional-unit-tests.yml'
+      - 'nuvlaedge/broker/'
+      - 'nuvlaedge/common/'
+      - 'nuvlaedge/models/'
+      - 'nuvlaedge/peripherals/'
+      - '.github/workflows/common-lib-unit-tests.yml'
   pull_request:
     paths:
-      - 'nuvlaedge/'
-      - 'tests/'
-      - '.github/workflows/functional-unit-tests.yml'
+      - 'nuvlaedge/broker/'
+      - 'nuvlaedge/common/'
+      - 'nuvlaedge/models/'
+      - 'nuvlaedge/peripherals/'
+      - '.github/workflows/common-lib-unit-tests.yml'
   workflow_dispatch:
-
 
 
 jobs:

@@ -68,4 +68,5 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
         with:
+          check_name: "| Unit Tests Results: Common Library |"
           files: test-report.xml

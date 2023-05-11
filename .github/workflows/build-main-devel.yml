@@ -1,7 +1,7 @@
 # Builds the python wheel package and the NuvlaEdge base image and publishes
 # it into nuvladev/ dockerhub registry
 
-name: "Build NuvlaEdge Image"
+name: "NuvlaEdge Dev-Image Build"
 
 on:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: "Common Lib UnitTesting"
+name: "UnitTesting: Common Lib"
 
 on:
   push:

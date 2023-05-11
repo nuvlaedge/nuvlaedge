@@ -1,4 +1,4 @@
-name: 'System Manager UnitTesting'
+name: 'UnitTesting: System Manager'
 
 on:
   push:

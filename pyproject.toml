@@ -24,6 +24,12 @@ pytest-cov = "^4.0.0"
 mock = "^5.0.2"
 
 
+[tool.poetry.group.per-network.dependencies]
+zeroconf = "^0.62.0"
+wsdiscovery = "^2.0.0"
+ssdpy = "^0.4.1"
+requests = "2.27.1"
+xmltodict = "^0.13.0"
 
 [build-system]
 requires = ["poetry-core"]

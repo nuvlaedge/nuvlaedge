@@ -60,7 +60,7 @@ class PeripheralsDBManager:
         nuvla_peripherals: CimiCollection = self.nuvla_client.search('nuvlabox-peripheral',
                                                                      filter=f'parent="{self.uuid}"')
         if nuvla_peripherals.count == 0:
-            self.logger.info(f'No resources registered in Nuvla to update')
+            self.logger.info('No resources registered in Nuvla to update')
             self._local_db = {}
             self._latest_update = {}
             return
@@ -210,7 +210,7 @@ class PeripheralsDBManager:
 
             self.add_peripheral(v)
 
-        self.logger.info(f'After adding in the local DB, backup to file')
+        self.logger.info('After adding in the local DB, backup to file')
         self.update_local_storage()
 
     def peripheral_expired(self, peripheral_id: str) -> bool:
@@ -244,7 +244,7 @@ class PeripheralsDBManager:
                 update_flag = True
                 self.remove_peripheral(p)
 
-        self.logger.info(f'After removing in the local DB, backup to file')
+        self.logger.info('After removing in the local DB, backup to file')
         if update_flag:
             self.update_local_storage()
 
@@ -254,9 +254,9 @@ class PeripheralsDBManager:
         :param new_peripherals:
         :return:
         """
-        self.logger.info(f'Checking if information has changed in peripherals')
+        self.logger.info('Checking if information has changed in peripherals')
         for identifier, data in new_peripherals.items():
             self._latest_update[identifier] = datetime.now()
 
-        self.logger.info(f'After editing the local DB, backup to file')
+        self.logger.info('After editing the local DB, backup to file')
         self.update_local_storage()

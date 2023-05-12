@@ -309,8 +309,7 @@ def network_manager(**kwargs):
     return output
 
 
-if __name__ == '__main__':
-
+def main():
     logger.info('NETWORK PERIPHERAL MANAGER STARTED')
 
     network_peripheral: Peripheral = Peripheral('network')
@@ -325,3 +324,7 @@ if __name__ == '__main__':
     ws_daemon = WSDiscovery()
 
     network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)
+
+
+if __name__ == '__main__':
+    main()

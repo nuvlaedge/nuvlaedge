@@ -6,6 +6,12 @@ authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"
 packages = [{include = "nuvlaedge"}]
 
+[tool.poetry.scripts]
+network = "nuvlaedge.peripherals.scripts.network:main"
+bluetooth = "nuvlaedge.peripherals.scripts.bluetooth:main"
+modbus = "nuvlaedge.peripherals.scripts.modbus:main"
+system-manager = "nuvlaedge.system_manager:entry"
+
 [tool.poetry.dependencies]
 python = "^3.11"
 pydantic = "1.10.7"
@@ -18,18 +24,21 @@ kubernetes = "26.1.0"
 cryptography = "40.0.2"
 pyopenssl = "23.1.1"
 
-[tool.poetry.group.tests.dependencies]
-pytest = "^7.3.1"
-pytest-cov = "^4.0.0"
-mock = "^5.0.2"
-
-
-[tool.poetry.group.per-network.dependencies]
+# Netowork Peripheral Deps
 zeroconf = "^0.62.0"
 wsdiscovery = "^2.0.0"
 ssdpy = "^0.4.1"
 requests = "2.27.1"
 xmltodict = "^0.13.0"
+
+# Modbus peripheral Deps
+pymodbus = "^3.2.2"
+paho-mqtt = "^1.6.1"
+
+[tool.poetry.group.tests.dependencies]
+pytest = "^7.3.1"
+pytest-cov = "^4.0.0"
+mock = "^5.0.2"
 
 [build-system]
 requires = ["poetry-core"]

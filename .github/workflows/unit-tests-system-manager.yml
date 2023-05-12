@@ -1,22 +1,17 @@
-name: "Test Common Tools"
+name: 'UnitTesting: System Manager'
 
 on:
   push:
     branch:
       - 'main'
-    paths:
-      - 'nuvlaedge/broker/'
-      - 'nuvlaedge/common/'
-      - 'nuvlaedge/models/'
-      - 'nuvlaedge/peripherals/'
-      - '.github/workflows/common-lib-unit-tests.yml'
   pull_request:
     paths:
       - 'nuvlaedge/broker/'
       - 'nuvlaedge/common/'
       - 'nuvlaedge/models/'
       - 'nuvlaedge/peripherals/'
-      - '.github/workflows/common-lib-unit-tests.yml'
+      - 'nuvlaedge/system_manager/'
+      - '.github/workflows/unit-tests-system-manager.yml'
   workflow_dispatch:
 
 
@@ -50,7 +45,7 @@ jobs:
 
       - name: Generate requirements for TOX
         run: |
-          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests --with common-lib 
+          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests
 
       - name: Install Tox
         run: pip install tox
@@ -68,4 +63,5 @@ jobs:
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
         with:
+          check_name: "| Unit Tests Results: System Manager |"
           files: test-report.xml

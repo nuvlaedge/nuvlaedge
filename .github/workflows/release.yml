@@ -28,10 +28,13 @@ jobs:
 
     steps:
       - name: Get latest release/pre-release
+        run: echo "Get Latest release"
 
       - name: Compare version and define output
+        run: echo "Comparing version"
 
       - name: Output True for check version
+        run: echo "Output Version check"
 
   release-package:
     name: 'Build and release code base'
@@ -72,7 +75,3 @@ jobs:
       # ------------------------------------------------
       # Setup environment
       # ------------------------------------------------
-      - name: L
-
-  release-container:
-    name: 'Release NuvlaEdge container'

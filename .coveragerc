@@ -1,0 +1,6 @@
+[run]
+relative_files = True
+include =
+    nuvlaedge/*
+    tests/*
+branch = True

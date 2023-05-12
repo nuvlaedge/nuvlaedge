@@ -130,10 +130,10 @@ class PeripheralManager(Thread):
         return peripheral_acc
 
     def run(self) -> None:
-        self.logger.info(f'Starting peripheral manager thread')
+        self.logger.info('Starting peripheral manager thread')
 
         while not self.exit_event.is_set():
-            self.logger.info(f'Scanning for detected devices')
+            self.logger.info('Scanning for detected devices')
             self.update_running_managers()
 
             # New peripherals accumulator for different peripheral managers
@@ -149,6 +149,6 @@ class PeripheralManager(Thread):
             self.exit_event.wait(self.REFRESH_RATE)
 
     def join(self, timeout: float | None = REFRESH_RATE) -> None:
-        self.logger.info(f'Exiting peripheral manager thread')
+        self.logger.info('Exiting peripheral manager thread')
         self.exit_event.set()
         super().join(timeout=timeout)

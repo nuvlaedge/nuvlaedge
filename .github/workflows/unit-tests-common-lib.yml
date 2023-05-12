@@ -4,12 +4,6 @@ on:
   push:
     branch:
       - 'main'
-    paths:
-      - 'nuvlaedge/broker/'
-      - 'nuvlaedge/common/'
-      - 'nuvlaedge/models/'
-      - 'nuvlaedge/peripherals/'
-      - '.github/workflows/unit-tests-common-lib.yml'
   pull_request:
     paths:
       - 'nuvlaedge/broker/'

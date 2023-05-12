@@ -375,12 +375,12 @@ class Docker(ContainerRuntime):
                                  f'Reason: cannot update an existing network.')
         except docker.errors.NotFound:
             pass
-        finally:
-            if new.lower() == 'false':
-                Path(utils.nuvlaedge_shared_net_unencrypted).touch()
-                return {}
 
-            return {"encrypted": "True"}
+        if new.lower() == 'false':
+            Path(utils.nuvlaedge_shared_net_unencrypted).touch()
+            return {}
+
+        return {"encrypted": "True"}
 
     def find_network(self, name: str) -> object:
         """

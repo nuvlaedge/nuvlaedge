@@ -11,6 +11,7 @@ from threading import Timer
 from typing import Union
 
 import docker
+import docker.errors
 import OpenSSL
 
 from nuvlaedge.system_manager.common import utils
@@ -739,3 +740,4 @@ class Supervise(Containers):
                     err_msg = f'Malfunctioning network for {name}: {str(e2)}'
                     self.log.error(f'Cannot recover {name}. {err_msg}')
                     self.operational_status.append((utils.status_degraded, err_msg))
+

@@ -628,7 +628,7 @@ class Containers:
     """ Common set of methods and variables for the NuvlaEdge system-manager
     """
     def __init__(self, logging):
-        """ Constructs an Container object
+        """ Constructs a Container object
         """
         self.docker_socket_file = '/var/run/docker.sock'
 

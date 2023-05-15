@@ -5,12 +5,6 @@ on:
     branch:
       - 'main'
   pull_request:
-#    paths:
-#      - 'nuvlaedge/broker/'
-#      - 'nuvlaedge/common/'
-#      - 'nuvlaedge/models/'
-#      - 'nuvlaedge/peripherals/'
-#      - '.github/workflows/unit-tests-common-lib.yml'
   workflow_dispatch:
 
 

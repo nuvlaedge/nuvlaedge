@@ -159,7 +159,7 @@ def main():
         time.sleep(15)
 
 
-if __name__ == '__main__':
+def entry():
     signal.signal(signal.SIGUSR1, signal_usr1)
 
     ne_log_level = os.environ.get('NUVLAEDGE_LOG_LEVEL')
@@ -177,3 +177,6 @@ if __name__ == '__main__':
 
     main()
 
+
+if __name__ == '__main__':
+    entry()

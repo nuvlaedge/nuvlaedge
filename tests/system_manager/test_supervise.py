@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import docker
+import docker.errors
 import logging
 import mock
 import requests
 import unittest
 
 import nuvlaedge.system_manager.Supervise as Supervise
+
 from nuvlaedge.system_manager.common.ContainerRuntime import Containers
 import tests.system_manager.utils.fake as fake
 
@@ -16,7 +18,6 @@ class SuperviseTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         Supervise.__bases__ = (fake.Fake.imitate(Containers),)
-
         self.obj = Supervise.Supervise()
         self.obj.container_runtime = mock.MagicMock()
         logging.disable(logging.CRITICAL)

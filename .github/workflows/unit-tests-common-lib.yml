@@ -2,7 +2,7 @@ name: "UnitTesting: NuvlaEdge"
 
 on:
   push:
-    branch:
+    branches:
       - 'main'
   pull_request:
   workflow_dispatch:

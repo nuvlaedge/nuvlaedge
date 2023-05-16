@@ -1,4 +1,4 @@
-name: "UnitTesting: Common Lib"
+name: "UnitTesting: NuvlaEdge"
 
 on:
   push:

@@ -98,8 +98,9 @@ class ContainerRuntimeKubernetesTestCase(unittest.TestCase):
         with self.assertRaises(TimeoutException):
             self.obj._wait_pod_deleted('fake-ns', 'fake-pod', wait_sec=0.001)
 
-    def test_get_node_info(self, ):
+    def test_get_node_info(self):
         # if MY_HOST_NODE_NAME is setup, then return the node's info
+        self.obj.host_node_name = 'NODE_NAME'
         self.obj.client.read_node.return_value = {}
         self.assertIsInstance(self.obj.get_node_info(), dict,
                               'Expecting node_info as a dict, but got something else instead')

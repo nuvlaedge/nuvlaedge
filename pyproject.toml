@@ -12,6 +12,7 @@ bluetooth = "nuvlaedge.peripherals.bluetooth:main"
 modbus = "nuvlaedge.peripherals.modbus:main"
 system-manager = "nuvlaedge.system_manager.__main__:entry"
 on-stop = "nuvlaedge.on_stop:main"
+agent = "nuvlaedge.agent:entry"
 
 [tool.poetry.dependencies]
 python = "^3.11"

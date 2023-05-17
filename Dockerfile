@@ -38,30 +38,9 @@ RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk
 # Required packages for USB peripheral discovery
 RUN apk add --no-cache libusb-dev udev
 
-# Compute API packages
-RUN apk add --no-cache socat
-
-# Open VPN Client packages
-RUN apk add --no-cache openvpn
-
-# Auxiliary tool for IPRoute discovery
-RUN apk add --no-cache iproute2
-
 # Copy configuration files
 COPY nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
 
 VOLUME /etc/nuvlaedge/database
 
-# Setup Compute-API
-COPY scripts/compute-api/api.sh /usr/bin/api
-RUN chmod +x /usr/bin/api
-
-# Setup VPN Client
-COPY scripts/vpn-client/* /opt/nuvlaedge/scripts/
-RUN mv /opt/nuvlaedge/scripts/openvpn-client.sh /usr/bin/openvpn-client
-RUN chmod +x /usr/bin/openvpn-client
-RUN chmod +x /opt/nuvlaedge/scripts/get_ip.sh
-RUN chmod +x /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
-
 WORKDIR /opt/
-

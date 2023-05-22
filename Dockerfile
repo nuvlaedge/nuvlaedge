@@ -8,7 +8,7 @@ RUN apk add curl gcc musl-dev py3-bluez linux-headers openssl-dev openssl libffi
 # Extract and separate requirements from package install to accelerate building process.
 # Package dependency install is the Slow part of the building process
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
 
 COPY dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl

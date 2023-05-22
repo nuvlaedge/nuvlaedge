@@ -3,7 +3,7 @@ ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
 FROM ${BASE_IMAGE} AS nuvlaedge-builder
 
 RUN apk update
-RUN apk add curl libffi-dev gcc musl-dev py3-bluez
+RUN apk add curl libffi-dev gcc musl-dev py3-bluez linux-headers openssl
 
 COPY dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl

@@ -29,8 +29,7 @@ psutil = "^5.9.5"
 # System Manager Deps
 docker = "6.1.1"
 kubernetes = "26.1.0"
-cryptography = "40.0.2"
-pyopenssl = "23.1.1"
+
 
 # Netowork Peripheral Deps
 zeroconf = "^0.62.0"
@@ -41,6 +40,7 @@ xmltodict = "^0.13.0"
 # Modbus peripheral Deps
 pymodbus = "^3.2.2"
 paho-mqtt = "^1.6.1"
+pyopenssl = "23.1.1"
 
 
 [tool.poetry.group.tests.dependencies]

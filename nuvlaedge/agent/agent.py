@@ -45,7 +45,7 @@ class Agent:
         self.nuvlaedge_updated_date: str = ''
         self.agent_flag: bool = agent_flag
 
-        self.excluded_monitors = os.environ.get('EXCLUDED_MONITORS', '')
+        self.excluded_monitors = os.environ.get('NUVLAEDGE_EXCLUDED_MONITORS', '')
 
         self._activate = None
         self._container_runtime = None

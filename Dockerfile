@@ -3,12 +3,11 @@ ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
 FROM ${BASE_IMAGE} AS nuvlaedge-builder
 
 RUN apk update
-RUN apk add curl gcc musl-dev py3-bluez linux-headers openssl-dev openssl libffi-dev
+RUN apk add curl gcc musl-dev linux-headers openssl-dev openssl libffi-dev cargo pkgconfig python3-dev
 
 # Extract and separate requirements from package install to accelerate building process.
 # Package dependency install is the Slow part of the building process
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --upgrade pip
 RUN pip install -r /tmp/requirements.txt
 
 COPY dist/nuvlaedge-*.whl /tmp/

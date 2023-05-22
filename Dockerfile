@@ -5,8 +5,8 @@ FROM ${BASE_IMAGE} AS nuvlaedge-builder
 RUN apk update
 RUN apk add curl libffi-dev gcc musl-dev py3-bluez
 
-COPY dist/nuvlaedge-0.1.0-py3-none-any.whl /tmp/
-RUN pip install /tmp/nuvlaedge-0.1.0-py3-none-any.whl
+COPY dist/nuvlaedge-*.whl /tmp/
+RUN pip install /tmp/nuvlaedge-*.whl
 
 
 FROM ${GO_BASE_IMAGE} AS golang-builder

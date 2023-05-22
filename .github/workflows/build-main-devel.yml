@@ -48,6 +48,7 @@ jobs:
         id: build
         run: |
           poetry build --no-interaction --format=wheel
+          poetry export -f requirements.txt --output requirements.txt --without-hashes --without-urls
       
       - name: SetUp QEMU
         uses: docker/setup-qemu-action@v2

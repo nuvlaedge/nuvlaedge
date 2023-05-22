@@ -32,10 +32,6 @@ COPY --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 COPY --from=nuvlaedge-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 
-# Required to install pybluez
-COPY --from=nuvlaedge-builder /usr/lib/python3.11/site-packages/bluetooth /usr/local/lib/python3.11/site-packages/bluetooth
-COPY --from=nuvlaedge-builder /usr/lib/libbluetooth.so.3.19.8 /usr/lib/libbluetooth.so.3
-
 # REquired packages for the Agent
 RUN apk update
 RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk

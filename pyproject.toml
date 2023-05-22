@@ -40,7 +40,8 @@ xmltodict = "^0.13.0"
 # Modbus peripheral Deps
 pymodbus = "^3.2.2"
 paho-mqtt = "^1.6.1"
-pyopenssl = "22.0.0"
+pyopenssl = "23.1.1"
+cryptography = "40.0.2"
 
 
 [tool.poetry.group.tests.dependencies]

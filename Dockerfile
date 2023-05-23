@@ -8,6 +8,7 @@ RUN apk add curl gcc musl-dev linux-headers openssl-dev openssl libffi-dev cargo
 # Extract and separate requirements from package install to accelerate building process.
 # Package dependency install is the Slow part of the building process
 COPY requirements.txt /tmp/requirements.txt
+RUN apk add py3-openssl="23.1.1-r1"
 RUN pip install -r /tmp/requirements.txt
 
 COPY dist/nuvlaedge-*.whl /tmp/
@@ -34,7 +35,7 @@ COPY --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 
 # REquired packages for the Agent
 RUN apk update
-RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk
+RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk py3-openssl="23.1.1-r1"
 
 # Required packages for USB peripheral discovery
 RUN apk add --no-cache libusb-dev udev

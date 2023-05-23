@@ -193,7 +193,7 @@ class Kubernetes(ContainerRuntime):
         self.minimum_version = f'{self.minimum_major_version}.{self.minimum_minor_version}'
         self.credentials_manager_component = 'kubernetes-credentials-manager'
         self.orchestrator = 'kubernetes'
-        self.agent_dns = f'agent.{self.namespace}'
+        self.agent_dns = f'nuvlaedge.agent.{self.namespace}'
         self.my_component_name = 'nuvlaedge-engine-core'
 
     def list_internal_components(self, base_label=utils.base_label):

@@ -72,6 +72,7 @@ class KubernetesTestCase(unittest.TestCase):
 
     def test_get_node_info(self):
         # if host_node_name is none, get None
+        self.obj.host_node_name = None
         self.assertIsNone(self.obj.get_node_info(),
                           'Got node info when host_node_name is None')
 

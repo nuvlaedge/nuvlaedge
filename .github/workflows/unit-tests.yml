@@ -1,10 +1,6 @@
 name: "UnitTesting: NuvlaEdge"
 
 on:
-  push:
-    branches:
-      - 'main'
-  pull_request:
   workflow_dispatch:
 
 
@@ -37,8 +33,13 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Generate requirements for TOX
-        run: |
-          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls --with tests 
+        run: >
+          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls 
+          --with tests 
+          --with agent 
+          --with system-manager 
+          --with network 
+          --with modbus 
 
       - name: Install Tox
         run: pip install tox

@@ -144,7 +144,8 @@ class PeripheralManager(Thread):
             new_peripherals = self.join_new_peripherals(new_peripherals)
 
             # Process the new peripherals data
-            self.process_new_peripherals(new_peripherals)
+            if new_peripherals:
+                self.process_new_peripherals(new_peripherals)
 
             self.exit_event.wait(self.REFRESH_RATE)
 

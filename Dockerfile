@@ -63,12 +63,12 @@ COPY --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 
 # Required alpine packages
 COPY --from=nuvlaedge-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-#COPY --from=nuvlaedge-builder /usr/lib /usr/lib
+COPY --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 
 # REquired packages for the Agent
 RUN apk update
-RUN apk add --no-cache procps curl mosquitto-clients lsblk gcc
+RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl
 
 # Required packages for USB peripheral discovery
 RUN apk add --no-cache libusb-dev udev

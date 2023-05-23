@@ -18,7 +18,7 @@ agent = "nuvlaedge.agent:entry"
 python = "^3.11"
 pydantic = "1.10.7"
 requests = "2.27.1"
-nuvla-api = "^3.0.8"
+nuvla-api = "3.0.8"
 docker = "6.1.1"
 kubernetes = "26.1.0"
 
@@ -27,19 +27,19 @@ filelock = "3.12.0"
 
 # Agent Dependencies
 [tool.poetry.group.agent.dependencies]
-psutil = "^5.9.5"
+psutil = "5.9.5"
 
 # Netowrk peripheral dependencies
 [tool.poetry.group.network.dependencies]
 zeroconf = "^0.62.0"
-wsdiscovery = "^2.0.0"
-ssdpy = "^0.4.1"
-xmltodict = "^0.13.0"
+wsdiscovery = "2.0.0"
+ssdpy = "0.4.1"
+xmltodict = "0.13.0"
 
 # Modbus peripheral Deps
 [tool.poetry.group.modbus.dependencies]
-pymodbus = "^3.2.2"
-paho-mqtt = "^1.6.1"
+pymodbus = "3.2.2"
+paho-mqtt = "1.6.1"
 
 # System manager dependencies
 [tool.poetry.group.system-manager.dependencies]

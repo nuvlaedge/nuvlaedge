@@ -30,10 +30,7 @@ FROM base-builder AS modbus-builder
 COPY requirements.modbus.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
-FROM ${BASE_IMAGE} AS nuvlaedge-builder
-
-RUN apk update
-RUN apk add curl gcc musl-dev linux-headers openssl-dev openssl libffi-dev cargo pkgconfig python3-dev
+FROM base-builder AS nuvlaedge-builder
 
 # Extract and separate requirements from package install to accelerate building process.
 # Package dependency install is the Slow part of the building process

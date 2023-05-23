@@ -42,16 +42,13 @@ pymodbus = "3.2.2"
 paho-mqtt = "1.6.1"
 
 # System manager dependencies
-[tool.poetry.group.system-manager.dependencies]
-cryptography = "3.3.2"
-pyopenssl = "21.0.0"
-
-# Unit tests
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 mock = "^5.0.2"
 
+[tool.poetry.group.system-manager.dependencies]
+pyopenssl = "23.1.1"
 
 [build-system]
 requires = ["poetry-core"]

@@ -16,6 +16,10 @@ RUN pip install -r /tmp/requirements.txt
 
 FROM base-builder AS system-manager-builder
 RUN apk add openssl-dev openssl libffi-dev
+RUN apk add py3-cryptography="40.0.2-r1"
+
+RUN cp -r /usr/lib/python3.11/site-packages/cryptography/ /usr/local/lib/python3.11/site-packages/
+RUN cp -r /usr/lib/python3.11/site-packages/cryptography-40.0.2.dist-info/ /usr/local/lib/python3.11/site-packages/
 
 COPY requirements.system-manager.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -66,7 +70,7 @@ RUN apk update
 RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk
 
 # Required packages for USB peripheral discovery
-RUN apk add --no-cache libusb-dev udev
+RUN apk add --no-cache libusb-dev udev openssl-dev
 
 # Copy configuration files
 COPY nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf

@@ -1,5 +1,35 @@
 ARG BASE_IMAGE=python:3.11.3-alpine3.18
 ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
+
+# Base builder stage containing the common python and alpine dependencies
+FROM ${BASE_IMAGE} AS base-builder
+RUN apk update
+RUN apk add gcc musl-dev linux-headers python3-dev
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+FROM base-builder AS agent-builder
+
+COPY requirements.agent.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+FROM base-builder AS system-manager-builder
+RUN apk add openssl-dev openssl libffi-dev
+
+COPY requirements.system-manager.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+FROM base-builder AS network-builder
+
+COPY requirements.network.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+FROM base-builder AS modbus-builder
+
+COPY requirements.modbus.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
 FROM ${BASE_IMAGE} AS nuvlaedge-builder
 
 RUN apk update
@@ -7,9 +37,10 @@ RUN apk add curl gcc musl-dev linux-headers openssl-dev openssl libffi-dev cargo
 
 # Extract and separate requirements from package install to accelerate building process.
 # Package dependency install is the Slow part of the building process
-COPY requirements.txt /tmp/requirements.txt
-RUN apk add py3-openssl="23.1.1-r1"
-RUN pip install -r /tmp/requirements.txt
+COPY --from=agent-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=system-manager-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=network-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
 COPY dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
@@ -35,7 +66,7 @@ COPY --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 
 # REquired packages for the Agent
 RUN apk update
-RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk py3-openssl="23.1.1-r1"
+RUN apk add --no-cache procps curl mosquitto-clients openssl lsblk
 
 # Required packages for USB peripheral discovery
 RUN apk add --no-cache libusb-dev udev

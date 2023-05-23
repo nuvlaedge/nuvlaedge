@@ -19,37 +19,39 @@ python = "^3.11"
 pydantic = "1.10.7"
 requests = "2.27.1"
 nuvla-api = "^3.0.8"
+docker = "6.1.1"
+kubernetes = "26.1.0"
 
 # Common library deps
 filelock = "3.12.0"
 
 # Agent Dependencies
+[tool.poetry.group.agent.dependencies]
 psutil = "^5.9.5"
 
-# System Manager Deps
-docker = "6.1.1"
-kubernetes = "26.1.0"
-# Due to an incompatibility in armV7 builds this dependencies are installed prebuilt
-# py3-openssl and py3-cryptography
-#pyopenssl = "23.1.1"
-#cryptography = "40.0.2"
-
-# Netowork Peripheral Deps
+# Netowrk peripheral dependencies
+[tool.poetry.group.network.dependencies]
 zeroconf = "^0.62.0"
 wsdiscovery = "^2.0.0"
 ssdpy = "^0.4.1"
 xmltodict = "^0.13.0"
 
 # Modbus peripheral Deps
+[tool.poetry.group.modbus.dependencies]
 pymodbus = "^3.2.2"
 paho-mqtt = "^1.6.1"
 
+# System manager dependencies
+[tool.poetry.group.system-manager.dependencies]
+cryptography = "3.3.2"
+pyopenssl = "21.0.0"
 
+# Unit tests
 [tool.poetry.group.tests.dependencies]
-pyopenssl = "23.1.1"
 pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 mock = "^5.0.2"
+
 
 [build-system]
 requires = ["poetry-core"]

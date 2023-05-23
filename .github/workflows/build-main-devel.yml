@@ -103,6 +103,7 @@ jobs:
         id: build
         run: |
           poetry build --no-interaction --format=wheel
+          poetry export -f requirements.txt --output requirements.txt --without-hashes --without-urls
           poetry export -f requirements.txt --output requirements.agent.txt --without-hashes --without-urls --with agent
           poetry export -f requirements.txt --output requirements.system-manager.txt --without-hashes --without-urls --with system-manager
           poetry export -f requirements.txt --output requirements.network.txt --without-hashes --without-urls --with network

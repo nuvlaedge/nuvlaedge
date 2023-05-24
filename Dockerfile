@@ -9,6 +9,20 @@ RUN apk add gcc musl-dev linux-headers python3-dev
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+FROM base-builder AS bt-builder
+RUN apk add git g++ bluez-dev
+
+WORKDIR /tmp/
+RUN git clone https://github.com/pybluez/pybluez.git
+
+WORKDIR /tmp/pybluez
+
+# Pybluez has no maintenance altough it accepts contributions. Lock it to the current commit sha
+RUN git checkout 4d46ce1
+
+RUN python setup.py install
+
+
 FROM base-builder AS agent-builder
 
 COPY requirements.agent.txt /tmp/requirements.txt
@@ -42,6 +56,7 @@ COPY --from=agent-builder /usr/local/lib/python3.11/site-packages /usr/local/lib
 COPY --from=system-manager-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=network-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=bt-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
 COPY dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
@@ -63,8 +78,10 @@ COPY --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 
 # Required alpine packages
 COPY --from=nuvlaedge-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 COPY --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
+# Library required by py-cryptography (pyopenssl).
+# By copying it from base builder we save up ~100MB of the gcc library
+COPY --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
 # REquired packages for the Agent
 RUN apk update
@@ -72,6 +89,9 @@ RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl
 
 # Required packages for USB peripheral discovery
 RUN apk add --no-cache libusb-dev udev
+
+# Required for bluetooth discovery
+RUN apk add --no-cache bluez-dev
 
 # Copy configuration files
 COPY nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf

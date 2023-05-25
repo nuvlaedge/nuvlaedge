@@ -5,19 +5,9 @@
 name: "NuvlaEdge Release"
 
 on:
-  workflow_dispatch:
-    inputs:
-      major_version:
-        description: 'NuvlaEdge new major version'
-        required: true
-
-      minor_version:
-        description: 'NuvlaEdge new minor version'
-        required: true
-
-      patch_version:
-        description: 'NuvlaEdge new patch version'
-        required: true
+  push:
+    tags:
+      - "v*"
 
 jobs:
   check_version:
@@ -38,7 +28,7 @@ jobs:
 
   release-package:
     name: 'Build and release code base'
-
+    needs: check_version
     runs-on: ubuntu-latest
 
     steps:

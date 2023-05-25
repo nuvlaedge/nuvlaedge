@@ -1,0 +1,63 @@
+# Manually trigger version bump of NuvlaEdge
+
+name: Bump NuvlaEdge version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'SemVer type of version bump: major / minor / patch'
+        require: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+
+    outputs:
+      old_version: ${{ steps.versioning.outputs.OLD_VERSION }}
+      new_version: ${{ steps.versioning.outputs.NEW_VERSION }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: SetUp python interpreter
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Load cached poetry
+        uses: actions/cache@v2.1.6
+        with:
+          path: ~/.local
+          key: dotlocal-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Bump version
+        id: versioning
+        run: |
+          echo "OLD_VERSION=$(poetry version -s)" >> "$GITHUB_OUTPUT"
+          poetry version ${{ github.event.inputs.version }}
+          echo "NEW_VERSION=$(poetry version -s)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate CHANGELOG
+        uses: TriPSs/conventional-changelog-action@v3.18.1
+        with:
+          release-count: 0
+          skip-tag: true
+          git-user-name: "nuvlaedge-bot"
+          git-user-email: "nuvlaedge-bot@sixsq.com"
+          git-message: "Update CHANGELOG for new version {}"
+
+

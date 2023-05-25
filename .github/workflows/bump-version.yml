@@ -7,7 +7,7 @@ on:
     inputs:
       version:
         description: 'SemVer type of version bump: major / minor / patch'
-        require: true
+        required: true
         type: choice
         options:
           - patch
@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: SetUp python interpreter
         uses: actions/setup-python@v4

@@ -1,0 +1,3 @@
+.coverage
+requirements*.txt
+.idea/

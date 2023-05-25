@@ -12,6 +12,10 @@ on:
     branches:
       - 'main'
   pull_request:
+    paths:
+      - "nuvlaedge/**"
+      - "tests/**"
+      - ".github/workflows/build-main-devel.yml"
   workflow_dispatch:
 
 jobs:

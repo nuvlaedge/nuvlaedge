@@ -55,3 +55,5 @@ pyopenssl = "23.1.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry_bumpversion.file."nuvlaedge/__init__.py"]

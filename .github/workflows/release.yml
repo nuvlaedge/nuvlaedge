@@ -118,14 +118,14 @@ jobs:
     outputs:
       boards: ${{ steps.set-boards.outputs.boards }}
       tests: ${{ steps.set-tests.outputs.tests }}
-      steps:
-        - id: set-boards
-          run: |
-            echo "boards=${{ vars.TESTBED_BOARDS }}" >> $GITHUB_OUTPUT
+    steps:
+      - id: set-boards
+        run: |
+          echo "boards=${{ vars.TESTBED_BOARDS }}" >> $GITHUB_OUTPUT
 
-        - id: set-tests
-          run: |
-            echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
+      - id: set-tests
+        run: |
+          echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
 
   run-validator:
     needs: validation-matrix
@@ -164,7 +164,8 @@ jobs:
 
       - name: Release package
         run: |
-          echo "Releasing NuvlaEdge version ${
+          echo "Releasing NuvlaEdge version ${{ github.ref_name }}"
+
   release-image:
     needs: run-validation
     runs-on: ubuntu-latest

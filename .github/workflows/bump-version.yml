@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          ssh-key: "${{ secrets.COMMIT_KEY }}"
 
       - name: SetUp python interpreter
         uses: actions/setup-python@v4

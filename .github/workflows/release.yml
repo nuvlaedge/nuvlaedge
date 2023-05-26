@@ -91,16 +91,16 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      - name: Download requirements
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{github.ref_name}}
+
       - name: Get some data
         run: |
           ls -la
           ls -la dist
           ls -la req
-
-      - name: Download requirements
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{github.ref_name}}
 
       - name: Install Tox
         run: |

@@ -55,9 +55,10 @@ jobs:
         uses: TriPSs/conventional-changelog-action@v3.18.1
         with:
           release-count: 0
-          skip-tag: true
+          version-file: "pyproject.toml"
+          skip-version-file: 'true'
           git-user-name: "nuvlaedge-bot"
           git-user-email: "nuvlaedge-bot@sixsq.com"
-          git-message: "Update CHANGELOG for new version {}"
+          git-message: "Update CHANGELOG for new version ${{ steps.versioning.outputs.NEW_VERSION }}"
 
 

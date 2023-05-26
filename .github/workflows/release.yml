@@ -1,6 +1,6 @@
 # Releases a new version of the NuvlaEdge
-#
-# Version number should be introduced from and input parameter in the Workflow
+# A new tag has to be manually trigger. After that, this workflow tests and validates the new release
+# creating the release
 
 name: "NuvlaEdge Release"
 
@@ -10,7 +10,8 @@ on:
       - "v*"
 
 jobs:
-  check_version:
+
+  unittests:
     name: 'Version Check'
     description: 'Checks the parsed version is > than the previous and forms the new one 
      formats into semver'

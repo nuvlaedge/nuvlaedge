@@ -9,6 +9,6 @@ changelog:
         - Semver-minor
         - feat
         - enhancement
-    - title: Other Changes
+    - title: Fixes and Minor Changes
       labels:
         - "*"

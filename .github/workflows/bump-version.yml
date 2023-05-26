@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache@v2.1.6
         with:
           path: ~/.local
-          key: dotlocal-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+          key: dotlocal-${{ runner.os }}
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -58,9 +58,6 @@ jobs:
         with:
           base: "CHANGELOG.md"
           futureRelease: "v${{ steps.versioning.outputs.NEW_VERSION }}"
-
-      - name:  Test
-        run: cat CHANGELOG.md
 
       - name: Generate new Tag
         run: |

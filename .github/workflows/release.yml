@@ -5,6 +5,7 @@
 name: "NuvlaEdge Release"
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "**"

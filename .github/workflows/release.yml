@@ -73,12 +73,11 @@ jobs:
         with:
           name: ${{github.ref_name}}
           path: |
-            dist/
-            req/
+            "dist/"
+            "req/"
 
   unittests:
     needs: build-nuvlaedge
-    name: 'NuvlaEdge unit tests'
     runs-on: ubuntu-latest
 
     steps:

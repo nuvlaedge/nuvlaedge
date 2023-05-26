@@ -13,8 +13,7 @@ jobs:
 
   unittests:
     name: 'Version Check'
-    description: 'Checks the parsed version is > than the previous and forms the new one 
-     formats into semver'
+    #description: 'Checks the parsed version is > than the previous and forms the new one formats into semver'
     runs-on: ubuntu-latest
 
     steps:
@@ -29,7 +28,7 @@ jobs:
 
   release-package:
     name: 'Build and release code base'
-    needs: check_version
+    needs: unittests
     runs-on: ubuntu-latest
 
     steps:

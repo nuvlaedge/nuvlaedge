@@ -73,8 +73,8 @@ jobs:
         with:
           name: ${{github.ref_name}}
           path: |
-            dist/
-            req/
+            dist
+            req
 
   unittests:
     needs: build-nuvlaedge
@@ -90,6 +90,12 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
+
+      - name: Get some data
+        run: |
+          ls -la
+          ls -la dist
+          ls -la req
 
       - name: Download requirements
         uses: actions/download-artifact@v3

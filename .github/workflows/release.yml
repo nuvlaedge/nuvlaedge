@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - v**
@@ -154,100 +153,99 @@ jobs:
           echo "Running validation ${{ matrix.validation-type }} on board ${{ matrix.board-config }}"
 #
 #
-#  release-package:
-#    name: 'Build and release code base'
-#    needs: run-validator
-#    runs-on: ubuntu-latest
-#    steps:
-#      # ------------------------------------------------
-#      # Checkout and and download package
-#      # ------------------------------------------------
-#      - uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0  # Do not download forked repos atm
-#
-#      - name: Download requirements
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: ${{github.ref_name}}
-#
-#      - name: Setup reqs
-#        run: |
-#          cp req/* .
-#
-#      - name: Release package
-#        run: |
-#          echo "Releasing NuvlaEdge version ${{ github.ref_name }}"
-#
-#  release-image:
-#    needs: run-validation
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      # ------------------------------------------------
-#      # Checkout and and download package
-#      # ------------------------------------------------
-#      - uses: actions/checkout@v3
-#        with:
-#          fetch-depth: 0  # Do not download forked repos atm
-#
-#      - name: Download requirements
-#      - uses: actions/download-artifact@v3
-#        with:
-#          name: ${{github.ref_name}}
-#
-#      - name: Setup reqs
-#        run: |
-#          cp req/* .
-#
-#      # ------------------------------------------------
-#      # Setup Docker ad Qemu
-#      # ------------------------------------------------
-#      - name: SetUp QEMU
-#        uses: docker/setup-qemu-action@v2
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v2
-#
-#      - name: Login to Docker Hub
-#        uses: docker/login-action@v2
-#        with:
-#          username: ${{ secrets.DOCKER_USERNAME }}
-#          password: ${{ secrets.DOCKER_PASSWORD }}
-#
-#      - name: Login to GitHub Container Registry
-#        uses: docker/login-action@v2
-#        with:
-#          registry: ghcr.io
-#          username: ${{ github.repository_owner }}
-#          password: ${{ secrets.GITHUB_TOKEN }}
-#
-#      # ------------------------------------------------
-#      # Build images for nuvlaedge
-#      # ------------------------------------------------
-#      - name: Build and push
-#        uses: docker/build-push-action@v4
-#        with:
-#          context: .
-#          file: ./Dockerfile
-#          platforms: linux/amd64,linux/arm/v7,linux/arm/v8,linux/arm64
-#          build-args: |
-#            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
-#            GIT_BUILD_TIME=$(date --utc +%FT%T.%3NZ)
-#            GIT_COMMIT_ID=${{ github.sha }}
-#            GITHUB_RUN_NUMBER=${{ github.run_number }}
-#            GITHUB_RUN_ID=${{ github.run_id }}
-#            PROJECT_URL=${{ github.server_url }}/${{ github.repository }}
-#            PACKAGE_NAME=${{ env.PACKAGE_NAME }}
-#          push: true
-#          tags: >
-#            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
-#            nuvlaedge/${{ github.event.repository.name }}:latest,
-#            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
-#            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest
-#          cache-from: type=gha
-#          cache-to: type=gha,mode=max
+  release-package:
+    name: 'Build and release code base'
+    needs: run-validator
+    runs-on: ubuntu-latest
+    steps:
+      # ------------------------------------------------
+      # Checkout and and download package
+      # ------------------------------------------------
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Do not download forked repos atm
+
+      - name: Download requirements
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{github.ref_name}}
+
+      - name: Release package
+        run: |
+          echo "Releasing NuvlaEdge version ${{ github.ref_name }}"
+          gh release create ${{ github.ref }} --generate-notes ./dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}0
+
+  release-image:
+    needs: run-validation
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------------------------
+      # Checkout and and download package
+      # ------------------------------------------------
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Do not download forked repos atm
+
+      - name: Download requirements
+      - uses: actions/download-artifact@v3
+        with:
+          name: ${{github.ref_name}}
+
+      - name: Setup reqs
+        run: |
+          cp req/* .
+
+      # ------------------------------------------------
+      # Setup Docker ad Qemu
+      # ------------------------------------------------
+      - name: SetUp QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------
+      # Build images for nuvlaedge
+      # ------------------------------------------------
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm/v7,linux/arm/v8,linux/arm64
+          build-args: |
+            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
+            GIT_BUILD_TIME=$(date --utc +%FT%T.%3NZ)
+            GIT_COMMIT_ID=${{ github.sha }}
+            GITHUB_RUN_NUMBER=${{ github.run_number }}
+            GITHUB_RUN_ID=${{ github.run_id }}
+            PROJECT_URL=${{ github.server_url }}/${{ github.repository }}
+            PACKAGE_NAME=${{ env.PACKAGE_NAME }}
+          push: true
+          tags: >
+            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
+            nuvlaedge/${{ github.event.repository.name }}:latest,
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
 
 

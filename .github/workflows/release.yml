@@ -61,7 +61,7 @@ jobs:
 
       - name: Build test requirements
         run: >
-          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls 
+          poetry export -f requirements.txt --output req/requirements.tests.txt --without-hashes --without-urls 
           --with tests 
           --with agent 
           --with system-manager 

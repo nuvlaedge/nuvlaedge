@@ -10,8 +10,6 @@ on:
       - "v*"
 
 jobs:
-  build-package:
-
 
   unittests:
     name: 'Version Check'

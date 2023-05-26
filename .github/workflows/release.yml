@@ -11,62 +11,63 @@ on:
 
 jobs:
   build-nuvlaedge:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: SetUp python interpreter
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: SetUp python interpreter
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-    - name: Load cached poetry
-      uses: actions/cache@v2.1.6
-      with:
-        path: ~/.local
-        key: dotlocal-${{ runner.os }}
+      - name: Load cached poetry
+        uses: actions/cache@v2.1.6
+        with:
+          path: ~/.local
+          key: dotlocal-${{ runner.os }}
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        virtualenvs-create: true
-        virtualenvs-in-project: true
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
 
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Build library
-      id: build
-      run: |
-        poetry build --no-interaction
-        mkdir req/
-        poetry export -f requirements.txt --output req/requirements.txt --without-hashes --without-urls
-        poetry export -f requirements.txt --output req/requirements.agent.txt --without-hashes --without-urls --with agent
-        poetry export -f requirements.txt --output req/requirements.system-manager.txt --without-hashes --without-urls --with system-manager
-        poetry export -f requirements.txt --output req/requirements.network.txt --without-hashes --without-urls --with network
-        poetry export -f requirements.txt --output req/requirements.modbus.txt --without-hashes --without-urls --with modbus
+      - name: Build library
+        id: build
+        run: |
+          poetry build --no-interaction
+          mkdir req/
+          poetry export -f requirements.txt --output req/requirements.txt --without-hashes --without-urls
+          poetry export -f requirements.txt --output req/requirements.agent.txt --without-hashes --without-urls --with agent
+          poetry export -f requirements.txt --output req/requirements.system-manager.txt --without-hashes --without-urls --with system-manager
+          poetry export -f requirements.txt --output req/requirements.network.txt --without-hashes --without-urls --with network
+          poetry export -f requirements.txt --output req/requirements.modbus.txt --without-hashes --without-urls --with modbus
 
-    - name: Build test requirements
-      run: >
-        poetry export -f requirements.txt --output req/requirements.tests.txt --without-hashes --without-urls 
-                  --with tests 
-                  --with agent 
-                  --with system-manager 
-                  --with network 
-                  --with modbus 
+      - name: Build test requirements
+        run: >
+          poetry export -f requirements.txt --output req/requirements.tests.txt --without-hashes --without-urls 
+                    --with tests 
+                    --with agent 
+                    --with system-manager 
+                    --with network 
+                    --with modbus 
 
-    - name: Save wheels and requirements as artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{github.ref_name}}
-        path: |
-          dist/
-          req/
+      - name: Save wheels and requirements as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{github.ref_name}}
+          path: |
+            dist/
+            req/
 
   unittests:
     needs: build-nuvlaedge

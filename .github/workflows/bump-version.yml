@@ -50,20 +50,20 @@ jobs:
           echo "OLD_VERSION=$(poetry version -s)" >> "$GITHUB_OUTPUT"
           poetry version ${{ github.event.inputs.version }}
           echo "NEW_VERSION=$(poetry version -s)" >> "$GITHUB_OUTPUT"
+          poetry lock
 
-      - name: Generate CHANGELOG
-        uses: TriPSs/conventional-changelog-action@v3.18.1
+
+      - name: Generate ChangeLog
+        uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
-          release-count: 0
-          skip-tag: 'true'
-          skip-version-file: 'true'
-          skip-ci: 'false'
-          git-user-name: "nuvlaedge-bot"
-          git-user-email: "nuvlaedge-bot@sixsq.com"
-          git-message: "Update CHANGELOG for new version ${{ steps.versioning.outputs.NEW_VERSION }}"
-          
+          base: "CHANGELOG.md"
+
+      - name:  Test
+        run: cat CHANGELOG.md
+
       - name: Generate new Tag
         run: |
-          git tag "v${{ steps.versioning.outputs.NEW_VERSION }}"
+          git commit -m "Prepare for release v${{ steps.versioning.outputs.NEW_VERSION }}" 
+          git tag "v${{ steps.versioning.outputs.NEW_VERSION }}" -m "NuvlaEdge Version "v${{ steps.versioning.outputs.NEW_VERSION }}"
           git push origin --tags
 

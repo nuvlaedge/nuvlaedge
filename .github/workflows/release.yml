@@ -7,7 +7,7 @@ name: "NuvlaEdge Release"
 on:
   push:
     tags:
-      - "v*"
+      - "v**"
 
 jobs:
 

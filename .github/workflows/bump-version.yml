@@ -63,7 +63,10 @@ jobs:
 
       - name: Generate new Tag
         run: |
-          git commit -m "Prepare for release v${{ steps.versioning.outputs.NEW_VERSION }}" 
+          git config --global user.email "nuvlaedge-bot@sixsq.com"
+          git config --global user.name "nuvlaedge-bot"
+          git commit -m "Prepare for release v${{ steps.versioning.outputs.NEW_VERSION }}"
+          git push origin main
           git tag "v${{ steps.versioning.outputs.NEW_VERSION }}" -m "NuvlaEdge Version "v${{ steps.versioning.outputs.NEW_VERSION }}"
           git push origin --tags
 

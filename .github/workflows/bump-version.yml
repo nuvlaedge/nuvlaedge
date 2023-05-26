@@ -58,6 +58,7 @@ jobs:
       - name: Generate ChangeLog
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           base: "CHANGELOG.md"
           futureRelease: "v${{ steps.versioning.outputs.NEW_VERSION }}"
 

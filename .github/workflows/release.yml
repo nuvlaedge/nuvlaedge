@@ -11,6 +11,7 @@ on:
 
 jobs:
   build-nuvlaedge:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -144,7 +145,8 @@ jobs:
 
   release-package:
     name: 'Build and release code base'
-    needs: run-validation
+    needs: run-validator
+    runs-on: ubuntu-latest
     steps:
       # ------------------------------------------------
       # Checkout and and download package

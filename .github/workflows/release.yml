@@ -61,12 +61,12 @@ jobs:
 
       - name: Build test requirements
         run: >
-          poetry export -f requirements.txt --output req/requirements.tests.txt --without-hashes --without-urls 
-                    --with tests 
-                    --with agent 
-                    --with system-manager 
-                    --with network 
-                    --with modbus 
+          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls 
+          --with tests 
+          --with agent 
+          --with system-manager 
+          --with network 
+          --with modbus 
 
       - name: Save wheels and requirements as artifacts
         uses: actions/upload-artifact@v3

@@ -179,7 +179,7 @@ jobs:
         
 
   release-image:
-    needs: run-validation
+    needs: run-validator
     runs-on: ubuntu-latest
 
     steps:

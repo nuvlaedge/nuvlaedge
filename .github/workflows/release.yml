@@ -122,36 +122,36 @@ jobs:
         with:
           check_name: "| Unit Tests Results: Common Library |"
           files: test-report.xml
-#
-#  validation-matrix:
-#    # Sets up the different combinations for the validation to generate the strategy matrix
-#    runs-on: ubuntu-latest
-#    needs: unittests
-#    outputs:
-#      boards: ${{ steps.set-boards.outputs.boards }}
-#      tests: ${{ steps.set-tests.outputs.tests }}
-#    steps:
-#      - id: set-boards
-#        run: |
-#          echo "boards=${{ vars.TESTBED_BOARDS }}" >> $GITHUB_OUTPUT
-#
-#      - id: set-tests
-#        run: |
-#          echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
-#
-#  run-validator:
-#    needs: validation-matrix
-#    strategy:
-#      matrix:
-#        board-config: ${{ fromJSON(needs.validation-matrix.outputs.boards) }}
-#        validation-type: ${{ fromJSON(needs.validation-matrix.outputs.tests) }}
-#      fail-fast: false
-#    runs-on: ${{ matrix.board-config }}
-#
-#    steps:
-#      - name: Run Validation
-#        run: |
-#          echo "Running validation ${{ matrix.validation-type }} on board ${{ matrix.board-config }}"
+
+  validation-matrix:
+    # Sets up the different combinations for the validation to generate the strategy matrix
+    runs-on: ubuntu-latest
+    needs: unittests
+    outputs:
+      boards: ${{ steps.set-boards.outputs.boards }}
+      tests: ${{ steps.set-tests.outputs.tests }}
+    steps:
+      - id: set-boards
+        run: |
+          echo "boards=${{ vars.TESTBED_BOARDS }}" >> $GITHUB_OUTPUT
+
+      - id: set-tests
+        run: |
+          echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
+
+  run-validator:
+    needs: validation-matrix
+    strategy:
+      matrix:
+        board-config: ${{ fromJSON(needs.validation-matrix.outputs.boards) }}
+        validation-type: ${{ fromJSON(needs.validation-matrix.outputs.tests) }}
+      fail-fast: false
+    runs-on: ${{ matrix.board-config }}
+
+    steps:
+      - name: Run Validation
+        run: |
+          echo "Running validation ${{ matrix.validation-type }} on board ${{ matrix.board-config }}"
 #
 #
 #  release-package:

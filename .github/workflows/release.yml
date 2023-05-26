@@ -73,8 +73,8 @@ jobs:
         with:
           name: ${{github.ref_name}}
           path: |
-            "dist/"
-            "req/"
+            dist/
+            req/
 
   unittests:
     needs: build-nuvlaedge
@@ -92,7 +92,7 @@ jobs:
           cache: 'pip'
 
       - name: Download requirements
-      - uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v3
         with:
           name: ${{github.ref_name}}
 

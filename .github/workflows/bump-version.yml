@@ -57,6 +57,7 @@ jobs:
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           base: "CHANGELOG.md"
+          futureRelease: "v${{ steps.versioning.outputs.NEW_VERSION }}"
 
       - name:  Test
         run: cat CHANGELOG.md
@@ -66,8 +67,8 @@ jobs:
           git config --global user.email "nuvlaedge-bot@sixsq.com"
           git config --global user.name "nuvlaedge-bot"
           git add poetry.lock pyproject.toml CHANGELOG.md
-          git commit -m "Prepare for release v${{ steps.versioning.outputs.NEW_VERSION }}"
+          git commit -m "Update ChangeLog for release v${{ steps.versioning.outputs.NEW_VERSION }}"
           git push origin main
-          git tag "v${{ steps.versioning.outputs.NEW_VERSION }}" -m "NuvlaEdge Version "v${{ steps.versioning.outputs.NEW_VERSION }}"
+          git tag "v${{ steps.versioning.outputs.NEW_VERSION }}" -m "NuvlaEdge Version v${{ steps.versioning.outputs.NEW_VERSION }}"
           git push origin --tags
 

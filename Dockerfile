@@ -142,6 +142,14 @@ RUN apk add --no-cache libusb-dev udev
 # ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
 
+# ------------------------------------------------------------------------
+# Setup Compute-API
+# ------------------------------------------------------------------------
+RUN apk add --no-cache socat
+
+COPY scripts/compute-api/api.sh /usr/bin/api
+RUN chmod +x /usr/bin/api
+
 
 # ------------------------------------------------------------------------
 # Setup VPN Client

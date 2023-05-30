@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.2.0](https://github.com/nuvlaedge/nuvlaedge/tree/v0.2.0) (2023-05-30)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.1.5...v0.2.0)
+
+**Implemented enhancements:**
+
+- feat: Add GPU scanner peripheral [\#58](https://github.com/nuvlaedge/nuvlaedge/pull/58) ([ignacio-penas](https://github.com/ignacio-penas))
+
+**Merged pull requests:**
+
+- docs: Update main README.md [\#57](https://github.com/nuvlaedge/nuvlaedge/pull/57) ([ignacio-penas](https://github.com/ignacio-penas))
+
+## [v0.1.5](https://github.com/nuvlaedge/nuvlaedge/tree/v0.1.5) (2023-05-26)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.1.4...v0.1.5)
+
 ## [v0.1.4](https://github.com/nuvlaedge/nuvlaedge/tree/v0.1.4) (2023-05-26)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.1.3...v0.1.4)

@@ -95,12 +95,6 @@ jobs:
         with:
           name: ${{github.ref_name}}
 
-      - name: Get some data
-        run: |
-          ls -la
-          ls -la dist
-          ls -la req
-
       - name: Install Tox
         run: |
           cp req/requirements.tests.txt requirements.tests.txt

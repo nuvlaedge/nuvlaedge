@@ -1,0 +1,7 @@
+ARG BASE_IMAGE=nuvlaedge:0.1.0
+
+FROM ${BASE_IMAGE}
+
+COPY /opt/scripts/cuda_scan.py /
+
+CMD ["python3", "cuda_scan.py"]

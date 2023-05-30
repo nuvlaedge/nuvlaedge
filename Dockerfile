@@ -1,7 +1,9 @@
 ARG BASE_IMAGE=python:3.11.3-alpine3.18
 ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
 
+# ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
+# ------------------------------------------------------------------------
 FROM ${BASE_IMAGE} AS base-builder
 RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev
@@ -9,6 +11,7 @@ RUN apk add gcc musl-dev linux-headers python3-dev
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# ------------------------------------------------------------------------
 FROM base-builder AS bt-builder
 RUN apk add git g++ bluez-dev
 
@@ -23,11 +26,13 @@ RUN git checkout 4d46ce1
 RUN python setup.py install
 
 
+# ------------------------------------------------------------------------
 FROM base-builder AS agent-builder
 
 COPY requirements.agent.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# ------------------------------------------------------------------------
 FROM base-builder AS system-manager-builder
 RUN apk add openssl-dev openssl libffi-dev
 RUN apk add py3-cryptography="40.0.2-r1"
@@ -38,16 +43,25 @@ RUN cp -r /usr/lib/python3.11/site-packages/cryptography-40.0.2.dist-info/ /usr/
 COPY requirements.system-manager.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# ------------------------------------------------------------------------
 FROM base-builder AS network-builder
 
 COPY requirements.network.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# ------------------------------------------------------------------------
 FROM base-builder AS modbus-builder
 
 COPY requirements.modbus.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
+# ------------------------------------------------------------------------
+FROM base-builder AS gpu-builder
+
+COPY requirements.gpu.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+# ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
 
 # Extract and separate requirements from package install to accelerate building process.
@@ -57,6 +71,7 @@ COPY --from=system-manager-builder /usr/local/lib/python3.11/site-packages /usr/
 COPY --from=network-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=bt-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=gpu-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
 COPY dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
@@ -76,24 +91,44 @@ RUN go mod tidy && go build
 FROM ${BASE_IMAGE}
 COPY --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 
+# ------------------------------------------------------------------------
 # Required alpine packages
+# ------------------------------------------------------------------------
 COPY --from=nuvlaedge-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
+
+# ------------------------------------------------------------------------
 # Library required by py-cryptography (pyopenssl).
 # By copying it from base builder we save up ~100MB of the gcc library
+# ------------------------------------------------------------------------
 COPY --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
+# ------------------------------------------------------------------------
+# GPU file handling
+# ------------------------------------------------------------------------
+RUN mkdir /opt/scripts/
+COPY nuvlaedge/peripherals/gpu/cuda_scan.py /opt/scripts/
+COPY nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/scripts/
+
+# ------------------------------------------------------------------------
 # REquired packages for the Agent
+# ------------------------------------------------------------------------
 RUN apk update
 RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl
 
+# ------------------------------------------------------------------------
 # Required packages for USB peripheral discovery
+# ------------------------------------------------------------------------
 RUN apk add --no-cache libusb-dev udev
 
+# ------------------------------------------------------------------------
 # Required for bluetooth discovery
+# ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
 
+# ------------------------------------------------------------------------
 # Copy configuration files
+# ------------------------------------------------------------------------
 COPY nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
 
 VOLUME /etc/nuvlaedge/database

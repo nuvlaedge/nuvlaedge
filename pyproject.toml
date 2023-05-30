@@ -15,6 +15,7 @@ agent = "nuvlaedge.agent:entry"
 network = "nuvlaedge.peripherals.network:main"
 bluetooth = "nuvlaedge.peripherals.bluetooth:main"
 modbus = "nuvlaedge.peripherals.modbus:main"
+gpu = "nuvlaedge.peripherals.gpu:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -51,6 +52,11 @@ mock = "5.0.2"
 
 [tool.poetry.group.system-manager.dependencies]
 pyopenssl = "23.1.1"
+
+[tool.poetry.group.gpu.dependencies]
+packaging = "23.1"
+six = "1.16.0"
+
 
 [build-system]
 requires = ["poetry-core"]

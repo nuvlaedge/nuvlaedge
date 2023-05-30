@@ -15,6 +15,7 @@ on:
     paths:
       - "nuvlaedge/**"
       - "tests/**"
+      - "scripts/**"
       - ".github/workflows/build-main-devel.yml"
       - "pyproject.toml"
 

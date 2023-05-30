@@ -436,7 +436,7 @@ remote-cert-tls server
 verify-x509-name "${vpn_common_name_prefix}" name-prefix
 
 script-security 2
-up /opt/nuvlaedge/scripts/get_ip.sh
+up /opt/nuvlaedge/scripts/vpn-client/get_ip.sh
 
 auth-nocache
 auth-retry nointeract

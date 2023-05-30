@@ -174,7 +174,7 @@ def cuda_cores(image, devices, volumes, gpus):
     # Build Image
     if len(client.images.list(img)) == 0 and current_version != '':
         logger.info('Build CUDA Cores Image')
-        client.images.build(path='/opt/scripts/', tag=img, dockerfile='Dockerfile.gpu')
+        client.images.build(path='/opt/nuvlaedge/scripts/gpu/', tag=img, dockerfile='Dockerfile.gpu')
 
     container_name = 'get-cuda-cores'
     container = ''

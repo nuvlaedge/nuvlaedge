@@ -57,6 +57,7 @@ jobs:
           poetry export -f requirements.txt --output req/requirements.system-manager.txt --without-hashes --without-urls --with system-manager
           poetry export -f requirements.txt --output req/requirements.network.txt --without-hashes --without-urls --with network
           poetry export -f requirements.txt --output req/requirements.modbus.txt --without-hashes --without-urls --with modbus
+          poetry export -f requirements.txt --output req/requirements.gpu.txt --without-hashes --without-urls --with gpu
 
       - name: Build test requirements
         run: >
@@ -66,6 +67,7 @@ jobs:
           --with system-manager 
           --with network 
           --with modbus 
+          --with gpu 
 
       - name: Save wheels and requirements as artifacts
         uses: actions/upload-artifact@v3

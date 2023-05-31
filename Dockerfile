@@ -193,6 +193,7 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 COPY --link --from=job-engine-builder /app/* /app/
 COPY --link --from=job-engine-builder /usr/bin/kubectl /usr/bin/kubectl
 COPY --link --from=job-engine-builder /usr/bin/docker /usr/bin/docker
+RUN echo 'docker compose "$@"' > /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
 
 RUN apk add --no-cache gettext
 WORKDIR /app

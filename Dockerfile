@@ -169,6 +169,11 @@ RUN chmod +x /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh
 COPY nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
 
 
+# ------------------------------------------------------------------------
+# Set up Job engine
+# ------------------------------------------------------------------------
+
+
 VOLUME /etc/nuvlaedge/database
 
 WORKDIR /opt/nuvlaedge/

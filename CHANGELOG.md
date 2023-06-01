@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.3.0](https://github.com/nuvlaedge/nuvlaedge/tree/v0.3.0) (2023-06-01)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.2.0...v0.3.0)
+
+**Implemented enhancements:**
+
+- feat: Merge job engine [\#61](https://github.com/nuvlaedge/nuvlaedge/pull/61) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: merge compute-api [\#60](https://github.com/nuvlaedge/nuvlaedge/pull/60) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: Merge vpn-client [\#59](https://github.com/nuvlaedge/nuvlaedge/pull/59) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [v0.2.0](https://github.com/nuvlaedge/nuvlaedge/tree/v0.2.0) (2023-05-30)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.1.5...v0.2.0)

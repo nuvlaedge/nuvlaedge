@@ -2,6 +2,7 @@
 ARG BASE_IMAGE=python:3.11.3-alpine3.18
 ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
 
+
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
 # ------------------------------------------------------------------------
@@ -11,6 +12,7 @@ RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
+
 
 # ------------------------------------------------------------------------
 # Bluetooth Peripheral builder
@@ -80,7 +82,19 @@ FROM base-builder AS job-engine-builder
 
 COPY --link job-engine/code/requirements.lite.txt /tmp/requirements.lite.txt
 RUN pip install -r /tmp/requirements.lite.txt
-RUN pip install docker-compose
+
+
+# ------------------------------------------------------------------------
+# Compose Switch builder
+# ------------------------------------------------------------------------
+FROM ${GO_BASE_IMAGE} AS docker-builder
+RUN apk update
+RUN apk add musl-dev linux-headers gcc make git
+
+RUN git clone --branch v1.0.5 https://github.com/docker/compose-switch.git
+WORKDIR /go/compose-switch
+RUN go mod tidy && go build
+
 
 # ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
@@ -184,12 +198,11 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-COPY --link --from=nuvla/job-lite:3.2.7 /app/* /app/
-COPY --link --from=job-engine-builder /usr/local/bin/docker-compose /usr/local/bin/docker-compose
+RUN apk add --no-cache gettext docker-cli
+RUN pip install docker-compose
 RUN apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
-RUN apk add --no-cache docker-cli
 
-RUN apk add --no-cache gettext
+COPY --link --from=nuvla/job-lite:3.2.7 /app/* /app/
 WORKDIR /app
 RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/rel-0.9.19/image/bin/my_init && \
     chmod 700 /app/my_init

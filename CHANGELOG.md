@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.3.1](https://github.com/nuvlaedge/nuvlaedge/tree/v0.3.1) (2023-06-01)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.3.0...v0.3.1)
+
 ## [v0.3.0](https://github.com/nuvlaedge/nuvlaedge/tree/v0.3.0) (2023-06-01)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.2.0...v0.3.0)

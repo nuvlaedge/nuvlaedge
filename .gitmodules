@@ -1,0 +1,3 @@
+[submodule "job-engine"]
+	path = job-engine
+	url = https://github.com/nuvla/job-engine.git

@@ -76,24 +76,20 @@ RUN pip install -r /tmp/requirements.txt
 
 
 # ------------------------------------------------------------------------
-# Agent builder
+# Job Engine builder
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
 
+RUN apk add py3-bcrypt="4.0.1-r2" py3-pynacl
+RUN cp -r /usr/lib/python3.11/site-packages/bcrypt/ /usr/local/lib/python3.11/site-packages/
+RUN cp -r /usr/lib/python3.11/site-packages/bcrypt-4.0.1.dist-info/ /usr/local/lib/python3.11/site-packages/
+
+RUN cp -r /usr/lib/python3.11/site-packages/nacl/ /usr/local/lib/python3.11/site-packages/
+RUN cp -r /usr/lib/python3.11/site-packages/PyNaCl-1.5.0-py3.11.egg-info/ /usr/local/lib/python3.11/site-packages/
+
+
 COPY --link job-engine/code/requirements.lite.txt /tmp/requirements.lite.txt
 RUN pip install -r /tmp/requirements.lite.txt
-
-
-# ------------------------------------------------------------------------
-# Compose Switch builder
-# ------------------------------------------------------------------------
-FROM ${GO_BASE_IMAGE} AS docker-builder
-RUN apk update
-RUN apk add musl-dev linux-headers gcc make git
-
-RUN git clone --branch v1.0.5 https://github.com/docker/compose-switch.git
-WORKDIR /go/compose-switch
-RUN go mod tidy && go build
 
 
 # ------------------------------------------------------------------------
@@ -110,9 +106,10 @@ COPY --link --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/l
 COPY --link --from=bt-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=gpu-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
+RUN pip install docker-compose
+
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
-
 
 FROM ${GO_BASE_IMAGE} AS golang-builder
 # Build Golang usb peripehral
@@ -199,7 +196,6 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 # Set up Job engine
 # ------------------------------------------------------------------------
 RUN apk add --no-cache gettext docker-cli
-RUN pip install docker-compose
 RUN apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
 COPY --link --from=nuvla/job-lite:3.2.7 /app/* /app/

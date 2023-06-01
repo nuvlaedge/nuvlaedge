@@ -2,3 +2,4 @@
 requirements*.txt
 .idea/
 **/__pycache__/
+dist/

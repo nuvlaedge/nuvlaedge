@@ -7,7 +7,7 @@ ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
 # ------------------------------------------------------------------------
 FROM ${BASE_IMAGE} AS base-builder
 RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev
+RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -54,7 +54,7 @@ RUN pip install -r /tmp/requirements.txt
 # System Manager builder
 # ------------------------------------------------------------------------
 FROM base-builder AS system-manager-builder
-RUN apk add openssl-dev openssl libffi-dev
+RUN apk add openssl-dev openssl
 RUN apk add py3-cryptography="40.0.2-r1"
 
 RUN cp -r /usr/lib/python3.11/site-packages/cryptography/ /usr/local/lib/python3.11/site-packages/
@@ -78,16 +78,9 @@ RUN pip install -r /tmp/requirements.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
 
-COPY --link job-engine/code/ /target/job/
-RUN mv /target/job/requirements.lite.txt /target/job/requirements.txt && \
-    pip install /target/job && \
-    mv /target/job/src/scripts/ /app/ && \
-    chmod -R +x /app/ && \
-    rm -rf /target/
-
-
-RUN apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
-RUN apk add --no-cache docker-cli docker-cli-compose
+COPY --link job-engine/code/requirements.lite.txt /tmp/requirements.lite.txt
+RUN pip install -r /tmp/requirements.lite.txt
+RUN pip install docker-compose
 
 # ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
@@ -97,6 +90,7 @@ FROM base-builder AS nuvlaedge-builder
 COPY --link --from=agent-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=system-manager-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=job-engine-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --link --from=nuvla/job-lite:3.2.7 /usr/local/lib/python3.8/site-packages/nuvla /usr/local/lib/python3.11/site-packages/nuvla
 COPY --link --from=network-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=bt-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
@@ -190,10 +184,10 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-COPY --link --from=job-engine-builder /app/* /app/
-COPY --link --from=job-engine-builder /usr/bin/kubectl /usr/bin/kubectl
-COPY --link --from=job-engine-builder /usr/bin/docker /usr/bin/docker
-RUN echo 'docker compose "$@"' > /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+COPY --link --from=nuvla/job-lite:3.2.7 /app/* /app/
+COPY --link --from=job-engine-builder /usr/local/bin/docker-compose /usr/local/bin/docker-compose
+RUN apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
+RUN apk add --no-cache docker-cli
 
 RUN apk add --no-cache gettext
 WORKDIR /app
@@ -205,3 +199,5 @@ RUN ln -s $(which python3) /usr/bin/python3
 VOLUME /etc/nuvlaedge/database
 
 WORKDIR /opt/nuvlaedge/
+
+ENTRYPOINT ["my_init"]

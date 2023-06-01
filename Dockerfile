@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 ARG BASE_IMAGE=python:3.11.3-alpine3.18
 ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
-
+ARG JOB_ENGINE_VERSION=3.2.7
 
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
@@ -100,7 +100,7 @@ FROM base-builder AS nuvlaedge-builder
 COPY --link --from=agent-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=system-manager-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=job-engine-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=nuvla/job-lite:3.2.7 /usr/local/lib/python3.8/site-packages/nuvla /usr/local/lib/python3.11/site-packages/nuvla
+COPY --link --from=nuvla/job-lite:${JOB_ENGINE_VERSION} /usr/local/lib/python3.8/site-packages/nuvla /usr/local/lib/python3.11/site-packages/nuvla
 COPY --link --from=network-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --link --from=bt-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
@@ -198,7 +198,7 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 RUN apk add --no-cache gettext docker-cli
 RUN apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
-COPY --link --from=nuvla/job-lite:3.2.7 /app/* /app/
+COPY --link --from=nuvla/job-lite:${JOB_ENGINE_VERSION} /app/* /app/
 WORKDIR /app
 RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/rel-0.9.19/image/bin/my_init && \
     chmod 700 /app/my_init

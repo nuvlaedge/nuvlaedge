@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${ secrets.VALIDATION_TOKEN_SECRET }
+          ssh-key: "${{ secrets.COMMIT_KEY }}"
           repository: 'nuvlaedge/validation'
           ref: 'feat-single-image'
 

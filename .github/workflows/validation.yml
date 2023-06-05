@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: CheckOut validation packages
         run: |
-          git clone https://${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}@github.com/nuvlaedge/validation.git --branch=feat-single-image feat-single-image
+          git clone https://${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}@github.com/nuvlaedge/validation.git --branch=feat-single-image
 
       - name: Setup Python environment
         uses: actions/setup-python@v4
@@ -75,8 +75,8 @@ jobs:
     needs: setup-matrix
     strategy:
       matrix:
-        board-config: ${{ fromJSON(needs.validation-matrix.outputs.boards) }}
-        validation-type: ${{ fromJSON(needs.validation-matrix.outputs.tests) }}
+        board-config: ${{ fromJSON(needs.setup-matrix.outputs.boards) }}
+        validation-type: ${{ fromJSON(needs.setup-matrix.outputs.tests) }}
       fail-fast: false
     runs-on: ${{ matrix.board-config }}
 

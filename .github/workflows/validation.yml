@@ -17,12 +17,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          ssh-key: "${{ secrets.COMMIT_KEY }}"
-          repository: 'nuvlaedge/validation'
-          ref: 'feat-single-image'
+      - name: CheckOut validation packages
+        run: |
+          git clone https://${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}@https://github.com/nuvlaedge/validation.git --branch=feat-single-image feat-single-image
 
       - name: Setup Python environment
         uses: actions/setup-python@v4
@@ -42,10 +39,13 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Build package
-        run: poetry build --format=wheel
+        run: |
+          cd feat-single-image
+          poetry build --format=wheel
 
       - name: Create standard latest release
         run: |
+          cd feat-single-image
           mv ./dist/validation* ./dist/validation-latest-py3-none-any.whl
 
       - name: Save wheels and requirements as artifacts
@@ -53,7 +53,7 @@ jobs:
         with:
           name: ${{github.ref_name}}
           path: |
-            dist
+            feat-single-image/dist
 
 
   setup-matrix:

@@ -22,6 +22,7 @@ jobs:
           fetch-depth: 0
           token: ${ secrets.VALIDATION_TOKEN_SECRET }
           repository: 'nuvlaedge/validation'
+          ref: 'feat-single-image'
 
       - name: Setup Python environment
         uses: actions/setup-python@v4
@@ -45,8 +46,7 @@ jobs:
 
       - name: Create standard latest release
         run: |
-          cp ./dist/validation* ./release-history/
-          mv ./dist/validation* ./validation-latest-py3-none-any.whl
+          mv ./dist/validation* ./dist/validation-latest-py3-none-any.whl
 
       - name: Save wheels and requirements as artifacts
         uses: actions/upload-artifact@v3
@@ -71,49 +71,56 @@ jobs:
         run: |
           echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
 
-    run-validation:
-      needs: setup-matrix
-      strategy:
-        matrix:
-          board-config: ${{ fromJSON(needs.validation-matrix.outputs.boards) }}
-          validation-type: ${{ fromJSON(needs.validation-matrix.outputs.tests) }}
-        fail-fast: false
-      runs-on: ${{ matrix.board-config }}
+  run-validation:
+    needs: setup-matrix
+    strategy:
+      matrix:
+        board-config: ${{ fromJSON(needs.validation-matrix.outputs.boards) }}
+        validation-type: ${{ fromJSON(needs.validation-matrix.outputs.tests) }}
+      fail-fast: false
+    runs-on: ${{ matrix.board-config }}
 
-      steps:
-        - name: Setup Python environment
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.10'
-            cache: 'pip'
+    steps:
+      - name: Setup Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
 
-        - name: Download requirements
-          uses: actions/download-artifact@v3
-          with:
-            name: ${{github.ref_name}}
+      - name: CheckOut validation packages
+        run: |
+          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
+          -H 'Accept: application/vnd.github.v3.raw' \
+          -O --create-dirs --output-dir conf/targets/ \
+          -L "https://api.github.com/repos/nuvlaedge/validation/contents/conf/targets/${{ matrix.board-config }}.toml"
 
-        - name: Install Validation Framework dependency
-          run: python -m pip install ${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
+      - name: Download requirements
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{github.ref_name}}
 
-        - name: Setup results folder
-          run: |
-            mkdir -p results/temp/xml results/temp/json
+      - name: Install Validation Framework dependency
+        run: python -m pip install ${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
 
-        - name: Clear previous results
-          run: |
-            rm results/temp/xml/*.xml || true
+      - name: Setup results folder
+        run: |
+          mkdir -p results/temp/xml results/temp/json
 
-        - name: Run Validation on board ${{ matrix.board-config }}
-          run: |
-            python -m validation_framework --target ${{ matrix.board-config }}.toml \
-            --key ${{ secrets.VALIDATION_NUVLA_API_KEY }} \
-            --secret ${{ secrets.VALIDATION_NUVLA_API_SECRET }} \
-            --validator ${{ matrix.validation-type }} \
-            --branch ${{ env.BRANCH_NAME }}
+      - name: Clear previous results
+        run: |
+          rm results/temp/xml/*.xml || true
 
-        - name: Publish Unit Test Results
-          uses: EnricoMi/publish-unit-test-result-action/composite@v2
-          if: always()
-          with:
-            check_name: "| ${{ matrix.board-config }} --- ${{ matrix.validation-type }} |"
-            junit_files: "results/temp/xml/*.xml"
+      - name: Run Validation on board ${{ matrix.board-config }}
+        run: |
+          python -m validation_framework --target ${{ matrix.board-config }}.toml \
+          --key ${{ secrets.VALIDATION_NUVLA_API_KEY }} \
+          --secret ${{ secrets.VALIDATION_NUVLA_API_SECRET }} \
+          --validator ${{ matrix.validation-type }} \
+          --branch ${{ env.BRANCH_NAME }}
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action/composite@v2
+        if: always()
+        with:
+          check_name: "| ${{ matrix.board-config }} --- ${{ matrix.validation-type }} |"
+          junit_files: "results/temp/xml/*.xml"

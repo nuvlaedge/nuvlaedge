@@ -20,10 +20,10 @@ jobs:
       - name: CheckOut validation packages
         run: |
           git clone https://${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}@github.com/nuvlaedge/validation.git --branch=feat-single-image
-      
+
       - name: Test package download
         run: |
-          ls -la
+          ls -la validation/
 
       - name: Setup Python environment
         uses: actions/setup-python@v4
@@ -43,14 +43,17 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Build package
+        working-directory: ./validation
         run: |
           poetry build --format=wheel
 
       - name: Create standard latest release
+        working-directory: ./validation
         run: |
           mv ./dist/validation* ./dist/validation-latest-py3-none-any.whl
 
       - name: Save wheels and requirements as artifacts
+        working-directory: ./validation
         uses: actions/upload-artifact@v3
         with:
           name: ${{github.ref_name}}

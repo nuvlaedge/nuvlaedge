@@ -18,14 +18,12 @@ on:
       - "nuvlaedge/**"
       - "tests/**"
       - "scripts/**"
-      - ".github/workflows/build-main-devel.yml"
       - "pyproject.toml"
   pull_request:
     paths:
       - "nuvlaedge/**"
       - "tests/**"
       - "scripts/**"
-      - ".github/workflows/build-main-devel.yml"
       - "pyproject.toml"
 
   workflow_dispatch:

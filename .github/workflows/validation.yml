@@ -53,12 +53,12 @@ jobs:
           mv ./dist/validation* ./dist/validation-latest-py3-none-any.whl
 
       - name: Save wheels and requirements as artifacts
-        working-directory: ./validation
         uses: actions/upload-artifact@v3
+
         with:
           name: ${{github.ref_name}}
           path: |
-            dist
+            validation/dist
 
 
   setup-matrix:

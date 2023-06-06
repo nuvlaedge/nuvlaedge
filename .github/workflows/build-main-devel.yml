@@ -59,6 +59,7 @@ jobs:
           --with network 
           --with modbus
           --with gpu
+          --with job-engine
 
       - name: Install Tox
         run: pip install tox
@@ -86,7 +87,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          submodules: 'true'
 
       - name: SetUp python interpreter
         uses: actions/setup-python@v4
@@ -123,6 +123,7 @@ jobs:
           poetry export -f requirements.txt --output requirements.network.txt --without-hashes --without-urls --with network
           poetry export -f requirements.txt --output requirements.modbus.txt --without-hashes --without-urls --with modbus
           poetry export -f requirements.txt --output requirements.gpu.txt --without-hashes --without-urls --with gpu
+          poetry export -f requirements.txt --output requirements.job-engine.txt --without-hashes --without-urls --with job-engine
 
       - name: SetUp QEMU
         uses: docker/setup-qemu-action@v2

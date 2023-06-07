@@ -11,6 +11,9 @@ concurrency:
 # This event should only trigger if the changes affect the source code or this file.
 # Also leave the possibility for manual triggers
 on:
+  push:
+    branches:
+      - 'main'
   pull_request:
     paths:
       - "nuvlaedge/**"

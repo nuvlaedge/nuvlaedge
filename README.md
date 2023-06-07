@@ -1,5 +1,11 @@
 # NuvlaEdge
 
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg?style=for-the-badge)](https://github.com/nuvlaedge/nuvlaedge/graphs/commit-activity)
+[![GitHub issues](https://img.shields.io/github/issues/nuvlaedge/nuvlaedge?style=for-the-badge&logo=github&logoColor=white)](https://GitHub.com/nuvlaedge/nuvlaedge/issues/)
+[![GitHub release](https://img.shields.io/github/release/nuvlaedge/nuvlaedge?style=for-the-badge&logo=github&logoColor=white)](https://github.com/nuvlaedge/nuvlaedge/releases/tag/1.1.0)
+[![GitHub release](https://img.shields.io/github/release-date/nuvlaedge/nuvlaedge?logo=github&logoColor=white&style=for-the-badge)](https://github.com/nuvlaedge/nuvlaedge/releases)
+
+
 This repository contains the main NuvlaEdge source code, a microservice based agent for [Nuvla.io](https://nuvla.io).
 NuvlaEdge consists in the following services:
 - **Agent**: Main NuvlaEdge component that implements the Nuvla protocol, gathers system configuration and statistics and 

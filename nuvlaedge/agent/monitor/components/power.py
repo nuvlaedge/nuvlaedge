@@ -1,7 +1,6 @@
 """ Module containing power report monitor """
 import os
 import re
-from typing import Dict, Union
 
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.components import monitor
@@ -14,7 +13,7 @@ class PowerMonitor(Monitor):
         Power monitor class
     """
 
-    _NVIDIA_MODEL: Dict = {
+    _NVIDIA_MODEL: dict = {
         "ina3221x": {
             "channels": 3,
             "boards": {
@@ -54,7 +53,7 @@ class PowerMonitor(Monitor):
         if not telemetry.edge_status.power:
             telemetry.edge_status.power = self.data
 
-    def get_power(self, driver: str) -> Union[PowerEntry, None]:
+    def get_power(self, driver: str) -> PowerEntry | None:
         """
         Parses the driver info received and reads the corresponding files to create a
         PowerEntry data structure
@@ -143,5 +142,5 @@ class PowerMonitor(Monitor):
             if it_data:
                 self.data.power_entries[it_data.metric_name] = it_data
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         ...

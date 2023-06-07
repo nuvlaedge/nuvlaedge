@@ -8,9 +8,9 @@ import logging
 import os
 from datetime import datetime
 from threading import Timer
-from typing import Union
 
 import docker
+import docker.models
 import docker.errors
 import OpenSSL
 
@@ -237,8 +237,8 @@ class Supervise(Containers):
         except Exception as e:
             self.log.error(f'Cannot add network {target_network.name} to DG {self.data_gateway_object.name}: {str(e)}')
 
-    def manage_docker_data_gateway_network(self, data_gateway_networks: list) -> Union[docker.models.networks.Network,
-                                                                                       None]:
+    def manage_docker_data_gateway_network(self, data_gateway_networks: list) \
+            -> docker.models.networks.Network | None:
         """
         Assesses the state of the DG network. Creates it if it doesn't exist or runs a sanity check at it if it does
 

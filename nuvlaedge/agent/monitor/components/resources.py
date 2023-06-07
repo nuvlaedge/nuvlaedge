@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """ NuvlaEdge host resources monitor module """
 import json
-from typing import Dict, List, Union
 from subprocess import CompletedProcess
 import psutil
 
 from nuvlaedge.agent.common.util import execute_cmd
-from nuvlaedge.agent.monitor.data.resources_data import (ResourcesData, DiskDataStructure,
-                                               CPUDataStructure, MemoryDataStructure)
+from nuvlaedge.agent.monitor.data.resources_data import (ResourcesData,
+                                                         DiskDataStructure,
+                                                         CPUDataStructure,
+                                                         MemoryDataStructure)
 from nuvlaedge.agent.monitor import Monitor
 from ..components import monitor
 
@@ -16,7 +17,7 @@ from ..components import monitor
 class ResourcesMonitor(Monitor):
     """ Resource monitor class. Extracts the host resource utilization """
 
-    _DISK_INFO_COMMAND: List[str] = ["lsblk", "--json", "-o",
+    _DISK_INFO_COMMAND: list[str] = ["lsblk", "--json", "-o",
                                      "NAME,SIZE,MOUNTPOINT,FSUSED", "-b", "-a"]
 
     def __init__(self, name: str, telemetry, enable_monitor: bool = True):
@@ -26,7 +27,7 @@ class ResourcesMonitor(Monitor):
             telemetry.edge_status.resources = self.data
 
     @staticmethod
-    def get_static_disks() -> List[DiskDataStructure]:
+    def get_static_disks() -> list[DiskDataStructure]:
         """
         Gathers the generic disk usage
 
@@ -41,7 +42,7 @@ class ResourcesMonitor(Monitor):
         })]
 
     @staticmethod
-    def clean_disk_report(report: Dict) -> Union[DiskDataStructure, None]:
+    def clean_disk_report(report: dict) -> DiskDataStructure | None:
         """
             Receives a dict containing information about a drive or a partition
             and returns a structure report of the node
@@ -66,7 +67,7 @@ class ResourcesMonitor(Monitor):
 
     def get_disks_usage(self):
         """ Gets disk usage for N partitions """
-        it_disk_status: List[DiskDataStructure] = []
+        it_disk_status: list[DiskDataStructure] = []
 
         raw_disk_info: CompletedProcess = execute_cmd(self._DISK_INFO_COMMAND)
 
@@ -74,12 +75,12 @@ class ResourcesMonitor(Monitor):
             return self.get_static_disks()
 
         # Gather list of disks and their children partitions
-        lsblk: Dict = json.loads(raw_disk_info.stdout)
-        devices: List[Dict] = lsblk.get('blockdevices', [])
+        lsblk: dict = json.loads(raw_disk_info.stdout)
+        devices: list[dict] = lsblk.get('blockdevices', [])
 
         # Iterate list of drives
         for device in devices:
-            partitions: List[Dict] = device.get('children', [])
+            partitions: list[dict] = device.get('children', [])
 
             # Generate drive report data structure
             if not device.get('size') or not device.get('children'):
@@ -98,7 +99,7 @@ class ResourcesMonitor(Monitor):
 
         return self.get_static_disks()
 
-    def get_disk_resources(self) -> List[DiskDataStructure]:
+    def get_disk_resources(self) -> list[DiskDataStructure]:
         """
         Gets the disk usage information and adds a topic name and the raw string for
         report
@@ -106,7 +107,7 @@ class ResourcesMonitor(Monitor):
         Returns: a list of DiskDataStructure pydantic base models
 
         """
-        partial_disk_data: List[DiskDataStructure] = self.get_disks_usage()
+        partial_disk_data: list[DiskDataStructure] = self.get_disks_usage()
         for disk in partial_disk_data:
             if disk:
                 disk.raw_sample = json.dumps(disk.dict(exclude_none=True))
@@ -161,7 +162,7 @@ class ResourcesMonitor(Monitor):
         self.data.cpu = self.get_cpu_data()
         self.data.ram = self.get_memory_data()
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
         nuvla_report['resources']['cpu'] = self.data.cpu.dict(by_alias=True)

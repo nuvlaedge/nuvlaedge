@@ -2,7 +2,6 @@
 Temperature monitor class
 """
 import os
-from typing import Dict, List, Union, Tuple
 
 import psutil
 
@@ -44,12 +43,12 @@ class TemperatureMonitor(Monitor):
         Returns:
 
         """
-        ps_temp: Dict = psutil.sensors_temperatures()
+        ps_temp: dict = psutil.sensors_temperatures()
         for name, value in ps_temp.items():
             self.update_temperature_entry(name, value.current)
 
     def read_temperature_file(self, zone_path, temp_path) -> \
-            Tuple[Union[str, None], Union[float, None]]:
+            tuple[str | None, float | None]:
         """
         Reads files, extract temperature/thermal values and returns them
 
@@ -77,7 +76,7 @@ class TemperatureMonitor(Monitor):
         """
         Updates class variable data reading the temperatures file of the system
         """
-        temperature_dirs: List = os.listdir(self.thermal_fs_path)
+        temperature_dirs: list = os.listdir(self.thermal_fs_path)
         temperature_dirs = \
             list(filter(lambda x: x.startswith('thermal'), temperature_dirs))
 
@@ -116,5 +115,5 @@ class TemperatureMonitor(Monitor):
         else:
             self.update_temperatures_with_file()
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         ...

@@ -52,7 +52,8 @@ def get_ssdp_device_xml_as_json(url):
         device_json = xmltodict.parse(device_xml.toxml())
 
         return device_json.get('device', {})
-    except:
+    except Exception as e:
+        logger.debug(f'Exception {e} parsing xml from {url}')
         logger.warning(f"Cannot get and parse XML for SSDP device info from {url}")
         return {}
 
@@ -110,8 +111,8 @@ def ssdpManager():
             if 'x-friendly-name' in device:
                 try:
                     alt_name = base64.b64decode(device.get('x-friendly-name')).decode()
-                except:
-                    pass
+                except Exception as ex:
+                    logger.debug(f'Exception decoding name', ex)
 
             name = device_from_location.get('friendlyName', alt_name)
             description = device_from_location.get('modelDescription',
@@ -251,11 +252,12 @@ def format_zeroconf_services(services):
                     # for additional classes
                     if 'class' in dict_properties:
                         output[identifier]['class'].append(dict_properties['class'])
-            except:
+            except Exception as ex:
+                logger.debug(f'Failed gathering extra information from peripheral', ex)
                 # this is only to get additional info on the peripheral, if it fails, we can live without it
                 pass
-        except:
-            logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}')
+        except Exception as ex:
+            logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}', ex)
             continue
 
     return output

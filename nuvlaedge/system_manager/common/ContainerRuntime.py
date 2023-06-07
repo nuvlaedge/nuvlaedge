@@ -337,6 +337,9 @@ class Kubernetes(ContainerRuntime):
         return ''
 
 
+DOCKER_SOCKET_FILE = '/var/run/docker.sock'
+
+
 class Docker(ContainerRuntime):
     """
     Docker client
@@ -525,8 +528,8 @@ class Docker(ContainerRuntime):
                                    labels=label,
                                    environment=[f'PROJECT_NAME={project_name}'],
                                    volumes={
-                                       '/var/run/docker.sock': {
-                                           'bind': '/var/run/docker.sock',
+                                       DOCKER_SOCKET_FILE: {
+                                           'bind': DOCKER_SOCKET_FILE,
                                            'mode': 'ro'
                                        }
                                    },
@@ -630,12 +633,11 @@ class Containers:
     def __init__(self, logging):
         """ Constructs a Container object
         """
-        self.docker_socket_file = '/var/run/docker.sock'
 
         if ORCHESTRATOR == 'kubernetes':
             self.container_runtime = Kubernetes(logging)
         else:
-            if os.path.exists(self.docker_socket_file):
+            if os.path.exists(DOCKER_SOCKET_FILE):
                 self.container_runtime = Docker(logging)
             else:
-                raise Exception(f'Orchestrator is "{ORCHESTRATOR}", but file {self.docker_socket_file} is not present')
+                raise Exception(f'Orchestrator is "{ORCHESTRATOR}", but file {DOCKER_SOCKET_FILE} is not present')

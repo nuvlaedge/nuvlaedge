@@ -171,7 +171,7 @@ def entry():
     try:
         args = agent_parser.parse_args()
         log_level_name = args.log_level
-    except BaseException as e:
+    except Exception as e:
         log.error(f'Error while parsing argument: {e}')
     configure_root_logger(log_level_name)
 

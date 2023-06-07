@@ -34,7 +34,8 @@ def main():
 
         try:
             docker_client.containers.prune(filters={'label': 'nuvlaedge.on-stop'})
-        except:
+        except Exception as ex:
+            logging.debug(f'Expect exception pruning containers {ex}')
             pass
         else:
             logging.info('Pruned old on-stop containers')
@@ -99,6 +100,7 @@ def main():
                     # maybe the service has been removed in the meantime
                     continue
                 except Exception as e:
+                    logging.debug(f'Exception {e} removing component {dg_svc.name}')
                     logging.warning(f'Unable to remove component {dg_svc.name}. Trying a second time')
                     time.sleep(5)
                     try:
@@ -106,11 +108,13 @@ def main():
                             dg_svc.remove()
                         else:
                             dg_svc.remove(force=True)
-                    except:
+                    except Exception as e:
+                        logging.debug(f'Exception {e} retrying removal of component {dg_svc.name}')
                         logging.error(f'Cannot remove {dg_svc.name}')
 
             logging.info('Preparing to delete additional NuvlaEdge networks')
-            custom_networks = docker_client.networks.list(filters={'label': 'nuvlaedge.network', 'driver': network_driver})
+            custom_networks = docker_client.networks.list(filters={'label': 'nuvlaedge.network',
+                                                                   'driver': network_driver})
             for network in custom_networks:
                 network.reload()
                 if network.attrs.get('Containers'):
@@ -128,11 +132,13 @@ def main():
                     # maybe the net has been removed in the meantime
                     continue
                 except Exception as e:
+                    logging.debug(f'Exception {e} while trying to remove network {network.name}')
                     logging.warning(f'Unable to remove network {network.name}. Trying a second time')
                     time.sleep(5)
                     try:
                         network.remove()
-                    except:
+                    except Exception as e:
+                        logging.debug(f'Exception {e} retrying removal of network {network.name}')
                         logging.error(f'Cannot remove {network.name}')
 
 

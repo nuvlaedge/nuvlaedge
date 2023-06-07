@@ -27,6 +27,7 @@ from nuvlaedge.peripherals.peripheral import Peripheral
 docker_socket_file = '/var/run/docker.sock'
 HOST_FILES = '/etcfs/nvidia-container-runtime/host-files-for-container.d/'
 RUNTIME_PATH = '/etcfs/docker/'
+DEVICE_PARENT_PATH = '/dev/'
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -109,7 +110,7 @@ def build_cuda_core_docker_cli(devices):
     cli_volumes = {}
     libs = []
 
-    current_devices = ['/dev/{}'.format(i) for i in os.listdir('/dev/')]
+    current_devices = ['/dev/{}'.format(i) for i in os.listdir(DEVICE_PARENT_PATH)]
 
     for device in devices:
 
@@ -332,10 +333,10 @@ def flow(**kwargs):
         logger.info(runtime_files)
         return {identifier: runtime_files}
 
-    elif len(nvidia_device(os.listdir('/dev/'))) > 0 and check_cuda_installation(get_device_type()):
+    elif len(nvidia_device(os.listdir(DEVICE_PARENT_PATH))) > 0 and check_cuda_installation(get_device_type()):
 
         # A GPU is present, and ready to be used, but not with --gpus
-        nv_devices = nvidia_device(os.listdir('/dev/'))
+        nv_devices = nvidia_device(os.listdir(DEVICE_PARENT_PATH))
         _, _, formatted_libs = build_cuda_core_docker_cli(nv_devices)
 
         runtime = {'devices': nv_devices, 'libraries': formatted_libs}

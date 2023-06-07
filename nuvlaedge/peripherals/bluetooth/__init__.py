@@ -238,8 +238,8 @@ def cod_converter(cod_decimal_string):
                 minor_key = int(key)
             except ValueError:
                 continue
-            except:
-                logging.exception("Failed to evaluate minor device class with key %s" % key)
+            except Exception as e:
+                logging.exception("Failed to evaluate minor device class with key %s" % key, e)
                 continue
 
             if minor_number & minor_key:
@@ -268,9 +268,9 @@ def bluetooth_manager():
         # list
         bluetooth_devices = device_discovery()
         logging.info(bluetooth_devices)
-    except:
+    except Exception as e:
         bluetooth_devices = []
-        logging.exception("Failed to discover BT devices")
+        logging.exception("Failed to discover BT devices", e)
 
     ble_devices = {}
     # TODO: implement reliable BLE discovery that works for RPi

@@ -622,7 +622,8 @@ class Supervise(Containers):
 
         try:
             project_name = self.get_project_name()
-        except:
+        except Exception as ex:
+            self.log.debug(f'Errors getting project name', ex)
             return
 
         original_project_label = f'com.docker.compose.project={project_name}'

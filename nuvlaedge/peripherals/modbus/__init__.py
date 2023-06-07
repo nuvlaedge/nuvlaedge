@@ -101,8 +101,8 @@ def parse_modbus_peripherals(namp_xml_output):
     except KeyError:
         logging.warning("Cannot find any open ports in this NuvlaEdge")
         return modbus
-    except:
-        logging.exception("Unknown error while processing ports scan")
+    except Exception as e:
+        logging.exception("Unknown error while processing ports scan", e)
         return modbus
 
     for port in all_ports:

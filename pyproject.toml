@@ -58,6 +58,12 @@ packaging = "23.1"
 six = "1.16.0"
 
 
+[tool.poetry.group.job-engine.dependencies]
+pyyaml = "6.0"
+statsd = "4.0.1"
+packaging = "23.1"
+
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

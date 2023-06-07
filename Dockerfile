@@ -87,7 +87,7 @@ RUN cp -r /usr/lib/python3.11/site-packages/nacl/ /usr/local/lib/python3.11/site
 RUN cp -r /usr/lib/python3.11/site-packages/PyNaCl-1.5.0-py3.11.egg-info/ /usr/local/lib/python3.11/site-packages/
 
 
-COPY --link job-engine/code/requirements.lite.txt /tmp/requirements.lite.txt
+COPY --link requirements.job-engine.txt /tmp/requirements.lite.txt
 RUN pip install -r /tmp/requirements.lite.txt
 
 

@@ -12,7 +12,7 @@ concurrency:
 on:
   push:
     tags:
-      - v**
+      - "**"
 
 jobs:
   build-nuvlaedge:

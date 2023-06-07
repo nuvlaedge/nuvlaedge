@@ -58,8 +58,8 @@ class DockerClient(ContainerRuntimeClient):
         except docker.errors.APIError as e:
             if self.lost_quorum_hint in str(e):
                 # quorum is lost
-                logging.warning(f'Quorum is lost. This node will no longer support '
-                                f'Service and Cluster management')
+                logging.warning('Quorum is lost. This node will no longer support '
+                                'Service and Cluster management')
 
         return ()
 
@@ -103,8 +103,8 @@ class DockerClient(ContainerRuntimeClient):
             return cont.ports['5000/tcp'][0]['HostPort']
 
         except (KeyError, IndexError) as ex:
-            self.logger.warning(f'Cannot infer ComputeAPI external port, container attributes '
-                                f'not properly formatted', exc_info=ex)
+            self.logger.warning('Cannot infer ComputeAPI external port, container attributes '
+                                'not properly formatted', exc_info=ex)
         return ""
 
     def get_api_ip_port(self):
@@ -154,10 +154,10 @@ class DockerClient(ContainerRuntimeClient):
                 self.job_engine_lite_image = container.attrs['Config']['Image']
                 return True
         except (AttributeError, KeyError):
-            logging.exception(f'Failed to get job-engine-lite image')
+            logging.exception('Failed to get job-engine-lite image')
             return False
 
-        logging.info(f'job-engine-lite not paused')
+        logging.info('job-engine-lite not paused')
         return False
 
     def get_node_labels(self):
@@ -231,7 +231,6 @@ class DockerClient(ContainerRuntimeClient):
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
                    docker_image=None):
         # Get the compute-api network
-        local_net = None
         try:
             compute_api = self.client.containers.get(util.compose_project_name + '-compute-api')
             local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
@@ -299,10 +298,13 @@ class DockerClient(ContainerRuntimeClient):
         cpu_percent = float('nan')
 
         try:
-            cpu_delta = float(cs["cpu_stats"]["cpu_usage"]["total_usage"]) - \
-                        float(cs["precpu_stats"]["cpu_usage"]["total_usage"])
-            system_delta = float(cs["cpu_stats"]["system_cpu_usage"]) - \
-                           float(cs["precpu_stats"]["system_cpu_usage"])
+            cpu_delta = \
+                float(cs["cpu_stats"]["cpu_usage"]["total_usage"]) - \
+                float(cs["precpu_stats"]["cpu_usage"]["total_usage"])
+            system_delta = \
+                float(cs["cpu_stats"]["system_cpu_usage"]) - \
+                float(cs["precpu_stats"]["system_cpu_usage"])
+
             online_cpus_alt = len(cs["cpu_stats"]["cpu_usage"].get("percpu_usage", []))
             online_cpus = cs["cpu_stats"].get('online_cpus', online_cpus_alt)
 
@@ -381,7 +383,7 @@ class DockerClient(ContainerRuntimeClient):
                                 f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
             try:
                 blk_out = float(io_bytes_recursive[1]["value"] / 1000 / 1000)
-            except (IndexError, KeyError, TypeError):
+            except (IndexError, KeyError, TypeError) as e:
                 logging.warning('Failed to get block usage (Out) for container '
                                 f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
 
@@ -517,7 +519,7 @@ class DockerClient(ContainerRuntimeClient):
         last_update = myself.attrs.get('Created', '')
         working_dir = self.get_working_dir_from_labels(myself.labels)
         config_files = self.get_config_files_from_labels(myself.labels)
-        project_name = self.get_compose_project_name_from_labels(myself.labels, None)
+        project_name = self.get_compose_project_name_from_labels(myself.labels)
 
         environment = []
         for env_var in myself.attrs.get('Config', {}).get('Env', []):
@@ -677,15 +679,16 @@ class DockerClient(ContainerRuntimeClient):
             result = run(cmd, stdout=PIPE, stderr=PIPE, timeout=5,
                          encoding='UTF-8', shell=True).stdout
         except TimeoutExpired as e:
-            logging.warning(f'Could not infer if Kubernetes is also installed on '
-                            f'the host: {str(e)}')
+            self.logger.warning(f'Could not infer if Kubernetes is also installed '
+                                f'on the host: {str(e)}')
             return k8s_cluster_info
 
         if not result:
             # try k3s
             try:
                 return self.is_k3s_running(fallback_address)
-            except:
+            except Exception as ex:
+                self.logger.debug(f'No K3s found, assuming K8s {ex}')
                 return k8s_cluster_info
 
         process_args_file = result.split(':')[0].rstrip('comm') + 'cmdline'
@@ -701,10 +704,10 @@ class DockerClient(ContainerRuntimeClient):
 
         # convert list to dict
         try:
-            args = { args_list[i].split('=')[0]: args_list[i].split('=')[-1] for i in range(0, len(args_list)) }
+            args = {args_list[i].split('=')[0]: args_list[i].split('=')[-1] for i in range(0, len(args_list))}
         except IndexError:
             # should never get into this exception, but keep it anyway, just to be safe
-            logging.warning(f'Unable to infer k8s cluster info from apiserver arguments {args_list}')
+            logging.warning(f'Unable to infer k8s cluster info from api-server arguments {args_list}')
             return k8s_cluster_info
 
         arg_address = "advertise-address"
@@ -733,7 +736,7 @@ class DockerClient(ContainerRuntimeClient):
                 'kubernetes-client-key': k8s_client_key
             })
         except (KeyError, FileNotFoundError) as e:
-            logging.warning(f'Cannot destructure or access certificates from k8s apiserver arguments {args}. {str(e)}')
+            logging.warning(f'Cannot destructure or access certificates from k8s api-server arguments {args}. {str(e)}')
             return {}
 
         return k8s_cluster_info
@@ -741,7 +744,7 @@ class DockerClient(ContainerRuntimeClient):
     def get_nuvlaedge_project_name(self, default_project_name=None) -> Optional[str]:
         try:
             current_container = self.get_current_container()
-            return self.get_compose_project_name_from_labels(current_container.labels, None)
+            return self.get_compose_project_name_from_labels(current_container.labels)
         except Exception as e:
             self.logger.warning(f'Failed to get docker compose project name: {e}')
         return default_project_name

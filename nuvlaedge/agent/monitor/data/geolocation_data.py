@@ -1,16 +1,15 @@
 """ Module for geolocation data structure reporting """
-from typing import List, Union
-
 from pydantic import root_validator
+
 from nuvlaedge.agent.monitor import BaseDataStructure
 
 
 class GeoLocationData(BaseDataStructure):
     """ Provides a standard structure for GeoLocation data """
-    longitude: Union[float, None]
-    latitude: Union[float, None]
-    coordinates: Union[List[float], None]
-    timestamp: Union[int, None]
+    longitude: float | None
+    latitude: float | None
+    coordinates: list[float] | None
+    timestamp: int | None
 
     @root_validator
     def fill_longitude(cls, values):

@@ -27,6 +27,7 @@ from nuvlaedge.peripherals.peripheral import Peripheral
 docker_socket_file = '/var/run/docker.sock'
 HOST_FILES = '/etcfs/nvidia-container-runtime/host-files-for-container.d/'
 RUNTIME_PATH = '/etcfs/docker/'
+DEVICE_PARENT_PATH = '/dev/'
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -109,7 +110,7 @@ def build_cuda_core_docker_cli(devices):
     cli_volumes = {}
     libs = []
 
-    current_devices = ['/dev/{}'.format(i) for i in os.listdir('/dev/')]
+    current_devices = ['/dev/{}'.format(i) for i in os.listdir(DEVICE_PARENT_PATH)]
 
     for device in devices:
 
@@ -161,7 +162,7 @@ def get_current_image_version(client):
         return '0.0.1'
 
 
-def cuda_cores(image, devices, volumes, gpus):
+def cuda_cores(image, devices, volumes):
     """
     Starts Cuda Core container and returns the output from the container
     """
@@ -192,11 +193,10 @@ def cuda_cores(image, devices, volumes, gpus):
                                               devices=devices,
                                               volumes=volumes,
                                               remove=True)
-        else:
-            pass
+
     except Exception as e:
+        # let's not stop the peripheral manager just because we can't get this property
         logger.error(f'Unable to infer CUDA cores. Reason: {str(e)}')
-        pass    # let's not stop the peripheral manager just because we can't get this property
 
     return str(container)
 
@@ -286,10 +286,10 @@ def read_runtime_files(path):
     return None
 
 
-def cuda_cores_information(nv_devices, gpus):
+def cuda_cores_information(nv_devices):
 
     devices, libs, _ = build_cuda_core_docker_cli(nv_devices)
-    output = cuda_cores(image, devices, libs, gpus)
+    output = cuda_cores(image, devices, libs)
     if output != '':
         try:
             name, information = cuda_information(output)
@@ -324,7 +324,7 @@ def flow(**kwargs):
 
             else:
                 logger.info('--gpus is not available in Docker, but GPU usage is available')
-            name, info = cuda_cores_information(runtime['devices'], True)
+            name, info = cuda_cores_information(runtime['devices'])
 
             runtime_files['name'] = name
             runtime_files['resources'] = info
@@ -332,17 +332,17 @@ def flow(**kwargs):
         logger.info(runtime_files)
         return {identifier: runtime_files}
 
-    elif len(nvidia_device(os.listdir('/dev/'))) > 0 and check_cuda_installation(get_device_type()):
+    elif len(nvidia_device(os.listdir(DEVICE_PARENT_PATH))) > 0 and check_cuda_installation(get_device_type()):
 
         # A GPU is present, and ready to be used, but not with --gpus
-        nv_devices = nvidia_device(os.listdir('/dev/'))
+        nv_devices = nvidia_device(os.listdir(DEVICE_PARENT_PATH))
         _, _, formatted_libs = build_cuda_core_docker_cli(nv_devices)
 
         runtime = {'devices': nv_devices, 'libraries': formatted_libs}
 
         # only for Docker
         if ORCHESTRATOR == 'docker':
-            name, info = cuda_cores_information(runtime['devices'], True)
+            name, info = cuda_cores_information(runtime['devices'])
 
             runtime_files['name'] = name
             runtime_files['resources'] = info

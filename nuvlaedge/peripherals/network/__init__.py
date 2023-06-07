@@ -52,12 +52,13 @@ def get_ssdp_device_xml_as_json(url):
         device_json = xmltodict.parse(device_xml.toxml())
 
         return device_json.get('device', {})
-    except:
+    except Exception as e:
+        logger.debug(f'Exception {e} parsing xml from {url}')
         logger.warning(f"Cannot get and parse XML for SSDP device info from {url}")
         return {}
 
 
-def ssdpManager():
+def ssdp_manager():
     """
     Manages SSDP discoverable devices (SSDP and UPnP devices)
     """
@@ -110,8 +111,8 @@ def ssdpManager():
             if 'x-friendly-name' in device:
                 try:
                     alt_name = base64.b64decode(device.get('x-friendly-name')).decode()
-                except:
-                    pass
+                except Exception as ex:
+                    logger.debug('Exception decoding name', ex)
 
             name = device_from_location.get('friendlyName', alt_name)
             description = device_from_location.get('modelDescription',
@@ -181,7 +182,7 @@ class ZeroConfListener:
     all_info = {}
     listening_to = {}
 
-    def remove_service(self, zeroconf, type, name):
+    def remove_service(self, name):
         logger.info(f"[zeroconf] Service {name} removed")
         if name in self.all_info:
             self.all_info.pop(name)
@@ -251,11 +252,12 @@ def format_zeroconf_services(services):
                     # for additional classes
                     if 'class' in dict_properties:
                         output[identifier]['class'].append(dict_properties['class'])
-            except:
+            except Exception as ex:
                 # this is only to get additional info on the peripheral, if it fails, we can live without it
-                pass
-        except:
-            logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}')
+                logger.debug('Failed gathering extra information from peripheral', ex)
+
+        except Exception as ex:
+            logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}', ex)
             continue
 
     return output
@@ -298,7 +300,7 @@ def network_manager(**kwargs):
     else:
         zeroconf_output = {}
 
-    ssdp_output = ssdpManager()
+    ssdp_output = ssdp_manager()
     ws_discovery_output = ws_discovery_manager(kwargs['wsdaemon'])
     output.update(ssdp_output)
     output.update(ws_discovery_output)

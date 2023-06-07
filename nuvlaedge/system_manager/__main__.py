@@ -55,7 +55,7 @@ class GracefulShutdown:
         signal.signal(signal.SIGTERM, self.exit_gracefully)
 
     def exit_gracefully(self, signum, frame):
-        log.info(f'Starting on-stop graceful shutdown of the NuvlaEdge...')
+        log.info('Starting on-stop graceful shutdown of the NuvlaEdge...')
         self_sup.container_runtime.launch_nuvlaedge_on_stop(self_sup.on_stop_docker_image)
         sys.exit(0)
 
@@ -171,7 +171,7 @@ def entry():
     try:
         args = agent_parser.parse_args()
         log_level_name = args.log_level
-    except BaseException as e:
+    except Exception as e:
         log.error(f'Error while parsing argument: {e}')
     configure_root_logger(log_level_name)
 

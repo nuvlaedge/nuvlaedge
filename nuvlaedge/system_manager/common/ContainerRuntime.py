@@ -296,8 +296,6 @@ class Kubernetes(ContainerRuntime):
         self.logging.info(f'The {self.credentials_manager_component} will be automatically restarted by Kubelet '
                           f'within the next 5 minutes')
 
-        return
-
     def find_nuvlaedge_agent_container(self):
         search_label = f'component={self.my_component_name}'
         main_pod = self.client.list_namespaced_pod(namespace=self.namespace,
@@ -335,6 +333,9 @@ class Kubernetes(ContainerRuntime):
     def get_current_container_id(self) -> str:
         # TODO
         return ''
+
+
+DOCKER_SOCKET_FILE = '/var/run/docker.sock'
 
 
 class Docker(ContainerRuntime):
@@ -525,8 +526,8 @@ class Docker(ContainerRuntime):
                                    labels=label,
                                    environment=[f'PROJECT_NAME={project_name}'],
                                    volumes={
-                                       '/var/run/docker.sock': {
-                                           'bind': '/var/run/docker.sock',
+                                       DOCKER_SOCKET_FILE: {
+                                           'bind': DOCKER_SOCKET_FILE,
                                            'mode': 'ro'
                                        }
                                    },
@@ -569,7 +570,7 @@ class Docker(ContainerRuntime):
                 # quorum is lost
                 msg = 'Quorum is lost. This node will not support Service and Cluster management'
                 self.logging.warning(msg)
-                err, warn = self.read_system_issues(self.get_node_info())
+                err, _ = self.read_system_issues(self.get_node_info())
                 err_msg = err[0] if err else msg
                 return False, err_msg
 
@@ -630,12 +631,12 @@ class Containers:
     def __init__(self, logging):
         """ Constructs a Container object
         """
-        self.docker_socket_file = '/var/run/docker.sock'
 
         if ORCHESTRATOR == 'kubernetes':
             self.container_runtime = Kubernetes(logging)
         else:
-            if os.path.exists(self.docker_socket_file):
+            if os.path.exists(DOCKER_SOCKET_FILE):
                 self.container_runtime = Docker(logging)
             else:
-                raise Exception(f'Orchestrator is "{ORCHESTRATOR}", but file {self.docker_socket_file} is not present')
+                raise FileNotFoundError(f'Orchestrator is "{ORCHESTRATOR}", '
+                                        f'but file {DOCKER_SOCKET_FILE} is not present')

@@ -8,9 +8,9 @@ import logging
 import os
 from datetime import datetime
 from threading import Timer
-from typing import Union
 
 import docker
+import docker.models
 import docker.errors
 import OpenSSL
 
@@ -44,7 +44,6 @@ class Supervise(Containers):
     def __init__(self):
         """ Constructs the Supervise object """
 
-        # self.docker_client = docker.from_env()
         self.log = logging.getLogger(__name__)
         super().__init__(self.log)
 
@@ -237,8 +236,8 @@ class Supervise(Containers):
         except Exception as e:
             self.log.error(f'Cannot add network {target_network.name} to DG {self.data_gateway_object.name}: {str(e)}')
 
-    def manage_docker_data_gateway_network(self, data_gateway_networks: list) -> Union[docker.models.networks.Network,
-                                                                                       None]:
+    def manage_docker_data_gateway_network(self, data_gateway_networks: list) \
+            -> docker.models.networks.Network | None:
         """
         Assesses the state of the DG network. Creates it if it doesn't exist or runs a sanity check at it if it does
 
@@ -300,7 +299,7 @@ class Supervise(Containers):
             # ## 2.2: at this stage, this is either a Swarm manager or a standalone Docker node
             if not self.data_gateway_object:
                 launched_dg = False
-                self.log.info(f'Data Gateway not found. Launching it')
+                self.log.info('Data Gateway not found. Launching it')
                 try:
                     launched_dg = self.launch_data_gateway(self.data_gateway_name)
                 except ClusterNodeCannotManageDG:
@@ -347,7 +346,6 @@ class Supervise(Containers):
 
                     self.log.warning(f'{err_msg}: {str(e)}')
 
-        return
 
     def manage_docker_data_gateway(self):
         """ Sets the DG service.
@@ -554,7 +552,7 @@ class Supervise(Containers):
             container_id = self.container_runtime.get_current_container_id()
             myself = self.container_runtime.client.containers.get(container_id)
         except docker.errors.NotFound:
-            err = f'Cannot find the current container. Cannot proceed'
+            err = 'Cannot find the current container. Cannot proceed'
             self.log.error(err)
             self.operational_status.append((utils.status_degraded, 'System Manager container lookup error'))
             raise RuntimeError(err)
@@ -622,7 +620,8 @@ class Supervise(Containers):
 
         try:
             project_name = self.get_project_name()
-        except:
+        except Exception as ex:
+            self.log.debug('Errors getting project name', ex)
             return
 
         original_project_label = f'com.docker.compose.project={project_name}'
@@ -654,8 +653,6 @@ class Supervise(Containers):
             self.container_runtime.client.api.start(container.id)
         except docker.errors.APIError as e:
             self.log.error(f'Cannot resume container {container.name}. Reason: {str(e)}')
-
-        return
 
     def heal_exited_container(self, container: docker.DockerClient.containers) -> None:
         """

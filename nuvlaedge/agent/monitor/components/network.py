@@ -9,11 +9,8 @@ It also reports and handles the IP geolocation system.
 import json
 import os
 import time
-from typing import List, NoReturn, Dict, Union
 
 import requests
-from docker import errors as docker_err
-from docker.models.containers import Container
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common import nuvlaedge_common, util
@@ -38,14 +35,14 @@ class NetworkMonitor(Monitor):
         super().__init__(self.__class__.__name__, NetworkingData,
                          enable_monitor=enable_monitor)
 
-        # List of network interfaces
-        self.updaters: List = [self.set_public_data,
+        # list of network interfaces
+        self.updaters: list = [self.set_public_data,
                                self.set_local_data,
                                self.set_swarm_data,
                                self.set_vpn_data]
 
         self.host_fs: str = telemetry.hostfs
-        self.first_net_stats: Dict = {}
+        self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
 
         self.runtime_client: nuvlaedge_common.ContainerRuntimeClient = telemetry.container_runtime
@@ -65,7 +62,7 @@ class NetworkMonitor(Monitor):
     def get_engine_project_name(self) -> str:
         return self.runtime_client.get_nuvlaedge_project_name(util.default_project_name)
 
-    def set_public_data(self) -> NoReturn:
+    def set_public_data(self) -> None:
         """
         Reads the IP from the GeoLocation systems.
         """
@@ -86,7 +83,7 @@ class NetworkMonitor(Monitor):
         except Exception as e:
             self.logger.error(f'Cannot retrieve public IP: {e}')
 
-    def parse_host_ip_json(self, iface_data: Dict) -> Union[NetworkInterface, None]:
+    def parse_host_ip_json(self, iface_data: dict) -> NetworkInterface | None:
         """
         Receives a dict with the information of a host interface and returns a
         BaseModel data class of NetworkInterface.
@@ -103,13 +100,13 @@ class NetworkMonitor(Monitor):
             self.logger.warning(f'Interface key not found {err}')
             return None
 
-    def is_already_registered(self, it_route: Dict) -> bool:
+    def is_already_registered(self, it_route: dict) -> bool:
         it_name = it_route.get('dev', '')
         it_ip = IP(address=it_route.get('prefsrc', ''))
         return it_name in self.data.interfaces.keys() \
                and it_ip in self.data.interfaces[it_name].ips
 
-    def is_skip_route(self, it_route: Dict) -> bool:
+    def is_skip_route(self, it_route: dict) -> bool:
         """
         Assess whether the IP route is a loopback or the interface is already
         registered
@@ -140,7 +137,7 @@ class NetworkMonitor(Monitor):
                                    args=self._IP_COMMAND_ARGS,
                                    network='host')
 
-    def read_traffic_data(self) -> List:
+    def read_traffic_data(self) -> list:
         """ Gets the list of net ifaces and corresponding rxbytes and txbytes
 
             :returns [{"interface": "iface1", "bytes-transmitted": X,
@@ -249,7 +246,7 @@ class NetworkMonitor(Monitor):
 
         return net_stats
 
-    def set_local_data(self) -> NoReturn:
+    def set_local_data(self) -> None:
         """
         Runs the auxiliary container that reads the host network interfaces and parses the
         output return
@@ -260,7 +257,7 @@ class NetworkMonitor(Monitor):
             return
 
         # Gather default Gateway
-        readable_route: List = []
+        readable_route: list = []
 
         try:
             readable_route = json.loads(ip_route)
@@ -299,7 +296,7 @@ class NetworkMonitor(Monitor):
                         self.data.interfaces[it_name].ips.append(ip_address)
 
         # Update traffic data
-        it_traffic: List = self.read_traffic_data()
+        it_traffic: list = self.read_traffic_data()
 
         for iface_traffic in it_traffic:
             it_name: str = iface_traffic.get("interface")
@@ -309,7 +306,7 @@ class NetworkMonitor(Monitor):
                 self.data.interfaces[it_name].rx_bytes = \
                     iface_traffic.get('bytes-received', '')
 
-    def set_vpn_data(self) -> NoReturn:
+    def set_vpn_data(self) -> None:
         """ Discovers the NuvlaEdge VPN IP  """
 
         # Check if file exists and not empty
@@ -325,21 +322,21 @@ class NetworkMonitor(Monitor):
         else:
             self.logger.warning("Cannot infer the NuvlaEdge VPN IP!")
 
-    def set_swarm_data(self) -> NoReturn:
+    def set_swarm_data(self) -> None:
         """ Discovers the host SWARM IP address """
         it_ip: str = self.runtime_client.get_api_ip_port()[0]
 
         if self.data.ips.swarm != it_ip:
             self.data.ips.swarm = it_ip
 
-    def update_data(self) -> NoReturn:
+    def update_data(self) -> None:
         """
         Iterates over the different interfaces and gathers the data
         """
         for updater in self.updaters:
             updater()
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         """
                 Network report structure:
                 network: {
@@ -369,7 +366,7 @@ class NetworkMonitor(Monitor):
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
 
-        it_traffic: List = [x.dict(by_alias=True, exclude={'ips', 'default_gw'})
+        it_traffic: list = [x.dict(by_alias=True, exclude={'ips', 'default_gw'})
                             for _, x in self.data.interfaces.items()]
 
         it_report = self.data.dict(by_alias=True, exclude={'interfaces'}, exclude_none=True)

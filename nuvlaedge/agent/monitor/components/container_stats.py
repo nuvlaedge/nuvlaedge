@@ -1,8 +1,6 @@
 """ NuvlaEdge container monitor """
 import os
-import time
 import datetime
-from typing import Dict, List, NoReturn, Union
 from subprocess import CompletedProcess
 
 from docker import errors as docker_err
@@ -37,12 +35,12 @@ class ContainerStatsMonitor(Monitor):
         if not telemetry.edge_status.container_stats:
             telemetry.edge_status.container_stats = self.data
 
-    def refresh_container_info(self) -> NoReturn:
+    def refresh_container_info(self) -> None:
         """
             Gathers container statistics from the orchestrator and stores it into
             local data variable
         """
-        it_containers: List = self.client_runtime.collect_container_metrics()
+        it_containers: list = self.client_runtime.collect_container_metrics()
         self.data.containers = {}
         for i in it_containers:
             it_cont: ContainerStatsData = ContainerStatsData.parse_obj(i)
@@ -123,13 +121,13 @@ class ContainerStatsMonitor(Monitor):
         if len(cluster_nodes) > 0:
             self.data.cluster_data.cluster_nodes = cluster_nodes
 
-    def get_swarm_certificate_expiration_date(self) -> Union[str, None]:
+    def get_swarm_certificate_expiration_date(self) -> str | None:
         """
         If the docker swarm certs can be found, try to infer their expiration date
 
         """
         if os.path.exists(self.swarm_node_cert_path):
-            command: List[str] = \
+            command: list[str] = \
                 ["openssl", "x509", "-enddate", "-noout", "-in",
                  self.swarm_node_cert_path]
 
@@ -160,7 +158,7 @@ class ContainerStatsMonitor(Monitor):
         self.data.swarm_node_cert_expiry_date = \
             self.get_swarm_certificate_expiration_date()
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
 

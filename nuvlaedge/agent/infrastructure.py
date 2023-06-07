@@ -213,7 +213,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         :return:
         """
-        self.logger.info(f'Starting VPN commissioning...')
+        self.logger.info('Starting VPN commissioning...')
 
         vpn_csr, vpn_key = self.prepare_vpn_certificates()
 
@@ -227,8 +227,7 @@ class Infrastructure(NuvlaEdgeCommon):
             return False
 
         if not vpn_conf_fields:
-            self.logger.error(f'Invalid response from VPN commissioning... '
-                                    f'cannot continue')
+            self.logger.error('Invalid response from VPN commissioning... cannot continue')
             return False
 
         self.logger.info(f'VPN configuration fields: {vpn_conf_fields}')

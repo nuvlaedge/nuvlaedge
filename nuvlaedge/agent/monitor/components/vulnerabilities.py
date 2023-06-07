@@ -3,7 +3,6 @@
 """
 import os
 import json
-from typing import Dict, Union
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 
@@ -22,7 +21,7 @@ class VulnerabilitiesMonitor(Monitor):
         if not telemetry.edge_status.vulnerabilities:
             telemetry.edge_status.vulnerabilities = self.data
 
-    def retrieve_security_vulnerabilities(self) -> Union[Dict, None]:
+    def retrieve_security_vulnerabilities(self) -> dict | None:
         """ Reads vulnerabilities from the security scans, from a file in the shared volume
 
             :return: contents of the file
@@ -61,6 +60,6 @@ class VulnerabilitiesMonitor(Monitor):
                 vulnerabilities,
                 key=lambda v: v.get('vulnerability-score', 0), reverse=True)[0:100]
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         if self.data.summary and self.data.items:
             nuvla_report['vulnerabilities'] = self.data.dict(by_alias=True)

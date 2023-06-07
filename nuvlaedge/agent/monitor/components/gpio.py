@@ -2,7 +2,6 @@
     GpioMonitor.py
 """
 from subprocess import SubprocessError, CompletedProcess
-from typing import Union, List, Dict, Any, Tuple
 
 from nuvlaedge.agent.common.util import execute_cmd
 from nuvlaedge.agent.monitor.edge_status import EdgeStatus
@@ -15,10 +14,10 @@ class GpioMonitor(Monitor):
     Monitor class to read GPIO pins for system-on-board devices
     """
     # GPIO Commands
-    _GPIO_VERSION_COMMAND: List[str] = ['gpio', '-v']
+    _GPIO_VERSION_COMMAND: list[str] = ['gpio', '-v']
 
     # GPIO parser configuration
-    _gpio_expected_attr: List[Dict[str, Any]] = [
+    _gpio_expected_attr: list[dict[str, any]] = [
         {"position": None, "type": int, "attribute": "BCM"},
         {"position": None, "type": str, "attribute": "NAME"},
         {"position": None, "type": str, "attribute": "MODE"},
@@ -52,7 +51,7 @@ class GpioMonitor(Monitor):
         except (SubprocessError, FileNotFoundError):
             return False
 
-    def parse_pin_cell(self, indexes: List, line: str) -> Union[GpioPin, None]:
+    def parse_pin_cell(self, indexes: list, line: str) -> GpioPin | None:
         """
         Parses one cell of the output from gpio readall, which has 2 pins
 
@@ -67,7 +66,7 @@ class GpioMonitor(Monitor):
                               f"Need {self._needed_indexes_len}")
             return None
 
-        gpio_values: List[str] = line.split('|')
+        gpio_values: list[str] = line.split('|')
         gpio_pin: GpioPin = GpioPin()
 
         try:
@@ -101,7 +100,7 @@ class GpioMonitor(Monitor):
             return None
 
     def parse_pin_line(self, pin_line: str) -> \
-            Tuple[Union[GpioPin, None], Union[GpioPin, None]]:
+            tuple[GpioPin | None, GpioPin | None]:
         """
         Intermediary call function to parse side by side pins to Tuple
         Args:
@@ -113,13 +112,13 @@ class GpioMonitor(Monitor):
         return self.parse_pin_cell(self._first_pin_indexes, pin_line), \
                self.parse_pin_cell(self._second_pin_indexes, pin_line)
 
-    def gather_gpio_lines(self) -> List[str]:
+    def gather_gpio_lines(self) -> list[str]:
         """
         Executes a readall command and performs a preliminary cleanup of the data
         @return: a list of lines with the current configuration of the GPIO ports
         """
-        command: List[str] = ["gpio", "readall"]
-        clean_gpio_lines: List[str]
+        command: list[str] = ["gpio", "readall"]
+        clean_gpio_lines: list[str]
         try:
             gpio_out: CompletedProcess = execute_cmd(command)
             clean_gpio_lines = gpio_out.stdout.splitlines()[3:-3]
@@ -142,7 +141,7 @@ class GpioMonitor(Monitor):
         {pin: 7, voltage: 0, mode: ALT1}]
         """
 
-        new_lines: List[str] = self.gather_gpio_lines()
+        new_lines: list[str] = self.gather_gpio_lines()
 
         for pin_line in new_lines:
             pin_1, pin_2 = self.parse_pin_line(pin_line)
@@ -152,5 +151,5 @@ class GpioMonitor(Monitor):
             if pin_2:
                 self.data.pins[pin_2.pin] = pin_2
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         ...

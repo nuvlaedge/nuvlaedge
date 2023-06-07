@@ -7,12 +7,10 @@ import logging
 import os
 from copy import copy
 from threading import Event, Thread
-from typing import NoReturn, List, Dict
 
 from nuvla.api.models import CimiResource
 from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
 from nuvlaedge.broker.file_broker import FileBroker
-from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common import util
@@ -107,7 +105,7 @@ class Agent:
                                         self.excluded_monitors)
         return self._telemetry
 
-    def activate_nuvlaedge(self) -> NoReturn:
+    def activate_nuvlaedge(self) -> None:
         """
         Creates an "activate" object class and uses it to check the previous status
         of the NuvlaEdge. If it was activated before, it gathers the previous status.
@@ -132,12 +130,11 @@ class Agent:
             self.activate.activate()
 
         # Gather resources post-activation
-        nuvlaedge_resource, old_nuvlaedge_resource = \
-            self.activate.update_nuvlaedge_resource()
+        nuvlaedge_resource, _ = self.activate.update_nuvlaedge_resource()
         self.nuvlaedge_status_id = nuvlaedge_resource["nuvlabox-status"]
         self.logger.info(f'NuvlaEdge status id {self.nuvlaedge_status_id}')
 
-    def initialize_infrastructure(self) -> NoReturn:
+    def initialize_infrastructure(self) -> None:
         """
         Initializes the infrastructure class
 
@@ -152,9 +149,6 @@ class Agent:
                               encoding='UTF-8')
             self.infrastructure.set_immutable_ssh_key()
 
-    def initialize_telemetry(self) -> NoReturn:
-        pass
-
     def initialize_agent(self) -> bool:
         """
         This method sequentially initializes al the NuvlaEdge main components.
@@ -164,16 +158,9 @@ class Agent:
         """
         # 1. Proceed with the initialization of the NuvlaEdge
         self.activate_nuvlaedge()
-
-        # 2. Initialization of the telemetry class
-        # self.initialize_telemetry()
-
-        # 3. Initialize Infrastructure class
-        # self.initialize_infrastructure()
-
         return True
 
-    def send_heartbeat(self) -> Dict:
+    def send_heartbeat(self) -> dict:
         """
         Updates the NuvlaEdge Status according to the local status file
 
@@ -187,7 +174,7 @@ class Agent:
         status, _del_attr = self.telemetry.diff(self.telemetry.status_on_nuvla,
                                                 self.telemetry.status)
         status_current_time = self.telemetry.status.get('current-time', '')
-        del_attr: List = []
+        del_attr: list = []
         self.logger.debug(f'send_heartbeat: status_current_time = {status_current_time} '
                           f'_delete_attributes = {_del_attr}  status = {status}')
 
@@ -245,7 +232,7 @@ class Agent:
                     # catch all
                     self.logger.error(f'Cannot process job {job_id}. Reason: {str(ex)}')
 
-    def handle_pull_jobs(self, response: Dict):
+    def handle_pull_jobs(self, response: dict):
         """
         Reads the response from the heartbeat and executes the jobs received from Nuvla
         Args:
@@ -254,7 +241,7 @@ class Agent:
         Returns:
 
         """
-        pull_jobs: List = response.get('jobs', [])
+        pull_jobs: list = response.get('jobs', [])
         if not isinstance(pull_jobs, list):
             self.logger.warning(f'Jobs received on format {response.get("jobs")} not '
                                 f'compatible')
@@ -310,7 +297,7 @@ class Agent:
             self.peripherals_thread = create_start_thread(name='PeripheralManager',
                                                           target=self.peripheral_manager.run)
 
-        response: Dict = self.send_heartbeat()
+        response: dict = self.send_heartbeat()
 
         self.handle_pull_jobs(response)
 

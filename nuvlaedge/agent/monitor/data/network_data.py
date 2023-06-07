@@ -4,8 +4,6 @@
 
 Gathers all the requirements for status reporting
 """
-from typing import Union, Dict, List, Optional
-
 from pydantic import Field
 
 from nuvlaedge.agent.monitor import BaseDataStructure
@@ -31,13 +29,13 @@ class NetworkInterface(BaseDataStructure):
         device or not
     """
 
-    iface_name: Union[str, None] = Field(alias='interface')
-    ips: List[IP] = Field([])
+    iface_name: str | None = Field(alias='interface')
+    ips: list[IP] = Field([])
     default_gw: bool = Field(False, alias='default-gw')
 
     # Interface data traffic control
-    tx_bytes: Union[int, None] = Field(0, alias='bytes-transmitted')
-    rx_bytes: Union[int, None] = Field(0, alias='bytes-received')
+    tx_bytes: int | None = Field(0, alias='bytes-transmitted')
+    rx_bytes: int | None = Field(0, alias='bytes-received')
 
 
 class IPAddresses(BaseDataStructure):
@@ -58,6 +56,6 @@ class NetworkingData(BaseDataStructure):
     Base model to gather all the IP addresses in the NuvlaEdge device
 
     """
-    default_gw: Optional[str]
-    interfaces: Dict[str, NetworkInterface] = {}
+    default_gw: str | None
+    interfaces: dict[str, NetworkInterface] = {}
     ips: IPAddresses = IPAddresses()

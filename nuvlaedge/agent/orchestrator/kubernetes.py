@@ -83,7 +83,7 @@ class KubernetesClient(ContainerRuntimeClient):
     def list_nodes(self, optional_filter: dict = None):
         return self.client.list_node().items
 
-    def list_containers(self, filters: dict = None, all: bool = False):
+    def list_containers(self):
         return self.client.list_pod_for_all_namespaces().items
 
     def get_cluster_info(self, default_cluster_name=None):

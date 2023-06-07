@@ -98,10 +98,7 @@ func main() {
 	// Only one context should be needed for an application.  It should always be closed.
 	ctx := getUsbContext()
 	defer func(ctx *gousb.Context) {
-		err := ctx.Close()
-		if err != nil {
-
-		}
+		ctx.Close()
 	}(ctx)
 
 	var available string = "True"

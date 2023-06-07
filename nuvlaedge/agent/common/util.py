@@ -8,7 +8,6 @@ import signal
 import tempfile
 
 from contextlib import contextmanager
-from typing import List, Union, Dict
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
@@ -25,8 +24,7 @@ def str_if_value_or_none(value):
     return str(value) if value else None
 
 
-def execute_cmd(command: List[str], method_flag: bool = True) \
-        -> Union[Dict, CompletedProcess, None]:
+def execute_cmd(command: list[str], method_flag: bool = True) -> dict | CompletedProcess | None:
     """ Shell wrapper to execute a command
 
     @param command: command to execute

@@ -1,6 +1,5 @@
 """ Module for controlling the geolocation of the NuvlaEdge"""
 import time
-from typing import Dict, Union
 
 import datetime
 import requests
@@ -14,7 +13,7 @@ from nuvlaedge.agent.monitor.data.geolocation_data import GeoLocationData
 class GeoLocationMonitor(Monitor):
     """ Threaded geolocation monitor """
 
-    _LOCATION_SERVICES: Dict[str, Dict] = {
+    _LOCATION_SERVICES: dict[str, dict] = {
         "ipinfo.io": {
             "url": "https://ipinfo.io/json",
             "coordinates_key": "loc",
@@ -49,7 +48,7 @@ class GeoLocationMonitor(Monitor):
         if not telemetry.edge_status.inferred_location:
             telemetry.edge_status.inferred_location = self.data
 
-    def send_request(self, service: str) -> Union[Dict, None]:
+    def send_request(self, service: str) -> dict | None:
         """
         Sends a get requests to the service parsed as parameter
         Args:
@@ -110,7 +109,7 @@ class GeoLocationMonitor(Monitor):
                 return
 
         for service, info in self._LOCATION_SERVICES.items():
-            it_response: Dict = self.send_request(info['url'])
+            it_response: dict = self.send_request(info['url'])
 
             if it_response:
                 try:
@@ -129,6 +128,6 @@ class GeoLocationMonitor(Monitor):
 
                 break
 
-    def populate_nb_report(self, nuvla_report: Dict):
+    def populate_nb_report(self, nuvla_report: dict):
         if self.data.coordinates:
             nuvla_report['inferred-location'] = self.data.coordinates

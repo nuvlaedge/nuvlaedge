@@ -11,7 +11,7 @@ import socket
 import time
 from argparse import ArgumentParser
 from threading import Event, Thread
-from typing import Union, Dict
+
 
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
 
@@ -90,7 +90,7 @@ def preflight_check(activator: Activate, exit_flag: bool, nb_updated_date: str,
     """
     global refresh_interval
 
-    nuvlaedge_resource: Dict = activator.get_nuvlaedge_info()
+    nuvlaedge_resource: dict = activator.get_nuvlaedge_info()
 
     if nuvlaedge_resource.get('state', '').startswith('DECOMMISSION'):
         exit_flag = False
@@ -132,7 +132,7 @@ def main():
     main_agent: Agent = Agent(agent_exit_flag)
     main_agent.initialize_agent()
 
-    watchdog_thread: Union[Thread, None] = None
+    watchdog_thread: Thread | None = None
     nuvlaedge_info_updated_date: str = ''
 
     while agent_exit_flag:

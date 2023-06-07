@@ -640,4 +640,5 @@ class Containers:
             if os.path.exists(DOCKER_SOCKET_FILE):
                 self.container_runtime = Docker(logging)
             else:
-                raise Exception(f'Orchestrator is "{ORCHESTRATOR}", but file {DOCKER_SOCKET_FILE} is not present')
+                raise FileNotFoundError(f'Orchestrator is "{ORCHESTRATOR}", '
+                                        f'but file {DOCKER_SOCKET_FILE} is not present')

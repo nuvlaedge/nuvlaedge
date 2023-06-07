@@ -36,7 +36,6 @@ def main():
             docker_client.containers.prune(filters={'label': 'nuvlaedge.on-stop'})
         except Exception as ex:
             logging.debug(f'Expect exception pruning containers {ex}')
-            pass
         else:
             logging.info('Pruned old on-stop containers')
 

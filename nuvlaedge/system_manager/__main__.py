@@ -55,7 +55,7 @@ class GracefulShutdown:
         signal.signal(signal.SIGTERM, self.exit_gracefully)
 
     def exit_gracefully(self, signum, frame):
-        log.info(f'Starting on-stop graceful shutdown of the NuvlaEdge...')
+        log.info('Starting on-stop graceful shutdown of the NuvlaEdge...')
         self_sup.container_runtime.launch_nuvlaedge_on_stop(self_sup.on_stop_docker_image)
         sys.exit(0)
 

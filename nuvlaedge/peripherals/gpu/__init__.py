@@ -162,7 +162,7 @@ def get_current_image_version(client):
         return '0.0.1'
 
 
-def cuda_cores(image, devices, volumes, gpus):
+def cuda_cores(image, devices, volumes):
     """
     Starts Cuda Core container and returns the output from the container
     """
@@ -193,11 +193,10 @@ def cuda_cores(image, devices, volumes, gpus):
                                               devices=devices,
                                               volumes=volumes,
                                               remove=True)
-        else:
-            pass
+
     except Exception as e:
+        # let's not stop the peripheral manager just because we can't get this property
         logger.error(f'Unable to infer CUDA cores. Reason: {str(e)}')
-        pass    # let's not stop the peripheral manager just because we can't get this property
 
     return str(container)
 
@@ -287,10 +286,10 @@ def read_runtime_files(path):
     return None
 
 
-def cuda_cores_information(nv_devices, gpus):
+def cuda_cores_information(nv_devices):
 
     devices, libs, _ = build_cuda_core_docker_cli(nv_devices)
-    output = cuda_cores(image, devices, libs, gpus)
+    output = cuda_cores(image, devices, libs)
     if output != '':
         try:
             name, information = cuda_information(output)
@@ -325,7 +324,7 @@ def flow(**kwargs):
 
             else:
                 logger.info('--gpus is not available in Docker, but GPU usage is available')
-            name, info = cuda_cores_information(runtime['devices'], True)
+            name, info = cuda_cores_information(runtime['devices'])
 
             runtime_files['name'] = name
             runtime_files['resources'] = info
@@ -343,7 +342,7 @@ def flow(**kwargs):
 
         # only for Docker
         if ORCHESTRATOR == 'docker':
-            name, info = cuda_cores_information(runtime['devices'], True)
+            name, info = cuda_cores_information(runtime['devices'])
 
             runtime_files['name'] = name
             runtime_files['resources'] = info

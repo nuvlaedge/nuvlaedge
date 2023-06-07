@@ -58,7 +58,7 @@ def get_ssdp_device_xml_as_json(url):
         return {}
 
 
-def ssdpManager():
+def ssdp_manager():
     """
     Manages SSDP discoverable devices (SSDP and UPnP devices)
     """
@@ -182,7 +182,7 @@ class ZeroConfListener:
     all_info = {}
     listening_to = {}
 
-    def remove_service(self, zeroconf, type, name):
+    def remove_service(self, name):
         logger.info(f"[zeroconf] Service {name} removed")
         if name in self.all_info:
             self.all_info.pop(name)
@@ -300,7 +300,7 @@ def network_manager(**kwargs):
     else:
         zeroconf_output = {}
 
-    ssdp_output = ssdpManager()
+    ssdp_output = ssdp_manager()
     ws_discovery_output = ws_discovery_manager(kwargs['wsdaemon'])
     output.update(ssdp_output)
     output.update(ws_discovery_output)

@@ -99,9 +99,6 @@ func main() {
 	ctx := getUsbContext()
 	defer func(ctx *gousb.Context) {
 		err := ctx.Close()
-		if err != nil {
-
-		}
 	}(ctx)
 
 	var available string = "True"

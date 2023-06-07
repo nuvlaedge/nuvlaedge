@@ -160,7 +160,6 @@ def manage_modbus_peripherals(ip_address):
     # local file naming convention:
     #    modbus.{port}.{interface}.{identifier}
 
-    modbus_identifier_pattern = "modbus.*"
     # Ask the NB agent for all modbus peripherals matching this pattern
 
     xml_file = scan_open_ports(ip_address)

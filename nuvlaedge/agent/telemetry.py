@@ -350,7 +350,7 @@ class Telemetry(NuvlaEdgeCommon):
                 "disk": int(psutil.disk_usage('/')[0] / 1024 / 1024 / 1024)
             })
         except AttributeError as ex:
-            self.logger.warning(f'Resources information not ready yet. ')
+            self.logger.warning('Resources information not ready yet.')
             self.logger.debug(ex, exc_info=True)
 
         return status_for_nuvla, all_status

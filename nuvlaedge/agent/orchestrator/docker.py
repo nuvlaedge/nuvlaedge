@@ -58,8 +58,8 @@ class DockerClient(ContainerRuntimeClient):
         except docker.errors.APIError as e:
             if self.lost_quorum_hint in str(e):
                 # quorum is lost
-                logging.warning(f'Quorum is lost. This node will no longer support '
-                                f'Service and Cluster management')
+                logging.warning('Quorum is lost. This node will no longer support '
+                                'Service and Cluster management')
 
         return ()
 
@@ -103,8 +103,8 @@ class DockerClient(ContainerRuntimeClient):
             return cont.ports['5000/tcp'][0]['HostPort']
 
         except (KeyError, IndexError) as ex:
-            self.logger.warning(f'Cannot infer ComputeAPI external port, container attributes '
-                                f'not properly formatted', exc_info=ex)
+            self.logger.warning('Cannot infer ComputeAPI external port, container attributes '
+                                'not properly formatted', exc_info=ex)
         return ""
 
     def get_api_ip_port(self):
@@ -154,10 +154,10 @@ class DockerClient(ContainerRuntimeClient):
                 self.job_engine_lite_image = container.attrs['Config']['Image']
                 return True
         except (AttributeError, KeyError):
-            logging.exception(f'Failed to get job-engine-lite image')
+            logging.exception('Failed to get job-engine-lite image')
             return False
 
-        logging.info(f'job-engine-lite not paused')
+        logging.info('job-engine-lite not paused')
         return False
 
     def get_node_labels(self):

@@ -264,6 +264,7 @@ class DockerClient(ContainerRuntimeClient):
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
                    docker_image=None):
         # Get the compute-api network
+        local_net = None
         try:
             compute_api = self._get_component_container(util.compute_api_service_name)
             local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]

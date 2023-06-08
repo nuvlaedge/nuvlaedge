@@ -322,13 +322,15 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
         job_exec_id = 'fake-exec-id'
         nuvla = 'https://fake-nuvla.io'
 
-        # if there's an error while getting the compute-api, we expect None
+        # if there's an error while getting the compute-api, it should still work
         mock_containers_get.side_effect = TimeoutError
         self.assertIs(self.obj.launch_job(job_id, job_exec_id, nuvla), None,
                       'compute-api could not be found, but still got something else than None')
-        mock_containers_run.assert_not_called()
+        mock_containers_run.assert_called_once()
 
         # otherwise we try to launch the job execution container
+        mock_net_connect.reset_mock()
+        mock_containers_run.reset_mock()
         mock_containers_get.reset_mock(side_effect=True)
         mock_containers_get.return_value = fake.MockContainer()
         mock_containers_run.return_value = None

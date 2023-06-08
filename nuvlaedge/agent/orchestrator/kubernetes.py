@@ -591,7 +591,8 @@ class KubernetesClient(ContainerRuntimeClient):
         except TimeoutException as ex:
             log.warning(ex)
             return ''
-        output = self.client.read_namespaced_pod_log(name, namespace)
+        output = self.client.read_namespaced_pod_log(name, namespace, _preload_content=False,
+                                                     timestamps=False).data.decode('utf8')
         if remove:
             self.container_remove(name, **kwargs)
         return output

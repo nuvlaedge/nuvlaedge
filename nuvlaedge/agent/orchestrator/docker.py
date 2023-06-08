@@ -800,12 +800,14 @@ class DockerClient(ContainerRuntimeClient):
                               args: str = None,
                               network: str = None, remove: bool = True,
                               **kwargs) -> str:
+        entrypoint = kwargs.get('entrypoint', None)
         if not command:
             command = args
         try:
             output: bytes = self.client.containers.run(
                 image,
                 command=command,
+                entrypoint=entrypoint,
                 name=name,
                 remove=remove,
                 network=network)

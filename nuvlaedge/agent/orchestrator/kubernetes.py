@@ -575,6 +575,11 @@ class KubernetesClient(ContainerRuntimeClient):
                               no_output=False,
                               **kwargs) -> str:
         name = self._to_k8s_obj_name(name)
+
+        if not command:
+            # To comply with docker, try to retrieve entrypoint when there is no command (k8s entrypoint) defined
+            command = kwargs.get('entrypoint', None)
+
         pod = self._pod_def(image, name, command=command, args=args,
                             network=network, **kwargs)
         namespace = self._namespace(**kwargs)

@@ -150,7 +150,7 @@ COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 # REquired packages for the Agent
 # ------------------------------------------------------------------------
 RUN apk update
-RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl
+RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl iproute2
 
 
 # ------------------------------------------------------------------------

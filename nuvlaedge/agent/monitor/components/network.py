@@ -25,8 +25,8 @@ class NetworkMonitor(Monitor):
     Handles the retrieval of IP networking data.
     """
     _REMOTE_IPV4_API: str = "https://api.ipify.org?format=json"
-    _AUXILIARY_DOCKER_IMAGE: str = "sixsq/iproute2:latest"
     _IP_COMMAND_ARGS: str = '-j route'
+    _IPROUTE_ENTRYPOINT: str = 'ip'
     _PUBLIC_IP_UPDATE_RATE: int = 3600
     _NUVLAEDGE_COMPONENT_LABEL_KEY: str = util.base_label
 
@@ -46,7 +46,7 @@ class NetworkMonitor(Monitor):
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
 
         self.runtime_client: nuvlaedge_common.ContainerRuntimeClient = telemetry.container_runtime
-
+        self._ip_route_image: str = self.runtime_client.job_engine_lite_image
 
         self.engine_project_name: str = self.get_engine_project_name()
         self.logger.info(f'Running network monitor for project '
@@ -132,9 +132,10 @@ class NetworkMonitor(Monitor):
         """
         self.runtime_client.container_remove(self.iproute_container_name)
         return self.runtime_client \
-            .container_run_command(self._AUXILIARY_DOCKER_IMAGE,
+            .container_run_command(self._ip_route_image,
                                    self.iproute_container_name,
                                    args=self._IP_COMMAND_ARGS,
+                                   entrypoint=self._IPROUTE_ENTRYPOINT,
                                    network='host')
 
     def read_traffic_data(self) -> list:

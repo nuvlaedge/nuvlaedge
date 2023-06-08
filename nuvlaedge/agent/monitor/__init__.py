@@ -25,7 +25,6 @@ class Monitor(ABC, Thread):
         self.daemon = True
         self.thread_period: int = thread_period
 
-        # TODO: FUTURE: Standardize system conf propagation
         if os.environ.get('NUVLAEDGE_THREAD_MONITORS', 'False') == 'False':
             self.is_thread: bool = False
         else:

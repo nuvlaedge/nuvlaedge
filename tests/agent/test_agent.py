@@ -44,8 +44,6 @@ class TestAgent(TestCase):
         infra_mock.return_value = it_mock
         with patch(self.agent_open) as mock_open, patch(self.atomic_write), patch(self.os_makedir):
             self.test_agent.initialize_infrastructure()
-            # TODO: fix
-            # self.assertEqual(mock_open.call_count, 1)
 
     @patch('nuvlaedge.agent.agent.Telemetry')
     def test_initialize_telemetry(self, tel_mock):

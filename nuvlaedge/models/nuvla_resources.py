@@ -15,7 +15,6 @@ class NuvlaResourceBase(NuvlaEdgeBaseModel):
     """
     # These entries are mandatory when the message is received from Nuvla. Cannot/Should not be created or edited
     # by the NuvlaEdge.
-    # TODO: Maybe we can skip here the compulsory check of parameters to add flexibility to the model
     id: str | None
     resource_type: str | None
     created: datetime | None

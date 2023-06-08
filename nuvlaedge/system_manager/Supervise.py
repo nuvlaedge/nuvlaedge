@@ -346,7 +346,6 @@ class Supervise(Containers):
 
                     self.log.warning(f'{err_msg}: {str(e)}')
 
-
     def manage_docker_data_gateway(self):
         """ Sets the DG service.
 

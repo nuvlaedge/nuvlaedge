@@ -41,6 +41,8 @@ class DockerClient(ContainerRuntimeClient):
         self.client = docker.from_env()
         self.lost_quorum_hint = 'possible that too few managers are online'
         self.data_gateway_name = "data-gateway"
+        # To initialize job_engine_image
+        self.has_pull_job_capability()
 
     def get_client_version(self) -> str:
         return self.client.version()['Version']

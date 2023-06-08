@@ -7,6 +7,7 @@ It also reports and handles the IP geolocation system.
 
 """
 import json
+import logging
 import os
 import time
 
@@ -34,13 +35,12 @@ class NetworkMonitor(Monitor):
 
         super().__init__(self.__class__.__name__, NetworkingData,
                          enable_monitor=enable_monitor)
-
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
                                self.set_swarm_data,
                                self.set_vpn_data]
-
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.host_fs: str = telemetry.hostfs
         self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
@@ -131,12 +131,13 @@ class NetworkMonitor(Monitor):
             str as the output of the command (can be empty).
         """
         self.runtime_client.container_remove(self.iproute_container_name)
-        return self.runtime_client \
-            .container_run_command(self._ip_route_image,
-                                   self.iproute_container_name,
-                                   args=self._IP_COMMAND_ARGS,
-                                   entrypoint=self._IPROUTE_ENTRYPOINT,
-                                   network='host')
+        self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
+        return self.runtime_client.container_run_command(
+            self._ip_route_image,
+            self.iproute_container_name,
+            args=self._IP_COMMAND_ARGS,
+            entrypoint=self._IPROUTE_ENTRYPOINT,
+            network='host')
 
     def read_traffic_data(self) -> list:
         """ Gets the list of net ifaces and corresponding rxbytes and txbytes
@@ -364,6 +365,7 @@ class NetworkMonitor(Monitor):
         # 2.- Default Local Gateway
         # 3.- Public
         # 4.- Swarm
+        self.logger.error('Updating data in Network monitor')
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
 

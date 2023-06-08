@@ -15,7 +15,10 @@ from subprocess import (Popen, run, PIPE, TimeoutExpired,
 base_label = 'nuvlaedge.component=True'
 default_project_name = 'nuvlaedge'
 compose_project_name = os.getenv('COMPOSE_PROJECT_NAME', default_project_name)
-compute_api = compose_project_name + '-compute-api'
+compute_api_service_name = 'compute-api'
+compute_api = compose_project_name + '-' + compute_api_service_name
+job_engine_service_name = 'job-engine-lite'
+vpn_client_service_name = 'vpn-client'
 
 COMPUTE_API_INTERNAL_PORT = 5000
 

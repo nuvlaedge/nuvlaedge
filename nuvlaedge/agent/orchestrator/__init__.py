@@ -23,9 +23,9 @@ class ContainerRuntimeClient(ABC):
 
     def __init__(self):
         self.client = None
-        self.job_engine_lite_component = util.compose_project_name + "-job-engine-lite"
+        self.job_engine_lite_component = util.compose_project_name + "-" + util.job_engine_service_name
         self.job_engine_lite_image = None
-        self.vpn_client_component = util.compose_project_name + '-vpn-client'
+        self.vpn_client_component = util.compose_project_name + '-' + util.vpn_client_service_name
         self.ignore_env_variables = ['NUVLAEDGE_API_KEY', 'NUVLAEDGE_API_SECRET']
         self.data_gateway_name = None
 

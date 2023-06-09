@@ -55,28 +55,6 @@ def parse_arguments() -> ArgumentParser:
     return parser
 
 
-def configure_root_logger(logger: logging.Logger, debug: bool):
-    """
-    Configures the root logger based on the environmental variables
-
-    Args:
-        logger: root logger to be configured
-        debug: debug verbosity flag
-    """
-    if debug:
-        logger.setLevel(logging.DEBUG)
-    else:
-        env_level: str = os.environ.get('NUVLAEDGE_LOG_LEVEL', '')
-        if env_level:
-            logger.setLevel(logging.getLevelName(env_level))
-        else:
-            logger.setLevel(logging.INFO)
-
-    # Setting flask server verbosity to warnings
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.WARNING)
-
-
 def preflight_check(activator: Activate, exit_flag: bool, nb_updated_date: str,
                     infra: Infrastructure):
     """
@@ -170,7 +148,6 @@ def entry():
                        debug=agent_parser.parse_args().debug)
 
     # Logger for the root script
-    configure_root_logger(root_logger, agent_parser.parse_args().debug)
     root_logger.info('Configuring Agent class and main script')
 
     main()

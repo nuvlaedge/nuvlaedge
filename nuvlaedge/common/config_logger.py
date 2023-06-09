@@ -18,7 +18,7 @@ def initialize_logging(config_file: str = '', debug: bool = False):
     :param debug:
     :return:
     """
-    # Remove possible inital handlers before configuring
+    # Remove possible initial handlers before configuring
     while len(logging.root.handlers) > 0:
         logging.root.removeHandler(logging.root.handlers[-1])
 

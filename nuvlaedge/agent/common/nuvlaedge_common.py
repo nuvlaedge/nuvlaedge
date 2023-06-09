@@ -30,8 +30,7 @@ class NuvlaEdgeCommon:
 
     ssh_pub_key = os.getenv('NUVLAEDGE_IMMUTABLE_SSH_PUB_KEY')
     vpn_interface_name = os.getenv('VPN_INTERFACE_NAME', 'tun')
-    nuvlaedge_engine_version = util.str_if_value_or_none(
-        os.getenv('NUVLAEDGE_ENGINE_VERSION'))
+    nuvlaedge_engine_version = util.extract_nuvlaedge_version()
 
     swarm_manager_token_file = "swarm-manager-token"
     swarm_worker_token_file = "swarm-worker-token"

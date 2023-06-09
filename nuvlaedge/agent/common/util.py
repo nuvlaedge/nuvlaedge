@@ -6,6 +6,7 @@ import os
 import logging
 import signal
 import tempfile
+from importlib.metadata import version
 
 from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
@@ -22,6 +23,11 @@ vpn_client_service_name = 'vpn-client'
 
 COMPUTE_API_INTERNAL_PORT = 5000
 
+
+def extract_nuvlaedge_version() -> str:
+    return version('nuvlaedge')
+
+print(extract_nuvlaedge_version())
 
 def str_if_value_or_none(value):
     return str(value) if value else None

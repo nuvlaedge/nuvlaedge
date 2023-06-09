@@ -51,6 +51,8 @@ def parse_arguments() -> ArgumentParser:
     parser: ArgumentParser = ArgumentParser(description="NuvlaEdge Agent")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true',
                         help='use for increasing the verbosity level')
+    parser.add_argument('-l', dest='log_level', required=False, default='', action='store_true',
+                        help='Select a logging level from: INFO, WARNING or ERROR')
 
     return parser
 
@@ -145,7 +147,8 @@ def entry():
     # Global logging configuration
     agent_parser: ArgumentParser = parse_arguments()
     initialize_logging(config_file='/etc/nuvlaedge/agent/config/agent_logger_config.conf',
-                       debug=agent_parser.parse_args().debug)
+                       debug=agent_parser.parse_args().debug,
+                       log_level=agent_parser.parse_args().log_level)
 
     # Logger for the root script
     root_logger.info('Configuring Agent class and main script')

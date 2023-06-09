@@ -133,8 +133,8 @@ class NetworkMonitor(Monitor):
         self.runtime_client.container_remove(self.iproute_container_name)
         self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
         return self.runtime_client.container_run_command(
-            self._ip_route_image,
-            self.iproute_container_name,
+            image=self._ip_route_image,
+            name=self.iproute_container_name,
             args=self._IP_COMMAND_ARGS,
             entrypoint=self._IPROUTE_ENTRYPOINT,
             network='host')

@@ -204,8 +204,6 @@ RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/r
 RUN ln -s /app/my_init /usr/bin/my_init
 RUN ln -s $(which python3) /usr/bin/python3
 
-VOLUME /etc/nuvlaedge/database
-
 WORKDIR /opt/nuvlaedge/
 
 ENTRYPOINT ["my_init"]

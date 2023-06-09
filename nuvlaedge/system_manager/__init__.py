@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 from nuvlaedge.common.config_logger import initialize_logging
 import nuvlaedge.system_manager.Requirements as MinReq
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.Supervise import Supervise
+from nuvlaedge.system_manager.supervise import Supervise
 
 __copyright__ = "Copyright (C) 2021 SixSq"
 __email__ = "support@sixsq.com"

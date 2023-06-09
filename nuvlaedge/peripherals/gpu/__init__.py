@@ -22,7 +22,7 @@ from packaging import version
 import docker.errors
 
 from nuvlaedge.peripherals.peripheral import Peripheral
-
+from nuvlaedge.common.nuvlaedge_config import nuvlaedge_arg_parser, initialize_logging
 
 docker_socket_file = '/var/run/docker.sock'
 HOST_FILES = '/etcfs/nvidia-container-runtime/host-files-for-container.d/'
@@ -40,7 +40,6 @@ else:
         ORCHESTRATOR = None
 
 
-logging.basicConfig(level=logging.DEBUG)
 logger: logging.Logger = logging.getLogger(__name__)
 
 identifier = 'GPU'
@@ -378,6 +377,12 @@ def gpu_check(api_url):
 
 
 def main():
+    global logger
+    arguments = nuvlaedge_arg_parser(component_name='GPU Peripheral')
+    initialize_logging(debug=arguments.parse_args().debug,
+                       log_level=arguments.parse_args().log_level)
+
+    logger = logging.getLogger(__name__)
     gpu_peripheral: Peripheral = Peripheral('gpu')
 
     gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)

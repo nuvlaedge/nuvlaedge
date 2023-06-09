@@ -41,6 +41,8 @@ class DockerClient(ContainerRuntimeClient):
         self.client = docker.from_env()
         self.lost_quorum_hint = 'possible that too few managers are online'
         self.data_gateway_name = "data-gateway"
+        # To initialize job_engine_image
+        self.has_pull_job_capability()
 
     def get_client_version(self) -> str:
         return self.client.version()['Version']
@@ -800,12 +802,14 @@ class DockerClient(ContainerRuntimeClient):
                               args: str = None,
                               network: str = None, remove: bool = True,
                               **kwargs) -> str:
+        entrypoint = kwargs.get('entrypoint', None)
         if not command:
             command = args
         try:
             output: bytes = self.client.containers.run(
                 image,
                 command=command,
+                entrypoint=entrypoint,
                 name=name,
                 remove=remove,
                 network=network)
@@ -855,3 +859,17 @@ class DockerClient(ContainerRuntimeClient):
             return False
 
         return True
+
+    def get_current_image(self) -> str:
+        if self._current_image:
+            return self._current_image
+
+        try:
+            current_id = self.get_current_container_id()
+            container = self.client.containers.get(current_id)
+        except docker.errors.NotFound as e:
+            logger.warning(f"Current container not found. Reason: {str(e)}")
+            return ""
+
+        self._current_image = container.attrs['Config']['Image']
+        return self._current_image

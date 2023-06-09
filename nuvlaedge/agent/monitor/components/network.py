@@ -7,6 +7,7 @@ It also reports and handles the IP geolocation system.
 
 """
 import json
+import logging
 import os
 import time
 
@@ -25,8 +26,8 @@ class NetworkMonitor(Monitor):
     Handles the retrieval of IP networking data.
     """
     _REMOTE_IPV4_API: str = "https://api.ipify.org?format=json"
-    _AUXILIARY_DOCKER_IMAGE: str = "sixsq/iproute2:latest"
     _IP_COMMAND_ARGS: str = '-j route'
+    _IPROUTE_ENTRYPOINT: str = 'ip'
     _PUBLIC_IP_UPDATE_RATE: int = 3600
     _NUVLAEDGE_COMPONENT_LABEL_KEY: str = util.base_label
 
@@ -34,19 +35,18 @@ class NetworkMonitor(Monitor):
 
         super().__init__(self.__class__.__name__, NetworkingData,
                          enable_monitor=enable_monitor)
-
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
                                self.set_swarm_data,
                                self.set_vpn_data]
-
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.host_fs: str = telemetry.hostfs
         self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
 
         self.runtime_client: nuvlaedge_common.ContainerRuntimeClient = telemetry.container_runtime
-
+        self._ip_route_image: str = self.runtime_client.get_current_image()
 
         self.engine_project_name: str = self.get_engine_project_name()
         self.logger.info(f'Running network monitor for project '
@@ -131,11 +131,13 @@ class NetworkMonitor(Monitor):
             str as the output of the command (can be empty).
         """
         self.runtime_client.container_remove(self.iproute_container_name)
-        return self.runtime_client \
-            .container_run_command(self._AUXILIARY_DOCKER_IMAGE,
-                                   self.iproute_container_name,
-                                   args=self._IP_COMMAND_ARGS,
-                                   network='host')
+        self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
+        return self.runtime_client.container_run_command(
+            image=self._ip_route_image,
+            name=self.iproute_container_name,
+            args=self._IP_COMMAND_ARGS,
+            entrypoint=self._IPROUTE_ENTRYPOINT,
+            network='host')
 
     def read_traffic_data(self) -> list:
         """ Gets the list of net ifaces and corresponding rxbytes and txbytes
@@ -363,6 +365,7 @@ class NetworkMonitor(Monitor):
         # 2.- Default Local Gateway
         # 3.- Public
         # 4.- Swarm
+        self.logger.info('Updating data in Network monitor')
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
 

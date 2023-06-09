@@ -59,6 +59,8 @@ class KubernetesClient(ContainerRuntimeClient):
         self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
+        self._current_image = os.getenv('NUVLAEDGE_AGENT_IMAGE')
+
     def get_node_info(self):
         if self.host_node_name:
             try:
@@ -575,6 +577,11 @@ class KubernetesClient(ContainerRuntimeClient):
                               no_output=False,
                               **kwargs) -> str:
         name = self._to_k8s_obj_name(name)
+
+        if not command:
+            # To comply with docker, try to retrieve entrypoint when there is no command (k8s entrypoint) defined
+            command = kwargs.get('entrypoint', None)
+
         pod = self._pod_def(image, name, command=command, args=args,
                             network=network, **kwargs)
         namespace = self._namespace(**kwargs)
@@ -632,3 +639,7 @@ class KubernetesClient(ContainerRuntimeClient):
 
     def get_nuvlaedge_project_name(self, default_project_name=None) -> str:
         return os.getenv('MY_NAMESPACE', default_project_name)
+
+    def get_current_image(self) -> str:
+        # TODO: Implement in a generic way
+        return self._current_image

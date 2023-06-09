@@ -28,6 +28,7 @@ class ContainerRuntimeClient(ABC):
         self.vpn_client_component = util.compose_project_name + '-' + util.vpn_client_service_name
         self.ignore_env_variables = ['NUVLAEDGE_API_KEY', 'NUVLAEDGE_API_SECRET']
         self.data_gateway_name = None
+        self._current_image = None
 
     @abstractmethod
     def get_node_info(self):
@@ -288,4 +289,13 @@ class ContainerRuntimeClient(ABC):
         in it) for K8s.
 
         :param name:
+        """
+
+    @abstractmethod
+    def get_current_image(self) -> str:
+        """
+        Extracts  the component container from its name or its service name
+        and extracts the image name from metadata
+
+        :return: The image name in the container running the component service
         """

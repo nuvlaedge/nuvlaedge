@@ -150,7 +150,7 @@ COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 # REquired packages for the Agent
 # ------------------------------------------------------------------------
 RUN apk update
-RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl
+RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl iproute2
 
 
 # ------------------------------------------------------------------------
@@ -203,8 +203,6 @@ RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/r
     chmod 700 /app/my_init
 RUN ln -s /app/my_init /usr/bin/my_init
 RUN ln -s $(which python3) /usr/bin/python3
-
-VOLUME /etc/nuvlaedge/database
 
 WORKDIR /opt/nuvlaedge/
 

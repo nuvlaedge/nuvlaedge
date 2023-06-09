@@ -6,7 +6,7 @@ import os
 import logging
 import signal
 import tempfile
-from importlib.metadata import version
+import pkg_resources
 
 from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
@@ -23,11 +23,16 @@ vpn_client_service_name = 'vpn-client'
 
 COMPUTE_API_INTERNAL_PORT = 5000
 
+logger: logging.Logger = logging.getLogger(__name__)
+
 
 def extract_nuvlaedge_version() -> str:
-    return version('nuvlaedge')
+    try:
+        return pkg_resources.get_distribution("simplegist").version
+    except Exception as ex:
+        logger.warning('Cannot retrieve NuvlaEdge version', exc_info=ex)
+        return ''
 
-print(extract_nuvlaedge_version())
 
 def str_if_value_or_none(value):
     return str(value) if value else None

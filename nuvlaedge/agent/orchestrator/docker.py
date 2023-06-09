@@ -859,3 +859,17 @@ class DockerClient(ContainerRuntimeClient):
             return False
 
         return True
+
+    def get_current_image(self) -> str:
+        if self._current_image:
+            return self._current_image
+
+        try:
+            current_id = self.get_current_container_id()
+            container = self.client.containers.get(current_id)
+        except docker.errors.NotFound as e:
+            logger.warning(f"Current container not found. Reason: {str(e)}")
+            return ""
+
+        self._current_image = container.attrs['Config']['Image']
+        return self._current_image

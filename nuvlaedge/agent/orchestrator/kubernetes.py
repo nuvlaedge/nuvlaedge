@@ -59,6 +59,8 @@ class KubernetesClient(ContainerRuntimeClient):
         self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
+        self._current_image = os.getenv('NUVLAEDGE_AGENT_IMAGE')
+
     def get_node_info(self):
         if self.host_node_name:
             try:
@@ -637,3 +639,7 @@ class KubernetesClient(ContainerRuntimeClient):
 
     def get_nuvlaedge_project_name(self, default_project_name=None) -> str:
         return os.getenv('MY_NAMESPACE', default_project_name)
+
+    def get_current_image(self) -> str:
+        # TODO: Implement in a generic way
+        return self._current_image

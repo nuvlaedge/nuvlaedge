@@ -12,7 +12,7 @@ import time
 from argparse import ArgumentParser
 from threading import Event, Thread
 
-
+from nuvlaedge.common.config_logger import initialize_logging
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
 
 
@@ -165,9 +165,9 @@ def main():
 
 def entry():
     # Global logging configuration
-    logging.config.fileConfig('/etc/nuvlaedge/agent/config/agent_logger_config.conf')
-
     agent_parser: ArgumentParser = parse_arguments()
+    initialize_logging(config_file='/etc/nuvlaedge/agent/config/agent_logger_config.conf',
+                       debug=agent_parser.parse_args().debug)
 
     # Logger for the root script
     configure_root_logger(root_logger, agent_parser.parse_args().debug)

@@ -14,10 +14,14 @@ import socket
 import sys
 import time
 
-logging.basicConfig(format='%(levelname)s - %(module)s - L%(lineno)s: %(message)s', level='INFO')
+from nuvlaedge.common.nuvlaedge_config import nuvlaedge_arg_parser, initialize_logging
 
 
 def main():
+    arguments = nuvlaedge_arg_parser(component_name='On-Stop')
+    initialize_logging(debug=arguments.parse_args().debug,
+                       log_level=arguments.parse_args().log_level)
+
     docker_client = docker.from_env()
     if len(sys.argv) > 1 and "paused".startswith(sys.argv[1].lower()):
         logging.info('Pausing myself...')

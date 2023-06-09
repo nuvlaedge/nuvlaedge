@@ -8,7 +8,7 @@ import mock
 import requests
 import unittest
 
-import nuvlaedge.system_manager.Supervise as Supervise
+import nuvlaedge.system_manager.supervise as Supervise
 
 from nuvlaedge.system_manager.common.ContainerRuntime import Containers
 import tests.system_manager.utils.fake as fake
@@ -93,7 +93,7 @@ class SuperviseTestCase(unittest.TestCase):
         cert_obj.get_notAfter.return_value = b'99990309161546Z'
         mock_load_cert.return_value = cert_obj
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.Supervise.open'):
+        with mock.patch('nuvlaedge.system_manager.supervise.open'):
             self.assertFalse(self.obj.is_cert_rotation_needed(),
                              'Failed to recognize valid certificates')
 
@@ -101,7 +101,7 @@ class SuperviseTestCase(unittest.TestCase):
         cert_obj.get_notAfter.return_value = b'20200309161546Z'
         mock_load_cert.return_value = cert_obj
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.Supervise.open'):
+        with mock.patch('nuvlaedge.system_manager.supervise.open'):
             self.assertTrue(self.obj.is_cert_rotation_needed(),
                             'Failed to recognize certificates in need of renewal')
 
@@ -680,7 +680,7 @@ class SuperviseTestCase(unittest.TestCase):
                           'Failed to handle Docker API error when healing container in created state')
 
     @mock.patch.object(Supervise.Supervise, 'restart_container')
-    @mock.patch('nuvlaedge.system_manager.Supervise.Timer')
+    @mock.patch('nuvlaedge.system_manager.supervise.Timer')
     def test_heal_exited_container(self, mock_timer, mock_restart_container):
         container = fake.MockContainer()
         container.attrs['State'] = {'ExitCode': 0}  # nothing to do

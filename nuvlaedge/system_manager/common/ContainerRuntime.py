@@ -631,7 +631,7 @@ class Containers:
     def __init__(self, logging):
         """ Constructs a Container object
         """
-
+        self.container_runtime = None
         if ORCHESTRATOR == 'kubernetes':
             self.container_runtime = Kubernetes(logging)
         else:

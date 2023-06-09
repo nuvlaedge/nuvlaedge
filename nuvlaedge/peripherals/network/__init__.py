@@ -14,6 +14,7 @@ import re
 import base64
 
 from nuvlaedge.peripherals.peripheral import Peripheral
+from nuvlaedge.common.nuvlaedge_config import nuvlaedge_arg_parser, initialize_logging
 
 # Packages for Service Discovery
 from ssdpy import SSDPClient
@@ -23,7 +24,7 @@ from wsdiscovery.discovery import ThreadedWSDiscovery as WSDiscovery
 from zeroconf import ZeroconfServiceTypes, ServiceBrowser, Zeroconf
 
 scanning_interval = 30
-logging.basicConfig(level=logging.INFO)
+
 logger: logging.Logger = logging.getLogger(__name__)
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
@@ -310,6 +311,11 @@ def network_manager(**kwargs):
 
 
 def main():
+    global  logger
+    arguments = nuvlaedge_arg_parser(component_name='Bluetooth Peripheral')
+    initialize_logging(debug=arguments.parse_args().debug,
+                       log_level=arguments.parse_args().log_level)
+    logger = logging.getLogger(__name__)
     logger.info('NETWORK PERIPHERAL MANAGER STARTED')
 
     network_peripheral: Peripheral = Peripheral('network')

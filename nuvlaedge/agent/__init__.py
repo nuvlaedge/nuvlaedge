@@ -12,7 +12,7 @@ import time
 from argparse import ArgumentParser
 from threading import Event, Thread
 
-from nuvlaedge.common.config_logger import initialize_logging
+from nuvlaedge.common.nuvlaedge_config import initialize_logging, nuvlaedge_arg_parser
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
 
 
@@ -40,21 +40,6 @@ def log_threads_stackstraces():
 
 def signal_usr1(signum, frame):
     log_threads_stackstraces()
-
-
-def parse_arguments() -> ArgumentParser:
-    """
-    Argument parser configuration for the agent
-    Returns: ArgumentParser. A configured argument parser object class
-
-    """
-    parser: ArgumentParser = ArgumentParser(description="NuvlaEdge Agent")
-    parser.add_argument('--debug', dest='debug', default=False, action='store_true',
-                        help='use for increasing the verbosity level')
-    parser.add_argument('-l', dest='log_level', required=False, default='', action='store_true',
-                        help='Select a logging level from: INFO, WARNING or ERROR')
-
-    return parser
 
 
 def preflight_check(activator: Activate, exit_flag: bool, nb_updated_date: str,
@@ -145,7 +130,7 @@ def main():
 
 def entry():
     # Global logging configuration
-    agent_parser: ArgumentParser = parse_arguments()
+    agent_parser: ArgumentParser = nuvlaedge_arg_parser('Agent')
     initialize_logging(config_file='/etc/nuvlaedge/agent/config/agent_logger_config.conf',
                        debug=agent_parser.parse_args().debug,
                        log_level=agent_parser.parse_args().log_level)

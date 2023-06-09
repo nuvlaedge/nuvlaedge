@@ -15,7 +15,7 @@ import sys
 import time
 from argparse import ArgumentParser
 
-from nuvlaedge.common.config_logger import initialize_logging
+from nuvlaedge.common.nuvlaedge_config import initialize_logging, nuvlaedge_arg_parser
 import nuvlaedge.system_manager.Requirements as MinReq
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.system_manager.supervise import Supervise
@@ -156,25 +156,10 @@ def main():
         time.sleep(15)
 
 
-def parse_arguments() -> ArgumentParser:
-    """
-    Argument parser configuration for the agent
-    Returns: ArgumentParser. A configured argument parser object class
-
-    """
-    parser: ArgumentParser = ArgumentParser(description="NuvlaEdge System Manager")
-    parser.add_argument('--debug', dest='debug', default=False, action='store_true',
-                        help='use for increasing the verbosity level')
-    parser.add_argument('-l', dest='log_level', required=False, default='', action='store_true',
-                        help='Select a logging level from: INFO, WARNING or ERROR')
-
-    return parser
-
-
 def entry():
     signal.signal(signal.SIGUSR1, signal_usr1)
 
-    arguments = parse_arguments()
+    arguments = nuvlaedge_arg_parser('System Manager')
     initialize_logging(debug=arguments.parse_args().debug,
                        log_level=arguments.parse_args().log_level)
 

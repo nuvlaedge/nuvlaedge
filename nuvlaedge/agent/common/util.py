@@ -26,9 +26,15 @@ COMPUTE_API_INTERNAL_PORT = 5000
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def extract_nuvlaedge_version() -> str:
+def extract_nuvlaedge_version(image_name: str) -> str:
     try:
-        return pkg_resources.get_distribution("simplegist").version
+        # First, try to extract the version form the image name
+        return image_name.split(':')[-1]
+    except Exception as ex:
+        logger.info(f'Cannot extract nuvlaedge version from image {image_name}', exc_info=ex)
+
+    try:
+        return pkg_resources.get_distribution("nuvlaedge").version
     except Exception as ex:
         logger.warning('Cannot retrieve NuvlaEdge version', exc_info=ex)
         return ''

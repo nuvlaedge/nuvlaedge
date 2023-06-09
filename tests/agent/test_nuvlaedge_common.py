@@ -278,35 +278,6 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             self.assertEqual(self.obj.read_json_file('fake-file'), json.loads(file_value),
                              'Unable to read JSON from file')
 
-    @mock.patch('nuvlaedge.agent.common.nuvlaedge_common.NuvlaEdgeCommon.read_json_file')
-    @mock.patch.object(Path, 'exists')
-    def test_get_nuvlaedge_version(self, mock_exists, mock_read_json):
-        # if the version is already an attribute of the class, just give back its major version
-        major = 2
-        self.obj.nuvlaedge_engine_version = f'{major}.1.0'
-        self.assertEqual(self.obj.get_nuvlaedge_version(), major,
-                         'Unable to infer NBE major version')
-
-        # otherwise, get it from the data volume
-        self.obj.nuvlaedge_engine_version = None
-        mock_exists.return_value = True
-
-        opener = mock.mock_open()
-
-        def mocked_open(*args, **kwargs):
-            return opener(*args, **kwargs)
-
-        # otherwise, give back the notes as a list
-        with mock.patch.object(Path, 'open', mocked_open):
-            with mock.patch("json.load", mock.MagicMock(side_effect=[{'version': major}])):
-                self.assertEqual(self.obj.get_nuvlaedge_version(), major,
-                                 'Unable to infer NBE major version from data volume file')
-
-        # and if no file exists either, default to latest known (2)
-        mock_exists.return_value = False
-        self.assertEqual(self.obj.get_nuvlaedge_version(), major,
-                         'Unable to default to NBE major version')
-
     @mock.patch('nuvlaedge.agent.common.nuvlaedge_common.NuvlaEdgeCommon.set_local_operational_status')
     def test_get_operational_status(self, mock_set_status):
         with mock.patch.object(Path, 'open') as mock_open:

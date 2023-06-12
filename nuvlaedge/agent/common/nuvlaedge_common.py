@@ -50,8 +50,6 @@ class NuvlaEdgeCommon:
         self.data_volume = shared_data_volume
         self.container_runtime: ContainerRuntimeClient = container_runtime
 
-        self.nuvlaedge_engine_version = ''
-
         self.mqtt_broker_host = self.container_runtime.data_gateway_name
 
         self.host_user_home_file = f'{self.data_volume}/.host_user_home'

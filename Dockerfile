@@ -3,8 +3,8 @@ ARG ALPINE_MAJ_MIN_VERSION="3.18"
 ARG PYTHON_MAJ_MIN_VERSION="3.11"
 ARG GOLANG_VERSION="1.20.4"
 ARG PYTHON_CRYPTOGRAPHY_VERSION="40.0.2"
-ARG PYTHON_BCRYPT="4.0.1"
-ARG PYTHON_NACL="1.5.0"
+ARG PYTHON_BCRYPT_VERSION="4.0.1"
+ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_VERSION="3.3.0"
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
@@ -92,15 +92,15 @@ RUN pip install -r /tmp/requirements.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
 ARG PYTHON_MAJ_MIN_VERSION
-ARG PYTHON_BCRYPT
-ARG PYTHON_NACL
+ARG PYTHON_BCRYPT_VERSION
+ARG PYTHON_NACL_VERSION
 
-RUN apk add "py3-bcrypt~${PYTHON_BCRYPT}" "py3-pynacl~${PYTHON_NACL}"
+RUN apk add "py3-bcrypt~${PYTHON_BCRYPT_VERSION}" "py3-pynacl~${PYTHON_NACL_VERSION}"
 RUN cp -r /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/bcrypt/ /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/
-RUN cp -r /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/bcrypt-${PYTHON_BCRYPT}.dist-info/ /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/
+RUN cp -r /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/bcrypt-${PYTHON_BCRYPT_VERSION}.dist-info/ /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/
 
 RUN cp -r /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/nacl/ /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/
-RUN cp -r /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/PyNaCl-${PYTHON_NACL}-py${PYTHON_MAJ_MIN_VERSION}.egg-info/ /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/
+RUN cp -r /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/PyNaCl-${PYTHON_NACL_VERSION}-py${PYTHON_MAJ_MIN_VERSION}.egg-info/ /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/
 
 COPY --link requirements.job-engine.txt /tmp/requirements.lite.txt
 RUN pip install -r /tmp/requirements.lite.txt

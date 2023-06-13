@@ -1,6 +1,19 @@
 # syntax=docker/dockerfile:1.4
-ARG BASE_IMAGE=python:3.11.3-alpine3.18
-ARG GO_BASE_IMAGE=golang:1.20.4-alpine3.18
+ARG ALPINE_MAJ_MIN_VERSION="3.18"
+ARG PYTHON_MAJ_MIN_VERSION="3.11"
+ARG GOLANG_VERSION="1.20.4"
+ARG PYTHON_CRYPTOGRAPHY_VERSION="40.0.2"
+ARG PYTHON_BCRYPT_VERSION="4.0.1"
+ARG PYTHON_NACL_VERSION="1.5.0"
+ARG JOB_LITE_VERSION="3.3.0"
+
+ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
+ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
+
+ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
+ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
+
+FROM nuvla/job-lite:${JOB_LITE_VERSION} AS job-lite
 
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
@@ -55,11 +68,16 @@ RUN pip install -r /tmp/requirements.txt
 # System Manager builder
 # ------------------------------------------------------------------------
 FROM base-builder AS system-manager-builder
-RUN apk add openssl-dev openssl
-RUN apk add py3-cryptography="40.0.2-r1"
+ARG PYTHON_MAJ_MIN_VERSION
+ARG PYTHON_CRYPTOGRAPHY_VERSION
+ARG PYTHON_SITE_PACKAGES
+ARG PYTHON_LOCAL_SITE_PACKAGES
 
-RUN cp -r /usr/lib/python3.11/site-packages/cryptography/ /usr/local/lib/python3.11/site-packages/
-RUN cp -r /usr/lib/python3.11/site-packages/cryptography-40.0.2.dist-info/ /usr/local/lib/python3.11/site-packages/
+RUN apk add openssl-dev openssl
+RUN apk add "py3-cryptography~${PYTHON_CRYPTOGRAPHY_VERSION}"
+
+RUN cp -r ${PYTHON_SITE_PACKAGES}/cryptography/ ${PYTHON_LOCAL_SITE_PACKAGES}/
+RUN cp -r ${PYTHON_SITE_PACKAGES}/cryptography-${PYTHON_CRYPTOGRAPHY_VERSION}.dist-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
 
 COPY --link requirements.system-manager.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -78,14 +96,19 @@ RUN pip install -r /tmp/requirements.txt
 # Job Engine builder
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
+ARG PYTHON_MAJ_MIN_VERSION
+ARG PYTHON_BCRYPT_VERSION
+ARG PYTHON_NACL_VERSION
+ARG PYTHON_SITE_PACKAGES
+ARG PYTHON_LOCAL_SITE_PACKAGES
 
-RUN apk add py3-bcrypt="4.0.1-r2" py3-pynacl
-RUN cp -r /usr/lib/python3.11/site-packages/bcrypt/ /usr/local/lib/python3.11/site-packages/
-RUN cp -r /usr/lib/python3.11/site-packages/bcrypt-4.0.1.dist-info/ /usr/local/lib/python3.11/site-packages/
+RUN apk add "py3-bcrypt~${PYTHON_BCRYPT_VERSION}" "py3-pynacl~${PYTHON_NACL_VERSION}"
 
-RUN cp -r /usr/lib/python3.11/site-packages/nacl/ /usr/local/lib/python3.11/site-packages/
-RUN cp -r /usr/lib/python3.11/site-packages/PyNaCl-1.5.0-py3.11.egg-info/ /usr/local/lib/python3.11/site-packages/
+RUN cp -r ${PYTHON_SITE_PACKAGES}/bcrypt/ ${PYTHON_LOCAL_SITE_PACKAGES}/
+RUN cp -r ${PYTHON_SITE_PACKAGES}/bcrypt-${PYTHON_BCRYPT_VERSION}.dist-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
 
+RUN cp -r ${PYTHON_SITE_PACKAGES}/nacl/ ${PYTHON_LOCAL_SITE_PACKAGES}/
+RUN cp -r ${PYTHON_SITE_PACKAGES}/PyNaCl-${PYTHON_NACL_VERSION}-py${PYTHON_MAJ_MIN_VERSION}.egg-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
 
 COPY --link requirements.job-engine.txt /tmp/requirements.lite.txt
 RUN pip install -r /tmp/requirements.lite.txt
@@ -93,17 +116,19 @@ RUN pip install -r /tmp/requirements.lite.txt
 
 # ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
+ARG PYTHON_MAJ_MIN_VERSION
+ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Extract and separate requirements from package install to accelerate building process.
 # Package dependency install is the Slow part of the building process
-COPY --link --from=agent-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=system-manager-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=job-engine-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=nuvla/job-lite:3.2.7 /usr/local/lib/python3.8/site-packages/nuvla /usr/local/lib/python3.11/site-packages/nuvla
-COPY --link --from=network-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=modbus-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=bt-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --link --from=gpu-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --link --from=agent-builder          ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=system-manager-builder ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=job-engine-builder     ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=job-lite               ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla
+COPY --link --from=network-builder        ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 
 RUN pip install docker-compose
 
@@ -121,13 +146,17 @@ WORKDIR /opt/usb/
 RUN go mod tidy && go build
 
 
+# ------------------------------------------------------------------------
 FROM ${BASE_IMAGE}
+ARG PYTHON_MAJ_MIN_VERSION
+ARG PYTHON_LOCAL_SITE_PACKAGES
+
 COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 
 # ------------------------------------------------------------------------
 # Required alpine packages
 # ------------------------------------------------------------------------
-COPY --link --from=nuvlaedge-builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 
 
@@ -201,7 +230,7 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 RUN apk add --no-cache gettext docker-cli
 RUN apk add --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
-COPY --link --from=nuvla/job-lite:3.2.7 /app/* /app/
+COPY --link --from=job-lite /app/* /app/
 WORKDIR /app
 RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/rel-0.9.19/image/bin/my_init && \
     chmod 700 /app/my_init

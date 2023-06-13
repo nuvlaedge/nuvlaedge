@@ -178,8 +178,13 @@ COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 # ------------------------------------------------------------------------
 # REquired packages for the Agent
 # ------------------------------------------------------------------------
-RUN apk update
 RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl iproute2
+
+
+# ------------------------------------------------------------------------
+# Required packages for modbus peripheral discovery
+# ------------------------------------------------------------------------
+RUN apk add --no-cache nmap nmap-scripts
 
 
 # ------------------------------------------------------------------------
@@ -189,7 +194,7 @@ RUN apk add --no-cache libusb-dev udev
 
 
 # ------------------------------------------------------------------------
-# Required for bluetooth discovery
+# Required package for bluetooth discovery
 # ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
 

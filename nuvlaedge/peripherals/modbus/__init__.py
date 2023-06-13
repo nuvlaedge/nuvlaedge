@@ -58,7 +58,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
 
     logger.info("Scanning open ports...")
 
-    command = "nmap --script {} --script-args='modbus-discover.aggressive=true' -p- {} -T4 -oX {} &>/dev/null"\
+    command = "nmap --script {} --script-args='modbus-discover.aggressive=true' -p- {} -T4 -oX {} > /dev/null"\
         .format(modbus_nse,
                 host,
                 xml_file)

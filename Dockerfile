@@ -213,6 +213,10 @@ RUN chmod +x /usr/bin/openvpn-client
 RUN chmod +x /opt/nuvlaedge/scripts/vpn-client/get_ip.sh
 RUN chmod +x /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh
 
+# For backward compatibility with existing vpn/nuvlaedge.conf file
+RUN ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh
+RUN ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
+
 
 # ------------------------------------------------------------------------
 # Copy configuration files

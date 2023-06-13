@@ -21,6 +21,7 @@ on:
       - "scripts/**"
       - ".github/workflows/build-main-devel.yml"
       - "pyproject.toml"
+      - "Dockerfile"
 
   workflow_dispatch:
 

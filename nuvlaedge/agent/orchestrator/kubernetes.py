@@ -59,7 +59,7 @@ class KubernetesClient(ContainerRuntimeClient):
         self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
-        self._current_image = os.getenv('NUVLAEDGE_AGENT_IMAGE')
+        self._current_image = os.getenv('NUVLAEDGE_IMAGE')
 
     def get_node_info(self):
         if self.host_node_name:

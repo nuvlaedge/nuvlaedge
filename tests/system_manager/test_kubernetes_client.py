@@ -17,7 +17,7 @@ class KubernetesTestCase(unittest.TestCase):
             # sys.modules.clear()
             if 'nuvlaedge.system_manager.common.ContainerRuntime' in sys.modules:
                 del sys.modules['nuvlaedge.system_manager.common.ContainerRuntime']
-            import nuvlaedge.system_manager.common.ContainerRuntime as ContainerRuntime
+            import nuvlaedge.system_manager.common.container_runtime as ContainerRuntime
 
         with mock.patch('kubernetes.client.CoreV1Api') as mock_k8s_client_CoreV1Api:
             with mock.patch('kubernetes.client.AppsV1Api') as mock_k8s_client_AppsV1Api:

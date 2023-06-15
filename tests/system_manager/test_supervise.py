@@ -10,7 +10,7 @@ import unittest
 
 import nuvlaedge.system_manager.supervise as Supervise
 
-from nuvlaedge.system_manager.common.ContainerRuntime import Containers
+from nuvlaedge.system_manager.common.container_runtime import Containers
 import tests.system_manager.utils.fake as fake
 
 

@@ -15,7 +15,7 @@ import docker.errors
 import OpenSSL
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.ContainerRuntime import Containers
+from nuvlaedge.system_manager.common.container_runtime import Containers
 
 
 class ClusterNodeCannotManageDG(Exception):
@@ -345,7 +345,6 @@ class Supervise(Containers):
                     self.operational_status.append((utils.status_degraded, err_msg))
 
                     self.log.warning(f'{err_msg}: {str(e)}')
-
 
     def manage_docker_data_gateway(self):
         """ Sets the DG service.

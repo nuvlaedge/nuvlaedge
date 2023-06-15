@@ -16,7 +16,7 @@ import time
 from argparse import ArgumentParser
 
 from nuvlaedge.common.nuvlaedge_config import initialize_logging, nuvlaedge_arg_parser
-import nuvlaedge.system_manager.Requirements as MinReq
+import nuvlaedge.system_manager.requirements as MinReq
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.system_manager.supervise import Supervise
 

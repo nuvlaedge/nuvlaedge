@@ -7,7 +7,7 @@ import mock
 import os
 import requests
 import unittest
-import nuvlaedge.system_manager.common.ContainerRuntime as ContainerRuntime
+import nuvlaedge.system_manager.common.container_runtime as ContainerRuntime
 import tests.system_manager.utils.fake as fake
 
 

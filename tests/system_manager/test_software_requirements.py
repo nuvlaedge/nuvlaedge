@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from nuvlaedge.system_manager.Requirements import SoftwareRequirements
+from nuvlaedge.system_manager.requirements import SoftwareRequirements
 import logging
 import mock
 import os

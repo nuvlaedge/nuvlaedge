@@ -15,7 +15,7 @@ import sys
 import time
 from argparse import ArgumentParser
 
-from nuvlaedge.common.nuvlaedge_config import initialize_logging, nuvlaedge_arg_parser
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 import nuvlaedge.system_manager.requirements as MinReq
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.system_manager.supervise import Supervise
@@ -104,17 +104,6 @@ def requirements_check(sw_rq: MinReq.SoftwareRequirements,
             log.info("Directory " + peripherals + " already exists")
 
 
-def argument_parser():
-    parser = ArgumentParser(description="NuvlaEdge System Manager")
-    parser.add_argument('-l', '--log-level', dest='log_level',
-                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                        default='INFO', help='Log level')
-    parser.add_argument('-d', '--debug', dest='log_level',
-                        action='store_const', const='DEBUG',
-                        help='Set log level to debug')
-    return parser
-
-
 def main():
     system_requirements = MinReq.SystemRequirements()
     software_requirements = MinReq.SoftwareRequirements()
@@ -159,9 +148,7 @@ def main():
 def entry():
     signal.signal(signal.SIGUSR1, signal_usr1)
 
-    arguments = nuvlaedge_arg_parser('System Manager')
-    initialize_logging(debug=arguments.parse_args().debug,
-                       log_level=arguments.parse_args().log_level)
+    parse_arguments_and_initialize_logging('System Manager')
 
     sys.exit(main())
 

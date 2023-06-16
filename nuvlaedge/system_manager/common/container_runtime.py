@@ -640,8 +640,7 @@ class Containers:
         if ORCHESTRATOR == 'kubernetes':
             self.container_runtime = Kubernetes(logging)
         else:
-            if os.path.exists(DOCKER_SOCKET_FILE):
-                self.container_runtime = Docker(logging)
-            else:
-                raise FileNotFoundError(f'Orchestrator is "{ORCHESTRATOR}", '
-                                        f'but file {DOCKER_SOCKET_FILE} is not present')
+            self.container_runtime = Docker(logging)
+            if not os.path.exists(DOCKER_SOCKET_FILE):
+                logging.warning(f'Orchestrator is "{ORCHESTRATOR}", '
+                                f'but file {DOCKER_SOCKET_FILE} is not present')

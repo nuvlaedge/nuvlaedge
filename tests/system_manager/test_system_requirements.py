@@ -5,7 +5,7 @@ import logging
 import mock
 import unittest
 
-from nuvlaedge.system_manager.Requirements import SystemRequirements
+from nuvlaedge.system_manager.requirements import SystemRequirements
 
 
 class SystemRequirementsTestCase(unittest.TestCase):

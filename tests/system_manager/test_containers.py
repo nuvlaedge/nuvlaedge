@@ -4,7 +4,7 @@
 import logging
 import mock
 import unittest
-import nuvlaedge.system_manager.common.ContainerRuntime as ContainerRuntime
+import nuvlaedge.system_manager.common.container_runtime as ContainerRuntime
 
 
 class ContainersCase(unittest.TestCase):

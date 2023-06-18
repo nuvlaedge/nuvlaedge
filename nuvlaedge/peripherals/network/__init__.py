@@ -14,7 +14,7 @@ import re
 import base64
 
 from nuvlaedge.peripherals.peripheral import Peripheral
-from nuvlaedge.common.nuvlaedge_config import nuvlaedge_arg_parser, initialize_logging
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 # Packages for Service Discovery
 from ssdpy import SSDPClient
@@ -311,10 +311,9 @@ def network_manager(**kwargs):
 
 
 def main():
-    global  logger
-    arguments = nuvlaedge_arg_parser(component_name='Bluetooth Peripheral')
-    initialize_logging(debug=arguments.parse_args().debug,
-                       log_level=arguments.parse_args().log_level)
+    global logger
+    parse_arguments_and_initialize_logging('Network Peripheral')
+
     logger = logging.getLogger(__name__)
     logger.info('NETWORK PERIPHERAL MANAGER STARTED')
 

@@ -438,20 +438,24 @@ class Docker(ContainerRuntime):
 
         try:
             container = self.client.containers.get(on_stop_container_name)
-        except docker.errors.NotFound:
-            # default to dev image
-            return 'nuvladev/on-stop:main'
-        except Exception as e:
-            self.logging.error(f"Unable to search for container {on_stop_container_name}. Reason: {str(e)}")
-            return None
-
-        try:
             if container.status.lower() == "paused":
                 return container.attrs['Config']['Image']
+        except docker.errors.NotFound as e:
+            self.logging.warning(f"Container {on_stop_container_name} not found: {str(e)}")
         except (AttributeError, KeyError) as e:
-            self.logging.error(f'Unable to infer Docker image for {on_stop_container_name}: {str(e)}')
+            self.logging.warning(f'Unable to infer Docker image for {on_stop_container_name}: {str(e)}')
+        except Exception as e:
+            self.logging.warning(f"Unable to search for container {on_stop_container_name}. Reason: {str(e)}")
 
-        return None
+        try:
+            return self.get_current_container().attrs['Config']['Image']
+        except docker.errors.NotFound as e:
+            self.logging.warning(f"Current container not found. Reason: {str(e)}")
+        except Exception as e:
+            self.logging.warning(f"Failed to get current container. Reason: {str(e)}")
+
+        # default to dev image
+        return 'nuvladev/nuvlaedge:main'
 
     def _get_container_id_from_cgroup(self):
         try:
@@ -523,6 +527,7 @@ class Docker(ContainerRuntime):
         }
         self.client.containers.run(on_stop_docker_image,
                                    name=on_stop_container_name,
+                                   entrypoint="on-stop",
                                    labels=label,
                                    environment=[f'PROJECT_NAME={project_name}'],
                                    volumes={
@@ -635,8 +640,7 @@ class Containers:
         if ORCHESTRATOR == 'kubernetes':
             self.container_runtime = Kubernetes(logging)
         else:
-            if os.path.exists(DOCKER_SOCKET_FILE):
-                self.container_runtime = Docker(logging)
-            else:
-                raise FileNotFoundError(f'Orchestrator is "{ORCHESTRATOR}", '
-                                        f'but file {DOCKER_SOCKET_FILE} is not present')
+            self.container_runtime = Docker(logging)
+            if not os.path.exists(DOCKER_SOCKET_FILE):
+                logging.warning(f'Orchestrator is "{ORCHESTRATOR}", '
+                                f'but file {DOCKER_SOCKET_FILE} is not present')

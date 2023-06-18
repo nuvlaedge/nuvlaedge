@@ -22,7 +22,7 @@ import logging
 import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
-from nuvlaedge.common.nuvlaedge_config import nuvlaedge_arg_parser, initialize_logging
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 
 logger = logging.getLogger(__name__)
@@ -170,11 +170,9 @@ def manage_modbus_peripherals(ip_address):
 def main():
     global logger
 
-    arguments = nuvlaedge_arg_parser(component_name='Bluetooth Peripheral')
-    initialize_logging(debug=arguments.parse_args().debug,
-                       log_level=arguments.parse_args().log_level)
-    logger = logging.getLogger(__name__)
+    parse_arguments_and_initialize_logging('Modbus Peripheral')
 
+    logger = logging.getLogger(__name__)
 
     gateway_ip = get_default_gateway_ip()
 

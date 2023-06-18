@@ -9,7 +9,7 @@ import shutil
 import os
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.ContainerRuntime import Containers
+from nuvlaedge.system_manager.common.container_runtime import Containers
 
 
 SKIP_MINIMUM_REQUIREMENTS = False

@@ -15,7 +15,7 @@ import docker.errors
 import OpenSSL
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.ContainerRuntime import Containers
+from nuvlaedge.system_manager.common.container_runtime import Containers
 
 
 class ClusterNodeCannotManageDG(Exception):
@@ -346,7 +346,6 @@ class Supervise(Containers):
 
                     self.log.warning(f'{err_msg}: {str(e)}')
 
-
     def manage_docker_data_gateway(self):
         """ Sets the DG service.
 
@@ -374,9 +373,6 @@ class Supervise(Containers):
 
         # ## 3: finally, connect this node's Agent container (+data source containers) to DG
         agent_container = self.find_nuvlaedge_agent()
-        data_source_containers = self.container_runtime.client.containers.list(filters={
-            'label': 'nuvlaedge.data-source-container'
-        })
 
         if agent_container:
             agent_container_id = agent_container.id
@@ -384,9 +380,8 @@ class Supervise(Containers):
             self.operational_status.append((utils.status_degraded, 'NuvlaEdge Agent is down'))
             return
 
-        connecting_containers = [agent_container] + data_source_containers
         try:
-            self.manage_docker_data_gateway_connect_to_network(connecting_containers, agent_container_id)
+            self.manage_docker_data_gateway_connect_to_network([agent_container], agent_container_id)
         except BreakDGManagementCycle:
             return
 

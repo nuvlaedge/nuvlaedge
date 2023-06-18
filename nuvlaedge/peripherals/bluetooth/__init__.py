@@ -9,7 +9,7 @@ import logging
 import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
-from nuvlaedge.common.nuvlaedge_config import nuvlaedge_arg_parser, initialize_logging
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -290,9 +290,7 @@ def bluetooth_manager():
 
 
 def main():
-    arguments = nuvlaedge_arg_parser(component_name='Bluetooth Peripheral')
-    initialize_logging(debug=arguments.parse_args().debug,
-                       log_level=arguments.parse_args().log_level)
+    parse_arguments_and_initialize_logging('Bluetooth Peripheral')
     
     logger.info('Starting bluetooth manager')
 

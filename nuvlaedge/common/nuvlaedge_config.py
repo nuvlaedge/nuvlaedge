@@ -5,18 +5,19 @@ configuration if done before any log
 import os
 import logging
 import logging.config
+import sys
+
 from argparse import ArgumentParser
 
 LOGGING_BASIC_FORMAT: str = '[%(asctime)s - %(name)s/%(funcName)s - %(levelname)s]: %(message)s'
-LOGGING_DEFAULT_LEVEL = logging.INFO
+LOGGING_DEFAULT_LEVEL = 'INFO'
 
 
-def initialize_logging(config_file: str = '', debug: bool = False, log_level: str = ''):
+def initialize_logging(log_level: str = '', config_file: str = ''):
     """
     Resets handlers that might have been created before proper configuration of logging
-    :param config_file:
-    :param debug:
     :param log_level
+    :param config_file
     :return:
     """
     # Remove possible initial handlers before configuring
@@ -27,30 +28,14 @@ def initialize_logging(config_file: str = '', debug: bool = False, log_level: st
     if config_file:
         logging.config.fileConfig(config_file)
     else:
-        logging.basicConfig(format=LOGGING_BASIC_FORMAT, level=LOGGING_DEFAULT_LEVEL)
+        logging.basicConfig(format=LOGGING_BASIC_FORMAT, level=logging.INFO)
 
-    root_logger: logging.Logger = logging.getLogger()
-
-    # Then assert which logging level to apply if any override configuration has been selected
-    # Priority goes as follows:
-    # If debug == True, set always debug log level
-    # else, command line log level overrides the environmental variable log level which at the same time
-    # overrides the file configuration log level
-    if debug:
-        root_logger.setLevel(logging.DEBUG)
-    else:
-        env_level: str = os.environ.get('NUVLAEDGE_LOG_LEVEL', '')
-
-        if log_level:
-            env_level = log_level
-
-        if env_level:
-            root_logger.setLevel(logging.getLevelName(env_level))
-        else:
-            root_logger.setLevel(LOGGING_DEFAULT_LEVEL)
+    if log_level:
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.getLevelName(log_level))
 
 
-def nuvlaedge_arg_parser(component_name: str, custom_arguments: callable = None) -> ArgumentParser:
+def nuvlaedge_arg_parser(component_name: str, additional_arguments: callable = None) -> ArgumentParser:
     """
     Common arguments creator for all NuvlaEdge components.
     It also receives a custom_arguments function to add extra arguments that
@@ -58,15 +43,49 @@ def nuvlaedge_arg_parser(component_name: str, custom_arguments: callable = None)
     :return: A configured ArgumentParser object
     """
 
-    parser: ArgumentParser = ArgumentParser(description=f"NuvlaEdge {component_name}")
-    parser.add_argument('--debug', dest='debug', default=False, action='store_true',
-                        help='use for increasing the verbosity level')
-    parser.add_argument('-l', dest='log_level', required=False, default='', action='store_true',
-                        help='Select a logging level from: INFO, WARNING or ERROR')
+    parser: ArgumentParser = ArgumentParser(description=f"NuvlaEdge {component_name}",
+                                            exit_on_error=False)
+    parser.add_argument('-l', '--log-level', dest='log_level',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        default='INFO', help='Log level')
+    parser.add_argument('-d', '--debug', dest='log_level',
+                        action='store_const', const='DEBUG',
+                        help='Set log level to debug')
 
-    # If more arguments are required, implement the function on the specific component and parse it
+    # If more arguments are required, implement the function on the specific component and pass it
     # to this function as an argument
-    if custom_arguments:
-        custom_arguments(parser)
+    if additional_arguments:
+        additional_arguments(parser)
 
     return parser
+
+
+def parse_arg(parser: ArgumentParser, args=None):
+    try:
+        return parser.parse_args(args)
+    except Exception as e:
+        logging.error(f'Error while parsing argument: {e}')
+    return None
+
+
+def handle_environment_variables():
+    log_level = os.environ.get('NUVLAEDGE_LOG_LEVEL')
+    if log_level \
+            and '--log-level' not in sys.argv \
+            and '-l' not in sys.argv:
+        sys.argv += ['--log-level', log_level]
+
+
+def parse_arguments_and_initialize_logging(component_name: str,
+                                           additional_arguments: callable = None,
+                                           logging_config_file: str = ''):
+    parser = nuvlaedge_arg_parser(component_name, additional_arguments)
+    handle_environment_variables()
+    args = parse_arg(parser)
+
+    log_level = 'INFO'
+    if args:
+        log_level = args.log_level
+
+    initialize_logging(log_level=log_level, config_file=logging_config_file)
+    return args

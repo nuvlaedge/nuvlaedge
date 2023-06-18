@@ -154,7 +154,7 @@ def do_cleanup():
 
 
 def arguments(parser):
-    parser.add_argument('action', nargs='?', choices=['paused', ''], default='')
+    parser.add_argument('action', nargs='?', choices=['pause', 'paused', ''], default='')
 
 
 def main():
@@ -165,7 +165,7 @@ def main():
         sys.exit(2)
 
     docker_client = docker.from_env()
-    if args.action == 'paused':
+    if args.action and 'paused'.startswith(args.action):
         pause()
     else:
         do_cleanup()

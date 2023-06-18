@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
 import unittest
 import mock
 
 import docker
 import docker.errors
+from docker.models.nodes import Node
 
 import nuvlaedge.on_stop as on_stop
 
@@ -62,22 +64,30 @@ class OnStopTestCase(unittest.TestCase):
         on_stop.detach_network_container(container, network)
         network.disconnect.assert_called_once()
 
-    @mock.patch('nuvlaedge.on_stop.detach_network_container')
-    def test_cleanup_networks(self, mock_detach_network_container):
+    def test_cleanup_networks(self):
         network = mock.MagicMock()
         network.attrs = {'Containers': {'container-id': {}}}
+        on_stop.docker_client.networks.list.return_value = [network]
 
         # Nominal case
-        on_stop.docker_client.networks.list.return_value = [network]
         on_stop.cleanup_networks('')
         network.reload.assert_called_once()
         network.remove.assert_called_once()
-        mock_detach_network_container.assert_called_once()
+        network.disconnect.assert_called_once()
 
         # reset
         network.reload.reset_mock()
         network.remove.reset_mock()
-        mock_detach_network_container.reset_mock()
+        network.disconnect.reset_mock()
+
+        # Without Containers
+        network.attrs = {}
+        on_stop.cleanup_networks('')
+        network.disconnect.assert_not_called()
+
+        # reset
+        network.remove.reset_mock()
+        network.disconnect.reset_mock()
 
         # NotFound
         network.remove.side_effect = docker.errors.NotFound('')
@@ -154,6 +164,101 @@ class OnStopTestCase(unittest.TestCase):
         container.remove.side_effect = Exception("network remove failed")
         with self.assertLogs(level='ERROR'):
             on_stop.cleanup_datagateway(False)
+
+    @mock.patch('docker.models.nodes.Node.update')
+    @mock.patch('nuvlaedge.on_stop.prune_old_onstop_containers')
+    @mock.patch('nuvlaedge.on_stop.cleanup_datagateway')
+    @mock.patch('nuvlaedge.on_stop.cleanup_networks')
+    def test_do_cleanup(self, mock_cleanup_networks,
+                        mock_cleanup_dg,
+                        mock_prune_onstop,
+                        mock_node_update):
+
+        # Swarm enabled and manager
+        on_stop.docker_client.info.return_value = {
+            'Swarm': {'NodeID': 'node-id',
+                      'LocalNodeState': 'active',
+                      'RemoteManagers': [{'NodeID': 'node-id'}]}
+        }
+        on_stop.docker_client.nodes.list.return_value = []
+        node_attrs = {'Spec': {'Labels': {'nuvlaedge': 'True'}}}
+        on_stop.docker_client.nodes.get.return_value = Node(client=on_stop.docker_client,
+                                                            attrs=node_attrs)
+        on_stop.do_cleanup()
+        mock_node_update.assert_called_once()
+        mock_prune_onstop.assert_called_once()
+        mock_cleanup_dg.assert_not_called()
+        mock_cleanup_networks.assert_not_called()
+
+        # reset
+        on_stop.docker_client.info.list.reset_mock()
+        on_stop.docker_client.nodes.list.reset_mock()
+        on_stop.docker_client.nodes.get.reset_mock()
+        mock_node_update.reset_mock()
+        mock_prune_onstop.reset_mock()
+        mock_cleanup_dg.reset_mock()
+        mock_cleanup_networks.reset_mock()
+
+        # Swarm enabled and worker
+        on_stop.docker_client.info.return_value = {
+            'Swarm': {'NodeID': 'another-node-id',
+                      'LocalNodeState': 'active',
+                      'RemoteManagers': [{'NodeID': 'node-id'}]}
+        }
+        on_stop.do_cleanup()
+        mock_node_update.assert_not_called()
+        mock_cleanup_dg.assert_not_called()
+        mock_cleanup_networks.assert_not_called()
+
+        # reset
+        on_stop.docker_client.info.list.reset_mock()
+        mock_node_update.reset_mock()
+        mock_cleanup_dg.reset_mock()
+        mock_cleanup_networks.reset_mock()
+
+        # Swarm disabled
+        on_stop.docker_client.info.return_value = {
+            'Swarm': {'NodeID': 'another-node-id',
+                      'RemoteManagers': [{'NodeID': 'node-id'}]}
+        }
+        on_stop.do_cleanup()
+        mock_node_update.assert_not_called()
+        mock_cleanup_dg.assert_called_once()
+        mock_cleanup_networks.assert_called_once()
+
+    @mock.patch('docker.from_env')
+    @mock.patch('nuvlaedge.on_stop.pause')
+    @mock.patch('nuvlaedge.on_stop.do_cleanup')
+    def test_main(self, mock_cleanup, mock_pause, mock_docker_from_env):
+        argv = sys.argv.copy()
+
+        # Pause
+        sys.argv = ['on-stop', 'paused']
+        on_stop.main()
+        mock_pause.assert_called_once()
+        mock_cleanup.assert_not_called()
+
+        # reset
+        mock_pause.reset_mock()
+        mock_cleanup.reset_mock()
+
+        # Cleanup
+        sys.argv = ['on-stop']
+        on_stop.main()
+        mock_pause.assert_not_called()
+        mock_cleanup.assert_called_once()
+
+        # reset
+        mock_pause.reset_mock()
+        mock_cleanup.reset_mock()
+
+        # Exception
+        sys.argv = ['on-stop', '--log-level', 'RAISE']
+        with self.assertRaises(SystemExit):
+            on_stop.main()
+
+        # reset
+        sys.argv = argv
 
 
 if __name__ == '__main__':

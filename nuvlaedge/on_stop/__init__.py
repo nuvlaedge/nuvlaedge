@@ -9,6 +9,7 @@ To be executed on every stop or full shutdown of the NBE, in order to ensure a p
 
 import logging
 import socket
+import sys
 import time
 
 import docker
@@ -124,7 +125,7 @@ def do_cleanup():
     remote_managers = [rm.get('NodeID') for rm in swarm_info.get('RemoteManagers')] if swarm_info.get('RemoteManagers') else []
     i_am_manager = True if node_id in remote_managers else False
 
-    network_driver = 'bridge'
+    network_driver  = 'bridge'
     cluster_managers = []
     if i_am_manager:
         network_driver = 'overlay'
@@ -153,13 +154,15 @@ def do_cleanup():
 
 
 def arguments(parser):
-    parser.add_argument('action', nargs='?', choices=['paused'], default='')
+    parser.add_argument('action', nargs='?', choices=['paused', ''], default='')
 
 
 def main():
     global docker_client
 
     args = parse_arguments_and_initialize_logging('on-stop', additional_arguments=arguments)
+    if args is None:
+        sys.exit(2)
 
     docker_client = docker.from_env()
     if args.action == 'paused':

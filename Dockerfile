@@ -45,6 +45,8 @@ RUN python setup.py install
 
 
 # ------------------------------------------------------------------------
+# Network Peripheral builder
+# ------------------------------------------------------------------------
 FROM base-builder AS network-builder
 
 COPY --link requirements.network.txt /tmp/requirements.txt
@@ -52,12 +54,16 @@ RUN pip install -r /tmp/requirements.txt
 
 
 # ------------------------------------------------------------------------
+# ModBus Peripheral builder
+# ------------------------------------------------------------------------
 FROM base-builder AS modbus-builder
 
 COPY --link requirements.modbus.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 
+# ------------------------------------------------------------------------
+# GPU Peripheral builder
 # ------------------------------------------------------------------------
 FROM base-builder AS gpu-builder
 
@@ -116,6 +122,8 @@ RUN pip install -r /tmp/requirements.lite.txt
 
 
 # ------------------------------------------------------------------------
+# NuvlaEdge builder
+# ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
 ARG PYTHON_MAJ_MIN_VERSION
 ARG PYTHON_LOCAL_SITE_PACKAGES
@@ -136,6 +144,9 @@ RUN pip install docker-compose
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
 
+# ------------------------------------------------------------------------
+# USB Peripheral builder
+# ------------------------------------------------------------------------
 FROM ${GO_BASE_IMAGE} AS golang-builder
 # Build Golang usb peripehral
 RUN apk update
@@ -147,6 +158,8 @@ WORKDIR /opt/usb/
 RUN go mod tidy && go build
 
 
+# ------------------------------------------------------------------------
+# Final NuvlaEdge image
 # ------------------------------------------------------------------------
 FROM ${BASE_IMAGE}
 ARG PYTHON_MAJ_MIN_VERSION
@@ -164,6 +177,16 @@ LABEL org.opencontainers.image.vendor="SixSq SA"
 LABEL org.opencontainers.image.title="NuvlaEdge"
 LABEL org.opencontainers.image.description="Common image for NuvlaEdge software components"
 
+# ------------------------------------------------------------------------
+# License
+# ------------------------------------------------------------------------
+COPY LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
+RUN chmod +x /opt/nuvlaedge/license.sh
+ONBUILD RUN ./license.sh
+
+# ------------------------------------------------------------------------
+# USB peripheral discovery binary
+# ------------------------------------------------------------------------
 COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 
 # ------------------------------------------------------------------------
@@ -189,7 +212,7 @@ COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 
 
 # ------------------------------------------------------------------------
-# REquired packages for the Agent
+# Required packages for the Agent
 # ------------------------------------------------------------------------
 RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl iproute2
 
@@ -210,6 +233,7 @@ RUN apk add --no-cache libusb-dev udev
 # Required package for bluetooth discovery
 # ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
+
 
 # ------------------------------------------------------------------------
 # Setup Compute-API

@@ -12,6 +12,7 @@ import unittest
 import yaml
 
 import docker
+import docker.errors
 import requests
 
 import tests.agent.utils.fake as fake
@@ -255,8 +256,11 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
         self.assertFalse(self.obj.is_vpn_client_running(),
                          'Says vpn-client is running, but it is not')
 
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_current_image')
     @mock.patch('docker.models.containers.ContainerCollection.run')
-    def test_install_ssh_key(self, mock_docker_run):
+    def test_install_ssh_key(self, mock_docker_run, mock_get_current_image):
+        mock_get_current_image.return_value = 'sixsq/nuvlaedge'
+
         # if all goes well, we expect True
         mock_docker_run.return_value = None
         self.assertTrue(self.obj.install_ssh_key('fake-pub-key', 'fake-ssh-folder'),

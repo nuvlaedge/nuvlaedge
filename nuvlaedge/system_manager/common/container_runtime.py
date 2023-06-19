@@ -15,6 +15,7 @@ if KUBERNETES_SERVICE_HOST:
     ORCHESTRATOR = 'kubernetes'
 else:
     import docker
+    import docker.errors
     ORCHESTRATOR = 'docker'
 
 
@@ -27,6 +28,8 @@ class ContainerRuntime(ABC):
     def __init__(self, logging):
         self.client = None
         self.logging = logging
+
+        self.current_image = 'nuvladev/nuvlaedge:main'
 
     @abstractmethod
     def list_internal_components(self, base_label=utils.base_label):
@@ -195,6 +198,7 @@ class Kubernetes(ContainerRuntime):
         self.orchestrator = 'kubernetes'
         self.agent_dns = f'nuvlaedge.agent.{self.namespace}'
         self.my_component_name = 'nuvlaedge-engine-core'
+        self.current_image = os.getenv('NUVLAEDGE_IMAGE') or self.current_image
 
     def list_internal_components(self, base_label=utils.base_label):
         # for k8s, components = pods
@@ -354,6 +358,7 @@ class Docker(ContainerRuntime):
         self.agent_dns = utils.compose_project_name + "-agent"
         self.my_component_name = utils.compose_project_name + '-system-manager'
         self.dg_encrypt_options = self.load_data_gateway_network_options()
+        self.current_image = self._get_current_image() or self.current_image
 
     def load_data_gateway_network_options(self) -> dict:
         """
@@ -447,6 +452,9 @@ class Docker(ContainerRuntime):
         except Exception as e:
             self.logging.warning(f"Unable to search for container {on_stop_container_name}. Reason: {str(e)}")
 
+        return self.current_image
+
+    def _get_current_image(self):
         try:
             return self.get_current_container().attrs['Config']['Image']
         except docker.errors.NotFound as e:
@@ -454,8 +462,7 @@ class Docker(ContainerRuntime):
         except Exception as e:
             self.logging.warning(f"Failed to get current container. Reason: {str(e)}")
 
-        # default to dev image
-        return 'nuvladev/nuvlaedge:main'
+        return None
 
     def _get_container_id_from_cgroup(self):
         try:

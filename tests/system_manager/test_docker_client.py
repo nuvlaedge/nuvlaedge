@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import docker
+import docker.errors
 import logging
 import mock
 import os
@@ -181,14 +182,15 @@ class DockerTestCase(unittest.TestCase):
         # if on-stop exists and is not pause, get fallback nuvlaedge image
         container.status = 'running'
         container.attrs = {'Config': {'Image': 'sixsq/nuvlaedge:1.2.3'}}
+
         self.obj.client.containers.get.return_value = container
-        self.assertEqual(self.obj.infer_on_stop_docker_image(), 'sixsq/nuvlaedge:1.2.3',
+        self.assertEqual(self.obj.infer_on_stop_docker_image(), default_on_stop_docker_image,
                          'Got the wrong image with a running on-stop container')
 
         # otherwise, get image name
-        container.attrs = {'Config': {'Image': 'foo'}}
+        container.status = 'paused'
         self.obj.client.containers.get.return_value = container
-        self.assertEqual(self.obj.infer_on_stop_docker_image(), 'foo',
+        self.assertEqual(self.obj.infer_on_stop_docker_image(), 'sixsq/nuvlaedge:1.2.3',
                          'Unable to infer on-stop image')
 
     @mock.patch('socket.gethostname')

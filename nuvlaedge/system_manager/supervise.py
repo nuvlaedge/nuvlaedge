@@ -528,7 +528,7 @@ class Supervise(Containers):
                "-c",
                f"echo -e '''{json.dumps(self.container_runtime.get_node_info(), indent=2)}''' && sleep 300"]
 
-        self.container_runtime.client.services.create('alpine',
+        self.container_runtime.client.services.create(self.container_runtime.current_image,
                                                       command=cmd,
                                                       container_labels=labels,
                                                       labels=labels,

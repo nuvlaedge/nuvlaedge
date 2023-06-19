@@ -184,7 +184,7 @@ class DockerClient(ContainerRuntimeClient):
         ssh_folder = '/tmp/ssh'
         cmd = "sh -c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
 
-        self.client.containers.run('alpine',
+        self.client.containers.run(self.get_current_image(),
                                    remove=True,
                                    command=cmd,
                                    environment={

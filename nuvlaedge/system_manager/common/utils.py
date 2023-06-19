@@ -17,7 +17,7 @@ node_label_key = "nuvlaedge"
 compose_project_name = os.getenv('COMPOSE_PROJECT_NAME', 'nuvlaedge')
 nuvlaedge_shared_net = compose_project_name + '-shared-network'
 nuvlaedge_shared_net_unencrypted = f'{data_volume}/.nuvlabox-shared-net-unencrypted'
-overlay_network_service = 'nuvlaedge-ack'
+overlay_network_service = compose_project_name + '-ack'
 
 status_degraded = 'DEGRADED'
 status_operational = 'OPERATIONAL'

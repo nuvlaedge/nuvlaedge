@@ -199,7 +199,7 @@ class KubernetesClient(ContainerRuntimeClient):
                 containers=[
                     client.V1Container(
                         name=name,
-                        image='alpine',
+                        image=self.get_current_image(),
                         env=[
                             client.V1EnvVar(
                                 name='SSH_PUB',

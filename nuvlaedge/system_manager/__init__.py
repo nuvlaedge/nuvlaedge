@@ -23,8 +23,8 @@ from nuvlaedge.system_manager.supervise import Supervise
 __copyright__ = "Copyright (C) 2021 SixSq"
 __email__ = "support@sixsq.com"
 
-log = logging.getLogger(__name__)
-self_sup = Supervise()
+log = None
+self_sup = None
 
 
 def log_threads_stackstraces():
@@ -105,6 +105,10 @@ def requirements_check(sw_rq: MinReq.SoftwareRequirements,
 
 
 def main():
+    global self_sup, log
+    log = logging.getLogger(__name__)
+    self_sup = Supervise()
+
     system_requirements = MinReq.SystemRequirements()
     software_requirements = MinReq.SoftwareRequirements()
 

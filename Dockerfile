@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.4
+
 ARG ALPINE_MAJ_MIN_VERSION="3.18"
 ARG PYTHON_MAJ_MIN_VERSION="3.11"
 ARG GOLANG_VERSION="1.20.4"
@@ -150,6 +151,18 @@ RUN go mod tidy && go build
 FROM ${BASE_IMAGE}
 ARG PYTHON_MAJ_MIN_VERSION
 ARG PYTHON_LOCAL_SITE_PACKAGES
+
+LABEL git.branch=${GIT_BRANCH}
+LABEL git.commit.id=${GIT_COMMIT_ID}
+LABEL git.build.time=${GIT_BUILD_TIME}
+LABEL git.run.number=${GITHUB_RUN_NUMBER}
+LABEL git.run.id=${GITHUB_RUN_ID}
+LABEL org.opencontainers.image.authors="support@sixsq.com"
+LABEL org.opencontainers.image.created=${GIT_BUILD_TIME}
+LABEL org.opencontainers.image.url=${PROJECT_URL}
+LABEL org.opencontainers.image.vendor="SixSq SA"
+LABEL org.opencontainers.image.title="NuvlaEdge"
+LABEL org.opencontainers.image.description="Common image for NuvlaEdge software components"
 
 COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 

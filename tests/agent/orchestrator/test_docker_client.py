@@ -13,6 +13,7 @@ import yaml
 
 import docker
 import docker.errors
+import docker.models.containers
 import requests
 
 import tests.agent.utils.fake as fake
@@ -183,33 +184,9 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
             self.assertEqual(self.obj.get_api_ip_port(), ('127.0.0.1', mocked_port),
                              'Could not get default IP from filesystem')
 
-    @mock.patch('docker.models.containers.ContainerCollection.get')
-    def test_has_pull_job_capability(self, mock_containers_get):
-        # if the job-lite does not exist, we get False
-        mock_containers_get.side_effect = docker.errors.NotFound
-        self.assertFalse(self.obj.has_pull_job_capability(),
-                         'Job lite can not be found but returned True anyway')
-
-        # same for any other exception
-        mock_containers_get.side_effect = EOFError
-        self.assertFalse(self.obj.has_pull_job_capability(),
-                         'Error occurred but returned True anyway')
-
-        # otherwise, we infer its Docker image
-        mock_containers_get.reset_mock(side_effect=True)
-
-        mock_containers_get.return_value = fake.MockContainer(status='running')
-
-        # if the container is running, we return false
-        self.assertFalse(self.obj.has_pull_job_capability(),
-                         'Returned True even when job-lite container is not paused')
-
-        # the container is supposed to be paused
-        mock_containers_get.return_value = fake.MockContainer()
-        self.assertTrue(self.obj.has_pull_job_capability(),
-                        'Should have found the job-lite component, but has not')
-        self.assertEqual(self.obj.job_engine_lite_image, 'fake-image',
-                         'Set the wrong job-lite Docker image')
+    def test_has_pull_job_capability(self):
+        # Always return True
+        self.assertTrue(self.obj.has_pull_job_capability())
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.cast_dict_to_list')
     @mock.patch('docker.api.swarm.SwarmApiMixin.inspect_node')
@@ -256,10 +233,9 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
         self.assertFalse(self.obj.is_vpn_client_running(),
                          'Says vpn-client is running, but it is not')
 
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_current_image')
     @mock.patch('docker.models.containers.ContainerCollection.run')
-    def test_install_ssh_key(self, mock_docker_run, mock_get_current_image):
-        mock_get_current_image.return_value = 'sixsq/nuvlaedge'
+    def test_install_ssh_key(self, mock_docker_run):
+        self.obj._current_image = 'sixsq/nuvlaedge'
 
         # if all goes well, we expect True
         mock_docker_run.return_value = None
@@ -319,29 +295,103 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
                          'Failed to kill job execution container in unknown state')
 
     @mock.patch('docker.api.network.NetworkApiMixin.connect_container_to_network')
-    @mock.patch('docker.models.containers.ContainerCollection.run')
+    @mock.patch('docker.api.container.ContainerApiMixin.remove_container')
+    @mock.patch('docker.models.containers.ContainerCollection.create')
     @mock.patch('docker.models.containers.ContainerCollection.get')
-    def test_launch_job(self, mock_containers_get, mock_containers_run, mock_net_connect):
-        job_id = 'fake-id'
-        job_exec_id = 'fake-exec-id'
+    @mock.patch('docker.models.containers.Container.start')
+    @mock.patch('docker.models.images.ImageCollection.pull')
+    def test_launch_job(self, mock_images_pull, mock_container_start, mock_containers_get, mock_containers_create,
+                        mock_remove_container, mock_net_connect):
+        job_id = 'fake-id-2'
+        job_exec_id = 'fake-exec-id-2'
         nuvla = 'https://fake-nuvla.io'
 
         # if there's an error while getting the compute-api, it should still work
-        mock_containers_get.side_effect = TimeoutError
+        mock_containers_get.side_effect = [TimeoutError, mock.DEFAULT]
+        mock_containers_create.return_value = docker.models.containers.Container()
         self.assertIs(self.obj.launch_job(job_id, job_exec_id, nuvla), None,
                       'compute-api could not be found, but still got something else than None')
-        mock_containers_run.assert_called_once()
+        mock_containers_create.assert_called_once()
+        mock_container_start.assert_called_once()
+
+        # no docker image found, using fallback
+        self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), 'nuvladev/nuvlaedge:main')
+
+        # reset
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock()
+        mock_containers_get.reset_mock(side_effect=True)
+
+        # Start with specified docker image and nuvla_endpoint_insecure=True
+        docker_image = 'sixsq/nuvlaedge:2.10.x'
+        mock_containers_create.return_value = docker.models.containers.Container()
+        self.obj.launch_job(job_id, job_exec_id, nuvla,
+                            docker_image=docker_image,
+                            nuvla_endpoint_insecure=True)
+        # docker image provided, using this one
+        create_kwargs = mock_containers_create.call_args.kwargs
+        self.assertEqual(create_kwargs.get('image'), docker_image)
+        self.assertIn('--api-insecure', create_kwargs.get('command', ''))
+
+        # reset
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock()
+        mock_containers_get.reset_mock()
+        mock_net_connect.reset_mock()
 
         # otherwise we try to launch the job execution container
-        mock_net_connect.reset_mock()
-        mock_containers_run.reset_mock()
-        mock_containers_get.reset_mock(side_effect=True)
         mock_containers_get.return_value = fake.MockContainer()
-        mock_containers_run.return_value = None
+        mock_containers_create.return_value = docker.models.containers.Container()
+        mock_container_start.return_value = None
         self.assertIs(self.obj.launch_job(job_id, job_exec_id, nuvla), None,
                       'Unable to launch job execution container')
-        mock_containers_run.assert_called_once()
+        mock_containers_create.assert_called_once()
+        mock_container_start.assert_called_once()
         mock_net_connect.assert_called_once_with(job_exec_id, 'bridge')
+
+        # reset
+        mock_net_connect.reset_mock()
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock(return_value=True)
+        mock_containers_get.reset_mock(return_value=True)
+
+        # pull and retry when docker image not found
+        mock_containers_create.side_effect = [docker.errors.ImageNotFound(''), mock.DEFAULT]
+        self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_images_pull.assert_called_once()
+        self.assertEqual(mock_containers_create.call_count, 2)
+
+        # reset
+        mock_containers_create.reset_mock(side_effect=True)
+        mock_images_pull.reset_mock()
+
+        # try to remove container when failed to fully create it (but fail to remove)
+        mock_containers_create.side_effect = TimeoutError
+        mock_remove_container.side_effect = docker.errors.NotFound('')
+        with self.assertRaises(TimeoutError):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_remove_container.assert_called_once()
+
+        # reset
+        mock_containers_create.reset_mock(side_effect=True)
+        mock_remove_container.reset_mock(side_effect=True)
+
+        # fail to connect container to bridge network
+        mock_net_connect.side_effect = RuntimeError
+        with self.assertLogs(level=logging.WARNING):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_container_start.assert_not_called()
+
+        # reset
+        mock_net_connect.reset_mock(side_effect=True)
+        mock_container_start.reset_mock()
+
+        # remove container when fail to start container
+        mock_containers_create.return_value = docker.models.containers.Container(client=self.obj.client)
+        mock_container_start.side_effect = docker.errors.APIError('')
+        with self.assertRaises(docker.errors.APIError):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_remove_container.assert_called_once()
 
     # Only available in Python >= 3.10
     @contextlib.contextmanager

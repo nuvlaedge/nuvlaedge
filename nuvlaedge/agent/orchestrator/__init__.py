@@ -24,11 +24,10 @@ class ContainerRuntimeClient(ABC):
     def __init__(self):
         self.client = None
         self.job_engine_lite_component = util.compose_project_name + "-" + util.job_engine_service_name
-        self.job_engine_lite_image = None
+        self.job_engine_lite_image = ''
         self.vpn_client_component = util.compose_project_name + '-' + util.vpn_client_service_name
         self.ignore_env_variables = ['NUVLAEDGE_API_KEY', 'NUVLAEDGE_API_SECRET']
         self.data_gateway_name = None
-        self._current_image = None
 
     @abstractmethod
     def get_node_info(self):
@@ -291,11 +290,13 @@ class ContainerRuntimeClient(ABC):
         :param name:
         """
 
+    @property
     @abstractmethod
-    def get_current_image(self) -> str:
+    def current_image(self) -> str:
         """
         Extracts  the component container from its name or its service name
         and extracts the image name from metadata
 
         :return: The image name in the container running the component service
         """
+

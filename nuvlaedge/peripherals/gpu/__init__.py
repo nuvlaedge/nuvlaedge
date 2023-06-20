@@ -27,9 +27,13 @@ from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_log
 
 default_image = 'nuvladev/nuvlaedge:main'
 docker_socket_file = '/var/run/docker.sock'
-HOST_FILES = '/etcfs/nvidia-container-runtime/host-files-for-container.d/'
-RUNTIME_PATH = '/etcfs/docker/'
-DEVICE_PARENT_PATH = '/dev/'
+HOST_PATH = '/host'
+DEVICE_PARENT_PATH = f'{HOST_PATH}/dev'
+HOST_USR_LIB_PATH = f'{HOST_PATH}/usr/lib'
+HOST_ETC_PATH = f'{HOST_PATH}/etc'
+HOST_FILES = f'{HOST_ETC_PATH}/nvidia-container-runtime/host-files-for-container.d'
+RUNTIME_PATH = f'{HOST_ETC_PATH}/docker'
+
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -72,9 +76,7 @@ def check_cuda():
 
     if cuda_version is not None:
         with open(cuda_version + '/version.txt', 'r') as f:
-            v = f.readline()
-
-            return v
+            return f.readline()
     else:
         return False
 
@@ -87,7 +89,7 @@ def nvidia_device(devices):
 
     for device in devices:
         if device.startswith('nv'):
-            nv_devices.append('/dev/{}'.format(device))
+            nv_devices.append('{}/{}'.format(DEVICE_PARENT_PATH, device))
 
     return nv_devices
 
@@ -96,7 +98,7 @@ def check_cuda_installation(cuda_version):
     """
     Checks if Cuda is installed.
     """
-    if 'libcuda.so' in os.listdir('/usr/lib/{}-linux-gnu'.format(cuda_version)):
+    if 'libcuda.so' in os.listdir('{}/{}-linux-gnu'.format(HOST_USR_LIB_PATH, cuda_version)):
         return True
     else:
         return False
@@ -110,7 +112,7 @@ def build_cuda_core_docker_cli(devices):
     cli_volumes = {}
     libs = []
 
-    current_devices = ['/dev/{}'.format(i) for i in os.listdir(DEVICE_PARENT_PATH)]
+    current_devices = ['{}/{}'.format(DEVICE_PARENT_PATH, i) for i in os.listdir(DEVICE_PARENT_PATH)]
 
     for device in devices:
 
@@ -123,12 +125,12 @@ def build_cuda_core_docker_cli(devices):
     #   in the discrete graphics, there is a need for different volumes.
 
     if cuda_version == 'aarch64':
-        libcuda = '/usr/lib/{0}-linux-gnu/'.format(cuda_version)
+        libcuda = '{}/{}-linux-gnu/'.format(HOST_USR_LIB_PATH, cuda_version)
         etc = '/etc/'
         cli_volumes[etc] = {'bind':  etc, 'mode': 'ro'}
         libs.extend([libcuda, etc])
     else:
-        libcuda = '/usr/lib/{0}-linux-gnu/libcuda.so'.format(cuda_version)
+        libcuda = '{}/{}-linux-gnu/libcuda.so'.format(HOST_USR_LIB_PATH, cuda_version)
         libs.extend([libcuda])
     cuda = '/usr/local/cuda'
 
@@ -217,7 +219,7 @@ def search_runtime(runtime_path, host_files_path):
     for i in os.listdir(runtime_path):
 
         if 'daemon.json' in i:
-            dic = read_json(runtime_path + i)
+            dic = read_json(f'{runtime_path}/{i}')
 
             try:
                 if 'nvidia' in dic['runtimes'].keys():
@@ -242,7 +244,7 @@ def read_runtime_files(path):
 
         for i in os.listdir(path):
 
-            with open(path + i) as csvFile:
+            with open(f'{path}/{i}') as csvFile:
                 reader = csv.reader(csvFile)
 
                 for line in reader:

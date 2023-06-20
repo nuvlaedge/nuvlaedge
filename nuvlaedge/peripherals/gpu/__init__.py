@@ -15,15 +15,17 @@ It provides:
 import os
 import csv
 import json
+import socket
 from shutil import which
 import requests
 import logging
-from packaging import version
 import docker.errors
 
+from nuvlaedge.agent.common.util import compose_project_name
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
+default_image = 'nuvladev/nuvlaedge:main'
 docker_socket_file = '/var/run/docker.sock'
 HOST_FILES = '/etcfs/nvidia-container-runtime/host-files-for-container.d/'
 RUNTIME_PATH = '/etcfs/docker/'
@@ -43,7 +45,6 @@ else:
 logger: logging.Logger = logging.getLogger(__name__)
 
 identifier = 'GPU'
-image = 'nuvlaedge_cuda_core_information:{}'
 
 
 def read_json(json_path):
@@ -138,60 +139,36 @@ def build_cuda_core_docker_cli(devices):
     return cli_devices, cli_volumes, libs
 
 
-def get_current_image_version(client):
-
-    peripheral_version = ''
-    cuda_core_version = ''
-
-    for container in client.containers.list():
-        repo_tags = container.image.attrs.get('RepoTags')
-        if not repo_tags:
-            continue
-        img, tag = repo_tags[0].split(':')
-        if img == 'nuvlaedge/nuvlaedge':
-            peripheral_version = tag
-        elif img == image:
-            cuda_core_version = tag
-    try:
-        if version.parse(peripheral_version) > version.parse(cuda_core_version):
-            return peripheral_version
-    except version.InvalidVersion:
-        pass
-    else:
-        return '0.0.1'
-
-
-def cuda_cores(image, devices, volumes):
+def cuda_cores(devices, volumes):
     """
     Starts Cuda Core container and returns the output from the container
     """
 
     client = docker.from_env()
 
-    current_version = get_current_image_version(client)
-    img = image.format(current_version)
-
-    # Build Image
-    if len(client.images.list(img)) == 0 and current_version != '':
-        logger.info('Build CUDA Cores Image')
-        client.images.build(path='/opt/nuvlaedge/scripts/gpu/', tag=img, dockerfile='Dockerfile.gpu')
-
-    container_name = 'get-cuda-cores'
-    container = ''
     try:
-        container = client.containers.run(img,
-                                          name=container_name,
-                                          devices=devices,
-                                          volumes=volumes,
-                                          remove=True)
+        image = client.containers.get(socket.gethostname()).attrs['Config']['Image']
+    except Exception as e:
+        logger.error(f'Failed to find current container image name ({e}). Fallback to default dev image')
+        image = default_image
+
+    container_name = compose_project_name + '-peripheral-gpu-get-cuda-cores'
+    container = ''
+
+    def run():
+        return client.containers.run(image,
+                                     name=container_name,
+                                     command=['python', 'scripts/gpu/cuda_scan.py'],
+                                     devices=devices,
+                                     volumes=volumes,
+                                     remove=True)
+
+    try:
+        container = run()
     except docker.errors.APIError as e:
         if '409' in str(e):
             client.api.remove_container(container_name)
-            container = client.containers.run(img,
-                                              name=container_name,
-                                              devices=devices,
-                                              volumes=volumes,
-                                              remove=True)
+            container = run()
 
     except Exception as e:
         # let's not stop the peripheral manager just because we can't get this property
@@ -288,7 +265,7 @@ def read_runtime_files(path):
 def cuda_cores_information(nv_devices):
 
     devices, libs, _ = build_cuda_core_docker_cli(nv_devices)
-    output = cuda_cores(image, devices, libs)
+    output = cuda_cores(devices, libs)
     if output != '':
         try:
             name, information = cuda_information(output)

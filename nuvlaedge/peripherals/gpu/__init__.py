@@ -15,6 +15,7 @@ It provides:
 import os
 import csv
 import json
+import re
 import socket
 from shutil import which
 import requests
@@ -25,15 +26,21 @@ from nuvlaedge.agent.common.util import compose_project_name
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
-default_image = 'nuvladev/nuvlaedge:main'
+# Increase this version to enforce rebuild (usually when Dockerfile.gpu is updated)
+gpu_image_version = '1.0'
+
 docker_socket_file = '/var/run/docker.sock'
+build_path = '/opt/nuvlaedge/scripts/gpu/'
+dockerfile_path = '/etc/nuvlaedge/scripts/gpu/Dockerfile.gpu'
+
 HOST_PATH = '/host'
-DEVICE_PARENT_PATH = f'{HOST_PATH}/dev'
+HOST_DEV_PATH = f'{HOST_PATH}/dev'
 HOST_USR_LIB_PATH = f'{HOST_PATH}/usr/lib'
 HOST_ETC_PATH = f'{HOST_PATH}/etc'
 HOST_FILES = f'{HOST_ETC_PATH}/nvidia-container-runtime/host-files-for-container.d'
 RUNTIME_PATH = f'{HOST_ETC_PATH}/docker'
 
+host_path_prefix = re.compile(r'^' + re.escape(HOST_PATH))
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -89,7 +96,7 @@ def nvidia_device(devices):
 
     for device in devices:
         if device.startswith('nv'):
-            nv_devices.append('{}/{}'.format(DEVICE_PARENT_PATH, device))
+            nv_devices.append('{}/{}'.format(HOST_DEV_PATH, device))
 
     return nv_devices
 
@@ -112,33 +119,57 @@ def build_cuda_core_docker_cli(devices):
     cli_volumes = {}
     libs = []
 
-    current_devices = ['{}/{}'.format(DEVICE_PARENT_PATH, i) for i in os.listdir(DEVICE_PARENT_PATH)]
+    logger.debug(f'build_cuda_core_docker_cli: devices: {devices}')
+    device_path = host_path_prefix.sub('', HOST_DEV_PATH)
+    usr_lib_path = host_path_prefix.sub('', HOST_USR_LIB_PATH)
+    logger.debug(f'build_cuda_core_docker_cli: device path: {device_path}')
+    logger.debug(f'build_cuda_core_docker_cli: user lib path: {usr_lib_path}')
+
+    current_devices = ['{}/{}'.format(device_path, i) for i in os.listdir(HOST_DEV_PATH)]
 
     for device in devices:
-
         if device in current_devices:
             cli_devices.append('{0}:{0}:rwm'.format(device))
 
     cuda_version = get_device_type()
 
     # Due to differences in the implementation of the GPUs by Nvidia, in the Jetson devices, and
-    #   in the discrete graphics, there is a need for different volumes.
+    # in the discrete graphics, there is a need for different volumes.
 
     if cuda_version == 'aarch64':
-        libcuda = '{}/{}-linux-gnu/'.format(HOST_USR_LIB_PATH, cuda_version)
+        libcuda = '{}/{}-linux-gnu/'.format(usr_lib_path, cuda_version)
         etc = '/etc/'
         cli_volumes[etc] = {'bind':  etc, 'mode': 'ro'}
         libs.extend([libcuda, etc])
     else:
-        libcuda = '{}/{}-linux-gnu/libcuda.so'.format(HOST_USR_LIB_PATH, cuda_version)
+        libcuda = '{}/{}-linux-gnu/libcuda.so'.format(usr_lib_path, cuda_version)
         libs.extend([libcuda])
+
     cuda = '/usr/local/cuda'
 
     libs.extend([cuda])
     cli_volumes[libcuda] = {'bind': libcuda, 'mode': 'ro'}
     cli_volumes[cuda] = {'bind': cuda, 'mode': 'ro'}
 
+    logger.debug(f'build_cuda_core_docker_cli: cli_devices: {cli_devices}')
+    logger.debug(f'build_cuda_core_docker_cli: cli_volumes: {cli_volumes}')
+    logger.debug(f'build_cuda_core_docker_cli: libs: {libs}')
+
     return cli_devices, cli_volumes, libs
+
+
+def get_linux_distribution_name_and_version():
+    try:
+        with open(f'{HOST_ETC_PATH}/os-release', 'r') as f:
+            os_release = f.read()
+            names = re.findall(r'''^ID=["']?(.+?)["']?$''', os_release, re.M)
+            versions = re.findall(r'''^VERSION_ID=["']?(.+?)["']?$''', os_release, re.M)
+            name = names[0] if names else None
+            version = versions[0] if versions else None
+            return name, version
+    except Exception as e:
+        logger.error(f'Failed to get the host Linux distribution and its version: {e}')
+    return None, None
 
 
 def cuda_cores(devices, volumes):
@@ -148,19 +179,31 @@ def cuda_cores(devices, volumes):
 
     client = docker.from_env()
 
-    try:
-        image = client.containers.get(socket.gethostname()).attrs['Config']['Image']
-    except Exception as e:
-        logger.error(f'Failed to find current container image name ({e}). Fallback to default dev image')
-        image = default_image
+    image = f'{compose_project_name}-gpu-get-cuda-cores:{gpu_image_version}'
+
+    os_dist_name, os_dist_version = get_linux_distribution_name_and_version()
+    build_args = {}
+    if os_dist_name:
+        build_args['DOCKER_IMAGE'] = os_dist_name
+    if os_dist_version:
+        build_args['DOCKER_IMAGE_TAG'] = os_dist_version
+
+    # Build Image
+    if len(client.images.list(image)) == 0:
+        logger.info(f'Build CUDA Cores Image "{image}" with following args: {build_args}')
+        client.images.build(path=build_path,
+                            tag=image,
+                            dockerfile=dockerfile_path,
+                            buildargs=build_args)
 
     container_name = compose_project_name + '-peripheral-gpu-get-cuda-cores'
     container = ''
 
     def run():
+        logger.info(f'Start container {container_name}')
+        logger.debug(f'with devices "{devices}" and volumes "{volumes}"')
         return client.containers.run(image,
                                      name=container_name,
-                                     command=['python', 'scripts/gpu/cuda_scan.py'],
                                      devices=devices,
                                      volumes=volumes,
                                      remove=True)
@@ -168,10 +211,9 @@ def cuda_cores(devices, volumes):
     try:
         container = run()
     except docker.errors.APIError as e:
-        if '409' in str(e):
-            client.api.remove_container(container_name)
+        if e.response.status_code == 409:
+            client.api.remove_container(container_name, force=True)
             container = run()
-
     except Exception as e:
         # let's not stop the peripheral manager just because we can't get this property
         logger.error(f'Unable to infer CUDA cores. Reason: {str(e)}')
@@ -310,10 +352,10 @@ def flow(**kwargs):
         logger.info(runtime_files)
         return {identifier: runtime_files}
 
-    elif len(nvidia_device(os.listdir(DEVICE_PARENT_PATH))) > 0 and check_cuda_installation(get_device_type()):
+    elif len(nvidia_device(os.listdir(HOST_DEV_PATH))) > 0 and check_cuda_installation(get_device_type()):
 
         # A GPU is present, and ready to be used, but not with --gpus
-        nv_devices = nvidia_device(os.listdir(DEVICE_PARENT_PATH))
+        nv_devices = nvidia_device(os.listdir(HOST_DEV_PATH))
         _, _, formatted_libs = build_cuda_core_docker_cli(nv_devices)
 
         runtime = {'devices': nv_devices, 'libraries': formatted_libs}

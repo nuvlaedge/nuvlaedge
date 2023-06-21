@@ -55,15 +55,7 @@ jobs:
           virtualenvs-in-project: true
 
       - name: Generate requirements for TOX
-        run: >
-          poetry export -f requirements.txt --output requirements.tests.txt --without-hashes --without-urls 
-          --with tests 
-          --with agent 
-          --with system-manager 
-          --with network 
-          --with modbus
-          --with gpu
-          --with job-engine
+        run: ./generate-requirements.sh
 
       - name: Install Tox
         run: pip install tox

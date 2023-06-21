@@ -3,7 +3,7 @@ ARG DOCKER_IMAGE_TAG=18.04
 
 FROM ${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}
 
-RUN apt update && apt install -y python3
+RUN apt update && apt install -y python3 && rm -rf /var/lib/apt/lists/*
 
 COPY cuda_scan.py /
 

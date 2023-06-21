@@ -16,8 +16,9 @@ import os
 import csv
 import json
 import re
-import socket
+
 from shutil import which
+
 import requests
 import logging
 import docker.errors
@@ -27,7 +28,7 @@ from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 # Increase this version to enforce rebuild (usually when Dockerfile.gpu is updated)
-gpu_image_version = '1.0'
+gpu_image_version = '1.1'
 
 docker_socket_file = '/var/run/docker.sock'
 build_path = '/opt/nuvlaedge/scripts/gpu/'
@@ -194,7 +195,8 @@ def cuda_cores(devices, volumes):
         client.images.build(path=build_path,
                             tag=image,
                             dockerfile=dockerfile_path,
-                            buildargs=build_args)
+                            buildargs=build_args,
+                            rm=True)
 
     container_name = compose_project_name + '-peripheral-gpu-get-cuda-cores'
     container = ''

@@ -1,6 +1,3 @@
-import sys
-print(f'\n\n\n {sys.version}\n\n\n')
-
 import json
 import logging
 import re

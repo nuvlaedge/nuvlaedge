@@ -5,11 +5,10 @@ Controls all the functionalities of the Agent
 
 import logging
 import logging.config
-import os
 import signal
 import socket
 import time
-from argparse import ArgumentParser
+
 from threading import Event, Thread
 
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging

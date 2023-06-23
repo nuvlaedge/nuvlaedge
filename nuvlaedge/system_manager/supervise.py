@@ -1,4 +1,3 @@
-#!/usr/local/bin/python3.7
 # -*- coding: utf-8 -*-
 
 """ Contains the supervising class for all NuvlaEdge Engine components """

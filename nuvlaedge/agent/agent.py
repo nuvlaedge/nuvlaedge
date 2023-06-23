@@ -2,7 +2,7 @@
 This class gathers the main properties of the agent component of the NuvlaEdge engine.
 Also controls the execution flow and provides utilities to the children dependencies
 """
-import json
+
 import logging
 import os
 from copy import copy

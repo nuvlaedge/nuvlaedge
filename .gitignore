@@ -4,3 +4,4 @@ requirements*.txt
 **/__pycache__/
 dist/
 test-report.xml
+coverage.xml

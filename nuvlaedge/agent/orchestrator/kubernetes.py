@@ -53,13 +53,11 @@ class KubernetesClient(ContainerRuntimeClient):
         self.client_apps = client.AppsV1Api()
         self.client_batch_api = client.BatchV1Api()
         self.namespace = self.get_nuvlaedge_project_name(util.default_project_name)
-        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE')
+        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
         self.host_node_ip = os.getenv('MY_HOST_NODE_IP')
         self.host_node_name = os.getenv('MY_HOST_NODE_NAME')
         self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
         self.data_gateway_name = f"data-gateway.{self.namespace}"
-
-        self._current_image = os.getenv('NUVLAEDGE_IMAGE')
 
     def get_node_info(self):
         if self.host_node_name:
@@ -199,7 +197,7 @@ class KubernetesClient(ContainerRuntimeClient):
                 containers=[
                     client.V1Container(
                         name=name,
-                        image=self.get_current_image(),
+                        image=self.current_image,
                         env=[
                             client.V1EnvVar(
                                 name='SSH_PUB',
@@ -640,6 +638,6 @@ class KubernetesClient(ContainerRuntimeClient):
     def get_nuvlaedge_project_name(self, default_project_name=None) -> str:
         return os.getenv('MY_NAMESPACE', default_project_name)
 
-    def get_current_image(self) -> str:
-        # TODO: Implement in a generic way
-        return self._current_image
+    @property
+    def current_image(self) -> str:
+        return os.getenv('NUVLAEDGE_IMAGE')

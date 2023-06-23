@@ -41,8 +41,8 @@ class DockerClient(ContainerRuntimeClient):
         self.client = docker.from_env()
         self.lost_quorum_hint = 'possible that too few managers are online'
         self.data_gateway_name = "data-gateway"
-        # To initialize job_engine_image
-        self.has_pull_job_capability()
+        self._current_image = None
+        self.job_engine_lite_image = self.current_image
 
     def get_client_version(self) -> str:
         return self.client.version()['Version']
@@ -144,25 +144,7 @@ class DockerClient(ContainerRuntimeClient):
         return ip, compute_api_external_port
 
     def has_pull_job_capability(self):
-        try:
-            container = self._get_component_container(util.job_engine_service_name)
-        except docker.errors.NotFound as e:
-            logger.warning(f"Container {self.job_engine_lite_component} not found. Reason: {str(e)}")
-            return False
-        except Exception as e:
-            logger.error(f"Unable to search for container {self.job_engine_lite_component}. Reason: {str(e)}")
-            return False
-
-        try:
-            if container.status.lower() == "paused":
-                self.job_engine_lite_image = container.attrs['Config']['Image']
-                return True
-        except (AttributeError, KeyError):
-            logger.exception('Failed to get job-engine-lite image')
-            return False
-
-        logger.info('job-engine-lite not paused')
-        return False
+        return True
 
     def get_node_labels(self):
         try:
@@ -184,7 +166,7 @@ class DockerClient(ContainerRuntimeClient):
         ssh_folder = '/tmp/ssh'
         cmd = "sh -c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
 
-        self.client.containers.run(self.get_current_image(),
+        self.client.containers.run(self.current_image,
                                    remove=True,
                                    command=cmd,
                                    environment={
@@ -261,17 +243,23 @@ class DockerClient(ContainerRuntimeClient):
         except (docker.errors.NotFound, docker.errors.APIError) as e:
             logger.debug(f'Failed to find {service_name} container by project and service name: {e}')
             raise
-        
+
     def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
                    docker_image=None):
+
+        image = docker_image if docker_image else self.job_engine_lite_image
+        if not image:
+            image = 'nuvladev/nuvlaedge:main'
+            logger.error('Failed to find docker image name to execute job. Fallback image will be used')
+
         # Get the compute-api network
         local_net = None
         try:
             compute_api = self._get_component_container(util.compute_api_service_name)
             local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
-        except (docker.errors.NotFound, docker.errors.APIError, IndexError, KeyError, TimeoutError) as e:
-            logger.error(f'Cannot infer compute-api network for local job {job_id}: {e}')
+        except Exception as e:
+            logger.warning(f'Cannot infer compute-api network for local job {job_id}: {e}')
 
         # Get environment variables and volumes from job-engine-lite container
         volumes = {
@@ -280,46 +268,53 @@ class DockerClient(ContainerRuntimeClient):
                 'mode': 'rw'
             }
         }
-        volumes_from = []
-        environment = []
 
-        try:
-            job_engine_lite = self._get_component_container(util.job_engine_service_name)
-            environment = job_engine_lite.attrs['Config']['Env']
-            volumes = []
-            volumes_from = [job_engine_lite.name]
-        except (docker.errors.NotFound, docker.errors.APIError, IndexError, KeyError, TimeoutError) as e:
-            logger.warning(f'Cannot get env and volumes from job-engine-lite ({job_id}): {e}')
-
-        cmd = f'-- /app/job_executor.py --api-url https://{nuvla_endpoint} ' \
-              f'--api-key {api_key} ' \
-              f'--api-secret {api_secret} ' \
-              f'--job-id {job_id}'
+        command = f'-- /app/job_executor.py --api-url https://{nuvla_endpoint} ' \
+                  f'--api-key {api_key} ' \
+                  f'--api-secret {api_secret} ' \
+                  f'--job-id {job_id}'
 
         if nuvla_endpoint_insecure:
-            cmd = f'{cmd} --api-insecure'
+            command += ' --api-insecure'
 
-        logger.info(f'Starting job {job_id} on {self.job_engine_lite_image} image, with command: "{cmd}"')
+        logger.info(f'Starting job "{job_id}" with docker image "{image}" and command: "{command}"')
 
-        img = docker_image if docker_image else self.job_engine_lite_image
-        self.client.containers.run(img,
-                                   command=cmd,
-                                   detach=True,
-                                   name=job_execution_id,
-                                   hostname=job_execution_id,
-                                   remove=True,
-                                   network=local_net,
-                                   volumes=volumes,
-                                   volumes_from=volumes_from,
-                                   environment=environment)
+        create_kwargs = dict(
+            image=image,
+            command=command,
+            name=job_execution_id,
+            hostname=job_execution_id,
+            auto_remove=True,
+            detach=True,
+            network=local_net,
+            volumes=volumes
+        )
+        try:
+            try:
+                container = self.client.containers.create(**create_kwargs)
+            except docker.errors.ImageNotFound:
+                self.client.images.pull(image)
+                container = self.client.containers.create(**create_kwargs)
+        except Exception as e:
+            logger.critical(f'Failed to create container to execute job "{job_id}": {e}')
+            try:
+                self.client.api.remove_container(job_execution_id, force=True)
+            except Exception as ex:
+                logger.debug(f'Failed to remove container {job_execution_id} which might have been partially created: {ex}')
+            raise
 
         try:
-            # for some jobs (like clustering), it is better if the job container is also
-            # in the default bridge network, so it doesn't get affected by network changes
-            # in the NuvlaEdge
+            # for some jobs (like clustering), it is better if the job container is also in the default bridge network,
+            # so it doesn't get affected by network changes in the NuvlaEdge.
             self.client.api.connect_container_to_network(job_execution_id, 'bridge')
-        except docker.errors.APIError as e:
+        except Exception as e:
             logger.warning(f'Could not attach {job_execution_id} to bridge network: {str(e)}')
+
+        try:
+            container.start()
+        except Exception:
+            container.remove(force=True)
+            raise
 
     @staticmethod
     def collect_container_metrics_cpu(container_stats: dict) -> float:
@@ -818,7 +813,7 @@ class DockerClient(ContainerRuntimeClient):
                 docker.errors.ContainerError,
                 docker.errors.APIError) as ex:
             logger.error("Failed running container '%s' from '%s': %s",
-                              name, image, ex.explanation)
+                         name, image, ex.explanation)
 
     def container_remove(self, name: str, **kwargs):
         try:
@@ -860,16 +855,14 @@ class DockerClient(ContainerRuntimeClient):
 
         return True
 
-    def get_current_image(self) -> str:
-        if self._current_image:
-            return self._current_image
-
-        try:
-            current_id = self.get_current_container_id()
-            container = self.client.containers.get(current_id)
-        except docker.errors.NotFound as e:
-            logger.warning(f"Current container not found. Reason: {str(e)}")
-            return ""
-
-        self._current_image = container.attrs['Config']['Image']
+    @property
+    def current_image(self) -> str:
+        if not self._current_image:
+            try:
+                current_id = self.get_current_container_id()
+                container = self.client.containers.get(current_id)
+                self._current_image = container.attrs['Config']['Image']
+            except Exception as e:
+                logger.error(f"Current container image not found: {str(e)}")
+                return ''
         return self._current_image

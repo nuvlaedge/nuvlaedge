@@ -243,11 +243,10 @@ class Agent:
         """
         pull_jobs: list = response.get('jobs', [])
         if not isinstance(pull_jobs, list):
-            self.logger.warning(f'Jobs received on format {response.get("jobs")} not '
-                                f'compatible')
+            self.logger.warning(f'Jobs received on format {response.get("jobs")} not compatible')
             return
 
-        if pull_jobs and self.infrastructure.container_runtime.job_engine_lite_image:
+        if pull_jobs:
             self.logger.info(f'Processing jobs {pull_jobs} in pull mode')
 
             Thread(

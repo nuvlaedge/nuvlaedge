@@ -8,6 +8,7 @@ class PeripheralData(NuvlaEdgeBaseModel):
     available: bool
     classes: list
 
+    name: str | None
     device_path: str | None
     port: int | None
     interface: str | None

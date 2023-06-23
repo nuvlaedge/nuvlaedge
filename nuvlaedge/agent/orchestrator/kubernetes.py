@@ -10,17 +10,7 @@ from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
 
 
-def init_logger(level=logging.INFO, handler=logging.StreamHandler()) \
-        -> logging.Logger:
-    logger = logging.getLogger('KubernetesClient')
-    logger.setLevel(level)
-    handler.setLevel(level)
-    logger.addHandler(handler)
-    logger.info('Logging initialised.')
-    return logger
-
-
-log = init_logger()
+log: logging.Logger = logging.getLogger(__name__)
 
 
 JOB_TTL_SECONDS_AFTER_FINISHED = 60 * 2

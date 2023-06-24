@@ -260,6 +260,10 @@ def search_runtime(runtime_path, host_files_path):
     Checks if Nvidia Runtime exists, and reads its files.
     """
 
+    if not os.path.isdir(runtime_path):
+        logger.warning("Runtime path do not exist or is not a directory")
+        return None
+
     for i in os.listdir(runtime_path):
 
         if 'daemon.json' in i:

@@ -234,7 +234,8 @@ jobs:
             nuvlaedge/${{ github.event.repository.name }}:latest,
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest,
-            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }}
+            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }},
+            sixsq/${{ github.event.repository.name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

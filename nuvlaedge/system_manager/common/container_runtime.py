@@ -1,13 +1,15 @@
 import os
 import random
-import requests
 import socket
 import string
 import time
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
+
 from nuvlaedge.system_manager.common import utils
+from nuvlaedge.agent.orchestrator.docker import DockerClient
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -29,7 +31,7 @@ class ContainerRuntime(ABC):
         self.client = None
         self.logging = logging
 
-        self.current_image = 'nuvladev/nuvlaedge:main'
+        self.current_image = 'sixsq/nuvlaedge:latest'
 
     @abstractmethod
     def list_internal_components(self, base_label=utils.base_label):
@@ -458,11 +460,13 @@ class Docker(ContainerRuntime):
         try:
             return self.get_current_container().attrs['Config']['Image']
         except docker.errors.NotFound as e:
-            self.logging.warning(f"Current container not found. Reason: {str(e)}")
+            self.logging.error(f"Current container not found. Reason: {str(e)}")
         except Exception as e:
-            self.logging.warning(f"Failed to get current container. Reason: {str(e)}")
+            self.logging.error(f"Failed to get current container. Reason: {str(e)}")
 
-        return None
+        image = DockerClient.get_current_image_from_env()
+        self.logging.error(f'Failed to get current container. Using fallback (built from environment): {image}')
+        return image
 
     def _get_container_id_from_cgroup(self):
         try:

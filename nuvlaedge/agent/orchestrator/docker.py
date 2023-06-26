@@ -859,6 +859,15 @@ class DockerClient(ContainerRuntimeClient):
 
         return True
 
+    @staticmethod
+    def get_current_image_from_env():
+        registry =     os.getenv('NE_IMAGE_REGISTRY', '')
+        organization = os.getenv('NE_IMAGE_ORGANIZATION', 'sixsq')
+        repository =   os.getenv('NE_IMAGE_REPOSITORY',   'nuvlaedge')
+        tag =          os.getenv('NE_IMAGE_TAG',          'latest')
+        name =         os.getenv('NE_IMAGE_NAME', f'{organization}/{repository}')
+        return f'{registry}{name}:{tag}'
+
     @property
     def current_image(self) -> str:
         if not self._current_image:
@@ -867,6 +876,7 @@ class DockerClient(ContainerRuntimeClient):
                 container = self.client.containers.get(current_id)
                 self._current_image = container.attrs['Config']['Image']
             except Exception as e:
-                logger.error(f"Current container image not found: {str(e)}")
-                return ''
+                self._current_image = self.get_current_image_from_env()
+                logger.error(f"Current container image not found: {str(e)}. "
+                             f"Using fallback (built from environment): {self._current_image}")
         return self._current_image

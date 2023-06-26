@@ -164,7 +164,7 @@ class DockerTestCase(unittest.TestCase):
                         'Failed to check that COE is enabled')
 
     def test_infer_on_stop_docker_image(self):
-        default_on_stop_docker_image = 'nuvladev/nuvlaedge:main'
+        default_on_stop_docker_image = 'sixsq/nuvlaedge:latest'
 
         # if container does not exist, take the latest dev image
         self.obj.client.containers.get.side_effect = docker.errors.NotFound('', requests.Response())

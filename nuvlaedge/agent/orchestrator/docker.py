@@ -164,10 +164,11 @@ class DockerClient(ContainerRuntimeClient):
 
     def install_ssh_key(self, ssh_pub_key, host_home):
         ssh_folder = '/tmp/ssh'
-        cmd = "sh -c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
+        cmd = "-c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
 
         self.client.containers.run(self.current_image,
                                    remove=True,
+                                   entrypoint='sh',
                                    command=cmd,
                                    environment={
                                        'SSH_PUB': ssh_pub_key

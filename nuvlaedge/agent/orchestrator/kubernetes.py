@@ -168,7 +168,8 @@ class KubernetesClient(ContainerRuntimeClient):
                 log.info(f'SSH key installer "{name}" has already been launched in the past. Skipping this step')
                 return False
 
-        cmd = ["sh", "-c", "echo -e \"${SSH_PUB}\" >> %s" % f'{ssh_folder}/authorized_keys']
+        entrypoint = ["sh"]
+        cmd = ["-c", "echo -e \"${SSH_PUB}\" >> %s" % f'{ssh_folder}/authorized_keys']
         volume_name = f'{name}-volume'
         pod_body = client.V1Pod(
             kind='Pod',
@@ -200,7 +201,8 @@ class KubernetesClient(ContainerRuntimeClient):
                                 mount_path=ssh_folder
                             )
                         ],
-                        command=cmd
+                        command=entrypoint,
+                        args=cmd
                     )
                 ]
             )

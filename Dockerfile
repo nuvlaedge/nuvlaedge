@@ -6,7 +6,8 @@ ARG GOLANG_VERSION="1.20.4"
 ARG PYTHON_CRYPTOGRAPHY_VERSION="40.0.2"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
-ARG JOB_LITE_VERSION="3.3.0"
+ARG JOB_LITE_VERSION="3.4.0"
+ARG JOB_LITE_IMG_ORG="nuvla"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -14,7 +15,7 @@ ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/s
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
-FROM nuvla/job-lite:${JOB_LITE_VERSION} AS job-lite
+FROM ${JOB_LITE_IMG_ORG}/job-lite:${JOB_LITE_VERSION} AS job-lite
 
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
@@ -164,6 +165,8 @@ RUN go mod tidy && go build
 FROM ${BASE_IMAGE}
 ARG PYTHON_MAJ_MIN_VERSION
 ARG PYTHON_LOCAL_SITE_PACKAGES
+ARG JOB_LITE_VERSION
+ENV JOB_LITE_VERSION=${JOB_LITE_VERSION}
 
 LABEL git.branch=${GIT_BRANCH}
 LABEL git.commit.id=${GIT_COMMIT_ID}

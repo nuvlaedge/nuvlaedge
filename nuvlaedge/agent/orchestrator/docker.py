@@ -164,10 +164,11 @@ class DockerClient(ContainerRuntimeClient):
 
     def install_ssh_key(self, ssh_pub_key, host_home):
         ssh_folder = '/tmp/ssh'
-        cmd = "sh -c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
+        cmd = "-c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
 
         self.client.containers.run(self.current_image,
                                    remove=True,
+                                   entrypoint='sh',
                                    command=cmd,
                                    environment={
                                        'SSH_PUB': ssh_pub_key
@@ -277,6 +278,9 @@ class DockerClient(ContainerRuntimeClient):
         if nuvla_endpoint_insecure:
             command += ' --api-insecure'
 
+        environment = {k: v for k, v in os.environ.items()
+                       if k.startswith('NE_IMAGE_')}
+
         logger.info(f'Starting job "{job_id}" with docker image "{image}" and command: "{command}"')
 
         create_kwargs = dict(
@@ -287,7 +291,8 @@ class DockerClient(ContainerRuntimeClient):
             auto_remove=True,
             detach=True,
             network=local_net,
-            volumes=volumes
+            volumes=volumes,
+            environment=environment
         )
         try:
             try:
@@ -855,6 +860,15 @@ class DockerClient(ContainerRuntimeClient):
 
         return True
 
+    @staticmethod
+    def get_current_image_from_env():
+        registry =     os.getenv('NE_IMAGE_REGISTRY', '')
+        organization = os.getenv('NE_IMAGE_ORGANIZATION', 'sixsq')
+        repository =   os.getenv('NE_IMAGE_REPOSITORY',   'nuvlaedge')
+        tag =          os.getenv('NE_IMAGE_TAG',          'latest')
+        name =         os.getenv('NE_IMAGE_NAME', f'{organization}/{repository}')
+        return f'{registry}{name}:{tag}'
+
     @property
     def current_image(self) -> str:
         if not self._current_image:
@@ -863,6 +877,7 @@ class DockerClient(ContainerRuntimeClient):
                 container = self.client.containers.get(current_id)
                 self._current_image = container.attrs['Config']['Image']
             except Exception as e:
-                logger.error(f"Current container image not found: {str(e)}")
-                return ''
+                self._current_image = self.get_current_image_from_env()
+                logger.error(f"Current container image not found: {str(e)}. "
+                             f"Using fallback (built from environment): {self._current_image}")
         return self._current_image

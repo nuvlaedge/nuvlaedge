@@ -315,7 +315,7 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
         mock_container_start.assert_called_once()
 
         # no docker image found, using fallback
-        self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), 'nuvladev/nuvlaedge:main')
+        self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), 'sixsq/nuvlaedge:latest')
 
         # reset
         mock_containers_create.reset_mock(return_value=True)

@@ -58,6 +58,7 @@ jobs:
           poetry export -f requirements.txt --output req/requirements.network.txt --without-hashes --without-urls --with network
           poetry export -f requirements.txt --output req/requirements.modbus.txt --without-hashes --without-urls --with modbus
           poetry export -f requirements.txt --output req/requirements.gpu.txt --without-hashes --without-urls --with gpu
+          poetry export -f requirements.txt --output req/requirements.job-engine.txt --without-hashes --without-urls --with job-engine
 
       - name: Build test requirements
         run: ./generate-requirements.sh req

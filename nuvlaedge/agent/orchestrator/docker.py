@@ -42,7 +42,7 @@ class DockerClient(ContainerRuntimeClient):
         self.lost_quorum_hint = 'possible that too few managers are online'
         self.data_gateway_name = "data-gateway"
         self._current_image = None
-        self.job_engine_lite_image = self.current_image
+        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
 
     def get_client_version(self) -> str:
         return self.client.version()['Version']

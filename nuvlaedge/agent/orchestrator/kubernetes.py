@@ -517,6 +517,20 @@ class KubernetesClient(ContainerRuntimeClient):
             containers=[container])
         if 'restart_policy' in kwargs:
             pod_spec.restart_policy = kwargs['restart_policy']
+
+        credentials_path = "/var/lib/nuvlaedge/nuvlaedge"
+
+        mount = client.V1VolumeMount(
+            name = pod_spec.volumes.name,
+            mount_path = "/srv/nuvlaedge/shared/",
+            read_only = True,
+        )
+
+        pod_spec.volumes = [client.V1Volume(
+            name="credentials-mount",
+            host_path=client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
+        )]
+
         return pod_spec
 
     @staticmethod
@@ -548,9 +562,9 @@ class KubernetesClient(ContainerRuntimeClient):
         pod_template: client.V1PodTemplateSpec = \
             self._pod_template_spec(name, pod_spec)
 
-        job_sec = client.V1JobSpec(template=pod_template)
-        job_sec.backoff_limit = kwargs.get('backoff_limit', JOB_BACKOFF_LIMIT)
-        job_sec.ttl_seconds_after_finished = \
+        job_spec = client.V1JobSpec(template=pod_template)
+        job_spec.backoff_limit = kwargs.get('backoff_limit', JOB_BACKOFF_LIMIT)
+        job_spec.ttl_seconds_after_finished = \
             kwargs.get('ttl_seconds_after_finished',
                        JOB_TTL_SECONDS_AFTER_FINISHED)
 
@@ -558,7 +572,7 @@ class KubernetesClient(ContainerRuntimeClient):
             api_version="batch/v1",
             kind="Job",
             metadata=client.V1ObjectMeta(name=name),
-            spec=job_sec
+            spec=job_spec
         )
 
     def container_run_command(self, image, name, command: str = None,

@@ -550,8 +550,11 @@ class KubernetesClient(ContainerRuntimeClient):
 
     def _pod_def(self, image, name, command: str = None, args: str = None,
                  network: str = None, **kwargs) -> client.V1Pod:
+        log.info('Calling _container_def') # FIXME
         container_def = self._container_def(image, name, command=command, args=args)
+        log.info('Called _container_def') # FIXME
         pod_spec = self._pod_spec(container_def, network=network, **kwargs)
+        log.info('Called _pod_spec') # FIXME
         return client.V1Pod(
             metadata=client.V1ObjectMeta(name=name, annotations={}),
             spec=pod_spec

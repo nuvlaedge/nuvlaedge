@@ -509,7 +509,7 @@ class KubernetesClient(ContainerRuntimeClient):
             name = credentials_name,
             mount_path = "/srv/nuvlaedge/shared/",
             read_only = True,)
-        log.info('Added volume mount {}', *volume_mount)
+        log.info('Added volume mount %s', volume_mount.name)
 
         return client.V1Container(
             image = image,

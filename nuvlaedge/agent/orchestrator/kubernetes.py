@@ -503,11 +503,19 @@ class KubernetesClient(ContainerRuntimeClient):
                 arg = None
             return cmd, arg
         command, args = parse_cmd_args(command, args)
+
+        credentials_name = "credentials-mount"
+        volume_mount = [client.V1VolumeMount(
+            name = credentials_name,
+            mount_path = "/srv/nuvlaedge/shared/",
+            read_only = True,)]
+        
         return client.V1Container(
             image=image,
             name=name,
             command=command,
-            args=args)
+            volume_mounts = volume_mount,
+            args=args,)
 
     @staticmethod
     def _pod_spec(container: client.V1Container, network: str = None,
@@ -520,11 +528,6 @@ class KubernetesClient(ContainerRuntimeClient):
 
         credentials_path = "/var/lib/nuvlaedge/nuvlaedge"
         credentials_name = "credentials-mount"
-
-        container.volume_mounts = [client.V1VolumeMount(
-            name = credentials_name,
-            mount_path = "/srv/nuvlaedge/shared/",
-            read_only = True,)]
 
         pod_spec.volumes = [client.V1Volume(
             name = credentials_name,

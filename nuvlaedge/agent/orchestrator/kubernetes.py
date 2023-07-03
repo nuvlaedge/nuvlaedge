@@ -505,17 +505,18 @@ class KubernetesClient(ContainerRuntimeClient):
         command, args = parse_cmd_args(command, args)
 
         credentials_name = "credentials-mount"
-        volume_mount = client.V1VolumeMount(
+        volume_mounts = []
+        volume_mounts.append(client.V1VolumeMount(
             name = credentials_name,
             mount_path = "/srv/nuvlaedge/shared/",
-            read_only = True,)
-        log.info('Added volume mount %s', volume_mount.name)
+            read_only = True,))
+        log.info('Added volume mount %s', volume_mounts)
 
         return client.V1Container(
             image = image,
             name = name,
             command = command,
-            volume_mounts = volume_mount,
+            volume_mounts = volume_mounts,
             args=args,)
 
     @staticmethod

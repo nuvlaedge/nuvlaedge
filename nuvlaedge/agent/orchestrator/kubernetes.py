@@ -536,6 +536,7 @@ class KubernetesClient(ContainerRuntimeClient):
             host_path =
                 client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
         )]
+        log.info('Added volume %s', credentials_name)
 
         return pod_spec
 

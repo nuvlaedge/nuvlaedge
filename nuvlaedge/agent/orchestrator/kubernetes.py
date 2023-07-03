@@ -521,14 +521,14 @@ class KubernetesClient(ContainerRuntimeClient):
         credentials_path = "/var/lib/nuvlaedge/nuvlaedge"
 
         mount = client.V1VolumeMount(
-            name = pod_spec.volumes.name,
+            name = "credentials-mount",
             mount_path = "/srv/nuvlaedge/shared/",
             read_only = True,
         )
 
         pod_spec.volumes = [client.V1Volume(
-            name="credentials-mount",
-            host_path=client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
+            name = "credentials-mount",
+            host_path = client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
         )]
 
         return pod_spec

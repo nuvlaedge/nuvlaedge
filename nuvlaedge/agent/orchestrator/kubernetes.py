@@ -519,16 +519,17 @@ class KubernetesClient(ContainerRuntimeClient):
             pod_spec.restart_policy = kwargs['restart_policy']
 
         credentials_path = "/var/lib/nuvlaedge/nuvlaedge"
+        credentials_name = "credentials-mount"
 
-        mount = client.V1VolumeMount(
-            name = "credentials-mount",
+        container.volume_mounts = [client.V1VolumeMount(
+            name = credentials_name,
             mount_path = "/srv/nuvlaedge/shared/",
-            read_only = True,
-        )
+            read_only = True,)]
 
         pod_spec.volumes = [client.V1Volume(
-            name = "credentials-mount",
-            host_path = client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
+            name = credentials_name,
+            host_path =
+                client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
         )]
 
         return pod_spec

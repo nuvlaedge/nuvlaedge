@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.1) (2023-07-04)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.0...2.10.1)
+
+**Merged pull requests:**
+
+- 2.10.1 patch [\#87](https://github.com/nuvlaedge/nuvlaedge/pull/87) ([schaubl](https://github.com/schaubl))
+
 ## [2.10.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.0) (2023-06-27)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.3.2...2.10.0)

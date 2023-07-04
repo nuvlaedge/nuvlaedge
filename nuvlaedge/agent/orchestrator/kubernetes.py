@@ -529,12 +529,12 @@ class KubernetesClient(ContainerRuntimeClient):
             pod_spec.restart_policy = kwargs['restart_policy']
 
         credentials_path = "/var/lib/nuvlaedge/nuvlaedge"
-        credentials_name = "credentials-mount"
+        credentials_name = "credentials-jsw-mount" ## FIXME change the name to better
 
         pod_spec.volumes = [client.V1Volume(
             name = credentials_name,
             host_path =
-                client.V1HostPathVolumeSource(path=credentials_path, type='Directory',)
+                client.V1HostPathVolumeSource(path=credentials_path)
         )]
         log.info('Added volume %s', credentials_name)
 

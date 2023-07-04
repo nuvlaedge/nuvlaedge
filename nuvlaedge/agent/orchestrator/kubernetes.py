@@ -490,7 +490,7 @@ class KubernetesClient(ContainerRuntimeClient):
         return name.replace('_', '-').replace('/', '-')
 
     @staticmethod
-    def _container_def(image, name, command: str = None, args: str = None) -> \
+    def _container_def(image, name, volume_mount_name, command: str = None,args: str = None) -> \
             client.V1Container:
         def parse_cmd_args(cmd, arg):
             if cmd:
@@ -504,39 +504,39 @@ class KubernetesClient(ContainerRuntimeClient):
             return cmd, arg
         command, args = parse_cmd_args(command, args)
 
-        credentials_name = "credentials-mount"
-        volume_mounts = []
-        volume_mounts.append(client.V1VolumeMount(
-            name = credentials_name,
+        volume_mounts_container = client.V1VolumeMount(
+            name = volume_mount_name,
             mount_path = "/srv/nuvlaedge/shared/",
-            read_only = True,))
-        log.info('Added volume mount %s', volume_mounts)
+            read_only = True,)
+        log.info('Added volume mount %s', volume_mount_name) # FIXME
 
         return client.V1Container(
             image = image,
             name = name,
             command = command,
-            volume_mounts = volume_mounts,
+            volume_mounts = [volume_mounts_container],
             args=args,)
 
     @staticmethod
-    def _pod_spec(container: client.V1Container, network: str = None,
+    def _pod_spec(volume_mount_name, container: client.V1Container, network: str = None,
                   **kwargs) -> client.V1PodSpec:
+        
+        credentials_path = "/var/lib/nuvlaedge/nuvlaedge" # FIXME
+        
         pod_spec = client.V1PodSpec(
             host_network=(network == 'host'),
             containers=[container])
         if 'restart_policy' in kwargs:
             pod_spec.restart_policy = kwargs['restart_policy']
 
-        credentials_path = "/var/lib/nuvlaedge/nuvlaedge"
-        credentials_name = "credentials-jsw-mount" ## FIXME change the name to better
-
-        pod_spec.volumes = [client.V1Volume(
-            name = credentials_name,
+        volume = client.V1Volume(
+            name = volume_mount_name,
             host_path =
-                client.V1HostPathVolumeSource(path=credentials_path)
-        )]
-        log.info('Added volume %s', credentials_name)
+            client.V1HostPathVolumeSource(path=credentials_path))
+        
+        pod_spec.volumes = [volume]
+
+        log.info('Added volume %s', volume_mount_name) # FIXME
 
         return pod_spec
 
@@ -550,10 +550,11 @@ class KubernetesClient(ContainerRuntimeClient):
 
     def _pod_def(self, image, name, command: str = None, args: str = None,
                  network: str = None, **kwargs) -> client.V1Pod:
+        volume_and_mount_name = "credentials-jsw-mount" # FIXME for better name
         log.info('Calling _container_def') # FIXME
-        container_def = self._container_def(image, name, command=command, args=args)
+        container_def = self._container_def(image, name, volume_and_mount_name, command=command, args=args)
         log.info('Called _container_def') # FIXME
-        pod_spec = self._pod_spec(container_def, network=network, **kwargs)
+        pod_spec = self._pod_spec(volume_and_mount_name, container_def, network=network, **kwargs)
         log.info('Called _pod_spec') # FIXME
         return client.V1Pod(
             metadata=client.V1ObjectMeta(name=name, annotations={}),

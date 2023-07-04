@@ -564,12 +564,13 @@ class KubernetesClient(ContainerRuntimeClient):
     def _job_def(self, image, name, command: str = None, args: str = None,
                  network: str = None, **kwargs) -> client.V1Job:
 
+        volume_and_mount_name = "credentials-jsw-mount" # FIXME for better name
         name = self._to_k8s_obj_name(name)
 
         container: client.V1Container = \
-            self._container_def(image, name, command=command, args=args)
+            self._container_def(image, name, volume_and_mount_name, command=command, args=args)
         pod_spec: client.V1PodSpec = \
-            self._pod_spec(container, network=network, **kwargs)
+            self._pod_spec(volume_and_mount_name, container, network=network, **kwargs)
         pod_template: client.V1PodTemplateSpec = \
             self._pod_template_spec(name, pod_spec)
 

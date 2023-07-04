@@ -543,6 +543,13 @@ class DockerClient(ContainerRuntimeClient):
     def get_working_dir_from_labels(labels) -> List[str]:
         return labels.get('com.docker.compose.project.working_dir', '')
 
+    @staticmethod
+    def get_container_env_variables(container, exclude: list[str] = None):
+        env_vars = container.attrs.get('Config', {}).get('Env', [])
+        if exclude is None:
+            exclude = []
+        return [env for env in env_vars if env.split('=')[0] not in exclude]
+
     def get_installation_parameters(self):
         try:
             myself = self.get_current_container()
@@ -556,11 +563,7 @@ class DockerClient(ContainerRuntimeClient):
         config_files = self.get_config_files_from_labels(myself.labels)
         project_name = self.get_compose_project_name_from_labels(myself.labels)
 
-        environment = []
-        for env_var in myself.attrs.get('Config', {}).get('Env', []):
-            if env_var.split('=')[0] in self.ignore_env_variables:
-                continue
-            environment.append(env_var)
+        environment = self.get_container_env_variables(myself, self.ignore_env_variables)
 
         nuvlaedge_containers = self.get_all_nuvlaedge_containers()
         nuvlaedge_containers = list(filter(lambda x: x.id != myself.id, nuvlaedge_containers))
@@ -571,7 +574,7 @@ class DockerClient(ContainerRuntimeClient):
                 if container.attrs.get('Created', '') > last_update:
                     last_update = container.attrs.get('Created', '')
                     config_files = self.get_config_files_from_labels(c_labels)
-                environment += container.attrs.get('Config', {}).get('Env', [])
+                environment += self.get_container_env_variables(container, self.ignore_env_variables)
 
         unique_config_files = list(filter(None, set(config_files)))
         unique_env = list(filter(None, set(environment)))

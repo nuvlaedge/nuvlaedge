@@ -10,7 +10,7 @@ from nuvlaedge.agent.common import util
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.data.nuvlaedge_data import NuvlaEdgeData as NuvlaInfo
 from nuvlaedge.agent.monitor.data.nuvlaedge_data import InstallationParametersData
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 from ..components import monitor
 
 
@@ -21,7 +21,7 @@ class NuvlaEdgeInfoMonitor(Monitor):
                  enable_monitor: bool = True):
         super().__init__(name, NuvlaInfo, enable_monitor)
 
-        self.runtime_client: ContainerRuntimeClient = telemetry.container_runtime
+        self.runtime_client: COEClient = telemetry.container_runtime
         self.ne_id: str = telemetry.nb_status_id
         self.ne_engine_version: str = util.extract_nuvlaedge_version(self.runtime_client.current_image)
         self.installation_home: str = telemetry.installation_home

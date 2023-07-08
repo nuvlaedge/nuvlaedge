@@ -21,7 +21,7 @@ from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.telemetry import Telemetry
 
 
@@ -34,7 +34,7 @@ class Infrastructure(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: ContainerRuntimeClient,
+                 container_runtime: COEClient,
                  data_volume: str,
                  telemetry: Telemetry,
                  refresh_period: int = 15):

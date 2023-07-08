@@ -11,7 +11,7 @@ import json
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class Job(NuvlaEdgeCommon):
@@ -24,7 +24,7 @@ class Job(NuvlaEdgeCommon):
         job_engine_lite_image: Docker image for Job Engine lite
     """
 
-    def __init__(self, container_runtime: ContainerRuntimeClient,
+    def __init__(self, container_runtime: COEClient,
                  data_volume,
                  job_id,
                  job_engine_lite_image):

@@ -7,7 +7,7 @@ from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
 
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 log: logging.Logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ class TimeoutException(Exception):
     ...
 
 
-class KubernetesClient(ContainerRuntimeClient):
+class KubernetesClient(COEClient):
     """
     Kubernetes client
     """

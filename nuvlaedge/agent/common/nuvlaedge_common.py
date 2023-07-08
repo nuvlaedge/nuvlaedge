@@ -15,7 +15,7 @@ from nuvla.api import Api
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class NuvlaEdgeCommon:
@@ -37,7 +37,7 @@ class NuvlaEdgeCommon:
     mqtt_broker_port = 1883
     mqtt_broker_keep_alive = 90
 
-    def __init__(self, container_runtime: ContainerRuntimeClient,
+    def __init__(self, container_runtime: COEClient,
                  shared_data_volume: str = "/srv/nuvlaedge/shared"):
         """
         Constructs an Infrastructure object, with a status placeholder
@@ -48,7 +48,7 @@ class NuvlaEdgeCommon:
 
         self.hostfs = container_runtime.hostfs
         self.data_volume = shared_data_volume
-        self.container_runtime: ContainerRuntimeClient = container_runtime
+        self.container_runtime: COEClient = container_runtime
 
         self.mqtt_broker_host = self.container_runtime.data_gateway_name
 

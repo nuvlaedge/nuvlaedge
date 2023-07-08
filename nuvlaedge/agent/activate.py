@@ -11,7 +11,7 @@ import requests
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class Activate(NuvlaEdgeCommon):
@@ -23,7 +23,7 @@ class Activate(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: ContainerRuntimeClient,
+                 container_runtime: COEClient,
                  data_volume: str):
         """
         Constructs an Activation object

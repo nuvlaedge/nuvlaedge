@@ -24,7 +24,7 @@ from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.monitor.components import get_monitor, active_monitors
 from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class MonitoredDict(dict):
@@ -73,7 +73,7 @@ class Telemetry(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: ContainerRuntimeClient,
+                 container_runtime: COEClient,
                  data_volume: str,
                  nuvlaedge_status_id: str,
                  excluded_monitors: str = ''):

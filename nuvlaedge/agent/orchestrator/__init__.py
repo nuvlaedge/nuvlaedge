@@ -7,9 +7,9 @@ from abc import ABC, abstractmethod
 from nuvlaedge.agent.common import util
 
 
-class ContainerRuntimeClient(ABC):
+class COEClient(ABC):
     """
-    Base abstract class for the Docker and Kubernetes clients
+    Base abstract class for the Container Orchestration Engine (COE) clients.
     """
 
     CLIENT_NAME: str

@@ -10,7 +10,7 @@ from nuvlaedge.agent.monitor.data.orchestrator_data import (DeploymentData, Cont
                                                   ClusterStatusData)
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.components import monitor
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.util import execute_cmd
 
 
@@ -23,7 +23,7 @@ class ContainerStatsMonitor(Monitor):
     def __init__(self, name: str, telemetry, enable_monitor: bool):
         super().__init__(name, DeploymentData, enable_monitor)
         self.is_thread = True
-        self.client_runtime: ContainerRuntimeClient = \
+        self.client_runtime: COEClient = \
             telemetry.container_runtime
 
         self.nuvlaedge_id: str = telemetry.nuvlaedge_id

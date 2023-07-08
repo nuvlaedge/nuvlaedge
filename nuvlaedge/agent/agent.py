@@ -16,7 +16,7 @@ from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.infrastructure import Infrastructure
 from nuvlaedge.agent.job import Job
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.orchestrator.factory import get_container_runtime
 from nuvlaedge.agent.telemetry import Telemetry
 
@@ -67,7 +67,7 @@ class Agent:
         return self._peripheral_manager
 
     @property
-    def container_runtime(self) -> ContainerRuntimeClient:
+    def container_runtime(self) -> COEClient:
         """ Class containing COE functions (docker or kubernetes) """
         if not self._container_runtime:
             self.logger.info('Instantiating ContainerRuntime class')

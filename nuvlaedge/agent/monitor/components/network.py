@@ -45,7 +45,7 @@ class NetworkMonitor(Monitor):
         self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
 
-        self.runtime_client: nuvlaedge_common.ContainerRuntimeClient = telemetry.container_runtime
+        self.runtime_client: nuvlaedge_common.COEClient = telemetry.container_runtime
         self._ip_route_image: str = self.runtime_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()

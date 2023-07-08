@@ -1,5 +1,4 @@
 import os
-import random
 import socket
 import string
 import time
@@ -532,7 +531,7 @@ class Docker(COEClient):
 
         project_name = self.get_compose_project_name_from_labels(myself_labels)
 
-        random_identifier = ''.join(random.choices(string.ascii_uppercase, k=5))
+        random_identifier = ''.join(utils.random_choices(string.ascii_uppercase, 5))
         now = datetime.strftime(datetime.utcnow(), '%d-%m-%Y_%H%M%S')
         on_stop_container_name = f"{project_name}-on-stop-{random_identifier}-{now}"
 

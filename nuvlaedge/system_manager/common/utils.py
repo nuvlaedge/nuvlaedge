@@ -5,6 +5,7 @@
 
 import os
 import logging
+import secrets
 
 
 data_volume = "/srv/nuvlaedge/shared"
@@ -46,3 +47,7 @@ def status_file_exists() -> bool:
         return True
 
     return False
+
+
+def random_choices(sequence, num=1) -> list:
+    return [secrets.choice(sequence) for _ in range(num)]

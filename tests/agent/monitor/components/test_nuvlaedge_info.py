@@ -41,15 +41,15 @@ class TestNuvlaEdgeInfoMonitor(unittest.TestCase):
         test_monitor.ne_id = 'id'
         test_monitor.ne_engine_version = 'ne_version'
         test_monitor.installation_home = 'home_path'
-        test_monitor.runtime_client.get_host_os.return_value = 'host_os'
-        test_monitor.runtime_client.get_host_architecture.return_value = 'arch'
-        test_monitor.runtime_client.get_hostname.return_value = 'hostname'
-        test_monitor.runtime_client.get_container_plugins.return_value = ['no']
+        test_monitor.coe_client.get_host_os.return_value = 'host_os'
+        test_monitor.coe_client.get_host_architecture.return_value = 'arch'
+        test_monitor.coe_client.get_hostname.return_value = 'hostname'
+        test_monitor.coe_client.get_container_plugins.return_value = ['no']
         mock_boot.return_value = time.time()
         test_monitor.data.installation_parameters = None
-        test_monitor.runtime_client.get_installation_parameters.return_value = \
+        test_monitor.coe_client.get_installation_parameters.return_value = \
             self.get_installation_parameters_result
-        test_monitor.runtime_client.get_all_nuvlaedge_components.return_value = \
+        test_monitor.coe_client.get_all_nuvlaedge_components.return_value = \
             ['component_1']
         test_monitor.update_data()
         self.assertTrue(test_monitor.data)
@@ -61,15 +61,15 @@ class TestNuvlaEdgeInfoMonitor(unittest.TestCase):
         test_monitor.ne_id = 'id'
         test_monitor.ne_engine_version = 'ne_version'
         test_monitor.installation_home = 'home_path'
-        test_monitor.runtime_client.get_host_os.return_value = 'host_os'
-        test_monitor.runtime_client.get_host_architecture.return_value = 'arch'
-        test_monitor.runtime_client.get_hostname.return_value = 'hostname'
-        test_monitor.runtime_client.get_container_plugins.return_value = ['no']
+        test_monitor.coe_client.get_host_os.return_value = 'host_os'
+        test_monitor.coe_client.get_host_architecture.return_value = 'arch'
+        test_monitor.coe_client.get_hostname.return_value = 'hostname'
+        test_monitor.coe_client.get_container_plugins.return_value = ['no']
         mock_boot.return_value = time.time()
         test_monitor.data.installation_parameters = None
-        test_monitor.runtime_client.get_installation_parameters.return_value = \
+        test_monitor.coe_client.get_installation_parameters.return_value = \
             self.get_installation_parameters_result
-        test_monitor.runtime_client.get_all_nuvlaedge_components.return_value = \
+        test_monitor.coe_client.get_all_nuvlaedge_components.return_value = \
             ['component_1']
         test_monitor.update_data()
         test_monitor.populate_nb_report(test_nb_report)

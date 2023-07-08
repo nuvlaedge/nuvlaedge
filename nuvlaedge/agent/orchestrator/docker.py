@@ -13,7 +13,7 @@ import requests
 import yaml
 
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class InferIPError(Exception):
     ...
 
 
-class DockerClient(ContainerRuntimeClient):
+class DockerClient(COEClient):
     """
     Docker client
     """

@@ -20,7 +20,7 @@ import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 
 
-class ContainerRuntimeDockerTestCase(unittest.TestCase):
+class COEClientDockerTestCase(unittest.TestCase):
 
     agent_nuvlaedge_common_open = 'nuvlaedge.agent.orchestrator.docker.open'
 
@@ -52,7 +52,7 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
 
         # the base class should also have been set
         self.assertEqual(self.obj.job_engine_lite_component, "nuvlaedge-job-engine-lite",
-                         'Base class of the ContainerRuntime was not properly initialized')
+                         'Base class of the COEClient was not properly initialized')
 
     def test_get_node_info(self):
         self.assertIn('ID', self.obj.get_node_info(),

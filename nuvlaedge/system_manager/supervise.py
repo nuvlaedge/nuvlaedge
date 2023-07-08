@@ -14,7 +14,7 @@ import docker.errors
 import OpenSSL
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.container_runtime import Containers
+from nuvlaedge.system_manager.common.coe_client import Containers
 
 
 class ClusterNodeCannotManageDG(Exception):
@@ -46,7 +46,7 @@ class Supervise(Containers):
         self.log = logging.getLogger(__name__)
         super().__init__(self.log)
 
-        self.on_stop_docker_image = self.container_runtime.infer_on_stop_docker_image()
+        self.on_stop_docker_image = self.coe_client.infer_on_stop_docker_image()
         self.data_gateway_enabled = os.getenv('NUVLAEDGE_DATA_GATEWAY_ENABLED', 'true').lower() == 'true'
         self.data_gateway_image = os.getenv('NUVLAEDGE_DATA_GATEWAY_IMAGE',
                                             os.getenv('NUVLABOX_DATA_GATEWAY_IMAGE',
@@ -64,8 +64,8 @@ class Supervise(Containers):
 
     def classify_this_node(self):
         # is it running in cluster mode?
-        node_id = self.container_runtime.get_node_id()
-        is_cluster_enabled = self.container_runtime.is_coe_enabled(check_local_node_state=True)
+        node_id = self.coe_client.get_node_id()
+        is_cluster_enabled = self.coe_client.is_coe_enabled(check_local_node_state=True)
 
         if not node_id or not is_cluster_enabled:
             self.i_am_manager = self.is_cluster_enabled = False
@@ -74,11 +74,11 @@ class Supervise(Containers):
         # if it got here, there cluster is active
         self.is_cluster_enabled = True
 
-        managers = self.container_runtime.get_cluster_managers()
+        managers = self.coe_client.get_cluster_managers()
         self.i_am_manager = True if node_id in managers else False
 
         if self.i_am_manager:
-            _update_label_success, err = self.container_runtime.set_nuvlaedge_node_label(node_id)
+            _update_label_success, err = self.coe_client.set_nuvlaedge_node_label(node_id)
             if err:
                 self.operational_status.append((utils.status_degraded, err))
 
@@ -126,8 +126,8 @@ class Supervise(Containers):
         if os.path.isfile(utils.tls_sync_file):
             os.remove(utils.tls_sync_file)
             self.log.info(f"Removed {utils.tls_sync_file}. "
-                          f"Restarting {self.container_runtime.credentials_manager_component}")
-            self.container_runtime.restart_credentials_manager()
+                          f"Restarting {self.coe_client.credentials_manager_component}")
+            self.coe_client.restart_credentials_manager()
 
     @cluster_workers_cannot_manage
     def launch_data_gateway(self, name: str) -> bool:
@@ -151,7 +151,7 @@ class Supervise(Containers):
                   "cp /mosquitto-no-auth.conf /mosquitto/config/mosquitto.conf 2>/dev/null; " \
                   "exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf'"
             if self.is_cluster_enabled and self.i_am_manager:
-                self.container_runtime.client.services.create(self.data_gateway_image,
+                self.coe_client.client.services.create(self.data_gateway_image,
                                                               name=name,
                                                               hostname=name,
                                                               init=True,
@@ -166,7 +166,7 @@ class Supervise(Containers):
                                                               )
             elif not self.is_cluster_enabled:
                 # Docker standalone mode
-                self.container_runtime.client.containers.run(self.data_gateway_image,
+                self.coe_client.client.containers.run(self.data_gateway_image,
                                                              name=name,
                                                              hostname=name,
                                                              init=True,
@@ -183,9 +183,9 @@ class Supervise(Containers):
                     self.log.warning(f'Despite the request to launch the Data Gateway, '
                                      f'{name} seems to exist already. Forcing its restart just in case')
                     if self.is_cluster_enabled and self.i_am_manager:
-                        self.container_runtime.client.services.get(name).force_update()
+                        self.coe_client.client.services.get(name).force_update()
                     else:
-                        self.container_runtime.client.containers.get(name).restart()
+                        self.coe_client.client.containers.get(name).restart()
 
                     return True
                 else:
@@ -201,7 +201,7 @@ class Supervise(Containers):
         :return: agent container object or None
         """
 
-        container, err = self.container_runtime.find_nuvlaedge_agent_container()
+        container, err = self.coe_client.find_nuvlaedge_agent_container()
 
         if err:
             self.operational_status.append((utils.status_degraded, err))
@@ -263,12 +263,12 @@ class Supervise(Containers):
                     self.destroy_docker_network(leftover_bridge_net)
                     # if swarm is enabled, a container-based data-gateway doesn't make sense
                     try:
-                        self.container_runtime.client.containers.get(self.data_gateway_name)
+                        self.coe_client.client.containers.get(self.data_gateway_name)
                     except docker.errors.NotFound:
                         pass
                     else:
                         try:
-                            self.container_runtime.client.api.remove_container(self.data_gateway_name, force=True)
+                            self.coe_client.client.api.remove_container(self.data_gateway_name, force=True)
                         except Exception as e:
                             self.log.error(f'Could not remove old {self.data_gateway_name} container: {str(e)}')
 
@@ -330,7 +330,7 @@ class Supervise(Containers):
                 self.log.info(f'Connecting ({ccont.name}) '
                               f'to network {utils.nuvlaedge_shared_net}')
                 try:
-                    self.container_runtime.client.api.connect_container_to_network(ccont.id, utils.nuvlaedge_shared_net)
+                    self.coe_client.client.api.connect_container_to_network(ccont.id, utils.nuvlaedge_shared_net)
                 except Exception as e:
                     # doe Network exist? If so, and agent was not connected, need to break and retry
                     if "notfound" not in str(e).replace(' ', '').lower():
@@ -407,10 +407,10 @@ class Supervise(Containers):
         try:
             if self.is_cluster_enabled and self.i_am_manager:
                 # in swarm
-                self.data_gateway_object = self.container_runtime.client.services.get(name)
+                self.data_gateway_object = self.coe_client.client.services.get(name)
             elif not self.is_cluster_enabled and not self.i_am_manager:
                 # in single Docker machine
-                self.data_gateway_object = self.container_runtime.client.containers.get(name)
+                self.data_gateway_object = self.coe_client.client.containers.get(name)
 
             return True
         except (docker.errors.NotFound, docker.errors.APIError) as e:
@@ -426,7 +426,7 @@ class Supervise(Containers):
         :return: Docker network object or None
         """
 
-        return self.container_runtime.client.networks.list(names=network_names)
+        return self.coe_client.client.networks.list(names=network_names)
 
     def destroy_docker_network(self, network: docker.DockerClient.networks):
         """
@@ -471,15 +471,15 @@ class Supervise(Containers):
         try:
             if not self.is_cluster_enabled:
                 # standalone Docker nodes create bridge network
-                self.container_runtime.client.networks.create(net_name,
+                self.coe_client.client.networks.create(net_name,
                                                               labels=labels)
                 return True
             elif self.is_cluster_enabled and self.i_am_manager:
                 # Swarm managers create overlay network
-                self.container_runtime.client.networks.create(net_name,
+                self.coe_client.client.networks.create(net_name,
                                                               driver="overlay",
                                                               attachable=True,
-                                                              options=self.container_runtime.dg_encrypt_options,
+                                                              options=self.coe_client.dg_encrypt_options,
                                                               labels=labels)
         except docker.errors.APIError as e:
             if '409' in str(e):
@@ -495,7 +495,7 @@ class Supervise(Containers):
         # if we got here, then we are handling an overlay network, and thus we need the propagation service
         ack_service = None
         try:
-            ack_service = self.container_runtime.client.services.get(utils.overlay_network_service)
+            ack_service = self.coe_client.client.services.get(utils.overlay_network_service)
         except docker.errors.NotFound:
             # good, it doesn't exist
             pass
@@ -525,9 +525,9 @@ class Supervise(Containers):
         self.log.info(f'Launching global network propagation service {utils.overlay_network_service}')
         cmd = ["sh",
                "-c",
-               f"echo -e '''{json.dumps(self.container_runtime.get_node_info(), indent=2)}''' && sleep 300"]
+               f"echo -e '''{json.dumps(self.coe_client.get_node_info(), indent=2)}''' && sleep 300"]
 
-        self.container_runtime.client.services.create(self.container_runtime.current_image,
+        self.coe_client.client.services.create(self.coe_client.current_image,
                                                       command=cmd,
                                                       container_labels=labels,
                                                       labels=labels,
@@ -543,8 +543,8 @@ class Supervise(Containers):
     def get_project_name(self) -> str:
         """"""
         try:
-            container_id = self.container_runtime.get_current_container_id()
-            myself = self.container_runtime.client.containers.get(container_id)
+            container_id = self.coe_client.get_current_container_id()
+            myself = self.coe_client.client.containers.get(container_id)
         except docker.errors.NotFound:
             err = 'Cannot find the current container. Cannot proceed'
             self.log.error(err)
@@ -622,11 +622,11 @@ class Supervise(Containers):
         filters = {
             'label': original_project_label
         }
-        original_nb_containers = self.container_runtime.client.containers.list(filters=filters)
-        self.nuvlaedge_containers = self.container_runtime.client.containers.list(filters=filters, all=True)
+        original_nb_containers = self.coe_client.client.containers.list(filters=filters)
+        self.nuvlaedge_containers = self.coe_client.client.containers.list(filters=filters, all=True)
 
         filters.update({'driver': 'bridge'})
-        original_nb_internal_network = self.container_runtime.client.networks.list(filters=filters)
+        original_nb_internal_network = self.coe_client.client.networks.list(filters=filters)
 
         if not original_nb_containers or not original_nb_internal_network:
             self.operational_status.append((utils.status_degraded, 'Original NuvlaEdge network not found'))
@@ -644,7 +644,7 @@ class Supervise(Containers):
         :return:
         """
         try:
-            self.container_runtime.client.api.start(container.id)
+            self.coe_client.client.api.start(container.id)
         except docker.errors.APIError as e:
             self.log.error(f'Cannot resume container {container.name}. Reason: {str(e)}')
 
@@ -716,7 +716,7 @@ class Supervise(Containers):
         """
 
         try:
-            self.container_runtime.client.api.restart(container_id)
+            self.coe_client.client.api.restart(container_id)
             self.log.info(f'Successfully restarted container {name}')
         except docker.errors.APIError as e:
             self.log.error(f'Failed to heal container {name}. Reason: {str(e)}')
@@ -725,7 +725,7 @@ class Supervise(Containers):
             if any(w in str(e) for w in ['NotFound', 'network', 'not found']):
                 self.log.warning(f'Trying to reset network config for {name}')
                 try:
-                    self.container_runtime.client.api.disconnect_container_from_network(container_id,
+                    self.coe_client.client.api.disconnect_container_from_network(container_id,
                                                                                         utils.nuvlaedge_shared_net)
                 except docker.errors.APIError as e2:
                     err_msg = f'Malfunctioning network for {name}: {str(e2)}'

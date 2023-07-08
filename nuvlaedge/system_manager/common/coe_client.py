@@ -21,9 +21,12 @@ else:
     ORCHESTRATOR = 'docker'
 
 
-class ContainerRuntime(ABC):
+class COEClient(ABC):
     """
-    Base abstract class for the Docker and Kubernetes clients
+    Abstract base class for the Container Orchestration Engine (COE) clients.
+
+    To be subclassed and implemented by clients to the concrete COE
+    implementations, such as Docker, Kubernetes, and alike.
     """
 
     @abstractmethod
@@ -180,7 +183,7 @@ class ContainerRuntime(ABC):
         pass
 
 
-class Kubernetes(ContainerRuntime):
+class Kubernetes(COEClient):
     """
     Kubernetes client
     """
@@ -344,7 +347,7 @@ class Kubernetes(ContainerRuntime):
 DOCKER_SOCKET_FILE = '/var/run/docker.sock'
 
 
-class Docker(ContainerRuntime):
+class Docker(COEClient):
     """
     Docker client
     """
@@ -645,13 +648,11 @@ class Containers:
     """ Common set of methods and variables for the NuvlaEdge system-manager
     """
     def __init__(self, logging):
-        """ Constructs a Container object
-        """
-        self.container_runtime = None
+        self.coe_client = None
         if ORCHESTRATOR == 'kubernetes':
-            self.container_runtime = Kubernetes(logging)
+            self.coe_client = Kubernetes(logging)
         else:
-            self.container_runtime = Docker(logging)
+            self.coe_client = Docker(logging)
             if not os.path.exists(DOCKER_SOCKET_FILE):
                 logging.warning(f'Orchestrator is "{ORCHESTRATOR}", '
                                 f'but file {DOCKER_SOCKET_FILE} is not present')

@@ -82,7 +82,7 @@ class TestNetworkMonitor(unittest.TestCase):
         status = Mock()
         status.iface_data = None
         it_1 = Mock()
-        it_1.container_runtime.client.containers.list.return_value = []
+        it_1.coe_client.client.containers.list.return_value = []
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("file", it_1, status)
         expected_result: NetworkInterface = \
@@ -102,7 +102,7 @@ class TestNetworkMonitor(unittest.TestCase):
         it_1 = Mock()
         m = Mock()
         m.return_value = ''
-        it_1.container_runtime.container_run_command = m
+        it_1.coe_client.container_run_command = m
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", it_1, True)
         self.assertEqual('', test_ip_monitor._gather_host_ip_route())
@@ -114,7 +114,7 @@ class TestNetworkMonitor(unittest.TestCase):
         cont_mock.labels = {'com.docker.compose.project': 'nuvlaedge_test'}
         runtime_mock.client.containers.list.return_value = [cont_mock]
         tel_mock = Mock()
-        tel_mock.container_runtime = runtime_mock
+        tel_mock.coe_client = runtime_mock
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", tel_mock, Mock())
         with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
@@ -135,18 +135,18 @@ class TestNetworkMonitor(unittest.TestCase):
         status = Mock()
         status.iface_data = None
         it_1 = Mock()
-        it_1.container_runtime.client.containers.list.return_value = []
+        it_1.coe_client.client.containers.list.return_value = []
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", it_1, status)
         mock_gather = Mock()
         mock_gather = b''
-        test_ip_monitor.runtime_client.container_run_command.return_value = mock_gather
+        test_ip_monitor.coe_client.container_run_command.return_value = mock_gather
         test_ip_monitor.set_local_data()
         self.assertFalse(test_ip_monitor.data.ips.local)
 
         # Test readable route
         it_1 = Mock()
-        it_1.container_runtime.client.containers.list.return_value = []
+        it_1.coe_client.client.containers.list.return_value = []
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", it_1, True)
         test_ip_monitor.is_skip_route = Mock(return_value=True)
@@ -234,17 +234,17 @@ class TestNetworkMonitor(unittest.TestCase):
         r_ip: str = generate_random_ip_address()
         status = Mock()
         status.iface_data = None
-        runtime_mock.container_runtime.get_api_ip_port.return_value = (r_ip, 0)
+        runtime_mock.coe_client.get_api_ip_port.return_value = (r_ip, 0)
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", runtime_mock, status)
         test_ip_monitor.set_swarm_data()
         self.assertEqual(test_ip_monitor.data.ips.swarm, r_ip)
 
-        runtime_mock.container_runtime.get_api_ip_port.return_value = ('', '')
+        runtime_mock.coe_client.get_api_ip_port.return_value = ('', '')
         test_ip_monitor.set_swarm_data()
         self.assertFalse(test_ip_monitor.data.ips.swarm)
 
-        runtime_mock.container_runtime.get_api_ip_port.return_value = None
+        runtime_mock.coe_client.get_api_ip_port.return_value = None
         with self.assertRaises(TypeError):
             test_ip_monitor.set_swarm_data()
 

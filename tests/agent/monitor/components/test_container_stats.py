@@ -23,7 +23,7 @@ class TestContainerStatsMonitor(unittest.TestCase):
         mock_telemetry.edge_status = EdgeStatus()
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
 
-        test_monitor.client_runtime.collect_container_metrics.return_value = []
+        test_monitor.coe_client.collect_container_metrics.return_value = []
         # Container should stay empty when no containers available
         test_monitor.refresh_container_info()
         self.assertFalse(test_monitor.data.containers)
@@ -54,22 +54,22 @@ class TestContainerStatsMonitor(unittest.TestCase):
         # otherwise, get nodes
         node_1 = fake.MockDockerNode()
         node_2 = fake.MockDockerNode()
-        test_monitor.client_runtime.list_nodes.return_value = [node_1, node_2]
+        test_monitor.coe_client.list_nodes.return_value = [node_1, node_2]
         # if there's an error, get False and [] again
-        test_monitor.client_runtime.list_nodes.side_effect = \
+        test_monitor.coe_client.list_nodes.side_effect = \
             docker.errors.APIError('', requests.Response())
         self.assertEqual(test_monitor.get_cluster_manager_attrs(['node-id'], 'node-id'),
                          (False, []),
                          'Returned cluster attrs even though nodes could not be listed')
 
         # otherwise, return nodes if active
-        test_monitor.client_runtime.is_node_active.return_value = True
-        test_monitor.client_runtime.list_nodes.reset_mock(side_effect=True)
+        test_monitor.coe_client.is_node_active.return_value = True
+        test_monitor.coe_client.list_nodes.reset_mock(side_effect=True)
         self.assertEqual(test_monitor.get_cluster_manager_attrs(['node-id'], 'node-id'),
                          (True, [node_1.id, node_2.id]),
                          'Failed to get cluster manager attributes')
 
-        test_monitor.client_runtime.is_node_active.return_value = False
+        test_monitor.coe_client.is_node_active.return_value = False
         self.assertEqual(test_monitor.get_cluster_manager_attrs(['node-id'], 'node-id'),
                          (True, []),
                          'Failed to get cluster manager attributes when no nodes '
@@ -79,12 +79,12 @@ class TestContainerStatsMonitor(unittest.TestCase):
     def test_update_cluster_data(self, mock_get_cluster_manager_attrs):
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         mock_get_cluster_manager_attrs.return_value = (False, [])
-        test_monitor.client_runtime.get_cluster_join_address.return_value = None
+        test_monitor.coe_client.get_cluster_join_address.return_value = None
         # if there's no node-id, then certain keys shall not be in body
-        test_monitor.client_runtime.get_node_id.return_value = None
-        test_monitor.client_runtime.get_cluster_id.return_value = None
-        test_monitor.client_runtime.get_cluster_managers.return_value = None
-        test_monitor.client_runtime.get_node_labels.return_value = None
+        test_monitor.coe_client.get_node_id.return_value = None
+        test_monitor.coe_client.get_cluster_id.return_value = None
+        test_monitor.coe_client.get_cluster_managers.return_value = None
+        test_monitor.coe_client.get_node_labels.return_value = None
         test_monitor.update_cluster_data()
         self.assertTrue(
             all(x not in test_monitor.data
@@ -92,38 +92,38 @@ class TestContainerStatsMonitor(unittest.TestCase):
             'Node ID attrs were included in status body even though there is no Node ID')
 
         # if cluster-id is None, then it is not added
-        test_monitor.client_runtime.get_cluster_id.return_value = None
+        test_monitor.coe_client.get_cluster_id.return_value = None
 
         test_monitor.update_cluster_data()
         self.assertIsNone(test_monitor.data.cluster_data.cluster_id,
                           'Cluster ID was added to status even though it does not exist')
 
         # same for cluster-managers
-        test_monitor.client_runtime.get_cluster_managers.return_value = []
+        test_monitor.coe_client.get_cluster_managers.return_value = []
 
         test_monitor.update_cluster_data()
         self.assertIsNone(test_monitor.data.cluster_data.cluster_managers,
                           'Cluster managers were added to status even though there '
                           'are none')
 
-        test_monitor.client_runtime.get_node_id.return_value = 'node-id'
+        test_monitor.coe_client.get_node_id.return_value = 'node-id'
         # if node is not a manager, skip those fields
-        test_monitor.client_runtime.get_cluster_managers.return_value = ['node-id-2']
-        test_monitor.client_runtime.ORCHESTRATOR_COE = 'coe'
+        test_monitor.coe_client.get_cluster_managers.return_value = ['node-id-2']
+        test_monitor.coe_client.ORCHESTRATOR_COE = 'coe'
 
         test_monitor.update_cluster_data()
-        test_monitor.client_runtime.get_cluster_join_address.assert_called_once()
+        test_monitor.coe_client.get_cluster_join_address.assert_called_once()
         self.assertEqual(test_monitor.data.cluster_data.node_id, 'node-id',
                          'Node ID does not match')
         self.assertEqual(test_monitor.data.cluster_data.cluster_node_role, 'worker',
                          'Saying node is not a worker when it is')
 
         # if it is a manager, then get all manager related attrs
-        test_monitor.client_runtime.get_cluster_id.return_value = 'cluster-id'
-        test_monitor.client_runtime.get_cluster_managers.return_value = ['node-id']
+        test_monitor.coe_client.get_cluster_id.return_value = 'cluster-id'
+        test_monitor.coe_client.get_cluster_managers.return_value = ['node-id']
         mock_get_cluster_manager_attrs.return_value = (True, ['node-id'])
-        test_monitor.client_runtime.get_cluster_join_address.return_value = 'addr:port'
-        test_monitor.client_runtime.get_node_labels.return_value = [{'name': 'coe-label', 'value': 'coe-value'}]
+        test_monitor.coe_client.get_cluster_join_address.return_value = 'addr:port'
+        test_monitor.coe_client.get_node_labels.return_value = [{'name': 'coe-label', 'value': 'coe-value'}]
 
         test_monitor.update_cluster_data()
         all_fields = ["node-id", "orchestrator", "cluster-node-role", "cluster-id",
@@ -178,18 +178,18 @@ class TestContainerStatsMonitor(unittest.TestCase):
         mock_update.return_value = None
         mock_cert.return_value = None
 
-        test_monitor.client_runtime.get_client_version.return_value = '1.0'
+        test_monitor.coe_client.get_client_version.return_value = '1.0'
 
         refresh_container.return_value = None
-        test_monitor.client_runtime.ORCHESTRATOR = 'docker'
+        test_monitor.coe_client.ORCHESTRATOR = 'docker'
         test_monitor.update_data()
 
         self.assertEqual(test_monitor.data.docker_server_version, '1.0')
         mock_cert.assert_called_once()
         mock_update.assert_called_once()
 
-        test_monitor.client_runtime.ORCHESTRATOR = 'not_docker'
-        test_monitor.client_runtime.get_client_version.return_value = '1.0'
+        test_monitor.coe_client.ORCHESTRATOR = 'not_docker'
+        test_monitor.coe_client.get_client_version.return_value = '1.0'
         test_monitor.update_data()
         self.assertEqual(test_monitor.data.kubelet_version, '1.0')
 

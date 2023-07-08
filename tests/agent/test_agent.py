@@ -107,13 +107,13 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.agent.agent.Infrastructure')
     @patch('nuvlaedge.agent.agent.Thread.start')
     def test_handle_pull_jobs(self, mock_thread, infra_mock):
-        infra_mock.container_runtime.job_engine_lite_image = True
+        infra_mock.coe_client.job_engine_lite_image = True
         self.test_agent._infrastructure = infra_mock
         self.test_agent.handle_pull_jobs({'jobs': ['1', '2']})
         mock_thread.assert_called_once()
         mock_thread.reset_mock()
 
-        infra_mock.container_runtime.job_engine_lite_image = False
+        infra_mock.coe_client.job_engine_lite_image = False
         self.test_agent.handle_pull_jobs({})
         self.assertEqual(mock_thread.call_count, 0)
 

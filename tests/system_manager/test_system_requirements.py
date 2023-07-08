@@ -12,7 +12,7 @@ class SystemRequirementsTestCase(unittest.TestCase):
 
     def setUp(self):
         self.obj = SystemRequirements()
-        self.obj.container_runtime = mock.MagicMock()
+        self.obj.coe_client = mock.MagicMock()
         logging.disable(logging.CRITICAL)
 
     def tearDown(self):
@@ -43,7 +43,7 @@ class SystemRequirementsTestCase(unittest.TestCase):
 
     def test_check_ram_requirements(self):
         # if not enough RAM, get False
-        self.obj.container_runtime.get_ram_capacity.return_value = 0.123
+        self.obj.coe_client.get_ram_capacity.return_value = 0.123
         self.assertFalse(self.obj.check_ram_requirements(),
                          'Ignored that there is not enough RAM to meet the requirements')
         self.assertEqual(len(self.obj.not_met), 1,
@@ -51,7 +51,7 @@ class SystemRequirementsTestCase(unittest.TestCase):
         self.obj.not_met = []
 
         # otherwise, True
-        self.obj.container_runtime.get_ram_capacity.return_value = 1230
+        self.obj.coe_client.get_ram_capacity.return_value = 1230
         self.assertTrue(self.obj.check_ram_requirements(),
                         'Says RAM requirements are not met when they are')
 

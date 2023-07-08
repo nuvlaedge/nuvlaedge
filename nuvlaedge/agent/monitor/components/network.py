@@ -12,12 +12,14 @@ import os
 import time
 
 import requests
-from nuvlaedge.common.constant_files import FILE_NAMES
 
-from nuvlaedge.agent.common import nuvlaedge_common, util
-from nuvlaedge.agent.monitor.data.network_data import NetworkingData, NetworkInterface, IP
-from nuvlaedge.agent.monitor import Monitor
 from ..components import monitor
+from nuvlaedge.agent.common import util
+from nuvlaedge.agent.monitor import Monitor
+from nuvlaedge.agent.monitor.data.network_data import NetworkingData, \
+    NetworkInterface, IP
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.constant_files import FILE_NAMES
 
 
 @monitor('network_monitor')
@@ -45,8 +47,8 @@ class NetworkMonitor(Monitor):
         self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
 
-        self.runtime_client: nuvlaedge_common.ContainerRuntimeClient = telemetry.container_runtime
-        self._ip_route_image: str = self.runtime_client.current_image
+        self.coe_client: COEClient = telemetry.coe_client
+        self._ip_route_image: str = self.coe_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()
         self.logger.info(f'Running network monitor for project '
@@ -60,7 +62,7 @@ class NetworkMonitor(Monitor):
             telemetry.edge_status.iface_data = self.data
 
     def get_engine_project_name(self) -> str:
-        return self.runtime_client.get_nuvlaedge_project_name(util.default_project_name)
+        return self.coe_client.get_nuvlaedge_project_name(util.default_project_name)
 
     def set_public_data(self) -> None:
         """
@@ -130,9 +132,9 @@ class NetworkMonitor(Monitor):
         Returns:
             str as the output of the command (can be empty).
         """
-        self.runtime_client.container_remove(self.iproute_container_name)
+        self.coe_client.container_remove(self.iproute_container_name)
         self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
-        return self.runtime_client.container_run_command(
+        return self.coe_client.container_run_command(
             image=self._ip_route_image,
             name=self.iproute_container_name,
             args=self._IP_COMMAND_ARGS,
@@ -326,7 +328,7 @@ class NetworkMonitor(Monitor):
 
     def set_swarm_data(self) -> None:
         """ Discovers the host SWARM IP address """
-        it_ip: str = self.runtime_client.get_api_ip_port()[0]
+        it_ip: str = self.coe_client.get_api_ip_port()[0]
 
         if self.data.ips.swarm != it_ip:
             self.data.ips.swarm = it_ip

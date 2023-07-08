@@ -26,7 +26,7 @@ class COEClient(ABC):
         self.job_engine_lite_component = util.compose_project_name + "-" + util.job_engine_service_name
         self.job_engine_lite_image = ''
         self.vpn_client_component = util.compose_project_name + '-' + util.vpn_client_service_name
-        self.ignore_env_variables = ['NUVLAEDGE_API_KEY', 'NUVLAEDGE_API_SECRET']
+        self.ignore_env_variables = ['NUVLAEDGE_API_KEY', 'NUVLAEDGE_API_SECRET', 'NE_IMAGE_TAG']
         self.data_gateway_name = None
 
     @abstractmethod

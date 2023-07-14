@@ -787,9 +787,12 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.infer_if_additional_coe_exists')
     def test_define_nuvla_infra_service(self, mock_other_coe_infra_service):
         mock_other_coe_infra_service.return_value = {}
-        # if the api_endpoint is not set, the infra is not set either
-        self.assertEqual({}, self.obj.define_nuvla_infra_service(''),
-                         'Returned a valid infra service when there is no API endpoint')
+        # if the api_endpoint is not set, the infra is set with unix docker socket and "null" credentials
+        self.assertEqual(self.obj.define_nuvla_infra_service(''),
+                         {'swarm-client-ca': 'null',
+                          'swarm-client-cert': 'null',
+                          'swarm-client-key': 'null',
+                          'swarm-endpoint': 'local'})
 
         # otherwise, use TLS keys and give back the commissioning payload for the IS.
         is_keys = ["swarm-client-ca", "swarm-client-cert", "swarm-client-key", "swarm-endpoint"]

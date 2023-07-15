@@ -100,18 +100,16 @@ class DockerClient(ContainerRuntimeClient):
     def find_compute_api_external_port(self) -> str:
         try:
             container = self._get_component_container(util.compute_api_service_name)
-
         except (docker.errors.NotFound, docker.errors.APIError, TimeoutError) as ex:
-            logger.debug(f"Compute API container not found {ex}")
+            logger.debug(f'Compute API container not found {ex}')
             return ''
 
         try:
             return container.ports['5000/tcp'][0]['HostPort']
-
         except (KeyError, IndexError) as ex:
             logger.warning(f'Cannot infer ComputeAPI external port, container attributes '
                            f'not properly formatted: {ex}')
-        return ""
+        return ''
 
     def get_api_ip_port(self):
         node_info = self.get_node_info()
@@ -253,7 +251,7 @@ class DockerClient(ContainerRuntimeClient):
 
         image = docker_image if docker_image else self.job_engine_lite_image
         if not image:
-            image = 'nuvladev/nuvlaedge:main'
+            image = 'sixsq/nuvlaedge:latest'
             logger.error('Failed to find docker image name to execute job. Fallback image will be used')
 
         # Get the compute-api network

@@ -18,6 +18,8 @@ from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+docker_socket_file_default = '/var/run/docker.sock'
+
 
 class InferIPError(Exception):
     ...
@@ -98,18 +100,16 @@ class DockerClient(ContainerRuntimeClient):
     def find_compute_api_external_port(self) -> str:
         try:
             container = self._get_component_container(util.compute_api_service_name)
-
         except (docker.errors.NotFound, docker.errors.APIError, TimeoutError) as ex:
-            logger.debug(f"Compute API container not found {ex}")
+            logger.debug(f'Compute API container not found {ex}')
             return ''
 
         try:
             return container.ports['5000/tcp'][0]['HostPort']
-
         except (KeyError, IndexError) as ex:
-            logger.warning('Cannot infer ComputeAPI external port, container attributes '
-                                'not properly formatted', exc_info=ex)
-        return ""
+            logger.warning(f'Cannot infer ComputeAPI external port, container attributes '
+                           f'not properly formatted: {ex}')
+        return ''
 
     def get_api_ip_port(self):
         node_info = self.get_node_info()
@@ -251,7 +251,7 @@ class DockerClient(ContainerRuntimeClient):
 
         image = docker_image if docker_image else self.job_engine_lite_image
         if not image:
-            image = 'nuvladev/nuvlaedge:main'
+            image = 'sixsq/nuvlaedge:latest'
             logger.error('Failed to find docker image name to execute job. Fallback image will be used')
 
         # Get the compute-api network
@@ -264,8 +264,8 @@ class DockerClient(ContainerRuntimeClient):
 
         # Get environment variables and volumes from job-engine-lite container
         volumes = {
-            '/var/run/docker.sock': {
-                'bind': '/var/run/docker.sock',
+            docker_socket_file_default: {
+                'bind': docker_socket_file_default,
                 'mode': 'rw'
             }
         }
@@ -644,15 +644,18 @@ class DockerClient(ContainerRuntimeClient):
 
         return enabled_plugins
 
-    def define_nuvla_infra_service(self, api_endpoint: str,
-                                   client_ca=None, client_cert=None, client_key=None) -> dict:
-        if not self.compute_api_is_running():
-            return {}
+    def define_nuvla_infra_service(self,
+                                   api_endpoint: str,
+                                   client_ca=None,
+                                   client_cert=None,
+                                   client_key=None) -> dict:
+
         try:
-            fallback_address = api_endpoint.replace('https://', '').split(':')[0]
+            fallback_address = api_endpoint.replace('https://', '').split(':')[0] if api_endpoint else None
             infra_service = self.infer_if_additional_coe_exists(fallback_address=fallback_address)
-        except (IndexError, ConnectionError):
+        except Exception as e:
             # this is a non-critical step, so we should never fail because of it
+            logger.warning(f'Exception while trying yo find additional COE: {e}')
             infra_service = {}
 
         if api_endpoint:
@@ -662,6 +665,11 @@ class DockerClient(ContainerRuntimeClient):
                 infra_service["swarm-client-ca"] = client_ca
                 infra_service["swarm-client-cert"] = client_cert
                 infra_service["swarm-client-key"] = client_key
+        else:
+            infra_service["swarm-endpoint"] = 'local'
+            infra_service["swarm-client-ca"] = client_ca or 'null'
+            infra_service["swarm-client-cert"] = client_cert or 'null'
+            infra_service["swarm-client-key"] = client_key or 'null'
 
         return infra_service
 

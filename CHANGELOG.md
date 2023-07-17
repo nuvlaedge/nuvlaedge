@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.10.4](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.4) (2023-07-16)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.3...2.10.4)
+
+**Merged pull requests:**
+
+- fix\(agent\): commission infrastructure-service and its credential even without compute-api [\#101](https://github.com/nuvlaedge/nuvlaedge/pull/101) ([schaubl](https://github.com/schaubl))
+
 ## [2.10.3](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.3) (2023-07-04)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.2...2.10.3)

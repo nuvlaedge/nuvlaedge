@@ -91,6 +91,7 @@ jobs:
 
       - name: Install latest validation package
         run: |
+          shasum dist/${{ env.VALIDATION_PACKAGE_NAME }}
           pip install dist/${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
 
       - name: Setup results folder

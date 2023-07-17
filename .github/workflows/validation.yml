@@ -70,6 +70,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Test
+        run:
+          echo ${{ secrets.VALIDATION_TOKEN_USERNAME }}
       - name: Retrieve target configuration
         run: |
           wget --user=${{ secrets.VALIDATION_TOKEN_USERNAME }} --password='${{ secrets.VALIDATION_TOKEN_SECRET }}' \

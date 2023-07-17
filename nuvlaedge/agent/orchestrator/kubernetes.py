@@ -39,7 +39,7 @@ class KubernetesClient(COEClient):
 
     # FIXME: This needs to be parametrised.
     NE_DB_ROOT_HOSTPATH = '/var/lib/nuvlaedge'
-    NE_DB_CONTAINER_PATH = FILE_NAMES.root_fs
+    NE_DB_CONTAINER_PATH = str(FILE_NAMES.root_fs)
 
     def __init__(self):
         super().__init__()

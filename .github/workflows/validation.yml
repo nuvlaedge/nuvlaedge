@@ -73,8 +73,7 @@ jobs:
       - name: Retrieve target configuration
         run: |
           wget \
-          -P conf/targets/ \
-          -O ${{ matrix.board-config }}.toml \
+          -O conf/targets/${{ matrix.board-config }}.toml \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml
 
       - name: Remove previous validation package
@@ -85,8 +84,7 @@ jobs:
       - name: Download Validation Framework dependency
         run: |
           wget \
-          -P dist/ \
-          -O ${{ env.VALIDATION_PACKAGE_NAME }} \
+          -O dist/${{ env.VALIDATION_PACKAGE_NAME }} \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}
 
       - name: Install latest validation package

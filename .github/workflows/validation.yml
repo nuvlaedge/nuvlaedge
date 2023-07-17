@@ -103,7 +103,7 @@ jobs:
 
       - name: Run Validation on board ${{ matrix.board-config }}
         run: |
-          python -m validation_framework \
+          validation \
           --target ${{ matrix.board-config }}.toml \
           --key ${{ secrets.VALIDATION_NUVLA_API_KEY }} \
           --secret ${{ secrets.VALIDATION_NUVLA_API_SECRET }} \

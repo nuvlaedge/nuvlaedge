@@ -74,6 +74,7 @@ jobs:
         run: |
           wget \
           -P conf/targets/ \
+          -O ${{ matrix.board-config }}.toml \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml
 
       - name: Remove previous validation package
@@ -85,6 +86,7 @@ jobs:
         run: |
           wget \
           -P dist/ \
+          -O ${{ env.VALIDATION_PACKAGE_NAME }} \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}
 
       - name: Install latest validation package

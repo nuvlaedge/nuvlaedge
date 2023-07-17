@@ -76,11 +76,6 @@ jobs:
           -P conf/targets/ \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml
 
-      - name: Check config file
-        run: |
-          ls -la conf/targets/
-          cat conf/targets/${{ matrix.board-config }}.toml
-
       - name: Remove previous validation package
         run: |
           rm -f ${{ env.VALIDATION_PACKAGE_NAME }} || true
@@ -90,11 +85,10 @@ jobs:
         run: |
           wget \
           -P dist/ \
-          https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}"
+          https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}
 
       - name: Install latest validation package
         run: |
-          md5sum dist/${{ env.VALIDATION_PACKAGE_NAME }}
           pip install dist/${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
 
       - name: Setup results folder

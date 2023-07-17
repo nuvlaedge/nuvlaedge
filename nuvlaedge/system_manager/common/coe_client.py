@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.agent.orchestrator.docker import DockerClient
+from nuvlaedge.agent.orchestrator.docker import DockerClient, docker_socket_file_default
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -18,6 +18,9 @@ else:
     import docker
     import docker.errors
     ORCHESTRATOR = 'docker'
+
+
+DOCKER_SOCKET_FILE = docker_socket_file_default
 
 
 class COEClient(ABC):
@@ -341,9 +344,6 @@ class Kubernetes(COEClient):
     def get_current_container_id(self) -> str:
         # TODO
         return ''
-
-
-DOCKER_SOCKET_FILE = '/var/run/docker.sock'
 
 
 class Docker(COEClient):

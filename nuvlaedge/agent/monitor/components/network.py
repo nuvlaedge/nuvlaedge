@@ -328,10 +328,7 @@ class NetworkMonitor(Monitor):
 
     def set_swarm_data(self) -> None:
         """ Discovers the host SWARM IP address """
-        it_ip: str = self.coe_client.get_api_ip_port()[0]
-
-        if self.data.ips.swarm != it_ip:
-            self.data.ips.swarm = it_ip
+        self.data.ips.swarm = self.coe_client.get_api_ip_port()[0]
 
     def update_data(self) -> None:
         """

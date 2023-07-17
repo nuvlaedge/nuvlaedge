@@ -23,7 +23,6 @@ class NuvlaEdgeCommon:
     Common set of methods and variables for the NuvlaEdge agent
     """
 
-    docker_socket_file = '/var/run/docker.sock'
     nuvla_endpoint_key = 'NUVLA_ENDPOINT'
     nuvla_endpoint_insecure_key = 'NUVLA_ENDPOINT_INSECURE'
     nuvla_timestamp_format = "%Y-%m-%dT%H:%M:%SZ"

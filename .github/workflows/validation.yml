@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VALIDATION_PACKAGE_NAME: "validation-latest-py3-none-any.whl"
+  VALIDATION_PACKAGE_NAME: "validation-1.0.0-py3-none-any.whl"
   BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
 
 jobs:
@@ -91,7 +91,6 @@ jobs:
 
       - name: Install latest validation package
         run: |
-          ls -la .
           pip install dist/${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
 
       - name: Setup results folder

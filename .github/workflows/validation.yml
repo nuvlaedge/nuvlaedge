@@ -72,9 +72,15 @@ jobs:
 
       - name: Retrieve target configuration
         run: |
-          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
-          -O --create-dirs --output-dir conf/targets/ \
-          "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ matrix.board-config }}.toml"
+          wget --user=${{ secrets.VALIDATION_TOKEN_USERNAME }} --password='${{ secrets.VALIDATION_TOKEN_SECRET }}' \
+          https://github.com/nuvlaedge/nuvlaedge/releases/download/1.0.0/${{ matrix.board-config }}.toml
+
+#      - name: Retrieve target configuration
+#        run: |
+#          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
+#          -H 'Accept: application/vnd.github.v3.raw' \
+#          -O --create-dirs --output-dir conf/targets/ \
+#          "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ matrix.board-config }}.toml"
 
       - name: Check config file
         run: |
@@ -89,6 +95,7 @@ jobs:
       - name: Download Validation Framework dependency
         run: |
           curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
+          -H 'Accept: application/octet-stream' \
           -O --create-dirs --output-dir dist/ \
           -L "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ env.VALIDATION_PACKAGE_NAME }}"
 

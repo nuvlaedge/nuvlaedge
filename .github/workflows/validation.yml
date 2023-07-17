@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VALIDATION_PACKAGE_NAME: "validation-1.0.0-py3-none-any.whl"
+  VALIDATION_PACKAGE_NAME: "validation-latest-py3-none-any.whl"
   BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
 
 jobs:
@@ -70,21 +70,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Test
-        run:
-          echo ${{ secrets.VALIDATION_TOKEN_USERNAME }}
       - name: Retrieve target configuration
         run: |
-          wget --user=${{ secrets.VALIDATION_TOKEN_USERNAME }} --password='${{ secrets.VALIDATION_TOKEN_SECRET }}' \
+          wget \
           -P conf/targets/ \
-          https://github.com/nuvlaedge/validation/releases/download/1.0.0/${{ matrix.board-config }}.toml
-
-#      - name: Retrieve target configuration
-#        run: |
-#          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
-#          -H 'Accept: application/vnd.github.v3.raw' \
-#          -O --create-dirs --output-dir conf/targets/ \
-#          "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ matrix.board-config }}.toml"
+          https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml
 
       - name: Check config file
         run: |
@@ -98,10 +88,9 @@ jobs:
 
       - name: Download Validation Framework dependency
         run: |
-          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
-          -H 'Accept: application/octet-stream' \
-          -O --create-dirs --output-dir dist/ \
-          -L "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ env.VALIDATION_PACKAGE_NAME }}"
+          wget \
+          -P dist/ \
+          https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}"
 
       - name: Install latest validation package
         run: |

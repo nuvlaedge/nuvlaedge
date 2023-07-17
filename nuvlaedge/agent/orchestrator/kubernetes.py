@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
@@ -498,7 +498,7 @@ class KubernetesClient(COEClient):
 
     @staticmethod
     def _container_def(image, name,
-                       volume_mounts: Union[List[client.V1VolumeMount], None],
+                       volume_mounts: List[client.V1VolumeMount] | None,
                        command: str = None,
                        args: str = None) -> client.V1Container:
         def parse_cmd_args(cmd, arg):

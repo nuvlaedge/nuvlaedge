@@ -42,7 +42,6 @@ env:
 
 jobs:
   setup-matrix:
-    needs: build-custom-validation
     runs-on: ubuntu-latest
     outputs:
       boards: ${{ steps.set-boards.outputs.boards }}

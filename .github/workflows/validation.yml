@@ -72,10 +72,11 @@ jobs:
 
       - name: Download target configuration file
         run: |
-          wget https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml \
-          --user=${{ secrets.VALIDATION_TOKEN_USERNAME }} \
-          --password=${{ secrets.VALIDATION_TOKEN_SECRET }} \
-          -P conf/targets/
+          wget \
+          --user ${{ secrets.VALIDATION_TOKEN_USERNAME }} \
+          --password ${{ secrets.VALIDATION_TOKEN_SECRET }} \
+          -P conf/targets/ \
+          https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml
 
       - name: Check config file
         run: |

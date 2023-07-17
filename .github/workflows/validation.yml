@@ -77,13 +77,20 @@ jobs:
           -O --create-dirs --output-dir conf/targets/ \
           -L "https://api.github.com/repos/nuvlaedge/validation/contents/conf/targets/${{ matrix.board-config }}.toml"
 
-      - name: Install Validation Framework dependency
+      - name: Remove previous validation package
         run: |
-          rm -f ${{ env.VALIDATION_PACKAGE_NAME }}
+          rm -f ${{ env.VALIDATION_PACKAGE_NAME }} || true
+          rm -f dist/${{ env.VALIDATION_PACKAGE_NAME }} || true
+
+      - name: Download Validation Framework dependency
+        run: |
           curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
           -H 'Accept: application/vnd.github.v3.raw' \
-          -O \
+          -O --create-dirs --output-dir dist/ \
           -L "https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}"
+
+      - name: Install latest validation package
+        run: |
           ls -la .
           pip install ${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
 

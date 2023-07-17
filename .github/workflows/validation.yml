@@ -70,12 +70,23 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: CheckOut validation packages
+      - name: Download target configuration file
         run: |
-          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
-          -O --create-dirs --output-dir conf/targets/ \
-          -L "https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml"
+          wget https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml \
+          --user=${{ secrets.VALIDATION_TOKEN_USERNAME }} \
+          --password=${{ secrets.VALIDATION_TOKEN_SECRET }} \
+          -P conf/targets/
+
+      - name: Check config file
+        run: |
+          ls -la conf/targets/
           cat conf/targets/${{ matrix.board-config }}.toml
+
+#        run: |
+#          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
+#          -O --create-dirs --output-dir conf/targets/ \
+#          -L "https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml"
+#          cat conf/targets/${{ matrix.board-config }}.toml
 
       - name: Remove previous validation package
         run: |

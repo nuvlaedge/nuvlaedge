@@ -73,7 +73,8 @@ jobs:
       - name: Retrieve target configuration
         run: |
           wget --user=${{ secrets.VALIDATION_TOKEN_USERNAME }} --password='${{ secrets.VALIDATION_TOKEN_SECRET }}' \
-          https://github.com/nuvlaedge/nuvlaedge/releases/download/1.0.0/${{ matrix.board-config }}.toml
+          -P conf/targets/
+          https://github.com/nuvlaedge/validation/releases/download/1.0.0/${{ matrix.board-config }}.toml
 
 #      - name: Retrieve target configuration
 #        run: |

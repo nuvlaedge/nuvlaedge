@@ -41,18 +41,6 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
 
 jobs:
-  build-custom-validation:
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download validation target device
-        run: |
-          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
-          -H 'Accept: application/vnd.github.v3.raw' \
-          -O \
-          -L "https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}"
-
   setup-matrix:
     needs: build-custom-validation
     runs-on: ubuntu-latest
@@ -82,6 +70,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: CheckOut validation packages
         run: |
@@ -91,7 +80,14 @@ jobs:
           -L "https://api.github.com/repos/nuvlaedge/validation/contents/conf/targets/${{ matrix.board-config }}.toml"
 
       - name: Install Validation Framework dependency
-        run: python -m pip install ${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
+        run: |
+          rm -f ${{ env.VALIDATION_PACKAGE_NAME }}
+          curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
+          -H 'Accept: application/vnd.github.v3.raw' \
+          -O \
+          -L "https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}"
+          ls -la .
+          pip install ${{ env.VALIDATION_PACKAGE_NAME }}  --force-reinstall
 
       - name: Setup results folder
         run: |

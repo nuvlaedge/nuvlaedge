@@ -74,7 +74,7 @@ jobs:
         run: |
           curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
           -O --create-dirs --output-dir conf/targets/ \
-          -L "https://github.com/nuvlaedge/validation/releases/download/1.0.0/${{ matrix.board-config }}.toml"
+          "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ matrix.board-config }}.toml"
 
       - name: Check config file
         run: |
@@ -90,7 +90,7 @@ jobs:
         run: |
           curl -u "${{ secrets.VALIDATION_TOKEN_USERNAME }}:${{ secrets.VALIDATION_TOKEN_SECRET }}" \
           -O --create-dirs --output-dir dist/ \
-          -L "https://github.com/nuvlaedge/validation/releases/download/1.0.0/${{ env.VALIDATION_PACKAGE_NAME }}"
+          -L "https://api.github.com/repos/nuvlaedge/validation/releases/assets/1.0.0/${{ env.VALIDATION_PACKAGE_NAME }}"
 
       - name: Install latest validation package
         run: |

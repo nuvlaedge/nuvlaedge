@@ -19,6 +19,7 @@ gpu = "nuvlaedge.peripherals.gpu:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+cython = "0.29.36"
 pydantic = "1.10.7"
 requests = "2.27.1"
 nuvla-api = "3.0.8"

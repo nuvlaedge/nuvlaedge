@@ -24,6 +24,8 @@ FROM ${BASE_IMAGE} AS base-builder
 RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev
 
+RUN pip install "cython<3.0.0" && pip install --no-build-isolation pyyaml==6.0
+
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
@@ -140,7 +142,7 @@ COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${
 COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 
-RUN pip install docker-compose
+RUN pip install --no-build-isolation docker-compose
 
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl

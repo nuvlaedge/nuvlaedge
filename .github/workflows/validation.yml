@@ -108,7 +108,8 @@ jobs:
           --validator ${{ matrix.validation-type }} \
           --retrieve_logs ${{ github.event.inputs.retrieve_logs }} \
           --nuvlaedge_branch ${{ env.BRANCH_NAME }} \
-          --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version }} --deployment_branch ${{ github.event.inputs.deployment_branch }}
+          --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version || 'latest' }} \ 
+          --deployment_branch ${{ github.event.inputs.deployment_branch || 'None' }}
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action/composite@v2

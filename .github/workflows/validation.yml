@@ -5,7 +5,7 @@ on:
     inputs:
 
       log_level:
-        description: 'Edit the default log level (INFO) of the validation process'
+        description: 'Logging Level'
         required: false
         type: choice
         default: 'INFO'
@@ -16,18 +16,20 @@ on:
           - 'ERROR'
 
       deployment_branch:
-        description: 'Select a branch in nuvlaedge/deployment repo to test against'
+        description: 'Deployment Repository branch to test against'
         required: false
         type: string
+        default: 'None'
 
       nuvlaedge_version:
-        description: 'A NuvlaEdge version can be provided to test against'
+        description: 'NuvlaEdge Tag'
         required: false
         type: string
+        default: 'latest'
 
       retrieve_logs:
         # Logs are retrieved whenever there is an error on the validation
-        description: 'Flag to always retrieve NuvlaEdge docker logs after validation'
+        description: 'Retrieve docker execution logs'
         required: false
         type: boolean
         default: false

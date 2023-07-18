@@ -19,13 +19,11 @@ on:
         description: 'Deployment Repository branch to test against'
         required: false
         type: string
-        default: 'None'
 
       nuvlaedge_version:
         description: 'NuvlaEdge Tag'
         required: false
         type: string
-        default: 'latest'
 
       retrieve_logs:
         # Logs are retrieved whenever there is an error on the validation
@@ -108,10 +106,9 @@ jobs:
           --key ${{ secrets.VALIDATION_NUVLA_API_KEY }} \
           --secret ${{ secrets.VALIDATION_NUVLA_API_SECRET }} \
           --validator ${{ matrix.validation-type }} \
-          --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version }} \
-          --deployment_branch ${{ github.event.inputs.deployment_branch }} \ 
+          --retrieve_logs ${{ github.event.inputs.retrieve_logs }} \
           --nuvlaedge_branch ${{ env.BRANCH_NAME }} \
-          --retrieve_logs ${{ github.event.inputs.retrieve_logs }}
+          --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version }} --deployment_branch ${{ github.event.inputs.deployment_branch }}
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action/composite@v2

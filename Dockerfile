@@ -24,8 +24,6 @@ FROM ${BASE_IMAGE} AS base-builder
 RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev
 
-RUN pip install "cython<3.0.0"
-
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 

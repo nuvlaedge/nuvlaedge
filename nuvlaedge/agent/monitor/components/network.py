@@ -16,8 +16,9 @@ import requests
 from ..components import monitor
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.data.network_data import NetworkingData, \
-    NetworkInterface, IP
+from nuvlaedge.agent.monitor.data.network_data import (NetworkingData,
+                                                       NetworkInterface,
+                                                       IP)
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
 

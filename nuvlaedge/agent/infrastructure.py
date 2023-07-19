@@ -726,7 +726,7 @@ class Infrastructure(NuvlaEdgeCommon):
             try:
                 with util.timeout(10):
                     if not self.coe_client.install_ssh_key(self.ssh_pub_key,
-                                                                  self.installation_home):
+                                                           self.installation_home):
                         return
             except Exception as e:
                 msg = f'An error occurred while setting immutable SSH key: {str(e)}'

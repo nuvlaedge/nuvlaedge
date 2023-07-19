@@ -13,7 +13,7 @@ import nuvla.api
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator.docker import DockerClient
-from nuvlaedge.agent.orchestrator.factory import get_container_runtime
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
 class NuvlaEdgeCommonTestCase(unittest.TestCase):
@@ -38,7 +38,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
         mock_os_isdir.return_value = True
         mock_set_vpn_config_extra.return_value = ''
         mock_set_nuvlaedge_id.return_value = 'nuvlabox/fake-id'
-        self.obj = NuvlaEdgeCommon(get_container_runtime())
+        self.obj = NuvlaEdgeCommon(get_coe_client())
         logging.disable(logging.CRITICAL)
 
     def tearDown(self):
@@ -49,7 +49,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
                          'Default NuvlaEdge data volume path was not set correctly')
 
         # by default, we should have a Docker runtime client
-        self.assertIsInstance(self.obj.container_runtime, DockerClient,
+        self.assertIsInstance(self.obj.coe_client, DockerClient,
                               'Container runtime not set to Docker client as expected')
         self.assertEqual(self.obj.mqtt_broker_host, 'data-gateway',
                          'data-gateway host name was not set')

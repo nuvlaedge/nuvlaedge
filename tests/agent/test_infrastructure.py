@@ -17,7 +17,7 @@ from nuvlaedge.agent.infrastructure import Infrastructure
 
 
 from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.agent.orchestrator.factory import get_container_runtime
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
 
@@ -32,7 +32,7 @@ class InfrastructureTestCase(unittest.TestCase):
             mock_telemetry.return_value = mock.MagicMock()
             self.shared_volume = "mock/path"
             self.refresh_period = 16    # change the default
-            self.obj = Infrastructure(get_container_runtime(),
+            self.obj = Infrastructure(get_coe_client(),
                                       self.shared_volume,
                                       mock_telemetry,
                                       refresh_period=self.refresh_period)
@@ -47,9 +47,9 @@ class InfrastructureTestCase(unittest.TestCase):
         self.obj.nuvlaedge_id = 'nuvlabox/fake-id'
         self.obj.context = 'context'
         self.obj.commissioning_file = '.commission'
-        self.obj.container_runtime = mock.MagicMock()
+        self.obj.coe_client = mock.MagicMock()
         self.obj.nuvlaedge_status_file = '.status'
-        self.obj.container_runtime.infra_service_endpoint_keyname = 'swarm-endpoint'
+        self.obj.coe_client.infra_service_endpoint_keyname = 'swarm-endpoint'
         self.obj.vpn_credential = 'vpn-credential'
         self.obj.vpn_key_file = 'nuvlaedge-vpn.key'
         self.obj.vpn_csr_file = 'nuvlaedge-vpn.csr'
@@ -250,14 +250,14 @@ class InfrastructureTestCase(unittest.TestCase):
     def test_get_nuvlaedge_capabilities(self):
         commission_payload = {}
         # monkeypatch the check for capability
-        self.obj.container_runtime.has_pull_job_capability.return_value = False
+        self.obj.coe_client.has_pull_job_capability.return_value = False
 
         # fn will change the given arg
         self.obj.get_nuvlaedge_capabilities(commission_payload)
         self.assertEqual(commission_payload, {'capabilities': []},
                          'Failed to get NB capabilities when there is no PULL mode')
 
-        self.obj.container_runtime.has_pull_job_capability.return_value = True
+        self.obj.coe_client.has_pull_job_capability.return_value = True
         self.obj.get_nuvlaedge_capabilities(commission_payload)
         self.assertEqual(commission_payload, {'capabilities': ['NUVLA_JOB_PULL']},
                          'Failed to get NB capabilities when PULL mode is set')
@@ -266,22 +266,22 @@ class InfrastructureTestCase(unittest.TestCase):
     def test_compute_api_is_running(self, mock_get):
 
         # only works for non-k8s installations
-        self.obj.container_runtime.ORCHESTRATOR = 'kubernetes'
+        self.obj.coe_client.ORCHESTRATOR = 'kubernetes'
         self.assertFalse(self.obj.compute_api_is_running(),
                          'Tried to check compute-api for a Kubernetes installation')
 
-        self.obj.container_runtime.ORCHESTRATOR = 'docker'
+        self.obj.coe_client.ORCHESTRATOR = 'docker'
         # if compute-api is running, return True
         compute_api_container = mock.MagicMock()
         compute_api_container.status = 'stopped'
-        self.obj.container_runtime.client.containers.get.return_value = compute_api_container
+        self.obj.coe_client.client.containers.get.return_value = compute_api_container
         self.assertFalse(self.obj.compute_api_is_running(),
                          'Unable to detect that compute-api is not running')
 
         # if running, try to reach its API
         # if an exception occurs, return False
         compute_api_container.status = 'running'
-        self.obj.container_runtime.client.containers.get.return_value = compute_api_container
+        self.obj.coe_client.client.containers.get.return_value = compute_api_container
         mock_get.side_effect = TimeoutError
         self.assertFalse(self.obj.compute_api_is_running(),
                          'Assuming compute-api is running even though we could not assess that')
@@ -333,47 +333,47 @@ class InfrastructureTestCase(unittest.TestCase):
 
     @mock.patch.object(Infrastructure, 'get_local_nuvlaedge_status')
     def test_needs_cluster_commission(self, mock_get_status):
-        self.obj.container_runtime.get_node_info.return_value = None
+        self.obj.coe_client.get_node_info.return_value = None
         # if cluster details DO NOT exist, check for a match on the node ID for WORKER commissioning
-        self.obj.container_runtime.get_cluster_info.return_value = False
+        self.obj.coe_client.get_cluster_info.return_value = False
         node_id = 'fake-id'
         mock_get_status.return_value = {'node-id': node_id}
-        self.obj.container_runtime.get_node_id.return_value = None
+        self.obj.coe_client.get_node_id.return_value = None
         self.assertEqual(self.obj.needs_cluster_commission(), {},
                          'Says cluster commissioning is needed when node ID is not set by the Docker client')
-        self.obj.container_runtime.get_node_id.return_value = 'other-id'
+        self.obj.coe_client.get_node_id.return_value = 'other-id'
         self.assertEqual(self.obj.needs_cluster_commission(), {},
                          'Says cluster commissioning is needed when node ID does not match')
-        self.obj.container_runtime.get_node_id.return_value = node_id
+        self.obj.coe_client.get_node_id.return_value = node_id
         self.assertEqual(self.obj.needs_cluster_commission(), {"cluster-worker-id": node_id},
                          'Unable to infer cluster commissioning as a WORKER')
 
         # if cluster info exists, then this is a manager, so check for whole cluster commissioning
-        self.obj.container_runtime.get_cluster_info.return_value = {
+        self.obj.coe_client.get_cluster_info.return_value = {
             'cluster-managers': ['some other node']
         }
         self.assertEqual(self.obj.needs_cluster_commission(), {},
                          'Says full cluster commissioning is needed when manager ID is not in cluster-managers')
 
-        self.obj.container_runtime.get_cluster_info.return_value = {
+        self.obj.coe_client.get_cluster_info.return_value = {
             'cluster-managers': [node_id]
         }
         self.assertEqual(self.obj.needs_cluster_commission(), {'cluster-managers': [node_id]},
                          'Unable to infer whether full cluster commissioning is needed')
 
     def test_get_compute_endpoint(self):
-        self.obj.container_runtime.get_api_ip_port.return_value = (None, None)
+        self.obj.coe_client.get_api_ip_port.return_value = (None, None)
         # if all we have are None values, then we also get None
         self.assertEqual(self.obj.get_compute_endpoint(''), (None, None),
                          'Returned a compute endpoint even though there is not enough information to infer it')
 
         # if VPN IP is given, use it
-        self.obj.container_runtime.get_api_ip_port.return_value = (None, 5000)
+        self.obj.coe_client.get_api_ip_port.return_value = (None, 5000)
         self.assertEqual(self.obj.get_compute_endpoint('1.1.1.1'), ('https://1.1.1.1:5000', 5000),
                          'Unable to get compute endpoint when there is a VPN IP')
 
         # otherwise, infer it
-        self.obj.container_runtime.get_api_ip_port.return_value = ('2.2.2.2', 5555)
+        self.obj.coe_client.get_api_ip_port.return_value = ('2.2.2.2', 5555)
         self.assertEqual(self.obj.get_compute_endpoint(''), ('https://2.2.2.2:5555', 5555),
                          'Unable to infer compute endpoint and port')
 
@@ -385,7 +385,7 @@ class InfrastructureTestCase(unittest.TestCase):
                           'Tried to do partial commissioning for a manager')
 
         mock_get_role.return_value = 'worker'
-        self.obj.container_runtime.get_partial_decommission_attributes.return_value = []
+        self.obj.coe_client.get_partial_decommission_attributes.return_value = []
         request_payload = {}
         # if there is nothing new to remove, then return the same
         full_payload = {
@@ -412,7 +412,7 @@ class InfrastructureTestCase(unittest.TestCase):
         old_payload = {
             'removed': []
         }
-        self.obj.container_runtime.get_partial_decommission_attributes.return_value = ['this']
+        self.obj.coe_client.get_partial_decommission_attributes.return_value = ['this']
         self.obj.needs_partial_decommission(request_payload, full_payload, old_payload)
 
         self.assertEqual(request_payload, {'that': 'value', 'removed': ['this']},
@@ -483,48 +483,48 @@ class InfrastructureTestCase(unittest.TestCase):
 
         swarm_endpoint = 'https://127.1.1.1:5000'
 
-        self.obj.container_runtime.get_join_tokens.return_value = ()
+        self.obj.coe_client.get_join_tokens.return_value = ()
         mock_needs_cluster_commission.return_value = {'cluster-managers': ['node-id']}
         mock_read_commission.return_value = {}
         self.obj.telemetry_instance.get_vpn_ip.return_value = '1.1.1.1'
         mock_get_comp_endpoint.return_value = (swarm_endpoint, 5000)
-        self.obj.container_runtime.get_node_labels.return_value = None
+        self.obj.coe_client.get_node_labels.return_value = None
         mock_attr_changed.return_value = None
 
         mock_get_tls_keys.return_value = ('ca', 'cert', 'key')
-        self.obj.container_runtime.define_nuvla_infra_service.return_value = {
+        self.obj.coe_client.define_nuvla_infra_service.return_value = {
             'swarm-endpoint': swarm_endpoint,
             'swarm-client-ca': 'ca',
             'swarm-client-cert': 'cert',
             'swarm-client-key': 'key'
         }
         mock_swarm_token_diff.return_value = None
-        self.obj.container_runtime.join_token_manager_keyname = 'swarm-token-manager'
-        self.obj.container_runtime.join_token_worker_keyname = 'swarm-token-worker'
+        self.obj.coe_client.join_token_manager_keyname = 'swarm-token-manager'
+        self.obj.coe_client.join_token_worker_keyname = 'swarm-token-worker'
         mock_get_capabilities.return_value = None
         mock_needs_partial_decommission.return_value = None
         mock_do_commission.return_value = None
         mock_write_file.return_value = None
 
         # if compute-api is not running, then IS is not defined
-        self.obj.container_runtime.compute_api_is_running = mock.MagicMock()
-        self.obj.container_runtime.compute_api_is_running.return_value = False
+        self.obj.coe_client.compute_api_is_running = mock.MagicMock()
+        self.obj.coe_client.compute_api_is_running.return_value = False
 
         self.obj.try_commission()
-        self.obj.container_runtime.define_nuvla_infra_service.assert_called_with(
+        self.obj.coe_client.define_nuvla_infra_service.assert_called_with(
             swarm_endpoint, 'ca', 'cert', 'key')
         # and if there are no joining tokens, then commissioning_attr_has_changed is not called
         self.assertEqual(mock_attr_changed.call_count, 0,
                          'commissioning_attr_has_changed called when no join tokens are available')
 
         # if compute-api is running, the IS is defined
-        self.obj.container_runtime.compute_api_is_running.return_value = False
-        self.obj.container_runtime.get_join_tokens.return_value = ('manager-token', 'worker-token') # ignored in this test
+        self.obj.coe_client.compute_api_is_running.return_value = False
+        self.obj.coe_client.get_join_tokens.return_value = ('manager-token', 'worker-token') # ignored in this test
         mock_do_commission.reset_mock()     # reset counters
 
         self.obj.try_commission()
 
-        self.obj.container_runtime.define_nuvla_infra_service.assert_called_with(
+        self.obj.coe_client.define_nuvla_infra_service.assert_called_with(
             swarm_endpoint,
             *('ca', 'cert', 'key'))
 
@@ -581,21 +581,21 @@ class InfrastructureTestCase(unittest.TestCase):
     @mock.patch.object(Infrastructure, 'commission_vpn')
     def test_fix_vpn_credential_mismatch(self, mock_commission_vpn, mock_write_file):
         # if vpn-client container doesn't exist, nothing is done
-        self.obj.container_runtime.is_vpn_client_running.side_effect = docker.errors.NotFound('', requests.Response())
+        self.obj.coe_client.is_vpn_client_running.side_effect = docker.errors.NotFound('', requests.Response())
         self.obj.fix_vpn_credential_mismatch({})
         mock_commission_vpn.assert_not_called()
         mock_write_file.assert_not_called()
 
         # if vpn-client container is not found, commission the VPN
-        self.obj.container_runtime.is_vpn_client_running.side_effect = None
-        self.obj.container_runtime.is_vpn_client_running.return_value = False
+        self.obj.coe_client.is_vpn_client_running.side_effect = None
+        self.obj.coe_client.is_vpn_client_running.return_value = False
         self.obj.fix_vpn_credential_mismatch({})
         mock_commission_vpn.assert_called_once()
         mock_write_file.assert_not_called()
 
         # result should be the same if check for vpn-client does not throw exception but says "False"
-        self.obj.container_runtime.is_vpn_client_running.reset_mock(side_effect=True)
-        self.obj.container_runtime.is_vpn_client_running.return_value = False
+        self.obj.coe_client.is_vpn_client_running.reset_mock(side_effect=True)
+        self.obj.coe_client.is_vpn_client_running.return_value = False
         mock_commission_vpn.reset_mock()
         self.obj.fix_vpn_credential_mismatch({})
         mock_commission_vpn.assert_called_once()
@@ -604,7 +604,7 @@ class InfrastructureTestCase(unittest.TestCase):
         # if it is running
         # but there's no VPN IP, the result is again the same
         mock_commission_vpn.reset_mock()
-        self.obj.container_runtime.is_vpn_client_running.return_value = True
+        self.obj.coe_client.is_vpn_client_running.return_value = True
         self.obj.telemetry_instance.get_vpn_ip.return_value = None
         self.assertIsNone(self.obj.fix_vpn_credential_mismatch({}),
                           'Unable to commission VPN when VPN IP is not set')
@@ -699,7 +699,7 @@ class InfrastructureTestCase(unittest.TestCase):
         mock_exists.side_effect = [False, True]
         mock_push_event.reset_mock()
         # if key cannot be set, just ignore and return
-        self.obj.container_runtime.install_ssh_key.return_value = None
+        self.obj.coe_client.install_ssh_key.return_value = None
         opener = mock.mock_open()
 
         def mocked_open(*args, **kwargs):
@@ -710,13 +710,13 @@ class InfrastructureTestCase(unittest.TestCase):
                 self.assertIsNone(self.obj.set_immutable_ssh_key(),
                                   'Unable to handle failure to set immutable SSH key')
 
-                self.obj.container_runtime.install_ssh_key.assert_called_once()
+                self.obj.coe_client.install_ssh_key.assert_called_once()
                 mock_push_event.assert_not_called()
                 mock_write_file.assert_not_called()
 
         # if set successfully, save it locally
         mock_exists.side_effect = [False, True]
-        self.obj.container_runtime.install_ssh_key.return_value = True
+        self.obj.coe_client.install_ssh_key.return_value = True
 
         with mock.patch.object(Path, 'open', mocked_open):
             with mock.patch("json.load", mock.MagicMock(side_effect=[{"owner": "user"}])):
@@ -728,7 +728,7 @@ class InfrastructureTestCase(unittest.TestCase):
 
         # if there's an error while setting key, push event
         mock_exists.side_effect = [False, True]
-        self.obj.container_runtime.install_ssh_key.side_effect = TimeoutError
+        self.obj.coe_client.install_ssh_key.side_effect = TimeoutError
         with mock.patch.object(Path, 'open', mocked_open):
             with mock.patch("json.load", mock.MagicMock(side_effect=[{"owner": "user"}])):
                 self.assertIsNone(self.obj.set_immutable_ssh_key(),

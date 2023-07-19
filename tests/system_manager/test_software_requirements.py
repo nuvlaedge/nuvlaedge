@@ -12,7 +12,7 @@ class SoftwareRequirementsTestCase(unittest.TestCase):
 
     def setUp(self):
         self.obj = SoftwareRequirements()
-        self.obj.container_runtime = mock.MagicMock()
+        self.obj.coe_client = mock.MagicMock()
         logging.disable(logging.CRITICAL)
 
     def tearDown(self):
@@ -26,8 +26,8 @@ class SoftwareRequirementsTestCase(unittest.TestCase):
 
     def test_check_sw_requirements(self):
         # COE version must be compatible and enabled
-        self.obj.container_runtime.is_version_compatible.return_value = False
-        self.obj.container_runtime.is_coe_enabled.return_value = True
+        self.obj.coe_client.is_version_compatible.return_value = False
+        self.obj.coe_client.is_coe_enabled.return_value = True
         self.assertFalse(self.obj.check_sw_requirements(),
                          'Failed to check SW requirements')
         self.assertEqual(len(self.obj.not_met), 1,
@@ -35,7 +35,7 @@ class SoftwareRequirementsTestCase(unittest.TestCase):
 
         # otherwise, True
         self.obj.not_met = []
-        self.obj.container_runtime.is_version_compatible.return_value = True
+        self.obj.coe_client.is_version_compatible.return_value = True
         self.assertTrue(self.obj.check_sw_requirements(),
                         'Says Software requirements are not met when they are')
 

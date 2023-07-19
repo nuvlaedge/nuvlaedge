@@ -15,7 +15,7 @@ from nuvla.api import Api
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class NuvlaEdgeCommon:
@@ -23,15 +23,12 @@ class NuvlaEdgeCommon:
     Common set of methods and variables for the NuvlaEdge agent
     """
 
-    docker_socket_file = '/var/run/docker.sock'
     nuvla_endpoint_key = 'NUVLA_ENDPOINT'
     nuvla_endpoint_insecure_key = 'NUVLA_ENDPOINT_INSECURE'
     nuvla_timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
 
     ssh_pub_key = os.getenv('NUVLAEDGE_IMMUTABLE_SSH_PUB_KEY')
     vpn_interface_name = os.getenv('VPN_INTERFACE_NAME', 'tun')
-    nuvlaedge_engine_version = util.str_if_value_or_none(
-        os.getenv('NUVLAEDGE_ENGINE_VERSION'))
 
     swarm_manager_token_file = "swarm-manager-token"
     swarm_worker_token_file = "swarm-worker-token"
@@ -39,7 +36,7 @@ class NuvlaEdgeCommon:
     mqtt_broker_port = 1883
     mqtt_broker_keep_alive = 90
 
-    def __init__(self, container_runtime: ContainerRuntimeClient,
+    def __init__(self, coe_client: COEClient,
                  shared_data_volume: str = "/srv/nuvlaedge/shared"):
         """
         Constructs an Infrastructure object, with a status placeholder
@@ -48,10 +45,11 @@ class NuvlaEdgeCommon:
         """
         self.logger: logging.Logger = logging.getLogger(__name__)
 
-        self.hostfs = container_runtime.hostfs
+        self.hostfs = coe_client.hostfs
         self.data_volume = shared_data_volume
-        self.container_runtime: ContainerRuntimeClient = container_runtime
-        self.mqtt_broker_host = self.container_runtime.data_gateway_name
+        self.coe_client: COEClient = coe_client
+
+        self.mqtt_broker_host = self.coe_client.data_gateway_name
 
         self.host_user_home_file = f'{self.data_volume}/.host_user_home'
         self.installation_home = self.set_installation_home(FILE_NAMES.HOST_USER_HOME)
@@ -341,21 +339,7 @@ class NuvlaEdgeCommon:
         with open(file_path) as f:
             return json.load(f)
 
-    def get_nuvlaedge_version(self) -> int:
-        """
-        Gives back this NuvlaEdge Engine's version
 
-        :return: major version of the NuvlaEdge Engine, as an integer
-        """
-        if self.nuvlaedge_engine_version:
-            version = int(self.nuvlaedge_engine_version.split('.')[0])
-        elif FILE_NAMES.CONTEXT.exists():
-            with FILE_NAMES.CONTEXT.open('r') as file:
-                version = json.load(file)['version']
-        else:
-            version = 2
-
-        return version
 
     def get_operational_status(self):
         """ Retrieves the operational status of the NuvlaEdge from the .status file """

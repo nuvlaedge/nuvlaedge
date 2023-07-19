@@ -13,7 +13,7 @@ import nuvla.api
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator.docker import DockerClient
-from nuvlaedge.agent.orchestrator.factory import get_container_runtime
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
 class NuvlaEdgeCommonTestCase(unittest.TestCase):
@@ -38,7 +38,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
         mock_os_isdir.return_value = True
         mock_set_vpn_config_extra.return_value = ''
         mock_set_nuvlaedge_id.return_value = 'nuvlabox/fake-id'
-        self.obj = NuvlaEdgeCommon(get_container_runtime())
+        self.obj = NuvlaEdgeCommon(get_coe_client())
         logging.disable(logging.CRITICAL)
 
     def tearDown(self):
@@ -49,7 +49,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
                          'Default NuvlaEdge data volume path was not set correctly')
 
         # by default, we should have a Docker runtime client
-        self.assertIsInstance(self.obj.container_runtime, DockerClient,
+        self.assertIsInstance(self.obj.coe_client, DockerClient,
                               'Container runtime not set to Docker client as expected')
         self.assertEqual(self.obj.mqtt_broker_host, 'data-gateway',
                          'data-gateway host name was not set')
@@ -272,35 +272,6 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
         with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data=file_value)):
             self.assertEqual(self.obj.read_json_file('fake-file'), json.loads(file_value),
                              'Unable to read JSON from file')
-
-    @mock.patch('nuvlaedge.agent.common.nuvlaedge_common.NuvlaEdgeCommon.read_json_file')
-    @mock.patch.object(Path, 'exists')
-    def test_get_nuvlaedge_version(self, mock_exists, mock_read_json):
-        # if the version is already an attribute of the class, just give back its major version
-        major = 2
-        self.obj.nuvlaedge_engine_version = f'{major}.1.0'
-        self.assertEqual(self.obj.get_nuvlaedge_version(), major,
-                         'Unable to infer NBE major version')
-
-        # otherwise, get it from the data volume
-        self.obj.nuvlaedge_engine_version = None
-        mock_exists.return_value = True
-
-        opener = mock.mock_open()
-
-        def mocked_open(*args, **kwargs):
-            return opener(*args, **kwargs)
-
-        # otherwise, give back the notes as a list
-        with mock.patch.object(Path, 'open', mocked_open):
-            with mock.patch("json.load", mock.MagicMock(side_effect=[{'version': major}])):
-                self.assertEqual(self.obj.get_nuvlaedge_version(), major,
-                                 'Unable to infer NBE major version from data volume file')
-
-        # and if no file exists either, default to latest known (2)
-        mock_exists.return_value = False
-        self.assertEqual(self.obj.get_nuvlaedge_version(), major,
-                         'Unable to default to NBE major version')
 
     @mock.patch('nuvlaedge.agent.common.nuvlaedge_common.NuvlaEdgeCommon.set_local_operational_status')
     def test_get_operational_status(self, mock_set_status):

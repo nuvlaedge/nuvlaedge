@@ -7,16 +7,20 @@ It also reports and handles the IP geolocation system.
 
 """
 import json
+import logging
 import os
 import time
 
 import requests
-from nuvlaedge.common.constant_files import FILE_NAMES
 
-from nuvlaedge.agent.common import nuvlaedge_common, util
-from nuvlaedge.agent.monitor.data.network_data import NetworkingData, NetworkInterface, IP
-from nuvlaedge.agent.monitor import Monitor
 from ..components import monitor
+from nuvlaedge.agent.common import util
+from nuvlaedge.agent.monitor import Monitor
+from nuvlaedge.agent.monitor.data.network_data import (NetworkingData,
+                                                       NetworkInterface,
+                                                       IP)
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.constant_files import FILE_NAMES
 
 
 @monitor('network_monitor')
@@ -25,8 +29,8 @@ class NetworkMonitor(Monitor):
     Handles the retrieval of IP networking data.
     """
     _REMOTE_IPV4_API: str = "https://api.ipify.org?format=json"
-    _AUXILIARY_DOCKER_IMAGE: str = "sixsq/iproute2:latest"
     _IP_COMMAND_ARGS: str = '-j route'
+    _IPROUTE_ENTRYPOINT: str = 'ip'
     _PUBLIC_IP_UPDATE_RATE: int = 3600
     _NUVLAEDGE_COMPONENT_LABEL_KEY: str = util.base_label
 
@@ -34,19 +38,18 @@ class NetworkMonitor(Monitor):
 
         super().__init__(self.__class__.__name__, NetworkingData,
                          enable_monitor=enable_monitor)
-
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
                                self.set_swarm_data,
                                self.set_vpn_data]
-
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.host_fs: str = telemetry.hostfs
         self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = telemetry.previous_net_stats_file
 
-        self.runtime_client: nuvlaedge_common.ContainerRuntimeClient = telemetry.container_runtime
-
+        self.coe_client: COEClient = telemetry.coe_client
+        self._ip_route_image: str = self.coe_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()
         self.logger.info(f'Running network monitor for project '
@@ -60,7 +63,7 @@ class NetworkMonitor(Monitor):
             telemetry.edge_status.iface_data = self.data
 
     def get_engine_project_name(self) -> str:
-        return self.runtime_client.get_nuvlaedge_project_name(util.default_project_name)
+        return self.coe_client.get_nuvlaedge_project_name(util.default_project_name)
 
     def set_public_data(self) -> None:
         """
@@ -130,12 +133,14 @@ class NetworkMonitor(Monitor):
         Returns:
             str as the output of the command (can be empty).
         """
-        self.runtime_client.container_remove(self.iproute_container_name)
-        return self.runtime_client \
-            .container_run_command(self._AUXILIARY_DOCKER_IMAGE,
-                                   self.iproute_container_name,
-                                   args=self._IP_COMMAND_ARGS,
-                                   network='host')
+        self.coe_client.container_remove(self.iproute_container_name)
+        self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
+        return self.coe_client.container_run_command(
+            image=self._ip_route_image,
+            name=self.iproute_container_name,
+            args=self._IP_COMMAND_ARGS,
+            entrypoint=self._IPROUTE_ENTRYPOINT,
+            network='host')
 
     def read_traffic_data(self) -> list:
         """ Gets the list of net ifaces and corresponding rxbytes and txbytes
@@ -324,10 +329,7 @@ class NetworkMonitor(Monitor):
 
     def set_swarm_data(self) -> None:
         """ Discovers the host SWARM IP address """
-        it_ip: str = self.runtime_client.get_api_ip_port()[0]
-
-        if self.data.ips.swarm != it_ip:
-            self.data.ips.swarm = it_ip
+        self.data.ips.swarm = self.coe_client.get_api_ip_port()[0]
 
     def update_data(self) -> None:
         """
@@ -363,6 +365,7 @@ class NetworkMonitor(Monitor):
         # 2.- Default Local Gateway
         # 3.- Public
         # 4.- Swarm
+        self.logger.info('Updating data in Network monitor')
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
 

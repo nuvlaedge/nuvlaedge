@@ -11,7 +11,7 @@ import paho.mqtt.client as mqtt
 
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.common import nuvlaedge_common
-from nuvlaedge.agent.orchestrator.factory import get_container_runtime
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
 from nuvlaedge.agent.telemetry import Telemetry
 
 
@@ -23,7 +23,7 @@ class TelemetryTestCase(unittest.TestCase):
     @mock.patch('nuvlaedge.agent.telemetry.Telemetry.initialize_monitors')
     def setUp(self, mock_monitor_initializer):
         fake_nuvlaedge_common = fake.Fake.imitate(nuvlaedge_common.NuvlaEdgeCommon)
-        setattr(fake_nuvlaedge_common, 'container_runtime', mock.MagicMock())
+        setattr(fake_nuvlaedge_common, 'coe_client', mock.MagicMock())
         setattr(fake_nuvlaedge_common, 'container_stats_json_file', 'fake-stats-file')
         setattr(fake_nuvlaedge_common, 'vpn_ip_file', 'fake-vpn-file')
         Telemetry.__bases__ = (fake_nuvlaedge_common,)
@@ -31,7 +31,7 @@ class TelemetryTestCase(unittest.TestCase):
         self.shared_volume = "mock/path"
         self.nuvlaedge_status_id = "nuvlabox-status/fake-id"
 
-        self.obj = Telemetry(get_container_runtime(),
+        self.obj = Telemetry(get_coe_client(),
                              self.shared_volume,
                              self.nuvlaedge_status_id)
 
@@ -91,7 +91,7 @@ class TelemetryTestCase(unittest.TestCase):
         # make sure attrs are set and NuvlaEdgeCommon is inherited
         self.assertIsNotNone(self.obj.status_default,
                              'Telemetry status not initialized')
-        self.assertIsNotNone(self.obj.container_runtime,
+        self.assertIsNotNone(self.obj.coe_client,
                              'NuvlaEdgeCommon not inherited')
         self.assertEqual(self.obj.status_default, self.obj.status,
                          'Failed to initialized status structures')
@@ -147,11 +147,11 @@ class TelemetryTestCase(unittest.TestCase):
     @mock.patch.object(Telemetry, 'set_status_operational_status')
     @mock.patch.object(Telemetry, 'send_mqtt')
     def test_get_status(self, mock_send_mqtt, mock_set_status_operational_status):
-        self.obj.container_runtime.get_node_info.return_value = fake.MockDockerNode()
-        self.obj.container_runtime.get_host_os.return_value = 'os'
-        self.obj.container_runtime.get_host_architecture.return_value = 'arch'
-        self.obj.container_runtime.get_hostname.return_value = 'hostname'
-        self.obj.container_runtime.get_container_plugins.return_value = ['plugin']
+        self.obj.coe_client.get_node_info.return_value = fake.MockDockerNode()
+        self.obj.coe_client.get_host_os.return_value = 'os'
+        self.obj.coe_client.get_host_architecture.return_value = 'arch'
+        self.obj.coe_client.get_hostname.return_value = 'hostname'
+        self.obj.coe_client.get_container_plugins.return_value = ['plugin']
 
         # these functions are already tested elsewhere
         mock_set_status_operational_status.return_value = \

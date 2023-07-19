@@ -7,20 +7,11 @@ from kubernetes import client, config
 from kubernetes.client.exceptions import ApiException
 
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.constant_files import FILE_NAMES
 
 
-def init_logger(level=logging.INFO, handler=logging.StreamHandler()) \
-        -> logging.Logger:
-    logger = logging.getLogger('KubernetesClient')
-    logger.setLevel(level)
-    handler.setLevel(level)
-    logger.addHandler(handler)
-    logger.info('Logging initialised.')
-    return logger
-
-
-log = init_logger()
+log: logging.Logger = logging.getLogger(__name__)
 
 
 JOB_TTL_SECONDS_AFTER_FINISHED = 60 * 2
@@ -31,7 +22,7 @@ class TimeoutException(Exception):
     ...
 
 
-class KubernetesClient(ContainerRuntimeClient):
+class KubernetesClient(COEClient):
     """
     Kubernetes client
     """
@@ -46,6 +37,10 @@ class KubernetesClient(ContainerRuntimeClient):
 
     WAIT_SLEEP_SEC = 2
 
+    # FIXME: This needs to be parametrised.
+    NE_DB_ROOT_HOSTPATH = '/var/lib/nuvlaedge'
+    NE_DB_CONTAINER_PATH = str(FILE_NAMES.root_fs)
+
     def __init__(self):
         super().__init__()
         config.load_incluster_config()
@@ -53,7 +48,7 @@ class KubernetesClient(ContainerRuntimeClient):
         self.client_apps = client.AppsV1Api()
         self.client_batch_api = client.BatchV1Api()
         self.namespace = self.get_nuvlaedge_project_name(util.default_project_name)
-        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE')
+        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
         self.host_node_ip = os.getenv('MY_HOST_NODE_IP')
         self.host_node_name = os.getenv('MY_HOST_NODE_NAME')
         self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
@@ -178,7 +173,8 @@ class KubernetesClient(ContainerRuntimeClient):
                 log.info(f'SSH key installer "{name}" has already been launched in the past. Skipping this step')
                 return False
 
-        cmd = ["sh", "-c", "echo -e \"${SSH_PUB}\" >> %s" % f'{ssh_folder}/authorized_keys']
+        entrypoint = ["sh"]
+        cmd = ["-c", "echo -e \"${SSH_PUB}\" >> %s" % f'{ssh_folder}/authorized_keys']
         volume_name = f'{name}-volume'
         pod_body = client.V1Pod(
             kind='Pod',
@@ -197,7 +193,7 @@ class KubernetesClient(ContainerRuntimeClient):
                 containers=[
                     client.V1Container(
                         name=name,
-                        image='alpine',
+                        image=self.current_image,
                         env=[
                             client.V1EnvVar(
                                 name='SSH_PUB',
@@ -210,7 +206,8 @@ class KubernetesClient(ContainerRuntimeClient):
                                 mount_path=ssh_folder
                             )
                         ],
-                        command=cmd
+                        command=entrypoint,
+                        args=cmd
                     )
                 ]
             )
@@ -264,13 +261,15 @@ class KubernetesClient(ContainerRuntimeClient):
                f'--job-id {job_id}'
 
         if nuvla_endpoint_insecure:
-            args = f'{args} --api-insecure'
+            args += ' --api-insecure'
 
         image = docker_image if docker_image else self.job_engine_lite_image
 
-        log.info(f'Launch Nuvla job {job_id} using {image} with command: "{cmd}"')
+        log.info(f'Launch Nuvla job {job_id} using {image} with: {cmd} {args}')
 
-        job = self._job_def(image, job_execution_id, command=cmd, args=args,
+        job = self._job_def(image, self._to_k8s_obj_name(job_execution_id),
+                            command=cmd, args=args,
+                            mount_ne_db=True,
                             restart_policy='Never')
 
         namespace = self._namespace(**kwargs)
@@ -498,8 +497,10 @@ class KubernetesClient(ContainerRuntimeClient):
         return name.replace('_', '-').replace('/', '-')
 
     @staticmethod
-    def _container_def(image, name, command: str = None, args: str = None) -> \
-            client.V1Container:
+    def _container_def(image, name,
+                       volume_mounts: List[client.V1VolumeMount] | None,
+                       command: str = None,
+                       args: str = None) -> client.V1Container:
         def parse_cmd_args(cmd, arg):
             if cmd:
                 cmd = cmd.split()
@@ -511,63 +512,102 @@ class KubernetesClient(ContainerRuntimeClient):
                 arg = None
             return cmd, arg
         command, args = parse_cmd_args(command, args)
-        return client.V1Container(
-            image=image,
-            name=name,
-            command=command,
-            args=args)
+
+        return client.V1Container(image=image,
+                                  name=name,
+                                  command=command,
+                                  volume_mounts=volume_mounts,
+                                  args=args)
 
     @staticmethod
-    def _pod_spec(container: client.V1Container, network: str = None,
+    def _pod_spec(container: client.V1Container,
+                  network: str = None,
+                  volumes: List[client.V1Volume] = None,
                   **kwargs) -> client.V1PodSpec:
-        pod_spec = client.V1PodSpec(
-            host_network=(network == 'host'),
-            containers=[container])
-        if 'restart_policy' in kwargs:
-            pod_spec.restart_policy = kwargs['restart_policy']
-        return pod_spec
+        return client.V1PodSpec(containers=[container],
+                                host_network=(network == 'host'),
+                                restart_policy=kwargs.get('restart_policy'),
+                                volumes=volumes)
 
     @staticmethod
-    def _pod_template_spec(name: str, pod_spec: client.V1PodSpec) \
-            -> client.V1PodTemplateSpec:
-        return client.V1PodTemplateSpec(
-            spec=pod_spec,
-            metadata=client.V1ObjectMeta(name=name)
-        )
+    def _pod_template_spec(name: str,
+                           pod_spec: client.V1PodSpec) -> client.V1PodTemplateSpec:
+        return client.V1PodTemplateSpec(spec=pod_spec,
+                                        metadata=client.V1ObjectMeta(name=name))
+
+    def _ne_db_hostpath(self):
+        return os.path.join(self.NE_DB_ROOT_HOSTPATH,
+                            self.get_nuvlaedge_project_name(util.default_project_name))
+
+    def _volume_mount_ne_db(self) -> (client.V1Volume, client.V1VolumeMount):
+        volume_name = 'ne-db'
+
+        pod_volume = client.V1Volume(
+            name=volume_name,
+            host_path=client.V1HostPathVolumeSource(path=self._ne_db_hostpath()))
+
+        container_volume_mount = client.V1VolumeMount(name=volume_name,
+                                                      mount_path=self.NE_DB_CONTAINER_PATH,
+                                                      read_only=True)
+
+        return pod_volume, container_volume_mount
 
     def _pod_def(self, image, name, command: str = None, args: str = None,
-                 network: str = None, **kwargs) -> client.V1Pod:
-        container_def = self._container_def(image, name, command=command, args=args)
-        pod_spec = self._pod_spec(container_def, network=network, **kwargs)
+                 network: str = None, mount_ne_db=False,
+                 **kwargs) -> client.V1Pod:
+
+        pod_spec = self._pod_spec_with_container(image, name,
+                                                 command, args,
+                                                 network, mount_ne_db, **kwargs)
         return client.V1Pod(
             metadata=client.V1ObjectMeta(name=name, annotations={}),
-            spec=pod_spec
-        )
+            spec=pod_spec)
+
+    def _pod_spec_with_container(self, image: str, name: str,
+                                 command: str = None, args: str = None,
+                                 network: str = None, mount_ne_db: bool = False,
+                                 **kwargs):
+
+        container_volume_mounts, pod_volumes = None, None
+        if mount_ne_db:
+            ne_db_volume, ne_db_volume_mount = self._volume_mount_ne_db()
+            container_volume_mounts = [ne_db_volume_mount]
+            pod_volumes = [ne_db_volume]
+
+        container = self._container_def(image, name,
+                                        volume_mounts=container_volume_mounts,
+                                        command=command, args=args)
+
+        return self._pod_spec(container,
+                              network=network,
+                              volumes=pod_volumes,
+                              **kwargs)
 
     def _job_def(self, image, name, command: str = None, args: str = None,
-                 network: str = None, **kwargs) -> client.V1Job:
+                 network: str = None, mount_ne_db=False,
+                 **kwargs) -> client.V1Job:
 
-        name = self._to_k8s_obj_name(name)
+        pod_spec = self._pod_spec_with_container(image, name,
+                                                 command, args,
+                                                 network, mount_ne_db, **kwargs)
 
-        container: client.V1Container = \
-            self._container_def(image, name, command=command, args=args)
-        pod_spec: client.V1PodSpec = \
-            self._pod_spec(container, network=network, **kwargs)
-        pod_template: client.V1PodTemplateSpec = \
-            self._pod_template_spec(name, pod_spec)
+        job_spec = client.V1JobSpec(template=self._pod_template_spec(name, pod_spec))
 
-        job_sec = client.V1JobSpec(template=pod_template)
-        job_sec.backoff_limit = kwargs.get('backoff_limit', JOB_BACKOFF_LIMIT)
-        job_sec.ttl_seconds_after_finished = \
-            kwargs.get('ttl_seconds_after_finished',
-                       JOB_TTL_SECONDS_AFTER_FINISHED)
+        job_spec.backoff_limit = kwargs.get('backoff_limit', JOB_BACKOFF_LIMIT)
 
-        return client.V1Job(
-            api_version="batch/v1",
-            kind="Job",
-            metadata=client.V1ObjectMeta(name=name),
-            spec=job_sec
-        )
+        job_spec.ttl_seconds_after_finished = kwargs.get(
+            'ttl_seconds_after_finished', JOB_TTL_SECONDS_AFTER_FINISHED)
+
+        return client.V1Job(api_version="batch/v1",
+                            kind="Job",
+                            metadata=client.V1ObjectMeta(name=name),
+                            spec=job_spec)
+
+    def _job_executor_job_def(self, image, name, cmd, args):
+        return self._job_def(image, self._to_k8s_obj_name(name),
+                             command=cmd, args=args,
+                             mount_ne_db=True,
+                             restart_policy='Never')
 
     def container_run_command(self, image, name, command: str = None,
                               args: str = None,
@@ -575,9 +615,17 @@ class KubernetesClient(ContainerRuntimeClient):
                               no_output=False,
                               **kwargs) -> str:
         name = self._to_k8s_obj_name(name)
-        pod = self._pod_def(image, name, command=command, args=args,
+
+        # To comply with docker, try to retrieve entrypoint when there is
+        # no command (k8s entrypoint) defined
+        command = command or kwargs.get('entrypoint')
+
+        pod = self._pod_def(image, name,
+                            command=command, args=args,
                             network=network, **kwargs)
+
         namespace = self._namespace(**kwargs)
+
         log.info('Run pod %s in namespace %s', pod.to_str(), namespace)
         try:
             self.client.create_namespaced_pod(namespace, pod)
@@ -591,8 +639,11 @@ class KubernetesClient(ContainerRuntimeClient):
         except TimeoutException as ex:
             log.warning(ex)
             return ''
-        output = self.client.read_namespaced_pod_log(name, namespace, _preload_content=False,
-                                                     timestamps=False).data.decode('utf8')
+        output = self.client.read_namespaced_pod_log(
+            name,
+            namespace,
+            _preload_content=False,
+            timestamps=False).data.decode('utf8')
         if remove:
             self.container_remove(name, **kwargs)
         return output
@@ -632,3 +683,7 @@ class KubernetesClient(ContainerRuntimeClient):
 
     def get_nuvlaedge_project_name(self, default_project_name=None) -> str:
         return os.getenv('MY_NAMESPACE', default_project_name)
+
+    @property
+    def current_image(self) -> str:
+        return os.getenv('NUVLAEDGE_IMAGE')

@@ -10,21 +10,20 @@ from nuvlaedge.agent.monitor.data.orchestrator_data import (DeploymentData, Cont
                                                   ClusterStatusData)
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.components import monitor
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.util import execute_cmd
 
 
 @monitor('container_stats_monitor')
 class ContainerStatsMonitor(Monitor):
     """
-    Extends Monitor and Thread for asynchronous information gathering about containers
+    Provides asynchronous information gathering about containers.
 
     """
     def __init__(self, name: str, telemetry, enable_monitor: bool):
         super().__init__(name, DeploymentData, enable_monitor)
         self.is_thread = True
-        self.client_runtime: ContainerRuntimeClient = \
-            telemetry.container_runtime
+        self.coe_client: COEClient = telemetry.coe_client
 
         self.nuvlaedge_id: str = telemetry.nuvlaedge_id
         self.swarm_node_cert_path: str = telemetry.swarm_node_cert
@@ -40,7 +39,7 @@ class ContainerStatsMonitor(Monitor):
             Gathers container statistics from the orchestrator and stores it into
             local data variable
         """
-        it_containers: list = self.client_runtime.collect_container_metrics()
+        it_containers: list = self.coe_client.collect_container_metrics()
         self.data.containers = {}
         for i in it_containers:
             it_cont: ContainerStatsData = ContainerStatsData.parse_obj(i)
@@ -60,12 +59,12 @@ class ContainerStatsMonitor(Monitor):
             return False, cluster_nodes
 
         try:
-            all_cluster_nodes = self.client_runtime.list_nodes()
+            all_cluster_nodes = self.coe_client.list_nodes()
         except docker_err.APIError as ex:
             self.logger.error(f'Cannot get Docker cluster nodes: {str(ex)}')
         else:
             for node in all_cluster_nodes:
-                active_node_id = self.client_runtime.is_node_active(node)
+                active_node_id = self.coe_client.is_node_active(node)
                 if not active_node_id:
                     continue
                 if active_node_id not in cluster_nodes:
@@ -83,20 +82,20 @@ class ContainerStatsMonitor(Monitor):
 
         """
 
-        node = self.client_runtime.get_node_info()
-        node_id = self.client_runtime.get_node_id(node)
-        cluster_id = self.client_runtime.get_cluster_id(
+        node = self.coe_client.get_node_info()
+        node_id = self.coe_client.get_node_id(node)
+        cluster_id = self.coe_client.get_cluster_id(
             node,
             f'cluster_{self.nuvlaedge_id}')
-        labels = self.client_runtime.get_node_labels()
+        labels = self.coe_client.get_node_labels()
 
-        cluster_managers = self.client_runtime.get_cluster_managers()
+        cluster_managers = self.coe_client.get_cluster_managers()
         if not self.data.cluster_data:
             self.data.cluster_data = ClusterStatusData()
 
         if node_id:
             self.data.cluster_data.node_id = node_id
-            self.data.cluster_data.orchestrator = self.client_runtime.ORCHESTRATOR_COE
+            self.data.cluster_data.orchestrator = self.coe_client.ORCHESTRATOR_COE
             self.data.cluster_data.cluster_node_role = 'worker'
 
         if cluster_id:
@@ -105,7 +104,7 @@ class ContainerStatsMonitor(Monitor):
         if cluster_managers:
             self.data.cluster_data.cluster_managers = cluster_managers
             if node_id:
-                join_addr = self.client_runtime.get_cluster_join_address(node_id)
+                join_addr = self.coe_client.get_cluster_join_address(node_id)
                 if join_addr:
 
                     self.data.cluster_data.cluster_join_address = join_addr
@@ -146,9 +145,9 @@ class ContainerStatsMonitor(Monitor):
 
     def update_data(self):
         self.refresh_container_info()
-        version: str = self.client_runtime.get_client_version()
+        version: str = self.coe_client.get_client_version()
 
-        if self.client_runtime.ORCHESTRATOR == 'docker':
+        if self.coe_client.ORCHESTRATOR == 'docker':
             self.data.docker_server_version = version
         else:
             self.data.kubelet_version = version

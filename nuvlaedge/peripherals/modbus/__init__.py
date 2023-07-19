@@ -22,19 +22,10 @@ import logging
 import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 
-def init_logger():
-    """ Initializes logging """
-
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(levelname)s - %(funcName)s - %(message)s')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
+logger = logging.getLogger(__name__)
 
 
 def get_default_gateway_ip():
@@ -43,7 +34,7 @@ def get_default_gateway_ip():
     :returns IP of the default gateway
     """
 
-    logging.info("Retrieving gateway IP...")
+    logger.info("Retrieving gateway IP...")
 
     with open("/proc/net/route") as route:
         for line in route:
@@ -65,9 +56,9 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     :returns XML filename where to write the nmap output
     """
 
-    logging.info("Scanning open ports...")
+    logger.info("Scanning open ports...")
 
-    command = "nmap --script {} --script-args='modbus-discover.aggressive=true' -p- {} -T4 -oX {} &>/dev/null"\
+    command = "nmap --script {} --script-args='modbus-discover.aggressive=true' -p- {} -T4 -oX {} > /dev/null"\
         .format(modbus_nse,
                 host,
                 xml_file)
@@ -99,10 +90,10 @@ def parse_modbus_peripherals(namp_xml_output):
     try:
         all_ports = namp_odict['nmaprun']['host']['ports']['port']
     except KeyError:
-        logging.warning("Cannot find any open ports in this NuvlaEdge")
+        logger.warning("Cannot find any open ports in this NuvlaEdge")
         return modbus
     except Exception as e:
-        logging.exception("Unknown error while processing ports scan", e)
+        logger.exception("Unknown error while processing ports scan", e)
         return modbus
 
     for port in all_ports:
@@ -130,7 +121,7 @@ def parse_modbus_peripherals(namp_xml_output):
                 elif elem['@key'] == 'Device identification':
                     device_identification = elem.get('#text')
                 else:
-                    logging.warning("Modbus device with slave ID {} cannot be categorized: {}").format(slave_id,
+                    logger.warning("Modbus device with slave ID {} cannot be categorized: {}").format(slave_id,
                                                                                                        elem)
             modbus_device_merge = { **modbus_device_base,
                                     "classes": classes,
@@ -146,7 +137,7 @@ def parse_modbus_peripherals(namp_xml_output):
             # add final modbus device to list of devices
             modbus.append(modbus_device_final)
 
-            logging.info("modbus device found {}".format(modbus_device_final))
+            logger.info("modbus device found {}".format(modbus_device_final))
 
     return modbus
 
@@ -177,10 +168,18 @@ def manage_modbus_peripherals(ip_address):
 
 
 def main():
-    init_logger()
+    global logger
+
+    parse_arguments_and_initialize_logging('Modbus Peripheral')
+
+    logger = logging.getLogger(__name__)
 
     gateway_ip = get_default_gateway_ip()
 
     modbus_peripheral: Peripheral = Peripheral('modbus')
 
     modbus_peripheral.run(manage_modbus_peripherals, ip_address=gateway_ip)
+
+
+if __name__ == '__main__':
+    main()

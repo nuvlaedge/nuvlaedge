@@ -3,6 +3,7 @@
 
 import logging
 import mock
+import string
 import unittest
 import nuvlaedge.system_manager.common.utils as utils
 
@@ -33,3 +34,12 @@ class DockerTestCase(unittest.TestCase):
         mock_exists.return_value = True
         self.assertTrue(utils.status_file_exists(),
                         'Says status file does not exist when it does')
+
+    def test_random_choices(self):
+        assert ['a'] == utils.random_choices('a')
+        assert ['a'] * 5 == utils.random_choices('a', 5)
+
+        choices = utils.random_choices(string.ascii_letters, 5)
+        assert 5 == len(choices)
+        assert all(map(lambda x: x in string.ascii_letters, choices))
+        assert True in map(lambda x: x != choices[0], choices[1:])

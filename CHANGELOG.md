@@ -1,5 +1,77 @@
 # Changelog
 
+## [2.10.4](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.4) (2023-07-16)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.3...2.10.4)
+
+**Merged pull requests:**
+
+- fix\(agent\): commission infrastructure-service and its credential even without compute-api [\#101](https://github.com/nuvlaedge/nuvlaedge/pull/101) ([schaubl](https://github.com/schaubl))
+
+## [2.10.3](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.3) (2023-07-04)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.2...2.10.3)
+
+**Fixed bugs:**
+
+- \[Bug\] Peripherals not reporting names properly [\#53](https://github.com/nuvlaedge/nuvlaedge/issues/53)
+
+## [2.10.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.2) (2023-07-04)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.1...2.10.2)
+
+## [2.10.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.1) (2023-07-04)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.0...2.10.1)
+
+**Merged pull requests:**
+
+- 2.10.1 patch [\#87](https://github.com/nuvlaedge/nuvlaedge/pull/87) ([schaubl](https://github.com/schaubl))
+
+## [2.10.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.0) (2023-06-27)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.3.2...2.10.0)
+
+**Implemented enhancements:**
+
+- extract generation of requirements files for unit tests in GH actions  [\#78](https://github.com/nuvlaedge/nuvlaedge/issues/78)
+- Remove job-engine submodule [\#63](https://github.com/nuvlaedge/nuvlaedge/issues/63)
+- feat: changed NuvlaEdge version parsing, using importlib package  [\#73](https://github.com/nuvlaedge/nuvlaedge/pull/73) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: added common logging function \(NuvlaEdge wide\) [\#72](https://github.com/nuvlaedge/nuvlaedge/pull/72) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: add support for IPRoute discovery in NuvlaEdge image [\#71](https://github.com/nuvlaedge/nuvlaedge/pull/71) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: remove job-engine submodule [\#64](https://github.com/nuvlaedge/nuvlaedge/pull/64) ([ignacio-penas](https://github.com/ignacio-penas))
+
+**Fixed bugs:**
+
+- fix: remove 'v' prefix from tags [\#65](https://github.com/nuvlaedge/nuvlaedge/pull/65) ([ignacio-penas](https://github.com/ignacio-penas))
+
+**Closed issues:**
+
+- Deploy Nuvlaedge on top of k3s/submariner [\#49](https://github.com/nuvlaedge/nuvlaedge/issues/49)
+- Unify release process and version updating after changes in any related part of the code [\#42](https://github.com/nuvlaedge/nuvlaedge/issues/42)
+- Merge nuvlaedge images into a single installation [\#41](https://github.com/nuvlaedge/nuvlaedge/issues/41)
+- Merge component repository into single one [\#40](https://github.com/nuvlaedge/nuvlaedge/issues/40)
+- which k8s implementations are considered unsuitable for multi-clustering [\#39](https://github.com/nuvlaedge/nuvlaedge/issues/39)
+- which k8s implementations require additional tools for multi-clustering support and what those tools are [\#38](https://github.com/nuvlaedge/nuvlaedge/issues/38)
+- what k8s implementations support multi-clustering out of the box [\#37](https://github.com/nuvlaedge/nuvlaedge/issues/37)
+- Investigate multi-clustering support of k8s implementations [\#36](https://github.com/nuvlaedge/nuvlaedge/issues/36)
+- Compare KPIs of non-functional criteria across the k8s implementations for edge [\#35](https://github.com/nuvlaedge/nuvlaedge/issues/35)
+
+**Merged pull requests:**
+
+- feat\(agent\): NE\_IMAGE\_\* environment variables [\#85](https://github.com/nuvlaedge/nuvlaedge/pull/85) ([schaubl](https://github.com/schaubl))
+- feat\(agent\): remove the need of having a paused job-engine-lite container [\#80](https://github.com/nuvlaedge/nuvlaedge/pull/80) ([schaubl](https://github.com/schaubl))
+- extract generation of requirements files [\#79](https://github.com/nuvlaedge/nuvlaedge/pull/79) ([konstan](https://github.com/konstan))
+- fix\(gpu\): refactor container and fix subcontainer image build [\#77](https://github.com/nuvlaedge/nuvlaedge/pull/77) ([schaubl](https://github.com/schaubl))
+- Fix on-stop, common argument parsing and common logging [\#75](https://github.com/nuvlaedge/nuvlaedge/pull/75) ([schaubl](https://github.com/schaubl))
+- feat: Dockerfile: extract package version as ARG [\#74](https://github.com/nuvlaedge/nuvlaedge/pull/74) ([schaubl](https://github.com/schaubl))
+- fix: base sourcecode smells  [\#67](https://github.com/nuvlaedge/nuvlaedge/pull/67) ([ignacio-penas](https://github.com/ignacio-penas))
+- docs: add basic badges to readme [\#66](https://github.com/nuvlaedge/nuvlaedge/pull/66) ([ignacio-penas](https://github.com/ignacio-penas))
+
+## [v0.3.2](https://github.com/nuvlaedge/nuvlaedge/tree/v0.3.2) (2023-06-01)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.3.1...v0.3.2)
+
 ## [v0.3.1](https://github.com/nuvlaedge/nuvlaedge/tree/v0.3.1) (2023-06-01)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/v0.3.0...v0.3.1)

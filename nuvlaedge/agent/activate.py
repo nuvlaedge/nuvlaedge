@@ -1,4 +1,3 @@
-#!/usr/local/bin/python3.7
 # -*- coding: utf-8 -*-
 
 """ NuvlaEdge Activation
@@ -12,7 +11,7 @@ import requests
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class Activate(NuvlaEdgeCommon):
@@ -24,14 +23,13 @@ class Activate(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: ContainerRuntimeClient,
+                 coe_client: COEClient,
                  data_volume: str):
         """
         Constructs an Activation object
         """
 
-        super().__init__(container_runtime=container_runtime,
-                         shared_data_volume=data_volume)
+        super().__init__(coe_client=coe_client, shared_data_volume=data_volume)
 
         self.activate_logger: logging.Logger = logging.getLogger(__name__)
         self.user_info = {}
@@ -42,9 +40,6 @@ class Activate(NuvlaEdgeCommon):
         first time activation of the NuvlaEdge
 
         :return boolean and user info is available"""
-
-        if self.get_operational_status() == "UNKNOWN":
-            return False, self.user_info
 
         try:
             self.user_info = self.read_json_file(FILE_NAMES.ACTIVATION_FLAG)

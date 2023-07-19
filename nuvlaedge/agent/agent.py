@@ -2,7 +2,7 @@
 This class gathers the main properties of the agent component of the NuvlaEdge engine.
 Also controls the execution flow and provides utilities to the children dependencies
 """
-import json
+
 import logging
 import os
 from copy import copy
@@ -16,8 +16,8 @@ from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.infrastructure import Infrastructure
 from nuvlaedge.agent.job import Job
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
-from nuvlaedge.agent.orchestrator.factory import get_container_runtime
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
 from nuvlaedge.agent.telemetry import Telemetry
 
 
@@ -46,7 +46,7 @@ class Agent:
         self.excluded_monitors = os.environ.get('NUVLAEDGE_EXCLUDED_MONITORS', '')
 
         self._activate = None
-        self._container_runtime = None
+        self._coe_client = None
         self._infrastructure = None
         self._telemetry = None
         self._peripheral_manager = None
@@ -67,19 +67,19 @@ class Agent:
         return self._peripheral_manager
 
     @property
-    def container_runtime(self) -> ContainerRuntimeClient:
+    def coe_client(self) -> COEClient:
         """ Class containing COE functions (docker or kubernetes) """
-        if not self._container_runtime:
-            self.logger.info('Instantiating ContainerRuntime class')
-            self._container_runtime = get_container_runtime()
-        return self._container_runtime
+        if not self._coe_client:
+            self.logger.info('Instantiating COE class')
+            self._coe_client = get_coe_client()
+        return self._coe_client
 
     @property
     def activate(self) -> Activate:
         """ Class responsible for activating and controlling previous nuvla installations """
         if not self._activate:
             self.logger.info('Instantiating Activate class')
-            self._activate = Activate(self.container_runtime,
+            self._activate = Activate(self.coe_client,
                                       self._DATA_VOLUME)
         return self._activate
 
@@ -88,7 +88,7 @@ class Agent:
         """ Intermediary class which provides and interface to communicate with nuvla """
         if not self._infrastructure:
             self.logger.info('Instantiating Infrastructure class')
-            self._infrastructure = Infrastructure(self.container_runtime,
+            self._infrastructure = Infrastructure(self.coe_client,
                                                   self._DATA_VOLUME,
                                                   telemetry=self.telemetry)
             self.initialize_infrastructure()
@@ -99,7 +99,7 @@ class Agent:
         """ Telemetry updater class """
         if not self._telemetry:
             self.logger.info('Instantiating Telemetry class')
-            self._telemetry = Telemetry(self.container_runtime,
+            self._telemetry = Telemetry(self.coe_client,
                                         self._DATA_VOLUME,
                                         self.nuvlaedge_status_id,
                                         self.excluded_monitors)
@@ -219,10 +219,10 @@ class Agent:
             job_list: list of job IDs
         """
         for job_id in job_list:
-            job: Job = Job(self.container_runtime,
+            job: Job = Job(self.coe_client,
                            self._DATA_VOLUME,
                            job_id,
-                           self.infrastructure.container_runtime.job_engine_lite_image)
+                           self.infrastructure.coe_client.job_engine_lite_image)
 
             if not job.do_nothing:
 
@@ -243,11 +243,10 @@ class Agent:
         """
         pull_jobs: list = response.get('jobs', [])
         if not isinstance(pull_jobs, list):
-            self.logger.warning(f'Jobs received on format {response.get("jobs")} not '
-                                f'compatible')
+            self.logger.warning(f'Jobs received on format {response.get("jobs")} not compatible')
             return
 
-        if pull_jobs and self.infrastructure.container_runtime.job_engine_lite_image:
+        if pull_jobs:
             self.logger.info(f'Processing jobs {pull_jobs} in pull mode')
 
             Thread(

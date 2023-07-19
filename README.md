@@ -48,6 +48,30 @@ To get more information on the latest builds click on the build status badges be
 | [Security](https://github.com/nuvlaedge/security)                     | [![Build Status](https://github.com/nuvlaedge/security/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/nuvlaedge/security/actions/workflows/main.yml)                                                                                                                                                                                                                    |
 | [GPU Peripheral](https://github.com/nuvlaedge/peripheral-manager-gpu) | [![Build Status](https://github.com/nuvlaedge/peripheral-manager-gpu/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/nuvlaedge/peripheral-manager-gpu/actions/workflows/main.yml)                                                                                                                                                                                        |
 
+## Project tools
+
+The project uses [poetry](https://python-poetry.org/)
+for the project and dependency management and [tox](https://tox.wiki/en/latest/)
+for tests execution and results reporting.
+
+### Running unit tests
+
+Before running unit tests with `tox` you need to generate requirements file out
+of the per-component dependency lists provided in the `poetry`'s project
+definition file.
+
+For that run the following wrapper script:
+
+```shell
+./generate-requiremenents.sh
+```
+
+Then run the unit tests with:
+
+```shell
+tox
+```
+
 ## Copyright
 
 Copyright &copy; 2023, SixSq SA

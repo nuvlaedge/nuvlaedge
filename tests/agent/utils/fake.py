@@ -176,7 +176,11 @@ class MockContainer(object):
             },
             'RestartCount': 1
         }
-    def stats():
+
+    def start(self):
+        pass
+
+    def stats(self):
         pass
 
     def remove(self):

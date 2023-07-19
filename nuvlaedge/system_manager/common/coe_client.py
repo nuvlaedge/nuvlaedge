@@ -1,13 +1,14 @@
 import os
-import random
-import requests
 import socket
 import string
 import time
+
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
+
 from nuvlaedge.system_manager.common import utils
+from nuvlaedge.agent.orchestrator.docker import DockerClient, docker_socket_file_default
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -15,18 +16,27 @@ if KUBERNETES_SERVICE_HOST:
     ORCHESTRATOR = 'kubernetes'
 else:
     import docker
+    import docker.errors
     ORCHESTRATOR = 'docker'
 
 
-class ContainerRuntime(ABC):
+DOCKER_SOCKET_FILE = docker_socket_file_default
+
+
+class COEClient(ABC):
     """
-    Base abstract class for the Docker and Kubernetes clients
+    Abstract base class for the Container Orchestration Engine (COE) clients.
+
+    To be subclassed and implemented by clients to the concrete COE
+    implementations, such as Docker, Kubernetes, and alike.
     """
 
     @abstractmethod
     def __init__(self, logging):
         self.client = None
         self.logging = logging
+
+        self.current_image = 'sixsq/nuvlaedge:latest'
 
     @abstractmethod
     def list_internal_components(self, base_label=utils.base_label):
@@ -175,7 +185,7 @@ class ContainerRuntime(ABC):
         pass
 
 
-class Kubernetes(ContainerRuntime):
+class Kubernetes(COEClient):
     """
     Kubernetes client
     """
@@ -195,6 +205,7 @@ class Kubernetes(ContainerRuntime):
         self.orchestrator = 'kubernetes'
         self.agent_dns = f'nuvlaedge.agent.{self.namespace}'
         self.my_component_name = 'nuvlaedge-engine-core'
+        self.current_image = os.getenv('NUVLAEDGE_IMAGE') or self.current_image
 
     def list_internal_components(self, base_label=utils.base_label):
         # for k8s, components = pods
@@ -335,10 +346,7 @@ class Kubernetes(ContainerRuntime):
         return ''
 
 
-DOCKER_SOCKET_FILE = '/var/run/docker.sock'
-
-
-class Docker(ContainerRuntime):
+class Docker(COEClient):
     """
     Docker client
     """
@@ -354,6 +362,7 @@ class Docker(ContainerRuntime):
         self.agent_dns = utils.compose_project_name + "-agent"
         self.my_component_name = utils.compose_project_name + '-system-manager'
         self.dg_encrypt_options = self.load_data_gateway_network_options()
+        self.current_image = self._get_current_image() or self.current_image
 
     def load_data_gateway_network_options(self) -> dict:
         """
@@ -438,20 +447,28 @@ class Docker(ContainerRuntime):
 
         try:
             container = self.client.containers.get(on_stop_container_name)
-        except docker.errors.NotFound:
-            # default to dev image
-            return 'nuvladev/on-stop:main'
-        except Exception as e:
-            self.logging.error(f"Unable to search for container {on_stop_container_name}. Reason: {str(e)}")
-            return None
-
-        try:
             if container.status.lower() == "paused":
                 return container.attrs['Config']['Image']
+        except docker.errors.NotFound as e:
+            self.logging.warning(f"Container {on_stop_container_name} not found: {str(e)}")
         except (AttributeError, KeyError) as e:
-            self.logging.error(f'Unable to infer Docker image for {on_stop_container_name}: {str(e)}')
+            self.logging.warning(f'Unable to infer Docker image for {on_stop_container_name}: {str(e)}')
+        except Exception as e:
+            self.logging.warning(f"Unable to search for container {on_stop_container_name}. Reason: {str(e)}")
 
-        return None
+        return self.current_image
+
+    def _get_current_image(self):
+        try:
+            return self.get_current_container().attrs['Config']['Image']
+        except docker.errors.NotFound as e:
+            self.logging.error(f"Current container not found. Reason: {str(e)}")
+        except Exception as e:
+            self.logging.error(f"Failed to get current container. Reason: {str(e)}")
+
+        image = DockerClient.get_current_image_from_env()
+        self.logging.error(f'Failed to get current container. Using fallback (built from environment): {image}')
+        return image
 
     def _get_container_id_from_cgroup(self):
         try:
@@ -514,7 +531,7 @@ class Docker(ContainerRuntime):
 
         project_name = self.get_compose_project_name_from_labels(myself_labels)
 
-        random_identifier = ''.join(random.choices(string.ascii_uppercase, k=5))
+        random_identifier = ''.join(utils.random_choices(string.ascii_uppercase, 5))
         now = datetime.strftime(datetime.utcnow(), '%d-%m-%Y_%H%M%S')
         on_stop_container_name = f"{project_name}-on-stop-{random_identifier}-{now}"
 
@@ -523,6 +540,7 @@ class Docker(ContainerRuntime):
         }
         self.client.containers.run(on_stop_docker_image,
                                    name=on_stop_container_name,
+                                   entrypoint="on-stop",
                                    labels=label,
                                    environment=[f'PROJECT_NAME={project_name}'],
                                    volumes={
@@ -629,14 +647,11 @@ class Containers:
     """ Common set of methods and variables for the NuvlaEdge system-manager
     """
     def __init__(self, logging):
-        """ Constructs a Container object
-        """
-
+        self.coe_client = None
         if ORCHESTRATOR == 'kubernetes':
-            self.container_runtime = Kubernetes(logging)
+            self.coe_client = Kubernetes(logging)
         else:
-            if os.path.exists(DOCKER_SOCKET_FILE):
-                self.container_runtime = Docker(logging)
-            else:
-                raise FileNotFoundError(f'Orchestrator is "{ORCHESTRATOR}", '
-                                        f'but file {DOCKER_SOCKET_FILE} is not present')
+            self.coe_client = Docker(logging)
+            if not os.path.exists(DOCKER_SOCKET_FILE):
+                logging.warning(f'Orchestrator is "{ORCHESTRATOR}", '
+                                f'but file {DOCKER_SOCKET_FILE} is not present')

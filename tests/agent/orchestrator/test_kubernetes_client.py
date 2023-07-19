@@ -16,7 +16,7 @@ from nuvlaedge.agent.common import nuvlaedge_common
 from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient, TimeoutException
 
 
-class ContainerRuntimeKubernetesTestCase(unittest.TestCase):
+class COEClientKubernetesTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         os.environ.setdefault('KUBERNETES_SERVICE_HOST', 'force-k8s-coe')
@@ -57,7 +57,7 @@ class ContainerRuntimeKubernetesTestCase(unittest.TestCase):
 
         # the base class should also have been set
         self.assertEqual(self.obj.job_engine_lite_component, "nuvlaedge-job-engine-lite",
-                         'Base class of the ContainerRuntime was not properly initialized')
+                         'Base class of the COEClient was not properly initialized')
 
     def test_wait_pod_in_phase_matched(self):
         check_phase = 'Running'

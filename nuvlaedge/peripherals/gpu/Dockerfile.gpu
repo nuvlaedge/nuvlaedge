@@ -1,7 +1,10 @@
-ARG BASE_IMAGE=nuvlaedge:0.1.0
+ARG DOCKER_IMAGE=ubuntu
+ARG DOCKER_IMAGE_TAG=18.04
 
-FROM ${BASE_IMAGE}
+FROM ${DOCKER_IMAGE}:${DOCKER_IMAGE_TAG}
 
-COPY /opt/scripts/cuda_scan.py /
+RUN apt update && apt install -y python3 && rm -rf /var/lib/apt/lists/*
+
+COPY cuda_scan.py /
 
 CMD ["python3", "cuda_scan.py"]

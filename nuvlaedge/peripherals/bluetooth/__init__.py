@@ -9,19 +9,10 @@ import logging
 import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 
-def init_logger():
-    """ Initializes logging """
-
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(levelname)s - %(funcName)s - %(message)s')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def device_discovery():
@@ -239,7 +230,7 @@ def cod_converter(cod_decimal_string):
             except ValueError:
                 continue
             except Exception as e:
-                logging.exception("Failed to evaluate minor device class with key %s" % key, e)
+                logger.exception("Failed to evaluate minor device class with key %s" % key, e)
                 continue
 
             if minor_number & minor_key:
@@ -267,10 +258,10 @@ def bluetooth_manager():
     try:
         # list
         bluetooth_devices = device_discovery()
-        logging.info(bluetooth_devices)
+        logger.info(bluetooth_devices)
     except Exception as e:
         bluetooth_devices = []
-        logging.exception("Failed to discover BT devices", e)
+        logger.exception("Failed to discover BT devices", e)
 
     ble_devices = {}
 
@@ -290,8 +281,9 @@ def bluetooth_manager():
 
 
 def main():
-    init_logger()
-    logging.info('Starting bluetooth manager')
+    parse_arguments_and_initialize_logging('Bluetooth Peripheral')
+
+    logger.info('Starting bluetooth manager')
 
     bluetooth_peripheral: Peripheral = Peripheral('bluetooth')
 

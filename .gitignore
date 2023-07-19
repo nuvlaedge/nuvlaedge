@@ -3,3 +3,5 @@ requirements*.txt
 .idea/
 **/__pycache__/
 dist/
+test-report.xml
+coverage.xml

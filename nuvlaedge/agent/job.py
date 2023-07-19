@@ -1,4 +1,3 @@
-#!/usr/local/bin/python3.7
 # -*- coding: utf-8 -*-
 
 """ NuvlaEdge Job
@@ -12,7 +11,7 @@ import json
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator import ContainerRuntimeClient
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 class Job(NuvlaEdgeCommon):
@@ -25,7 +24,8 @@ class Job(NuvlaEdgeCommon):
         job_engine_lite_image: Docker image for Job Engine lite
     """
 
-    def __init__(self, container_runtime: ContainerRuntimeClient,
+    def __init__(self, 
+                 coe_client: COEClient,
                  data_volume,
                  job_id,
                  job_engine_lite_image):
@@ -33,7 +33,7 @@ class Job(NuvlaEdgeCommon):
         Constructs an Job object
         """
 
-        super().__init__(container_runtime=container_runtime,
+        super().__init__(coe_client=coe_client,
                          shared_data_volume=data_volume)
 
         self.job_id = job_id
@@ -43,7 +43,7 @@ class Job(NuvlaEdgeCommon):
 
     def check_job_is_running(self):
         """ Checks if the job is already running """
-        return self.container_runtime.is_nuvla_job_running(self.job_id, self.job_id_clean)
+        return self.coe_client.is_nuvla_job_running(self.job_id, self.job_id_clean)
 
     def launch(self):
         """ Starts a Job Engine Lite container with this job
@@ -57,7 +57,7 @@ class Job(NuvlaEdgeCommon):
             logging.error(f'Cannot find NuvlaEdge API key for job {self.job_id}')
             return
 
-        self.container_runtime.launch_job(
+        self.coe_client.launch_job(
             self.job_id, self.job_id_clean, self.nuvla_endpoint,
             self.nuvla_endpoint_insecure,
             user_info["api-key"],

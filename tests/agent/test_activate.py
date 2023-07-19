@@ -10,7 +10,7 @@ from tests.agent.utils.fake import Fake, FakeNuvlaApi
 
 from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator.factory import get_container_runtime
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 
@@ -20,7 +20,7 @@ class ActivateTestCase(unittest.TestCase):
     def setUp(self):
         Activate.__bases__ = (Fake.imitate(NuvlaEdgeCommon),)
         self.shared_volume = "mock/path"
-        self.obj = Activate(get_container_runtime(), self.shared_volume)
+        self.obj = Activate(get_coe_client(), self.shared_volume)
         self.api_key_content = '{"api-key": "mock-key", "secret-key": "mock-secret"}'
         self.obj.nuvlaedge_id = "nuvlabox/fake-id"
         self.obj.nuvla_endpoint = "https://fake-nuvla.io"

@@ -11,14 +11,18 @@ import subprocess
 import unittest
 import yaml
 
+from mock import MagicMock
+
 import docker
+import docker.errors
+import docker.models.containers
 import requests
 
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 
 
-class ContainerRuntimeDockerTestCase(unittest.TestCase):
+class COEClientDockerTestCase(unittest.TestCase):
 
     agent_nuvlaedge_common_open = 'nuvlaedge.agent.orchestrator.docker.open'
 
@@ -50,7 +54,7 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
 
         # the base class should also have been set
         self.assertEqual(self.obj.job_engine_lite_component, "nuvlaedge-job-engine-lite",
-                         'Base class of the ContainerRuntime was not properly initialized')
+                         'Base class of the COEClient was not properly initialized')
 
     def test_get_node_info(self):
         self.assertIn('ID', self.obj.get_node_info(),
@@ -164,51 +168,27 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
         mock_get_nodes_info.return_value = {'Swarm': {}}
         # if there's a valid IP in this file, we return it
         tcp_file = '''sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
-   6: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 51149 1 ffffffc1c9be2e80 100 0 0 10 0
-   7: 0100007F:13D8 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 58062 1 ffffffc1dea25d00 100 0 0 10 0
-   8: 2D28A8C0:0016 652AA8C0:D6C9 01 00000024:00000000 01:00000015 00000000     0        0 3610139 4 ffffffc10cd3f440 22 4 29 10 -1
-   9: 0100007F:ECA0 0100007F:13D8 06 00000000:00000000 03:00000577 00000000     0        0 0 3 ffffffc0d1887ef0
-   '''
+            6: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 51149 1 ffffffc1c9be2e80 100 0 0 10 0
+            7: 0100007F:13D8 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 58062 1 ffffffc1dea25d00 100 0 0 10 0
+            8: 2D28A8C0:0016 652AA8C0:D6C9 01 00000024:00000000 01:00000015 00000000     0        0 3610139 4 ffffffc10cd3f440 22 4 29 10 -1
+            9: 0100007F:ECA0 0100007F:13D8 06 00000000:00000000 03:00000577 00000000     0        0 0 3 ffffffc0d1887ef0
+        '''
         with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data=tcp_file)):
             self.assertEqual(self.obj.get_api_ip_port(), ('192.168.40.45', mocked_port),
                              'Could not get valid IP from filesystem')
 
         # if there's no valid IP in this file, then we return 127.0.0.1
         tcp_file = '''sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
-   0: 0100007F:0B83 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 22975 1 ffffffc1dea20000 100 0 0 10 0
-   1: 00000000:1388 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 46922 1 ffffffc1c9be1740 100 0 0 10 0
-   '''
+            0: 0100007F:0B83 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 22975 1 ffffffc1dea20000 100 0 0 10 0
+            1: 00000000:1388 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 46922 1 ffffffc1c9be1740 100 0 0 10 0
+        '''
         with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data=tcp_file)):
             self.assertEqual(self.obj.get_api_ip_port(), ('127.0.0.1', mocked_port),
                              'Could not get default IP from filesystem')
 
-    @mock.patch('docker.models.containers.ContainerCollection.get')
-    def test_has_pull_job_capability(self, mock_containers_get):
-        # if the job-lite does not exist, we get False
-        mock_containers_get.side_effect = docker.errors.NotFound
-        self.assertFalse(self.obj.has_pull_job_capability(),
-                         'Job lite can not be found but returned True anyway')
-
-        # same for any other exception
-        mock_containers_get.side_effect = EOFError
-        self.assertFalse(self.obj.has_pull_job_capability(),
-                         'Error occurred but returned True anyway')
-
-        # otherwise, we infer its Docker image
-        mock_containers_get.reset_mock(side_effect=True)
-
-        mock_containers_get.return_value = fake.MockContainer(status='running')
-
-        # if the container is running, we return false
-        self.assertFalse(self.obj.has_pull_job_capability(),
-                         'Returned True even when job-lite container is not paused')
-
-        # the container is supposed to be paused
-        mock_containers_get.return_value = fake.MockContainer()
-        self.assertTrue(self.obj.has_pull_job_capability(),
-                        'Should have found the job-lite component, but has not')
-        self.assertEqual(self.obj.job_engine_lite_image, 'fake-image',
-                         'Set the wrong job-lite Docker image')
+    def test_has_pull_job_capability(self):
+        # Always return True
+        self.assertTrue(self.obj.has_pull_job_capability())
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.cast_dict_to_list')
     @mock.patch('docker.api.swarm.SwarmApiMixin.inspect_node')
@@ -257,6 +237,8 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
 
     @mock.patch('docker.models.containers.ContainerCollection.run')
     def test_install_ssh_key(self, mock_docker_run):
+        self.obj._current_image = 'sixsq/nuvlaedge'
+
         # if all goes well, we expect True
         mock_docker_run.return_value = None
         self.assertTrue(self.obj.install_ssh_key('fake-pub-key', 'fake-ssh-folder'),
@@ -315,29 +297,127 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
                          'Failed to kill job execution container in unknown state')
 
     @mock.patch('docker.api.network.NetworkApiMixin.connect_container_to_network')
-    @mock.patch('docker.models.containers.ContainerCollection.run')
+    @mock.patch('docker.api.container.ContainerApiMixin.remove_container')
+    @mock.patch('docker.models.containers.ContainerCollection.create')
     @mock.patch('docker.models.containers.ContainerCollection.get')
-    def test_launch_job(self, mock_containers_get, mock_containers_run, mock_net_connect):
-        job_id = 'fake-id'
-        job_exec_id = 'fake-exec-id'
+    @mock.patch('docker.models.containers.Container.start')
+    @mock.patch('docker.models.images.ImageCollection.pull')
+    def test_launch_job(self, mock_images_pull, mock_container_start, mock_containers_get, mock_containers_create,
+                        mock_remove_container, mock_net_connect):
+        job_id = 'fake-id-2'
+        job_exec_id = 'fake-exec-id-2'
         nuvla = 'https://fake-nuvla.io'
+        fallback_image = 'sixsq/nuvlaedge:latest'
 
         # if there's an error while getting the compute-api, it should still work
-        mock_containers_get.side_effect = TimeoutError
+        mock_containers_get.side_effect = [TimeoutError, mock.DEFAULT]
+        mock_containers_create.return_value = docker.models.containers.Container()
         self.assertIs(self.obj.launch_job(job_id, job_exec_id, nuvla), None,
                       'compute-api could not be found, but still got something else than None')
-        mock_containers_run.assert_called_once()
+        mock_containers_create.assert_called_once()
+        mock_container_start.assert_called_once()
+
+        # no docker image found, using fallback from env
+        self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), fallback_image)
+
+        # reset
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock()
+        mock_containers_get.reset_mock(side_effect=True)
+
+        # no docker image found, using fallback
+        self.obj.job_engine_lite_image = None
+        mock_containers_create.return_value = docker.models.containers.Container()
+        with self.assertLogs(level='ERROR'):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), fallback_image)
+
+        # reset
+        mock_containers_create.reset_mock(return_value=True)
+        self.obj.job_engine_lite_image = self.obj.current_image
+
+        # reset
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock()
+        mock_containers_get.reset_mock(side_effect=True)
+
+        # Start with specified docker image and nuvla_endpoint_insecure=True
+        docker_image = 'sixsq/nuvlaedge:2.10.x'
+        mock_containers_create.return_value = docker.models.containers.Container()
+        self.obj.launch_job(job_id, job_exec_id, nuvla,
+                            docker_image=docker_image,
+                            nuvla_endpoint_insecure=True)
+        # docker image provided, using this one
+        create_kwargs = mock_containers_create.call_args.kwargs
+        self.assertEqual(create_kwargs.get('image'), docker_image)
+        self.assertIn('--api-insecure', create_kwargs.get('command', ''))
+
+        # reset
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock()
+        mock_containers_get.reset_mock()
+        mock_net_connect.reset_mock()
 
         # otherwise we try to launch the job execution container
-        mock_net_connect.reset_mock()
-        mock_containers_run.reset_mock()
-        mock_containers_get.reset_mock(side_effect=True)
         mock_containers_get.return_value = fake.MockContainer()
-        mock_containers_run.return_value = None
+        mock_containers_create.return_value = docker.models.containers.Container()
+        mock_container_start.return_value = None
         self.assertIs(self.obj.launch_job(job_id, job_exec_id, nuvla), None,
                       'Unable to launch job execution container')
-        mock_containers_run.assert_called_once()
+        mock_containers_create.assert_called_once()
+        mock_container_start.assert_called_once()
         mock_net_connect.assert_called_once_with(job_exec_id, 'bridge')
+
+        # reset
+        mock_net_connect.reset_mock()
+        mock_containers_create.reset_mock(return_value=True)
+        mock_container_start.reset_mock(return_value=True)
+        mock_containers_get.reset_mock(return_value=True)
+
+        # pull and retry when docker image not found
+        mock_containers_create.side_effect = [docker.errors.ImageNotFound(''), mock.DEFAULT]
+        self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_images_pull.assert_called_once()
+        self.assertEqual(mock_containers_create.call_count, 2)
+
+        # reset
+        mock_containers_create.reset_mock(side_effect=True)
+        mock_images_pull.reset_mock()
+
+        # try to remove container when failed to fully create it (but fail to remove)
+        mock_containers_create.side_effect = TimeoutError
+        mock_remove_container.side_effect = docker.errors.NotFound('')
+        with self.assertRaises(TimeoutError):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_remove_container.assert_called_once()
+
+        # reset
+        mock_containers_create.reset_mock(side_effect=True)
+        mock_remove_container.reset_mock(side_effect=True)
+
+        # fail to connect container to bridge network
+        mock_net_connect.side_effect = RuntimeError
+        with self.assertLogs(level=logging.WARNING):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_container_start.assert_not_called()
+
+        # reset
+        mock_net_connect.reset_mock(side_effect=True)
+        mock_container_start.reset_mock()
+
+        # remove container when fail to start container
+        mock_containers_create.return_value = docker.models.containers.Container(client=self.obj.client)
+        mock_container_start.side_effect = docker.errors.APIError('')
+        with self.assertRaises(docker.errors.APIError):
+            self.obj.launch_job(job_id, job_exec_id, nuvla)
+        mock_remove_container.assert_called_once()
+
+        # reset
+        mock_container_start.reset_mock(side_effect=True)
+        mock_remove_container.reset_mock()
+
+
+
 
     # Only available in Python >= 3.10
     @contextlib.contextmanager
@@ -731,11 +811,14 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
                          'Returned container plugins when none are active')
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.infer_if_additional_coe_exists')
-    def test_define_nuvla_infra_service(self, mock_other_coe_infra_service):
+    def test_define_nuvla_infra_service(self, mock_other_coe_infra_service: mock.MagicMock):
         mock_other_coe_infra_service.return_value = {}
-        # if the api_endpoint is not set, the infra is not set either
-        self.assertEqual({}, self.obj.define_nuvla_infra_service(''),
-                         'Returned a valid infra service when there is no API endpoint')
+        # if the api_endpoint is not set, the infra is set with unix docker socket and "null" credentials
+        self.assertEqual(self.obj.define_nuvla_infra_service(''),
+                         {'swarm-client-ca': 'null',
+                          'swarm-client-cert': 'null',
+                          'swarm-client-key': 'null',
+                          'swarm-endpoint': 'local'})
 
         # otherwise, use TLS keys and give back the commissioning payload for the IS.
         is_keys = ["swarm-client-ca", "swarm-client-cert", "swarm-client-key", "swarm-endpoint"]
@@ -762,6 +845,14 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
                       'Additional COE was not added to infrastructure service payload')
         self.assertEqual(5, len(coe_is),
                          'Unexpected number of infrastructure service fields')
+
+        # api_endpoint is None
+        self.obj.define_nuvla_infra_service(None)
+
+        # exception in infer_if_additional_coe_exists
+        mock_other_coe_infra_service.side_effect = Exception
+        with self.assertLogs(level='WARNING'):
+            self.obj.define_nuvla_infra_service(None)
 
     def test_get_partial_decommission_attributes(self):
         # returns a constant, so let's just make sure that all return list items start with 'swarm'
@@ -877,3 +968,77 @@ class ContainerRuntimeDockerTestCase(unittest.TestCase):
         mock_containers_list.return_value = [fake.MockContainer(myid='fake-container')]
         self.assertEqual(self.obj.get_all_nuvlaedge_components(), ['fake-container'],
                          'Failed to get all NuvlaEdge containers')
+
+    @mock.patch('docker.models.containers.ContainerCollection.get')
+    def test_find_compute_api_external_port(self, mock_container_get: MagicMock):
+        # Container not found
+        mock_container_get.side_effect = docker.errors.NotFound('')
+        with self.assertLogs(level='DEBUG'):
+            port = self.obj.find_compute_api_external_port()
+            self.assertEqual(port, '')
+
+        mock_container_get.reset_mock(return_value=True, side_effect=True)
+
+        # Container found but port not found
+        mock_container_get.return_value = docker.models.containers.Container()
+        with self.assertLogs(level='WARNING'):
+            port = self.obj.find_compute_api_external_port()
+            self.assertEqual(port, '')
+
+        mock_container_get.reset_mock(return_value=True, side_effect=True)
+
+        # Container and port found
+        port = '1234'
+        attrs = {'NetworkSettings': {'Ports': {'5000/tcp': [{'HostPort': port}]}}}
+        mock_container_get.return_value = docker.models.containers.Container(attrs=attrs)
+        p = self.obj.find_compute_api_external_port()
+        self.assertEqual(p, port)
+
+    @mock.patch('docker.models.containers.ContainerCollection.list')
+    def test_get_component_container_by_service_name(self, mock_container_list: MagicMock):
+        # No container found
+        mock_container_list.return_value = []
+        with self.assertRaises(docker.errors.NotFound):
+            self.obj._get_component_container_by_service_name('test')
+
+        mock_container_list.reset_mock(return_value=True, side_effect=True)
+
+        # More than one container found
+        c1 = docker.models.containers.Container(attrs={'Id': '1234567890abcdef'})
+        c2 = docker.models.containers.Container(attrs={'Id': 'abcdefghijklmnop'})
+        mock_container_list.return_value = [c1, c2]
+        with self.assertLogs(level='WARNING'):
+            container = self.obj._get_component_container_by_service_name('test')
+            self.assertIs(container, c1)
+
+    @mock.patch('docker.models.containers.ContainerCollection.get')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient._get_component_container_by_service_name')
+    def test_get_component_container(self,
+                                     mock_get_comp_cont_by_svc_name: MagicMock,
+                                     mock_container_get: MagicMock):
+
+        container = docker.models.containers.Container()
+
+        # Container found by name
+        mock_container_get.return_value = container
+        c = self.obj._get_component_container('service', 'container')
+        self.assertIs(c, container)
+
+        mock_container_get.reset_mock(return_value=True, side_effect=True)
+
+        # Container not found by name but found by service name
+        mock_container_get.side_effect = docker.errors.NotFound('')
+        mock_get_comp_cont_by_svc_name.return_value = container
+        c = self.obj._get_component_container('service', 'container')
+        self.assertIs(c, container)
+
+        mock_container_get.reset_mock(return_value=True, side_effect=True)
+        mock_get_comp_cont_by_svc_name.reset_mock(return_value=True, side_effect=True)
+
+        # Container not found by name and by service name (APIError)
+        mock_container_get.side_effect = docker.errors.NotFound('')
+        mock_get_comp_cont_by_svc_name.side_effect = docker.errors.APIError('')
+        with self.assertRaises(docker.errors.APIError):
+            self.obj._get_component_container('service', 'container')
+
+

@@ -1,4 +1,3 @@
-#!/usr/local/bin/python3.7
 # -*- coding: utf-8 -*-
 
 """ Common set of managament methods to be used by
@@ -6,6 +5,7 @@
 
 import os
 import logging
+import secrets
 
 
 data_volume = "/srv/nuvlaedge/shared"
@@ -17,7 +17,7 @@ node_label_key = "nuvlaedge"
 compose_project_name = os.getenv('COMPOSE_PROJECT_NAME', 'nuvlaedge')
 nuvlaedge_shared_net = compose_project_name + '-shared-network'
 nuvlaedge_shared_net_unencrypted = f'{data_volume}/.nuvlabox-shared-net-unencrypted'
-overlay_network_service = 'nuvlaedge-ack'
+overlay_network_service = compose_project_name + '-ack'
 
 status_degraded = 'DEGRADED'
 status_operational = 'OPERATIONAL'
@@ -47,3 +47,7 @@ def status_file_exists() -> bool:
         return True
 
     return False
+
+
+def random_choices(sequence, num=1) -> list:
+    return [secrets.choice(sequence) for _ in range(num)]

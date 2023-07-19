@@ -5,14 +5,13 @@ Controls all the functionalities of the Agent
 
 import logging
 import logging.config
-import os
 import signal
 import socket
 import time
-from argparse import ArgumentParser
+
 from threading import Event, Thread
 
-
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
 
 
@@ -40,41 +39,6 @@ def log_threads_stackstraces():
 
 def signal_usr1(signum, frame):
     log_threads_stackstraces()
-
-
-def parse_arguments() -> ArgumentParser:
-    """
-    Argument parser configuration for the agent
-    Returns: ArgumentParser. A configured argument parser object class
-
-    """
-    parser: ArgumentParser = ArgumentParser(description="NuvlaEdge Agent")
-    parser.add_argument('--debug', dest='debug', default=False, action='store_true',
-                        help='use for increasing the verbosity level')
-
-    return parser
-
-
-def configure_root_logger(logger: logging.Logger, debug: bool):
-    """
-    Configures the root logger based on the environmental variables
-
-    Args:
-        logger: root logger to be configured
-        debug: debug verbosity flag
-    """
-    if debug:
-        logger.setLevel(logging.DEBUG)
-    else:
-        env_level: str = os.environ.get('NUVLAEDGE_LOG_LEVEL', '')
-        if env_level:
-            logger.setLevel(logging.getLevelName(env_level))
-        else:
-            logger.setLevel(logging.INFO)
-
-    # Setting flask server verbosity to warnings
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.WARNING)
 
 
 def preflight_check(activator: Activate, exit_flag: bool, nb_updated_date: str,
@@ -165,12 +129,10 @@ def main():
 
 def entry():
     # Global logging configuration
-    logging.config.fileConfig('/etc/nuvlaedge/agent/config/agent_logger_config.conf')
-
-    agent_parser: ArgumentParser = parse_arguments()
+    logging_config_file = '/etc/nuvlaedge/agent/config/agent_logger_config.conf'
+    parse_arguments_and_initialize_logging('Agent', logging_config_file=logging_config_file)
 
     # Logger for the root script
-    configure_root_logger(root_logger, agent_parser.parse_args().debug)
     root_logger.info('Configuring Agent class and main script')
 
     main()

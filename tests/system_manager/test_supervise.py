@@ -8,9 +8,9 @@ import mock
 import requests
 import unittest
 
-import nuvlaedge.system_manager.Supervise as Supervise
+import nuvlaedge.system_manager.supervise as Supervise
 
-from nuvlaedge.system_manager.common.ContainerRuntime import Containers
+from nuvlaedge.system_manager.common.coe_client import Containers
 import tests.system_manager.utils.fake as fake
 
 
@@ -19,7 +19,7 @@ class SuperviseTestCase(unittest.TestCase):
     def setUp(self) -> None:
         Supervise.__bases__ = (fake.Fake.imitate(Containers),)
         self.obj = Supervise.Supervise()
-        self.obj.container_runtime = mock.MagicMock()
+        self.obj.coe_client = mock.MagicMock()
         logging.disable(logging.CRITICAL)
 
     def tearDown(self):
@@ -31,40 +31,40 @@ class SuperviseTestCase(unittest.TestCase):
                          'Failed to initialize Supervise class')
 
     def test_classify_this_node(self):
-        self.obj.container_runtime.get_node_id.return_value = 'id'
+        self.obj.coe_client.get_node_id.return_value = 'id'
         # if COE is disabled, get None and set attrs to false
-        self.obj.container_runtime.is_coe_enabled.return_value = False
+        self.obj.coe_client.is_coe_enabled.return_value = False
         self.assertIsNone(self.obj.classify_this_node(),
                           'Tried to classify node where COE is disabled')
         self.assertEqual((self.obj.i_am_manager, self.obj.is_cluster_enabled), (False, False),
                          'Saying node has cluster mode enabled when it has not')
 
-        self.obj.container_runtime.is_coe_enabled.return_value = True
-        self.obj.container_runtime.get_node_id.return_value = None
+        self.obj.coe_client.is_coe_enabled.return_value = True
+        self.obj.coe_client.get_node_id.return_value = None
         self.assertIsNone(self.obj.classify_this_node(),
                           'Tried to classify node without a node ID')
         self.assertEqual((self.obj.i_am_manager, self.obj.is_cluster_enabled), (False, False),
                          'Saying node has cluster mode enabled when it does not even have a node ID')
 
         # otherwise, cluster mode is True
-        self.obj.container_runtime.get_node_id.return_value = 'id'
-        self.obj.container_runtime.get_cluster_managers.return_value = []
+        self.obj.coe_client.get_node_id.return_value = 'id'
+        self.obj.coe_client.get_cluster_managers.return_value = []
         self.assertIsNone(self.obj.classify_this_node(),
                           'Failed to classify node which is not a manager')
         self.assertEqual((self.obj.i_am_manager, self.obj.is_cluster_enabled), (False, True),
                          'Failed to classify when node is not a manager but cluster is enabled')
 
         # and if cluster is a manager, also label it
-        self.obj.container_runtime.get_cluster_managers.return_value = ['id']
-        self.obj.container_runtime.set_nuvlaedge_node_label.return_value = (None, None)
+        self.obj.coe_client.get_cluster_managers.return_value = ['id']
+        self.obj.coe_client.set_nuvlaedge_node_label.return_value = (None, None)
         self.assertIsNone(self.obj.classify_this_node(),
                           'Failed to classify manager node')
         self.assertEqual((self.obj.i_am_manager, self.obj.is_cluster_enabled), (True, True),
                          'Node should be a manager in cluster mode')
-        self.obj.container_runtime.set_nuvlaedge_node_label.assert_called_once_with('id')
+        self.obj.coe_client.set_nuvlaedge_node_label.assert_called_once_with('id')
 
         # and is labeling fails, set degraded state
-        self.obj.container_runtime.set_nuvlaedge_node_label.return_value = (None, 'label-error')
+        self.obj.coe_client.set_nuvlaedge_node_label.return_value = (None, 'label-error')
         self.obj.classify_this_node()
         self.assertIn((Supervise.utils.status_degraded, 'label-error'), self.obj.operational_status,
                       'Failed to set degraded state')
@@ -93,7 +93,7 @@ class SuperviseTestCase(unittest.TestCase):
         cert_obj.get_notAfter.return_value = b'99990309161546Z'
         mock_load_cert.return_value = cert_obj
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.Supervise.open'):
+        with mock.patch('nuvlaedge.system_manager.supervise.open'):
             self.assertFalse(self.obj.is_cert_rotation_needed(),
                              'Failed to recognize valid certificates')
 
@@ -101,26 +101,26 @@ class SuperviseTestCase(unittest.TestCase):
         cert_obj.get_notAfter.return_value = b'20200309161546Z'
         mock_load_cert.return_value = cert_obj
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.Supervise.open'):
+        with mock.patch('nuvlaedge.system_manager.supervise.open'):
             self.assertTrue(self.obj.is_cert_rotation_needed(),
                             'Failed to recognize certificates in need of renewal')
 
     @mock.patch('os.remove')
     @mock.patch('os.path.isfile')
     def test_request_rotate_certificates(self, mock_isfile, mock_rm):
-        self.obj.container_runtime.restart_credentials_manager.return_value = None
+        self.obj.coe_client.restart_credentials_manager.return_value = None
         # always returns None, but if file exists, calls fn to remove certs and recreate them
         mock_isfile.return_value = False
         self.assertIsNone(self.obj.request_rotate_certificates(),
                           'Tried to rotate certs without needing it')
         mock_rm.assert_not_called()
-        self.obj.container_runtime.restart_credentials_manager.assert_not_called()
+        self.obj.coe_client.restart_credentials_manager.assert_not_called()
 
         mock_isfile.return_value = True
         self.assertIsNone(self.obj.request_rotate_certificates(),
                           'Failed to rotate certs')
         mock_rm.assert_called_once_with(Supervise.utils.tls_sync_file)
-        self.obj.container_runtime.restart_credentials_manager.assert_called_once()
+        self.obj.coe_client.restart_credentials_manager.assert_called_once()
 
     def test_launch_data_gateway(self):
         # if self.is_cluster_enabled and not self.i_am_manager, cannot even start fn
@@ -130,58 +130,58 @@ class SuperviseTestCase(unittest.TestCase):
 
         # otherwise, run
         self.obj.i_am_manager = True
-        self.obj.container_runtime.client.services.create.return_value = None
-        self.obj.container_runtime.client.containers.run.return_value = None
+        self.obj.coe_client.client.services.create.return_value = None
+        self.obj.coe_client.client.containers.run.return_value = None
 
         # if in swarm, CREATE DG
         self.assertIsNone(self.obj.launch_data_gateway('dg'),
                           'Failed to create data-gateway service')
-        self.obj.container_runtime.client.services.create.assert_called_once()
-        self.obj.container_runtime.client.containers.run.assert_not_called()
+        self.obj.coe_client.client.services.create.assert_called_once()
+        self.obj.coe_client.client.containers.run.assert_not_called()
 
         # otherwise, RUN DG container
         self.obj.is_cluster_enabled = False
         self.assertIsNone(self.obj.launch_data_gateway('dg'),
                           'Failed to create data-gateway container')
-        self.obj.container_runtime.client.containers.run.assert_called_once()
+        self.obj.coe_client.client.containers.run.assert_called_once()
 
         # if docker fails, parse error
-        self.obj.container_runtime.client.containers.run.side_effect = docker.errors.APIError('', requests.Response())
+        self.obj.coe_client.client.containers.run.side_effect = docker.errors.APIError('', requests.Response())
         self.assertFalse(self.obj.launch_data_gateway('dg'),
                          'Says it launched the DG even though DG failed with an exception')
 
-        self.obj.container_runtime.client.services.create.side_effect = docker.errors.APIError('409',
+        self.obj.coe_client.client.services.create.side_effect = docker.errors.APIError('409',
                                                                                                requests.Response())
         # when 409, simply restart the DG
         component = mock.MagicMock()
         component.restart.return_value = None
         component.force_update.return_value = None
-        self.obj.container_runtime.client.containers.get.return_value = component
-        self.obj.container_runtime.client.services.get.return_value = component
+        self.obj.coe_client.client.containers.get.return_value = component
+        self.obj.coe_client.client.services.get.return_value = component
         self.obj.is_cluster_enabled = True
         self.assertTrue(self.obj.launch_data_gateway('dg'),
                         'Failed to restart data-gateway service')
-        self.obj.container_runtime.client.services.get.assert_called_once_with('dg')
-        self.obj.container_runtime.client.containers.get.assert_not_called()
+        self.obj.coe_client.client.services.get.assert_called_once_with('dg')
+        self.obj.coe_client.client.containers.get.assert_not_called()
 
         self.obj.is_cluster_enabled = False
-        self.obj.container_runtime.client.containers.run.side_effect = docker.errors.APIError('409',
+        self.obj.coe_client.client.containers.run.side_effect = docker.errors.APIError('409',
                                                                                               requests.Response())
         self.assertTrue(self.obj.launch_data_gateway('dg'),
                         'Failed to restart data-gateway container')
-        self.obj.container_runtime.client.containers.get.assert_called_once_with('dg')
+        self.obj.coe_client.client.containers.get.assert_called_once_with('dg')
 
     def test_find_nuvlaedge_agent(self):
         # if cannot find it, get None and append to op status
         l = len(self.obj.operational_status)
-        self.obj.container_runtime.find_nuvlaedge_agent_container.return_value = (None, True)
+        self.obj.coe_client.find_nuvlaedge_agent_container.return_value = (None, True)
         self.assertIsNone(self.obj.find_nuvlaedge_agent(),
                           'Claming the agent was found when it does not exist')
         self.assertEqual(len(self.obj.operational_status), l+1,
                          'Failed to append operational status due to agent not being found')
 
         # otherwise succeed
-        self.obj.container_runtime.find_nuvlaedge_agent_container.return_value = ('container', False)
+        self.obj.coe_client.find_nuvlaedge_agent_container.return_value = ('container', False)
         self.assertEqual(self.obj.find_nuvlaedge_agent(), 'container',
                          'Failed to find NB agent container')
 
@@ -262,22 +262,22 @@ class SuperviseTestCase(unittest.TestCase):
         data_gateway_networks = [net, net_bridge_one, net_bridge_two]
         # if old dg container exists, delete it
         mock_destroy_network.return_value = None
-        self.obj.container_runtime.client.containers.get.side_effect = docker.errors.NotFound('', requests.Response())
+        self.obj.coe_client.client.containers.get.side_effect = docker.errors.NotFound('', requests.Response())
         self.assertEqual(self.obj.manage_docker_data_gateway_network(data_gateway_networks), net,
                          'Failed to manage leftover bridge DG networks')
-        self.assertTrue(self.obj.container_runtime.client.containers.get.call_count==mock_destroy_network.call_count==2,
+        self.assertTrue(self.obj.coe_client.client.containers.get.call_count==mock_destroy_network.call_count==2,
                         'Failed to search and delete leftover DG container for the 2 leftover bridge networks')
-        self.obj.container_runtime.client.api.remove_container.assert_not_called()
+        self.obj.coe_client.client.api.remove_container.assert_not_called()
 
         # if leftover containers exist, delete them
-        self.obj.container_runtime.client.containers.get.reset_mock(side_effect=True)
-        self.obj.container_runtime.client.containers.get.return_value = None
-        self.obj.container_runtime.client.api.remove_container.return_value = None
+        self.obj.coe_client.client.containers.get.reset_mock(side_effect=True)
+        self.obj.coe_client.client.containers.get.return_value = None
+        self.obj.coe_client.client.api.remove_container.return_value = None
         # also is no overlay net is passed, we get None
         data_gateway_networks = [net_bridge_one, net_bridge_two]
         self.assertEqual(self.obj.manage_docker_data_gateway_network(data_gateway_networks), None,
                          'Failed to manage DG networks when there is no overlay net in cluster mode')
-        self.assertEqual(self.obj.container_runtime.client.api.remove_container.call_count, 2,
+        self.assertEqual(self.obj.coe_client.client.api.remove_container.call_count, 2,
                          'Failed to delete leftover DG containers')
 
     @mock.patch.object(Supervise.Supervise, 'launch_data_gateway')
@@ -328,24 +328,24 @@ class SuperviseTestCase(unittest.TestCase):
         containers_to_connect = [c1]
         self.assertIsNone(self.obj.manage_docker_data_gateway_connect_to_network(containers_to_connect, 'id'),
                           'Failed to notice that containers are already connected to DG network')
-        self.obj.container_runtime.client.api.connect_container_to_network.assert_not_called()
+        self.obj.coe_client.client.api.connect_container_to_network.assert_not_called()
         # otherwise
         containers_to_connect = [c1, c2]
         self.assertIsNone(self.obj.manage_docker_data_gateway_connect_to_network(containers_to_connect, 'id'),
                           'Failed to connect containers to DG network')
-        self.obj.container_runtime.client.api.connect_container_to_network.assert_called_once_with(c2.id,
+        self.obj.coe_client.client.api.connect_container_to_network.assert_called_once_with(c2.id,
                                                                                                    Supervise.utils.nuvlaedge_shared_net)
 
         # if the connection fails, add a status note
         l = len(self.obj.operational_status)
-        self.obj.container_runtime.client.api.connect_container_to_network.side_effect = Exception('notfound')
+        self.obj.coe_client.client.api.connect_container_to_network.side_effect = Exception('notfound')
         self.assertIsNone(self.obj.manage_docker_data_gateway_connect_to_network(containers_to_connect, c2.id),
                           'Failed to handle net connection error')
         self.assertEqual(l+1, len(self.obj.operational_status),
                          'Failure to connect container to DG net should have added something to the operational status')
 
         # and if the error is related with the agent, raise exception
-        self.obj.container_runtime.client.api.connect_container_to_network.side_effect = Exception
+        self.obj.coe_client.client.api.connect_container_to_network.side_effect = Exception
         self.assertRaises(Supervise.BreakDGManagementCycle, self.obj.manage_docker_data_gateway_connect_to_network,
                           containers_to_connect, c2.id)
         self.assertEqual(l+2, len(self.obj.operational_status),
@@ -380,7 +380,7 @@ class SuperviseTestCase(unittest.TestCase):
         # if it passes, get the containers for connecting
         mock_manage_docker_data_gateway_object.reset_mock(side_effect=True)
         mock_manage_docker_data_gateway_object.return_value = None
-        self.obj.container_runtime.client.containers.list.return_value = [fake.MockContainer('data-source')]
+        self.obj.coe_client.client.containers.list.return_value = [fake.MockContainer('data-source')]
 
         # if agent container is not found, add operational status
         mock_find_nuvlaedge_agent.return_value = None
@@ -401,7 +401,7 @@ class SuperviseTestCase(unittest.TestCase):
 
         # if agent API is not found, increment fail flag
         fail_flag = self.obj.agent_dg_failed_connection
-        self.obj.container_runtime.test_agent_connection.return_value = (fake.FakeRequestsResponse(status_code=404),
+        self.obj.coe_client.test_agent_connection.return_value = (fake.FakeRequestsResponse(status_code=404),
                                                                          None)
         self.assertIsNone(self.obj.manage_docker_data_gateway(),
                           'Failed to increment agent errors')
@@ -410,7 +410,7 @@ class SuperviseTestCase(unittest.TestCase):
         # after 3 attempts, restart the DG
         self.obj.agent_dg_failed_connection = 4
         mock_restart_data_gateway.return_value = None
-        self.obj.container_runtime.test_agent_connection.return_value = (fake.FakeRequestsResponse(), None)
+        self.obj.coe_client.test_agent_connection.return_value = (fake.FakeRequestsResponse(), None)
         self.assertIsNone(self.obj.manage_docker_data_gateway(),
                           'Failed to restart data gateway')
         self.assertEqual(self.obj.agent_dg_failed_connection, 0,
@@ -440,24 +440,24 @@ class SuperviseTestCase(unittest.TestCase):
         # otherwise
         self.obj.i_am_manager = True
         # define dg object and return True
-        self.obj.container_runtime.client.services.get.return_value = 'dg'
+        self.obj.coe_client.client.services.get.return_value = 'dg'
         self.assertTrue(self.obj.find_data_gateway('foo'),
                         'Failed to find DG service')
         self.assertEqual(self.obj.data_gateway_object, 'dg',
                          'Failed to set DG object')
-        self.obj.container_runtime.client.containers.get.assert_not_called()
+        self.obj.coe_client.client.containers.get.assert_not_called()
 
         # same for containers
         self.obj.i_am_manager = False
         self.obj.is_cluster_enabled = False
-        self.obj.container_runtime.client.containers.get.return_value = 'dgc'
+        self.obj.coe_client.client.containers.get.return_value = 'dgc'
         self.assertTrue(self.obj.find_data_gateway('foo'),
                         'Failed to find DG container')
         self.assertEqual(self.obj.data_gateway_object, 'dgc',
                          'Failed to set DG object in container mode')
 
         # in case of errors, get false and set obj to None
-        self.obj.container_runtime.client.containers.get.side_effect = docker.errors.APIError('', requests.Response())
+        self.obj.coe_client.client.containers.get.side_effect = docker.errors.APIError('', requests.Response())
         self.assertFalse(self.obj.find_data_gateway('foo'),
                          'Unable to cope with find error')
         self.assertIsNone(self.obj.data_gateway_object,
@@ -465,7 +465,7 @@ class SuperviseTestCase(unittest.TestCase):
 
     def test_find_docker_network(self):
         # lookup
-        self.obj.container_runtime.client.networks.list.return_value = ['foo']
+        self.obj.coe_client.client.networks.list.return_value = ['foo']
         self.assertEqual(self.obj.find_docker_network(['net']), ['foo'],
                          'Failed to find Docker network')
 
@@ -487,7 +487,7 @@ class SuperviseTestCase(unittest.TestCase):
                          'Failed to disconnect the two containers from the network')
 
     def test_setup_docker_network(self):
-        self.obj.container_runtime.get_node_info.return_value = {}
+        self.obj.coe_client.get_node_info.return_value = {}
         # if cluster_workers_cannot_manage, throw it
         self.obj.i_am_manager = False
         self.obj.is_cluster_enabled = True
@@ -497,78 +497,78 @@ class SuperviseTestCase(unittest.TestCase):
         self.obj.i_am_manager = True
 
         # without any assumptions or error, it just calls the Docker api a few times
-        self.obj.container_runtime.client.services.get.return_value = None
+        self.obj.coe_client.client.services.get.return_value = None
         self.assertTrue(self.obj.setup_docker_network('net'),
                         'Failed to setup Docker network')
-        self.obj.container_runtime.client.services.create.assert_called_once()
-        self.obj.container_runtime.client.services.get.assert_called_once_with(Supervise.utils.overlay_network_service)
-        self.obj.container_runtime.client.networks.create.assert_called_once()
+        self.obj.coe_client.client.services.create.assert_called_once()
+        self.obj.coe_client.client.services.get.assert_called_once_with(Supervise.utils.overlay_network_service)
+        self.obj.coe_client.client.networks.create.assert_called_once()
 
         # if ack exists, return earlier
         ack = mock.MagicMock()
-        self.obj.container_runtime.client.services.get.return_value = ack
+        self.obj.coe_client.client.services.get.return_value = ack
         self.assertTrue(self.obj.setup_docker_network('net'),
                         'Failed to setup Docker network when ack service exists')
         ack.force_update.assert_called_once()
 
         # in standalone mode, we just exit
-        self.obj.container_runtime.client.services.get.reset_mock()
+        self.obj.coe_client.client.services.get.reset_mock()
         self.obj.is_cluster_enabled = False
         self.assertTrue(self.obj.setup_docker_network('net'),
                         'Failed to setup Docker network in standalone mode')
-        self.obj.container_runtime.client.services.get.assert_not_called()
+        self.obj.coe_client.client.services.get.assert_not_called()
 
         # if ack is not found, keep going and create it
         self.obj.is_cluster_enabled = True
-        self.obj.container_runtime.client.services.create.reset_mock()
-        self.obj.container_runtime.client.services.get.side_effect = docker.errors.NotFound('', requests.Response())
+        self.obj.coe_client.client.services.create.reset_mock()
+        self.obj.coe_client.client.services.get.side_effect = docker.errors.NotFound('', requests.Response())
         self.assertTrue(self.obj.setup_docker_network('net'),
                         'Failed to setup Docker network when ack does not exist')
-        self.obj.container_runtime.client.services.create.assert_called_once()
+        self.obj.coe_client.client.services.create.assert_called_once()
 
         # other ack error return False
-        self.obj.container_runtime.client.services.create.reset_mock()
-        self.obj.container_runtime.client.services.get.side_effect = docker.errors.APIError('', requests.Response())
+        self.obj.coe_client.client.services.create.reset_mock()
+        self.obj.coe_client.client.services.get.side_effect = docker.errors.APIError('', requests.Response())
         self.assertFalse(self.obj.setup_docker_network('net'),
                          'Tried to setup Docker network when ack failed to be found')
-        self.obj.container_runtime.client.services.create.assert_not_called()
+        self.obj.coe_client.client.services.create.assert_not_called()
 
         # if there are errors creating the network
         # get False
-        self.obj.container_runtime.client.networks.create.side_effect = docker.errors.APIError('', requests.Response())
-        self.obj.container_runtime.client.services.get.reset_mock()
+        self.obj.coe_client.client.networks.create.side_effect = docker.errors.APIError('', requests.Response())
+        self.obj.coe_client.client.services.get.reset_mock()
         self.assertFalse(self.obj.setup_docker_network('net'),
                          'Tried to setup Docker network when network could not be created')
-        self.obj.container_runtime.client.services.get.assert_not_called()
+        self.obj.coe_client.client.services.get.assert_not_called()
 
         # unless it is a 409
-        self.obj.container_runtime.client.services.get.reset_mock()
-        self.obj.container_runtime.client.services.get.reset_mock(side_effect=True)
-        self.obj.container_runtime.client.networks.create.side_effect = docker.errors.APIError('409',
+        self.obj.coe_client.client.services.get.reset_mock()
+        self.obj.coe_client.client.services.get.reset_mock(side_effect=True)
+        self.obj.coe_client.client.networks.create.side_effect = docker.errors.APIError('409',
                                                                                                requests.Response())
         # continue in cluster mode
         self.assertTrue(self.obj.setup_docker_network('net'),
                         'Failed to setup Docker network when overlay net already exists')
-        self.obj.container_runtime.client.services.get.assert_called_once()
+        self.obj.coe_client.client.services.get.assert_called_once()
         # and stop in standalone mode
-        self.obj.container_runtime.client.services.get.reset_mock()
+        self.obj.coe_client.client.services.get.reset_mock()
         self.obj.is_cluster_enabled = False
         self.assertTrue(self.obj.setup_docker_network('net'),
                         'Failed to setup Docker network when bridge net already exists')
-        self.obj.container_runtime.client.services.get.assert_not_called()
+        self.obj.coe_client.client.services.get.assert_not_called()
 
     def test_get_project_name(self):
         l = len(self.obj.operational_status)
         # exit on error, but log
-        self.obj.container_runtime.client.containers.get.side_effect = docker.errors.NotFound('', requests.Response())
+        self.obj.coe_client.client.containers.get.side_effect = docker.errors.NotFound('', requests.Response())
         self.assertRaises(Exception, self.obj.get_project_name)
         self.assertEqual(len(self.obj.operational_status), l+1,
                          'Failed to add operational status after failing to get project name')
 
-        self.obj.container_runtime.client.containers.get.reset_mock(side_effect=True)
+        self.obj.coe_client.client.containers.get.reset_mock(side_effect=True)
         out_container = fake.MockContainer()
         # get the project name if all goes well
-        self.obj.container_runtime.client.containers.get.return_value = out_container
+        self.obj.coe_client.client.containers.get.return_value = out_container
         self.assertEqual(self.obj.get_project_name(), fake.MockContainer().labels['com.docker.compose.project'],
                          'Failed to get project name from container labels')
 
@@ -577,13 +577,13 @@ class SuperviseTestCase(unittest.TestCase):
         # try the name
         # outcome depends on the naming convention
         out_container.name = 'bad-name'
-        self.obj.container_runtime.client.containers.get.return_value = out_container
+        self.obj.coe_client.client.containers.get.return_value = out_container
         self.assertRaises(Exception, self.obj.get_project_name)
         self.assertEqual(len(self.obj.operational_status), l+2,
                          'Failed to add operational status when project name cannot be inferred from container name')
 
         out_container.name = 'project-good-name'
-        self.obj.container_runtime.client.containers.get.return_value = out_container
+        self.obj.coe_client.client.containers.get.return_value = out_container
         self.assertEqual(self.obj.get_project_name(), out_container.name.split('-')[0],
                          'Failed to get project name from container name')
 
@@ -646,12 +646,12 @@ class SuperviseTestCase(unittest.TestCase):
         mock_get_project_name.side_effect = Exception
         self.assertIsNone(self.obj.check_nuvlaedge_docker_connectivity(),
                           'Tried to check Docker connectivity without a project name')
-        self.obj.container_runtime.client.containers.list.assert_not_called()
+        self.obj.coe_client.client.containers.list.assert_not_called()
 
         # otherwise get containers and networks
         mock_get_project_name.reset_mock(side_effect=True)
-        self.obj.container_runtime.client.containers.list.return_value = []
-        self.obj.container_runtime.client.networks.list.return_value = []
+        self.obj.coe_client.client.containers.list.return_value = []
+        self.obj.coe_client.client.networks.list.return_value = []
         # without container or networks, return none and add operational status
         l = len(self.obj.operational_status)
         self.assertIsNone(self.obj.check_nuvlaedge_docker_connectivity(),
@@ -663,24 +663,24 @@ class SuperviseTestCase(unittest.TestCase):
         # otherwise, fix the connectivity
         c = fake.MockContainer()
         n = fake.MockNetwork('net')
-        self.obj.container_runtime.client.containers.list.return_value = [c]
-        self.obj.container_runtime.client.networks.list.return_value = [n]
+        self.obj.coe_client.client.containers.list.return_value = [c]
+        self.obj.coe_client.client.networks.list.return_value = [n]
         self.assertIsNone(self.obj.check_nuvlaedge_docker_connectivity(),
                           'Failed to check NB Docker connectivity')
         mock_fix_network_connectivity.assert_called_once_with([c], n)
 
     def test_heal_created_container(self):
         # simple action calling
-        self.obj.container_runtime.client.api.start.return_value = None
+        self.obj.coe_client.client.api.start.return_value = None
         self.assertIsNone(self.obj.heal_created_container(fake.MockContainer()),
                           'Failed to heal container in created state')
 
-        self.obj.container_runtime.client.api.start.side_effect = docker.errors.APIError('', requests.Response())
+        self.obj.coe_client.client.api.start.side_effect = docker.errors.APIError('', requests.Response())
         self.assertIsNone(self.obj.heal_created_container(fake.MockContainer()),
                           'Failed to handle Docker API error when healing container in created state')
 
     @mock.patch.object(Supervise.Supervise, 'restart_container')
-    @mock.patch('nuvlaedge.system_manager.Supervise.Timer')
+    @mock.patch('nuvlaedge.system_manager.supervise.Timer')
     def test_heal_exited_container(self, mock_timer, mock_restart_container):
         container = fake.MockContainer()
         container.attrs['State'] = {'ExitCode': 0}  # nothing to do
@@ -766,28 +766,28 @@ class SuperviseTestCase(unittest.TestCase):
     def test_restart_container(self):
         self.assertIsNone(self.obj.restart_container('name', 'id'),
                           'Failed to restart container')
-        self.obj.container_runtime.client.api.restart.assert_called_once_with('id')
+        self.obj.coe_client.client.api.restart.assert_called_once_with('id')
 
         # when it fail, add status note
-        self.obj.container_runtime.client.api.restart.side_effect = docker.errors.APIError('', requests.Response())
+        self.obj.coe_client.client.api.restart.side_effect = docker.errors.APIError('', requests.Response())
         l = len(self.obj.operational_status)
         self.assertIsNone(self.obj.restart_container('name', 'id'),
                           'Failed to cope with error while restarting container')
         self.assertEqual(len(self.obj.operational_status), l+1,
                          'Failed to append operational status when cannot restart container')
-        self.obj.container_runtime.client.api.disconnect_container_from_network.assert_not_called()
+        self.obj.coe_client.client.api.disconnect_container_from_network.assert_not_called()
 
         # if error is network related, try to disconnect container from network
-        self.obj.container_runtime.client.api.restart.side_effect = docker.errors.APIError('network not found',
+        self.obj.coe_client.client.api.restart.side_effect = docker.errors.APIError('network not found',
                                                                                            requests.Response())
         self.assertIsNone(self.obj.restart_container('name', 'id'),
                           'Failed to disconnect container from network when restart fails')
-        self.obj.container_runtime.client.api.disconnect_container_from_network.assert_called_once_with('id',
+        self.obj.coe_client.client.api.disconnect_container_from_network.assert_called_once_with('id',
                                                                                                         Supervise.utils.nuvlaedge_shared_net)
 
         # if disconnect fails, add a second operations status
         l = len(self.obj.operational_status)
-        self.obj.container_runtime.client.api.disconnect_container_from_network.side_effect = docker.errors.APIError('',
+        self.obj.coe_client.client.api.disconnect_container_from_network.side_effect = docker.errors.APIError('',
                                                                                                                      requests.Response())
         self.assertIsNone(self.obj.restart_container('name', 'id'),
                           'Failed to handle network disconnection error')

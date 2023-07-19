@@ -34,7 +34,7 @@ class Monitor(ABC, Thread):
         self.data: data_type = data_type(telemetry_name=name)
 
         # Logging system
-        self.logger: logging.Logger = logging.getLogger(name)
+        self.logger: logging.Logger = logging.getLogger(__name__)
 
         # Enable flag
         self._enabled_monitor: bool = enable_monitor

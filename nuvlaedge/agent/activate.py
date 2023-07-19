@@ -22,7 +22,9 @@ class Activate(NuvlaEdgeCommon):
         data_volume: path to shared NuvlaEdge data
     """
 
-    def __init__(self, coe_client: COEClient, data_volume: str):
+    def __init__(self,
+                 coe_client: COEClient,
+                 data_volume: str):
         """
         Constructs an Activation object
         """

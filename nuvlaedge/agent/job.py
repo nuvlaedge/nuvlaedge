@@ -24,7 +24,8 @@ class Job(NuvlaEdgeCommon):
         job_engine_lite_image: Docker image for Job Engine lite
     """
 
-    def __init__(self, coe_client: COEClient,
+    def __init__(self, 
+                 coe_client: COEClient,
                  data_volume,
                  job_id,
                  job_engine_lite_image):

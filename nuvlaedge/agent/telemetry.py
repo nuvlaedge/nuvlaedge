@@ -73,7 +73,7 @@ class Telemetry(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: COEClient,
+                 coe_client: COEClient,
                  data_volume: str,
                  nuvlaedge_status_id: str,
                  excluded_monitors: str = ''):
@@ -81,7 +81,7 @@ class Telemetry(NuvlaEdgeCommon):
         Constructs an Telemetry object, with a status placeholder
         """
 
-        super().__init__(container_runtime=container_runtime,
+        super().__init__(coe_client=coe_client,
                          shared_data_volume=data_volume)
 
         self.logger: logging.Logger = logging.getLogger('Telemetry')
@@ -245,7 +245,7 @@ class Telemetry(NuvlaEdgeCommon):
         operational_status_notes = self.get_operational_status_notes()
         operational_status = self.get_operational_status()
 
-        system_errors, system_warnings = self.container_runtime.read_system_issues(node)
+        system_errors, system_warnings = self.coe_client.read_system_issues(node)
 
         operational_status_notes += system_errors + system_warnings
         if system_errors:
@@ -321,7 +321,7 @@ class Telemetry(NuvlaEdgeCommon):
         # Update monitor objects
         self.update_monitors(status_for_nuvla)
 
-        node_info = self.container_runtime.get_node_info()
+        node_info = self.coe_client.get_node_info()
         # - STATUS attrs
         self.set_status_operational_status(status_for_nuvla, node_info)
 

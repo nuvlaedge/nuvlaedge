@@ -1,5 +1,5 @@
 """
-Orchestration factory
+Concrete COE client factory.
 """
 
 import os
@@ -9,10 +9,10 @@ from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
 
 
-def get_container_runtime() -> COEClient:
+def get_coe_client() -> COEClient:
     """
-    Instantiate the right container runtime client based on the underlying COE
-    :return: instance of a ContainerRuntimeClient
+    Returns the concrete COE client based on the underlying target COE.
+    :return: instance of a COEClient
     """
     if os.getenv('KUBERNETES_SERVICE_HOST'):
         return KubernetesClient()

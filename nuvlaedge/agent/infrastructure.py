@@ -34,7 +34,7 @@ class Infrastructure(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: COEClient,
+                 coe_client: COEClient,
                  data_volume: str,
                  telemetry: Telemetry,
                  refresh_period: int = 15):
@@ -43,7 +43,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         :param data_volume: shared volume
         """
-        super(Infrastructure, self).__init__(container_runtime=container_runtime,
+        super(Infrastructure, self).__init__(coe_client=coe_client,
                                              shared_data_volume=data_volume)
 
         self.logger: logging.Logger = logging.getLogger(__name__)
@@ -294,7 +294,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         # NUVLA_JOB_PULL if job-engine-lite has been deployed with the NBE
         commissioning_dict['capabilities'] = []
-        if self.container_runtime.has_pull_job_capability():
+        if self.coe_client.has_pull_job_capability():
             commissioning_dict['capabilities'].append('NUVLA_JOB_PULL')
 
     def compute_api_is_running(self) -> bool:
@@ -306,13 +306,13 @@ class Infrastructure(NuvlaEdgeCommon):
         :return: True or False
         """
 
-        if self.container_runtime.ORCHESTRATOR not in ['docker', 'swarm']:
+        if self.coe_client.ORCHESTRATOR not in ['docker', 'swarm']:
             return False
 
         compute_api_url = f'https://{util.compute_api}:{util.COMPUTE_API_INTERNAL_PORT}'
         self.logger.debug(f'Trying to reach compute API using {compute_api_url} address')
         try:
-            if self.container_runtime.client.containers.get(util.compute_api).status != 'running':
+            if self.coe_client.client.containers.get(util.compute_api).status != 'running':
                 return False
         except (docker_err.NotFound, docker_err.APIError, TimeoutError) as ex:
             self.logger.debug(f"Compute API container not found {ex}")
@@ -379,11 +379,11 @@ class Infrastructure(NuvlaEdgeCommon):
         :return: commission-ready cluster info
         """
 
-        cluster_info = self.container_runtime.get_cluster_info(
+        cluster_info = self.coe_client.get_cluster_info(
             default_cluster_name=f'cluster_{self.nuvlaedge_id}')
 
-        node_info = self.container_runtime.get_node_info()
-        node_id = self.container_runtime.get_node_id(node_info)
+        node_info = self.coe_client.get_node_info()
+        node_id = self.coe_client.get_node_id(node_info)
 
         # we only commission the cluster when the NuvlaEdge status
         # has already been updated with its "node-id"
@@ -412,7 +412,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         :returns tuple (api_endpoint, port)
         """
-        coe_api_ip, coe_api_port = self.container_runtime.get_api_ip_port()
+        coe_api_ip, coe_api_port = self.coe_client.get_api_ip_port()
 
         api_endpoint = None
         if vpn_ip:
@@ -437,7 +437,7 @@ class Infrastructure(NuvlaEdgeCommon):
             return
 
         full_payload['removed'] = \
-            self.container_runtime.get_partial_decommission_attributes()
+            self.coe_client.get_partial_decommission_attributes()
         if full_payload['removed'] != old_payload.get('removed', []):
             minimum_payload['removed'] = full_payload['removed']
 
@@ -486,7 +486,7 @@ class Infrastructure(NuvlaEdgeCommon):
     def try_commission(self):
         """ Checks whether any of the system configurations have changed
         and if so, returns True or False """
-        cluster_join_tokens = self.container_runtime.get_join_tokens()
+        cluster_join_tokens = self.coe_client.get_join_tokens()
         cluster_info = self.needs_cluster_commission()
 
         # initialize the commissioning payload
@@ -497,14 +497,14 @@ class Infrastructure(NuvlaEdgeCommon):
 
         my_vpn_ip = self.telemetry_instance.get_vpn_ip()
         api_endpoint, _ = self.get_compute_endpoint(my_vpn_ip)
-        infra_service = self.container_runtime.define_nuvla_infra_service(api_endpoint,
+        infra_service = self.coe_client.define_nuvla_infra_service(api_endpoint,
                                                                           *self.get_tls_keys())
 
         # 1st time commissioning the IS, so we need to also pass the keys, even if they
         # haven't changed
         infra_diff = {k: v for k, v in infra_service.items() if v != old_commission_payload.get(k)}
 
-        if self.container_runtime.infra_service_endpoint_keyname in \
+        if self.coe_client.infra_service_endpoint_keyname in \
                 old_commission_payload:
             minimum_commission_payload.update(infra_diff)
         else:
@@ -512,25 +512,25 @@ class Infrastructure(NuvlaEdgeCommon):
 
         commission_payload.update(infra_service)
 
-        # atm, it isn't clear whether these will make sense for k8s
-        # if they do, then this block should be moved to an abstractmethod of the
-        # ContainerRuntime
+        # FIXME: ATM, it isn't clear whether these will make sense for k8s. If
+        #  they do, then this block should be moved to an abstractmethod of the
+        #  COEClient.
         if len(cluster_join_tokens) > 1:
             self.swarm_token_diff(cluster_join_tokens[0], cluster_join_tokens[1])
             commission_payload.update({
-                self.container_runtime.join_token_manager_keyname: cluster_join_tokens[0],
-                self.container_runtime.join_token_worker_keyname: cluster_join_tokens[1]
+                self.coe_client.join_token_manager_keyname: cluster_join_tokens[0],
+                self.coe_client.join_token_worker_keyname: cluster_join_tokens[1]
             })
 
             self.commissioning_attr_has_changed(
                 commission_payload,
                 old_commission_payload,
-                self.container_runtime.join_token_manager_keyname,
+                self.coe_client.join_token_manager_keyname,
                 minimum_commission_payload)
             self.commissioning_attr_has_changed(
                 commission_payload,
                 old_commission_payload,
-                self.container_runtime.join_token_worker_keyname,
+                self.coe_client.join_token_worker_keyname,
                 minimum_commission_payload)
 
         self.get_nuvlaedge_capabilities(commission_payload)
@@ -594,7 +594,7 @@ class Infrastructure(NuvlaEdgeCommon):
         exists = None
         running = None
         try:
-            running = self.container_runtime.is_vpn_client_running()
+            running = self.coe_client.is_vpn_client_running()
             exists = True
         except docker.errors.NotFound:
             exists = False
@@ -725,8 +725,8 @@ class Infrastructure(NuvlaEdgeCommon):
                              f'{self.installation_home}')
             try:
                 with util.timeout(10):
-                    if not self.container_runtime.install_ssh_key(self.ssh_pub_key,
-                                                                  self.installation_home):
+                    if not self.coe_client.install_ssh_key(self.ssh_pub_key,
+                                                           self.installation_home):
                         return
             except Exception as e:
                 msg = f'An error occurred while setting immutable SSH key: {str(e)}'

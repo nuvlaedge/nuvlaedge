@@ -21,7 +21,7 @@ gpu = "nuvlaedge.peripherals.gpu:main"
 python = "^3.11"
 pydantic = "1.10.7"
 requests = "2.27.1"
-nuvla-api = "3.0.8"
+nuvla-api = "3.0.9"
 docker = "6.1.1"
 kubernetes = "26.1.0"
 
@@ -59,7 +59,7 @@ six = "1.16.0"
 
 
 [tool.poetry.group.job-engine.dependencies]
-pyyaml = "6.0"
+pyyaml = "6.0.1"
 statsd = "4.0.1"
 packaging = "23.1"
 

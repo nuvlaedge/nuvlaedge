@@ -23,14 +23,13 @@ class Activate(NuvlaEdgeCommon):
     """
 
     def __init__(self,
-                 container_runtime: COEClient,
+                 coe_client: COEClient,
                  data_volume: str):
         """
         Constructs an Activation object
         """
 
-        super().__init__(container_runtime=container_runtime,
-                         shared_data_volume=data_volume)
+        super().__init__(coe_client=coe_client, shared_data_volume=data_volume)
 
         self.activate_logger: logging.Logger = logging.getLogger(__name__)
         self.user_info = {}

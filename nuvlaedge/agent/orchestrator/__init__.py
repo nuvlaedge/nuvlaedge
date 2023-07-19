@@ -1,5 +1,5 @@
 """
-Orchestration base class. To be extended and implemented by docker or kubernetes
+Abstract base class for the Container Orchestration Engine (COE) clients.
 """
 
 from abc import ABC, abstractmethod
@@ -9,7 +9,10 @@ from nuvlaedge.agent.common import util
 
 class COEClient(ABC):
     """
-    Base abstract class for the Container Orchestration Engine (COE) clients.
+    Abstract base class for the Container Orchestration Engine (COE) clients.
+
+    To be subclassed and implemented by clients to the concrete COE
+    implementations, such as Docker, Kubernetes, and alike.
     """
 
     CLIENT_NAME: str

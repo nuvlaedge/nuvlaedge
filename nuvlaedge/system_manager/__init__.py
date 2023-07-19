@@ -13,14 +13,13 @@ import os
 import signal
 import sys
 import time
-from argparse import ArgumentParser
 
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 import nuvlaedge.system_manager.requirements as MinReq
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.system_manager.supervise import Supervise
 
-__copyright__ = "Copyright (C) 2021 SixSq"
+__copyright__ = "Copyright (C) 2023 SixSq"
 __email__ = "support@sixsq.com"
 
 log = None
@@ -57,7 +56,7 @@ class GracefulShutdown:
 
     def exit_gracefully(self, signum, frame):
         log.info('Starting on-stop graceful shutdown of the NuvlaEdge...')
-        self_sup.container_runtime.launch_nuvlaedge_on_stop(self_sup.on_stop_docker_image)
+        self_sup.coe_client.launch_nuvlaedge_on_stop(self_sup.on_stop_docker_image)
         sys.exit(0)
 
 
@@ -124,7 +123,7 @@ def main():
             log.info("Rotating NuvlaEdge certificates...")
             self_sup.request_rotate_certificates()
 
-        if self_sup.container_runtime.orchestrator != 'kubernetes':
+        if self_sup.coe_client.orchestrator != 'kubernetes':
             # in k8s there are no switched from uncluster - cluster, so there's no need for connectivity check
             self_sup.check_nuvlaedge_docker_connectivity()
 

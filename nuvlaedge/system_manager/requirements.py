@@ -8,7 +8,7 @@ import shutil
 import os
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.container_runtime import Containers
+from nuvlaedge.system_manager.common.coe_client import Containers
 
 
 SKIP_MINIMUM_REQUIREMENTS = False
@@ -64,7 +64,7 @@ class SystemRequirements(Containers):
          :returns True if there's enough RAM, False otherwise
          """
 
-        total_ram = round(self.container_runtime.get_ram_capacity(), 2)
+        total_ram = round(self.coe_client.get_ram_capacity(), 2)
 
         if total_ram < self.minimum_requirements["ram"]:
             msg = f'Your device only provides {total_ram} MBs of memory. ' \
@@ -123,10 +123,10 @@ class SoftwareRequirements(Containers):
 
     def check_sw_requirements(self):
         """ Checks all the SW requirements """
-        if not self.container_runtime.is_version_compatible():
-            msg = f'The COE ({self.container_runtime.orchestrator}) version installed ' \
-                  f'in your system ({self.container_runtime.get_version()}) is too old. ' \
-                  f'Need version {self.container_runtime.minimum_version} or higher.'
+        if not self.coe_client.is_version_compatible():
+            msg = f'The COE ({self.coe_client.orchestrator}) version installed ' \
+                  f'in your system ({self.coe_client.get_version()}) is too old. ' \
+                  f'Need version {self.coe_client.minimum_version} or higher.'
             self.not_met.append(msg)
 
         if self.not_met:
@@ -137,7 +137,7 @@ class SoftwareRequirements(Containers):
     def check_sw_optional_requirements(self):
         msgs = []
 
-        if self.container_runtime.orchestrator == 'docker' and not self.container_runtime.is_coe_enabled():
+        if self.coe_client.orchestrator == 'docker' and not self.coe_client.is_coe_enabled():
             msgs.append((utils.status_operational, 'Docker Swarm mode is not enabled.'))
 
         return msgs

@@ -152,30 +152,28 @@ class Supervise(Containers):
                   "exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf'"
             if self.is_cluster_enabled and self.i_am_manager:
                 self.coe_client.client.services.create(self.data_gateway_image,
-                                                              name=name,
-                                                              hostname=name,
-                                                              init=True,
-                                                              labels=labels,
-                                                              container_labels=labels,
-                                                              networks=[utils.nuvlaedge_shared_net],
-                                                              constraints=[
-                                                                  'node.role==manager',
-                                                                  f'node.labels.{utils.node_label_key}==True'
-                                                              ],
-                                                              command=cmd
-                                                              )
+                                                       name=name,
+                                                       hostname=name,
+                                                       init=True,
+                                                       labels=labels,
+                                                       container_labels=labels,
+                                                       networks=[utils.nuvlaedge_shared_net],
+                                                       constraints=[
+                                                           'node.role==manager',
+                                                           f'node.labels.{utils.node_label_key}==True'
+                                                       ],
+                                                       command=cmd)
             elif not self.is_cluster_enabled:
                 # Docker standalone mode
                 self.coe_client.client.containers.run(self.data_gateway_image,
-                                                             name=name,
-                                                             hostname=name,
-                                                             init=True,
-                                                             detach=True,
-                                                             labels=labels,
-                                                             restart_policy={"Name": "always"},
-                                                             network=utils.nuvlaedge_shared_net,
-                                                             command=cmd
-                                                             )
+                                                      name=name,
+                                                      hostname=name,
+                                                      init=True,
+                                                      detach=True,
+                                                      labels=labels,
+                                                      restart_policy={"Name": "always"},
+                                                      network=utils.nuvlaedge_shared_net,
+                                                      command=cmd)
         except docker.errors.APIError as e:
             try:
                 if '409' in str(e):
@@ -472,15 +470,15 @@ class Supervise(Containers):
             if not self.is_cluster_enabled:
                 # standalone Docker nodes create bridge network
                 self.coe_client.client.networks.create(net_name,
-                                                              labels=labels)
+                                                       labels=labels)
                 return True
             elif self.is_cluster_enabled and self.i_am_manager:
                 # Swarm managers create overlay network
                 self.coe_client.client.networks.create(net_name,
-                                                              driver="overlay",
-                                                              attachable=True,
-                                                              options=self.coe_client.dg_encrypt_options,
-                                                              labels=labels)
+                                                       driver="overlay",
+                                                       attachable=True,
+                                                       options=self.coe_client.dg_encrypt_options,
+                                                       labels=labels)
         except docker.errors.APIError as e:
             if '409' in str(e):
                 # already exists
@@ -528,15 +526,14 @@ class Supervise(Containers):
                f"echo -e '''{json.dumps(self.coe_client.get_node_info(), indent=2)}''' && sleep 300"]
 
         self.coe_client.client.services.create(self.coe_client.current_image,
-                                                      command=cmd,
-                                                      container_labels=labels,
-                                                      labels=labels,
-                                                      mode="global",
-                                                      name=utils.overlay_network_service,
-                                                      networks=[net_name],
-                                                      restart_policy=restart_policy,
-                                                      stop_grace_period=3,
-                                                      )
+                                               command=cmd,
+                                               container_labels=labels,
+                                               labels=labels,
+                                               mode="global",
+                                               name=utils.overlay_network_service,
+                                               networks=[net_name],
+                                               restart_policy=restart_policy,
+                                               stop_grace_period=3)
 
         return True
 
@@ -726,7 +723,7 @@ class Supervise(Containers):
                 self.log.warning(f'Trying to reset network config for {name}')
                 try:
                     self.coe_client.client.api.disconnect_container_from_network(container_id,
-                                                                                        utils.nuvlaedge_shared_net)
+                                                                                 utils.nuvlaedge_shared_net)
                 except docker.errors.APIError as e2:
                     err_msg = f'Malfunctioning network for {name}: {str(e2)}'
                     self.log.error(f'Cannot recover {name}. {err_msg}')

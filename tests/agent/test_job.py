@@ -67,6 +67,6 @@ class JobTestCase(unittest.TestCase):
                               'Failed to launch job')
 
         self.obj.coe_client.launch_job.assert_called_once_with(self.obj.job_id, self.obj.job_id_clean,
-                                                                      self.obj.nuvla_endpoint,
-                                                                      self.obj.nuvla_endpoint_insecure,
-                                                                      "", "", self.obj.job_engine_lite_image)
+                                                               self.obj.nuvla_endpoint,
+                                                               self.obj.nuvla_endpoint_insecure,
+                                                               "", "", self.obj.job_engine_lite_image)

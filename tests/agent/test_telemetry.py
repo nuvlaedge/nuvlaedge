@@ -221,7 +221,7 @@ class TelemetryTestCase(unittest.TestCase):
 
         # make sure the right status is updated and saved
         with mock.patch(self.agent_telemetry_open) as mock_open, \
-             mock.patch(self.atomic_write): # TODO: Patch not needed but file cleanup is required
+             mock.patch(self.atomic_write):
             mock_open.return_value.write.return_value = None
             self.assertIsNone(self.obj.update_status(),
                               'Failed to update status')

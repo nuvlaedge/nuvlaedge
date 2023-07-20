@@ -70,9 +70,6 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             os.environ.setdefault('VPN_CONFIG_EXTRA', r'--allow-pull-fqdn\n--client-nat snat network netmask alias')
             self.assertEqual(self.obj.set_vpn_config_extra(), '--allow-pull-fqdn\n--client-nat snat network netmask alias',
                              'Failed to read extra VPN config from environment variable')
-            # TODO: fix
-            # self.assertEqual(mock_open.call_count, 1,
-            #                  'Failed to save extra VPN config from env into file')
 
     @mock.patch('os.path.exists')
     def test_set_installation_home(self, mock_exists):
@@ -133,7 +130,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     @mock.patch('os.path.exists')
     def test_save_nuvla_configuration(self, mock_exists):
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write): # TODO: this patch is not needed but file cleanup is required
+             mock.patch(self.atomic_write):
             # if file exists, don't do anything
             mock_exists.return_value = True
             self.assertIsNone(self.obj.save_nuvla_configuration('', ''),
@@ -145,8 +142,6 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             mock_open.return_value.write.return_value = None
             self.assertIsNone(self.obj.save_nuvla_configuration('file', 'content'),
                               'Returned something when None was expected')
-            # TODO: fix
-            # mock_open.assert_called_once_with('file', 'w')
 
     @mock.patch('os.path.exists')
     def test_set_nuvlaedge_id(self, mock_exists):
@@ -251,7 +246,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     @mock.patch('json.dumps')
     def test_write_json_to_file(self, mock_json_dumps):
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write) as mock_atomic_write: # TODO: this patch is not needed but file cleanup is required
+             mock.patch(self.atomic_write) as mock_atomic_write:
             # if there's an open error, return False
             mock_open.side_effect = FileNotFoundError
             mock_atomic_write.side_effect = FileNotFoundError

@@ -49,7 +49,6 @@ class PeripheralManager(Thread):
         """
         self.logger.info(f'Getting peripheral status from: {FILE_NAMES.PERIPHERALS_FOLDER}')
 
-        # TODO: Keep a registry status of the last update of every peripheral instead of iterating folders
         for f in FILE_NAMES.PERIPHERALS_FOLDER.iterdir():
             if f.is_dir():
                 self.logger.info(f'{f} peripheral manager running')

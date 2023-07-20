@@ -94,8 +94,6 @@ class FileBroker(NuvlaEdgeBroker):
             )
         )
 
-    # TODO: Generic function to write a file. It should probably go to common/utils and reuse the atomic writing
-    # from the agent
     @staticmethod
     def write_file(file_name: Path, data: dict):
         with file_name.open('w') as file:

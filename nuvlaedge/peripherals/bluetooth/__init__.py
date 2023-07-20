@@ -41,7 +41,7 @@ def compare_bluetooth(bluetooth, ble):
     for device_id, device_name in ble.items():
         d = {
             "identifier": device_id,
-            "class": "",  # TODO
+            "class": "",
             "interface": "Bluetooth-LE"
         }
 
@@ -264,16 +264,7 @@ def bluetooth_manager():
         logger.exception("Failed to discover BT devices", e)
 
     ble_devices = {}
-    # TODO: implement reliable BLE discovery that works for RPi
-    # try:
-    #     # dict
-    #     bleDevices = bleDeviceDiscovery()
-    #     logger.info(bleDevices)
-    # except:
-    #     bleDevices = {}
-    #     logger.exception("Failed to discover BLE devices")
 
-    # get formatted list of bt devices [{},...]
     bluetooth = compare_bluetooth(bluetooth_devices, ble_devices)
     if len(bluetooth) > 0:
         for device in bluetooth:
@@ -291,7 +282,7 @@ def bluetooth_manager():
 
 def main():
     parse_arguments_and_initialize_logging('Bluetooth Peripheral')
-    
+
     logger.info('Starting bluetooth manager')
 
     bluetooth_peripheral: Peripheral = Peripheral('bluetooth')

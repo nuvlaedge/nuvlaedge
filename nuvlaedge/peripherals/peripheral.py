@@ -14,8 +14,6 @@ class Peripheral:
 
     def __init__(self, name: str, scanning_interval: int = 30):
         self.logger: logging.Logger = logging.getLogger(name)
-        # TODO: Temporal default debug level
-        self.logger.setLevel(logging.DEBUG)
 
         self._name: str = name
         self._id: str = ''

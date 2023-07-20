@@ -499,11 +499,9 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'Unable to define IS')
 
     def test_get_partial_decommission_attributes(self):
-        # FIXME: NOT IMPLEMENTED
         self.assertEqual(self.obj.get_partial_decommission_attributes(), [],
                          'Received partial decommissioning attrs for K8s even though method is not implemented')
 
     def test_infer_if_additional_coe_exists(self):
-        # FIXME: NOT IMPLEMENTED
         self.assertEqual(self.obj.infer_if_additional_coe_exists(), {},
                          'Received additional COE even though method is not implemented for K8s')

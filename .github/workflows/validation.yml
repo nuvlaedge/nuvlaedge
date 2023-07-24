@@ -117,7 +117,7 @@ jobs:
         if: ${{ github.event.inputs.retrieve_logs }} || ${{ steps.validate.outcome }} == 'success'
         uses: actions/upload-artifact@v3
         with:
-          name: nuvlaedge_logs
+          name: 'nuvlaedge_logs_${{ matrix.board-config }}-${{ matrix.validation-type }}'
           path: /tmp/nuvlaedge_validator/
 
       - name: Publish Unit Test Results

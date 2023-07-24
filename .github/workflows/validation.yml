@@ -95,11 +95,13 @@ jobs:
         run: |
           mkdir -p results/temp/xml results/temp/json
 
-      - name: Clear previous results
+      - name: Clear previous results and logs
         run: |
           rm results/temp/xml/*.xml || true
+          rm -rf /tmp/nuvlaedge_validator/ 
 
       - name: Run Validation on board ${{ matrix.board-config }}
+        id: validate
         run: >
           validation
           --target ${{ matrix.board-config }}.toml
@@ -110,6 +112,13 @@ jobs:
           --nuvlaedge_branch ${{ env.BRANCH_NAME }}
           --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version || 'latest' }} 
           --deployment_branch ${{ github.event.inputs.deployment_branch || 'None' }}
+
+      - name: Save logs as artifacts if requested or failed
+        if: ${{ github.event.inputs.retrieve_logs }} || ${{ steps.validate.outcome }} == 'success'
+        uses: actions/upload-artifact@v3
+        with:
+          name: nuvlaedge_logs
+          path: /tmp/nuvlaedge_validator/
 
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action/composite@v2

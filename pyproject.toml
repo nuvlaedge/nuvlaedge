@@ -16,6 +16,7 @@ network = "nuvlaedge.peripherals.network:main"
 bluetooth = "nuvlaedge.peripherals.bluetooth:main"
 modbus = "nuvlaedge.peripherals.modbus:main"
 gpu = "nuvlaedge.peripherals.gpu:main"
+security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"

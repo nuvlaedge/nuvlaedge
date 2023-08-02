@@ -237,6 +237,12 @@ RUN apk add --no-cache libusb-dev udev
 # ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
 
+# ------------------------------------------------------------------------
+# Required package for bluetooth discovery
+# ------------------------------------------------------------------------
+# nmap nmap-scripts coreutils curl
+RUN apk add --no-cache coreutils
+COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
 
 # ------------------------------------------------------------------------
 # Setup Compute-API

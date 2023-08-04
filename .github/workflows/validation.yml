@@ -114,7 +114,7 @@ jobs:
           --deployment_branch ${{ github.event.inputs.deployment_branch || 'None' }}
 
       - name: Save logs as artifacts if requested or failed
-        if: ${{ github.event.inputs.retrieve_logs }} || ${{ steps.validate.outcome }} == 'success'
+        if: ${{ github.event.inputs.retrieve_logs }} || ${{ steps.validate.outcome }} != 'success'
         uses: actions/upload-artifact@v3
         with:
           name: 'nuvlaedge_logs_${{ matrix.board-config }}-${{ matrix.validation-type }}'

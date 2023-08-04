@@ -9,15 +9,22 @@ import logging
 import os
 import re
 import shutil
-from subprocess import run, PIPE, STDOUT, Popen, CompletedProcess, TimeoutExpired, \
-    SubprocessError, CalledProcessError
+from pathlib import Path
 from threading import Event
 import time
-from xml.etree import ElementTree
+from subprocess import (run,
+                        PIPE,
+                        STDOUT,
+                        Popen,
+                        CompletedProcess,
+                        TimeoutExpired,
+                        SubprocessError,
+                        CalledProcessError)
 
-import xmltodict
+from xml.etree import ElementTree
 from nuvla.api import Api
 from pydantic import BaseSettings, Field
+
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 
@@ -51,6 +58,7 @@ class SecuritySettings(BaseSettings):
     data_volume: str = "/srv/nuvlaedge/shared"
     vulnerabilities_file: str = f'{data_volume}/vulnerabilities'
     security_folder: str = f'{data_volume}/security'
+    vulnerabilities_db: str = f'{security_folder}/db/'
     external_db_update_file: str = f'{security_folder}/.vuln-db-update'
     external_db_names_file: str = f'{security_folder}/.file_locations'
     nmap_script_path: str = '/usr/share/nmap/scripts/vulscan/'
@@ -73,10 +81,10 @@ class SecuritySettings(BaseSettings):
     slice_size: int = Field(20, env='DB_SLICE_SIZE')
 
     # Database files
-    raw_vulnerabilities_gz: str = '/opt/nuvlaedge/raw_vulnerabilities.gz'
-    raw_vulnerabilities: str = '/opt/nuvlaedge/raw_vulnerabilities'
-    vulscan_out_file: str = f'{data_volume}/nmap-vulscan-out-xml'
-    vulscan_db_dir: str = Field('', env='VULSCAN_DB_DIR')
+    raw_vulnerabilities_gz: str = f'{vulnerabilities_db}/raw_vulnerabilities.gz'
+    raw_vulnerabilities: str = f'{vulnerabilities_db}/raw_vulnerabilities'
+    vulscan_out_file: str = f'{security_folder}/nmap-vulscan-out-xml'
+    vulscan_db_dir: str = Field(vulnerabilities_db, env='VULSCAN_DB_DIR')
     online_vulscan_db_prefix: str = 'cve_online.csv.'
     external_db: str
 
@@ -117,6 +125,10 @@ class Security:
             self.get_previous_external_db_update()
 
         self.offline_vulscan_db: list = []
+
+        if not Path(self.settings.vulnerabilities_db).exists():
+            Path(self.settings.vulnerabilities_db).mkdir(parents=True)
+
         if self.settings.vulscan_db_dir:
             self.offline_vulscan_db = [db for db in os.listdir(self.settings.vulscan_db_dir) if
                                        db.startswith('cve.csv.')]
@@ -197,6 +209,7 @@ class Security:
         """
             Updates or gets the local database from the provided URL
         """
+
         # Download external DB
         download_command: list = ['curl', '-L',
                                   self.settings.external_db.lstrip('"').rstrip('"'),
@@ -226,13 +239,14 @@ class Security:
         else:
 
             split_files: list = \
-                [f for f in os.listdir('/opt/nuvlaedge') if f.startswith('x')]
+                [f for f in os.listdir(self.settings.vulnerabilities_db) if f.startswith('x')]
             renamed_files: list = []
             for i, _ in enumerate(split_files):
                 renamed_files.append(self.settings.online_vulscan_db_prefix + str(i))
 
+            self.logger.info(f'Saving database into {self.settings.vulscan_db_dir}')
             for old, new in zip(split_files, renamed_files):
-                shutil.move(f'/opt/nuvlaedge/{old}',
+                shutil.move(f'{self.settings.vulnerabilities_db}/{old}',
                             f'{self.settings.vulscan_db_dir}/{new}')
 
             self.vulscan_dbs = renamed_files

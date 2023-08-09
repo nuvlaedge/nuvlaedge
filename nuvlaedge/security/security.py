@@ -221,7 +221,8 @@ class Security:
         # Split file in smaller files
         split_command: list = ['split', '-u', '-l', '20000', '-d',
                                self.settings.raw_vulnerabilities,
-                               '--additional-suffix=.cve_online.csv']
+                               '--additional-suffix=.cve_online.csv',
+                               self.settings.vulnerabilities_db]
 
         try:
             # Download full db
@@ -238,18 +239,8 @@ class Security:
 
         else:
 
-            split_files: list = \
-                [f for f in os.listdir(self.settings.vulnerabilities_db) if f.startswith('x')]
-            renamed_files: list = []
-            for i, _ in enumerate(split_files):
-                renamed_files.append(self.settings.online_vulscan_db_prefix + str(i))
-
-            self.logger.info(f'Saving database into {self.settings.vulscan_db_dir}')
-            for old, new in zip(split_files, renamed_files):
-                shutil.move(f'{self.settings.vulnerabilities_db}/{old}',
-                            f'{self.settings.vulscan_db_dir}/{new}')
-
-            self.vulscan_dbs = renamed_files
+            self.vulscan_dbs: list = \
+                [f for f in os.listdir(self.settings.vulnerabilities_db) if f.startswith('0')]
 
         if os.path.exists(self.settings.raw_vulnerabilities):
             os.remove(self.settings.raw_vulnerabilities)
@@ -337,9 +328,6 @@ class Security:
 
         :return: list of CVE vulnerabilities
         """
-        # with open(self.settings.vulscan_out_file, 'e') as file:
-        #     result = xmltodict.parse(file.read())
-        #     ports = result.get('nmaprun').get('host')
         if not os.path.exists(self.settings.vulscan_out_file):
             return None
 
@@ -408,14 +396,15 @@ class Security:
 
         """
         temp_vulnerabilities: list = []
-
+        self.logger.debug(f'Running scan on DBs {self.vulscan_dbs}')
         for vulscan_db in self.vulscan_dbs:
             nmap_scan_cmd: list[str] = \
                 ['nice', '-n', '15',
                  'nmap',
                  '-sV',
                  '--script', 'vulscan/', '--script-args',
-                 f'vulscandb={vulscan_db},vulscanoutput=nuvlaedge-cve,vulscanshowall=1',
+                 f'vulscandb={self.settings.vulnerabilities_db + vulscan_db},vulscanoutput=nuvlaedge-cve,'
+                 f'vulscanshowall=1',
                  'localhost',
                  '-oX', self.settings.vulscan_out_file]
 

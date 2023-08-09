@@ -223,7 +223,7 @@ RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl iproute2
 # ------------------------------------------------------------------------
 # Required packages for modbus peripheral discovery
 # ------------------------------------------------------------------------
-RUN apk add --no-cache nmap-scripts
+RUN apk add --no-cache nmap nmap-scripts
 
 
 # ------------------------------------------------------------------------

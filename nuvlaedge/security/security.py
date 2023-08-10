@@ -186,7 +186,7 @@ class Security:
         @param command: command to execute
         @return: all outputs
         """
-        self.logger.info(f'Executing command {command}')
+        self.logger.info(f'Executing command {" ".join(command)}')
         try:
             return run(command, stdout=PIPE, stderr=STDOUT, encoding='UTF-8',
                        check=True)
@@ -221,8 +221,7 @@ class Security:
         # Split file in smaller files
         split_command: list = ['split', '-u', '-l', '20000', '-d',
                                self.settings.raw_vulnerabilities,
-                               '--additional-suffix=.cve_online.csv',
-                               self.settings.vulnerabilities_db]
+                               '--additional-suffix=.cve_online.csv']
 
         try:
             # Download full db
@@ -240,7 +239,7 @@ class Security:
         else:
 
             self.vulscan_dbs: list = \
-                [f for f in os.listdir(self.settings.vulnerabilities_db) if f.startswith('0')]
+                sorted([f for f in os.listdir(self.settings.vulnerabilities_db) if f.startswith('0')])
 
         if os.path.exists(self.settings.raw_vulnerabilities):
             os.remove(self.settings.raw_vulnerabilities)
@@ -331,8 +330,7 @@ class Security:
         if not os.path.exists(self.settings.vulscan_out_file):
             return None
 
-        ports = ElementTree.parse(self.settings.vulscan_out_file)\
-            .getroot().findall('host/ports/port')
+        ports = ElementTree.parse(self.settings.vulscan_out_file).getroot().findall('host/ports/port')
 
         vulnerabilities = []
         for port in ports:
@@ -396,7 +394,7 @@ class Security:
 
         """
         temp_vulnerabilities: list = []
-        self.logger.debug(f'Running scan on DBs {self.vulscan_dbs}')
+        self.logger.info(f'Running scan on DBs {self.vulscan_dbs}')
         for vulscan_db in self.vulscan_dbs:
             nmap_scan_cmd: list[str] = \
                 ['nice', '-n', '15',

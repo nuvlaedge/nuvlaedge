@@ -81,11 +81,11 @@ class SecuritySettings(BaseSettings):
     slice_size: int = Field(20, env='DB_SLICE_SIZE')
 
     # Database files
-    raw_vulnerabilities_gz: str = f'{vulnerabilities_db}/raw_vulnerabilities.gz'
-    raw_vulnerabilities: str = f'{vulnerabilities_db}/raw_vulnerabilities'
+    raw_vulnerabilities_gz: str = f'{nmap_script_path}/raw_vulnerabilities.csv.gz'
+    raw_vulnerabilities: str = f'{nmap_script_path}/raw_vulnerabilities.csv'
     vulscan_out_file: str = f'{security_folder}/nmap-vulscan-out-xml'
     vulscan_db_dir: str = Field(vulnerabilities_db, env='VULSCAN_DB_DIR')
-    online_vulscan_db_prefix: str = 'cve_online.csv.'
+    online_vulscan_db_prefix: str = 'cve.csv.'
     external_db: str
 
     class Config:
@@ -131,7 +131,7 @@ class Security:
 
         if self.settings.vulscan_db_dir:
             self.offline_vulscan_db = [db for db in os.listdir(self.settings.vulscan_db_dir) if
-                                       db.startswith('cve.csv.')]
+                                       db.startswith(self.settings.online_vulscan_db_prefix)]
 
     def authenticate(self):
         """ Uses the NB ApiKey credential to authenticate against Nuvla
@@ -221,7 +221,7 @@ class Security:
         # Split file in smaller files
         split_command: list = ['split', '-u', '-l', '20000', '-d',
                                self.settings.raw_vulnerabilities,
-                               '--additional-suffix=.cve_online.csv']
+                               '/usr/share/nmap/scripts/vulscan/cve.csv.']
 
         try:
             # Download full db
@@ -239,7 +239,8 @@ class Security:
         else:
 
             self.vulscan_dbs: list = \
-                sorted([f for f in os.listdir(self.settings.vulnerabilities_db) if f.startswith('0')])
+                sorted([f for f in os.listdir(self.settings.nmap_script_path)
+                        if f.startswith(self.settings.online_vulscan_db_prefix)])
 
         if os.path.exists(self.settings.raw_vulnerabilities):
             os.remove(self.settings.raw_vulnerabilities)
@@ -401,7 +402,7 @@ class Security:
                  'nmap',
                  '-sV',
                  '--script', 'vulscan/', '--script-args',
-                 f'vulscandb={self.settings.vulnerabilities_db + vulscan_db},vulscanoutput=nuvlaedge-cve,'
+                 f'vulscandb={vulscan_db},vulscanoutput=nuvlaedge-cve,'
                  f'vulscanshowall=1',
                  'localhost',
                  '-oX', self.settings.vulscan_out_file]

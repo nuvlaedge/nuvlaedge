@@ -28,9 +28,3 @@ class SecurityConfig(NuvlaConfig):
     # Kubernetes Security configuration
     kubernetes_service_host: str = Field('', env='KUBERNETES_SERVICE_HOST')
     namespace: str = Field('nuvlaedge', env='MY_NAMESPACE')
-
-
-from pathlib import Path
-x = SecurityConfig.from_toml(Path('~/PycharmProjects/nuvlaedge/conf/example/security.toml').expanduser())
-
-print(json.dumps(x.dict(), indent=4))

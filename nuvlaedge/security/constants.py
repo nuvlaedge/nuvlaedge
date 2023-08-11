@@ -17,6 +17,6 @@ ONLINE_VULSCAN_DB_PREFIX: str = 'cve.csv.'
 
 TIMEOUT_WAIT_TIME: int = 60
 
-RAW_VULNERABILITIES_GZ: str = f'{NMAP_OUTPUT_FILE}/raw_vulnerabilities.csv.gz'
-RAW_VULNERABILITIES: str = f'{NMAP_OUTPUT_FILE}/raw_vulnerabilities.csv'
+RAW_VULNERABILITIES_GZ: str = f'{DEFAULT_NMAP_DIRECTORY}/raw_vulnerabilities.csv.gz'
+RAW_VULNERABILITIES: str = f'{DEFAULT_NMAP_DIRECTORY}/raw_vulnerabilities.csv'
 

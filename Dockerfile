@@ -275,7 +275,7 @@ RUN ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedg
 # Copy configuration files
 # ------------------------------------------------------------------------
 COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
-
+COPY --link conf/example/* /etc/nuvlaedge/
 
 # ------------------------------------------------------------------------
 # Set up Job engine

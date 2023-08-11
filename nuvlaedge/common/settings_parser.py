@@ -26,8 +26,9 @@ class NuvlaConfig(BaseSettings):
                 cls,
                 init_settings: SettingsSourceCallable,
                 env_settings: SettingsSourceCallable,
+                file_secret_settings: SettingsSourceCallable
         ) -> tuple[SettingsSourceCallable, ...]:
             """
             Allow overwriting file defined settings with environmental variables
             """
-            return env_settings, init_settings
+            return env_settings, init_settings, file_secret_settings

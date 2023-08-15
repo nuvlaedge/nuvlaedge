@@ -78,7 +78,7 @@ EOF
 
   kubectl get csr
 
-  timeout -t ${WAIT_APPROVED_SEC} sh -c 'while [[ -z "$CERT" ]]
+  timeout ${WAIT_APPROVED_SEC} sh -c 'while [[ -z "$CERT" ]]
 do
 CERT=`kubectl get csr ${CSR_NAME} -o jsonpath="{.status.certificate}" | base64 -d`
 done'

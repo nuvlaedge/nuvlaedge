@@ -157,15 +157,16 @@ def manage_modbus_peripherals(ip_address):
         namp_xml_output = ox.read()
 
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
-
+    discovered_devices: dict = {}
     for per in all_modbus_devices:
         port = per.get("port", "nullport")
         interface = per.get("interface", "nullinterface")
         identifier = "modbus.{}.{}.{}".format(port, interface, per.get("identifier"))
         # Redefine the identifier
         per['identifier'] = identifier
+        discovered_devices[identifier] = per
 
-    return all_modbus_devices
+    return discovered_devices
 
 
 def main():

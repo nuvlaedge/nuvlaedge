@@ -65,6 +65,8 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
                 host,
                 xml_file)
 
+    logger.info('Generated command:\n%s',command) # FIXME
+
     os.system(command)
 
     return xml_file

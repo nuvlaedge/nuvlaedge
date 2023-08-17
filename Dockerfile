@@ -140,8 +140,6 @@ COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${
 COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 
-RUN pip install --no-build-isolation docker-compose
-
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
 

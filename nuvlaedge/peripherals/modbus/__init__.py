@@ -57,14 +57,14 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     """
 
     logger.info("Scanning open ports...")
-    ports = "-p-"
+    ports_range = "-p-"
     if os.getenv('KUBERNETES_SERVICE_HOST'):
         host = host + "/24" # the default gateway for kubernetes is the CNI gateway. All kubernetes pods will be in this namespace...
-        ports = "-p 502"
+        ports_range = "-p 502"
 
     command = "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\
         .format(modbus_nse,
-                ports,
+                ports_range,
                 host,
                 xml_file)
 

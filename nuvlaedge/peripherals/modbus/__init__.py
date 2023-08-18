@@ -58,11 +58,14 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
 
     logger.info("Scanning open ports...")
     ports_range = "-p-"
+    # FIXME we could determine which port to target based on the configuration of the nmap script?
+    # Saves scanning all those open ports?
     if os.getenv('KUBERNETES_SERVICE_HOST'):
         host = host + "/24" # the default gateway for kubernetes is the CNI gateway. All kubernetes pods will be in this namespace...
         ports_range = "-p 502"
 
-    command = "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\
+    command = \
+        "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\
         .format(modbus_nse,
                 ports_range,
                 host,
@@ -166,12 +169,16 @@ def manage_modbus_peripherals(ip_address):
 
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
 
+    discovered_devices: dict = {}
     for per in all_modbus_devices:
         port = per.get("port", "nullport")
         interface = per.get("interface", "nullinterface")
         identifier = "modbus.{}.{}.{}".format(port, interface, per.get("identifier"))
         # Redefine the identifier
         per['identifier'] = identifier
+        discovered_devices[identifier] = per
+
+    return discovered_devices
 
 
 def main():

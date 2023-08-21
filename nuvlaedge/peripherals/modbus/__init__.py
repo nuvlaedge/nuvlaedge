@@ -60,9 +60,16 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     ports_range = "-p-"
     # FIXME we could determine which port to target based on the configuration of the nmap script?
     # Saves scanning all those open ports?
+    # the default gateway for kubernetes is the CNI gateway. All kubernetes pods will be in this namespace...
     if os.getenv('KUBERNETES_SERVICE_HOST'):
-        host = host + "/24" # the default gateway for kubernetes is the CNI gateway. All kubernetes pods will be in this namespace...
+        # check if a MY_HOST_NODE_IP has been defined
+        if os.getenv('MY_HOST_NODE_IP'):
+            host = os.getenv('MY_HOST_NODE_IP')
+        else:
+            host = host + "/24" # need to check FIXME
         ports_range = "-p 502"
+        # FIXME do we need to define a ports_range variable from the UI?
+        # We could then modify the modbus-discover.nse script...
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

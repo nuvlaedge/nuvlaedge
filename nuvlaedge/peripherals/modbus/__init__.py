@@ -67,7 +67,8 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
             host = os.getenv('MY_HOST_NODE_IP')
         else:
             host = host + "/24" # need to check FIXME
-        ports_range = "-p 502"
+        
+    ports_range = "-p 502"
         # FIXME do we need to define a ports_range variable from the UI?
         # We could then modify the modbus-discover.nse script...
 

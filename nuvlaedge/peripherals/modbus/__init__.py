@@ -21,6 +21,7 @@ import logging
 import sys
 import json
 import xmltodict
+import fileinput
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -44,7 +45,13 @@ def get_default_gateway_ip():
                 continue
 
             return socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
-
+        
+def nmap_replace_port(file, searchExp, replaceExp):
+    '''testing only'''
+    for line in fileinput.input(file, inplace=1):
+        if searchExp in line:
+            line = line.replace(searchExp,replaceExp)
+        sys.stdout.write(line)
 
 def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_scan.xml"):
     """ Uses nmap to scan all the open ports in the NuvlaEdge.
@@ -68,6 +75,8 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
         if os.getenv('MY_HOST_NODE_IP'):
             host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
         logging.info('The host list in k8ss has been set to:\n%s',host)
+        # FIX ME testing only
+        nmap_replace_port("/usr/share/nmap/"+modbus_nse, "port_or_service(502", "port_or_service(5020")
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

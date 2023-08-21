@@ -17,9 +17,10 @@ It provides:
 import socket
 import struct
 import os
-import xmltodict
 import logging
 import sys
+import json
+import xmltodict
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -66,6 +67,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
         if os.getenv('MY_HOST_NODE_IP'):
             host = os.getenv('MY_HOST_NODE_IP')
         else:
+            logger.info('MY_HOST_NODE_IP not found ...') # FIXME
             host = host + "/24" # need to check FIXME
         
     ports_range = "-p 502"
@@ -175,6 +177,7 @@ def manage_modbus_peripherals(ip_address):
     with open(xml_file) as ox:
         namp_xml_output = ox.read()
 
+    logging.info(json.dumps(namp_xml_output))
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
 
     discovered_devices: dict = {}

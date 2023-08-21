@@ -67,7 +67,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
         # check if a MY_HOST_NODE_IP has been defined
         if os.getenv('MY_HOST_NODE_IP'):
             host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
-        logging.info('The host list in k8s has been set to:\n%s',host)
+        logging.info('The host list in k8ss has been set to:\n%s',host)
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

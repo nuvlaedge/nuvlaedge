@@ -76,7 +76,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
             host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
         logging.info('The host list in k8ss has been set to:\n%s',host)
         # FIX ME testing only
-        nmap_replace_port("/usr/share/nmap/"+modbus_nse, "port_or_service(502", "port_or_service(5020")
+        nmap_replace_port("/usr/share/nmap/scripts/" + modbus_nse, "port_or_service(502", "port_or_service(5020")
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

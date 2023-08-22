@@ -130,6 +130,7 @@ def parse_modbus_peripherals(namp_xml_output):
         return modbus
 
     for port in all_ports:
+        logger.info('Port is: %s',port)
         if 'service' not in port or port['service']['@name'] != "modbus":
             continue
 
@@ -190,7 +191,6 @@ def manage_modbus_peripherals(ip_address):
     with open(xml_file) as ox:
         namp_xml_output = ox.read()
 
-    logging.info('\n',json.dumps(namp_xml_output))
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
    
     discovered_devices: dict = {}

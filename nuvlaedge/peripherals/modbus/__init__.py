@@ -20,8 +20,9 @@ import os
 import logging
 import sys
 import json
-import xmltodict
 import fileinput
+import xmltodict
+from xml.etree import ElementTree
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -175,6 +176,81 @@ def parse_modbus_peripherals(namp_xml_output):
 
     return modbus
 
+def parse_modbus_peripherals_new(nmap_xml_file):
+    """ Uses the output from the nmap port scan to find modbus
+    services.
+    Plain output example:
+
+        PORT    STATE SERVICE
+        502/tcp open  modbus
+        | modbus-discover:
+        |   sid 0x64:
+        |     Slave ID data: \xFA\xFFPM710PowerMeter
+        |     Device identification: Schneider Electric PM710 v03.110
+        |   sid 0x96:
+        |_    error: GATEWAY TARGET DEVICE FAILED TO RESPONSE
+
+    :returns List of modbus devices"""
+
+    namp_odict = xmltodict.parse(namp_xml_output, process_namespaces=True)
+    
+    ports = ElementTree.parse(nmap_xml_file).getroot().findall('host/ports/port')
+
+    modbus = []
+    try:
+        all_ports = namp_odict['nmaprun']['host']['ports']['port']
+    except KeyError:
+        logger.warning("Cannot find any open ports in this NuvlaEdge")
+        return modbus
+    except Exception as e:
+        logger.exception("Unknown error while processing ports scan", e)
+        return modbus
+
+    for port in all_ports:
+        logger.info('Port is: %s',port)
+        if 'service' not in port or port['service']['@name'] != "modbus":
+            continue
+
+        modbus_device_base = {
+            "interface": port['@protocol'].upper() if "@protocol" in port else None,
+            "port": int(port["@portid"]) if "@portid" in port else None,
+            "available": True if port['state']['@state'] == "open" else False
+        }
+
+        output = port['script']['table']
+        if not isinstance(output, list):
+            output = [output]
+
+        for address in output:
+            slave_id = int(address['@key'].split()[1], 16)
+            elements_list = address['elem']
+            classes = None
+            device_identification = None
+            for elem in elements_list:
+                if elem['@key'] == "Slave ID data":
+                    classes = [str(elem.get('#text'))]
+                elif elem['@key'] == 'Device identification':
+                    device_identification = elem.get('#text')
+                else:
+                    logger.warning("Modbus device with slave ID {} cannot be categorized: {}").format(slave_id,
+                                                                                                       elem)
+            modbus_device_merge = { **modbus_device_base,
+                                    "classes": classes,
+                                    "identifier": str(slave_id),
+                                    "vendor": device_identification,
+                                    "name": "Modbus {}/{} {} - {}".format(modbus_device_base['port'], port.get('@protocol'),
+                                                                          ' '.join(classes),
+                                                                          slave_id)
+                                    }
+
+            modbus_device_final = {k: v for k, v in modbus_device_merge.items() if v is not None}
+
+            # add final modbus device to list of devices
+            modbus.append(modbus_device_final)
+
+            logger.info("modbus device found {}".format(modbus_device_final))
+
+    return modbus
 
 def manage_modbus_peripherals(ip_address):
     """ Takes care of posting or deleting the respective
@@ -190,6 +266,8 @@ def manage_modbus_peripherals(ip_address):
     xml_file = scan_open_ports(ip_address)
     with open(xml_file) as ox:
         namp_xml_output = ox.read()
+
+    all_modbus_devices = parse_modbus_peripherals_new(xml_file)
 
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
    

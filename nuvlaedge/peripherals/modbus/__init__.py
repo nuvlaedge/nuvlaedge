@@ -65,10 +65,13 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     """
     
     net_mask = "27"
+    ports_range = "-p-"
     alternate_modbus_port = "5020"
+    if alternate_modbus_port:
+        ports_range = "-p " + alternate_modbus_port
 
     logger.info("Scanning open ports...")
-    ports_range = "-p-"
+    
     # FIXME we could determine which port to target based on the configuration of the nmap script?
     # Saves scanning all those open ports?
     # the default gateway for kubernetes is the CNI gateway. All kubernetes pods will be in this namespace...

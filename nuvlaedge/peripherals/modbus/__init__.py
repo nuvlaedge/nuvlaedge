@@ -84,6 +84,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
         # FIX ME testing only
         nmap_replace_port("/usr/share/nmap/scripts/" + \
             modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
+        host = 10.42.0.14
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\
@@ -189,7 +190,7 @@ def manage_modbus_peripherals(ip_address):
     with open(xml_file) as ox:
         namp_xml_output = ox.read()
 
-    logging.info(json.dumps(namp_xml_output))
+    logging.info('\n',json.dumps(namp_xml_output))
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
    
     discovered_devices: dict = {}

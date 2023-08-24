@@ -3,6 +3,7 @@ Module for the security scanner class
 """
 from contextlib import contextmanager
 from datetime import datetime
+from dataclasses import dataclass
 import signal
 import json
 import logging
@@ -45,10 +46,19 @@ def raise_timeout(signum, frame):
     raise TimeoutError(signum, frame)
 
 
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+@dataclass
+class VulnerabilitiesInfo:
+    product: str
+    vulnerability_id: str
+    score: float | None = None
+
+
 class Security:
     """ Security wrapper class """
     def __init__(self, config: SecurityConfig):
-        self.logger: logging.Logger = logging.getLogger(__name__)
 
         self.config: SecurityConfig = config
 
@@ -102,12 +112,12 @@ class Security:
         :return: nuvla endpoint and nuvla endpoint insecure boolean
         """
         with timeout(cte.TIMEOUT_WAIT_TIME):
-            self.logger.info('Waiting for NuvlaEdge to bootstrap')
+            logger.info('Waiting for NuvlaEdge to bootstrap')
             while not os.path.exists(cte.APIKEY_FILE):
                 time.sleep(5)
 
-            self.logger.info('Waiting and searching for Nuvla connection parameters '
-                             'after NuvlaEdge activation')
+            logger.info('Waiting and searching for Nuvla connection parameters '
+                        'after NuvlaEdge activation')
 
             while not os.path.exists(FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION):
                 time.sleep(5)
@@ -124,28 +134,29 @@ class Security:
                 except IndexError:
                     pass
 
-    def execute_cmd(self, command: list[str]) -> dict | CompletedProcess | None:
+    @staticmethod
+    def execute_cmd(command: list[str]) -> dict | CompletedProcess | None:
         """ Shell wrapper to execute a command
 
         @param command: command to execute
         @return: all outputs
         """
-        self.logger.info(f'Executing command {" ".join(command)}')
+        logger.info(f'Executing command {" ".join(command)}')
         try:
             return run(command, stdout=PIPE, stderr=STDOUT, encoding='UTF-8',
                        check=True)
 
         except OSError as ex:
-            self.logger.error(f"Trying to execute non existent file: {ex}")
+            logger.error(f"Trying to execute non existent file: {ex}")
 
         except ValueError as ex:
-            self.logger.error(f"Invalid arguments executed: {ex}")
+            logger.error(f"Invalid arguments executed: {ex}")
 
         except TimeoutExpired as ex:
-            self.logger.error(f"Timeout {ex} expired waiting for command: {command}")
+            logger.error(f"Timeout {ex} expired waiting for command: {command}")
 
         except SubprocessError as ex:
-            self.logger.error(f"Exception not identified: {ex}")
+            logger.error(f"Exception not identified: {ex}")
 
         return None
 
@@ -178,7 +189,7 @@ class Security:
             self.execute_cmd(split_command)
 
         except CalledProcessError:
-            self.logger.exception('External database update process returned an error')
+            logger.exception('External database update process returned an error')
 
         else:
 
@@ -223,7 +234,7 @@ class Security:
         vulnerabilities database
 
         """
-        self.logger.info('Retrieving previously updated db date')
+        logger.info('Retrieving previously updated db date')
         if os.path.exists(cte.EXTERNAL_DB_UPDATE_FILE):
             with open(cte.EXTERNAL_DB_UPDATE_FILE, 'r', encoding="utf-8") \
                     as date_file:
@@ -249,76 +260,148 @@ class Security:
         self.api.logout()
 
         if not nuvla_vul_db:
-            self.logger.warning(f'Nuvla endpoint {self.nuvla_endpoint} does not '
+            logger.warning(f'Nuvla endpoint {self.nuvla_endpoint} does not '
                                 f'contain any vulnerability')
             return
 
         temp_db_last_update = nuvla_vul_db[0].data.get('updated')
 
-        self.logger.info(f"Nuvla's vulnerability DB was last updated on "
+        logger.info(f"Nuvla's vulnerability DB was last updated on "
                          f"{temp_db_last_update}")
 
         if self.local_db_last_update and \
                 temp_db_last_update < self.local_db_last_update:
-            self.logger.info('Database recently updated')
+            logger.info('Database recently updated')
             return
 
-        self.logger.info(f"Fetching and extracting {self.config.external_vulnerabilities_db}")
+        logger.info(f"Fetching and extracting {self.config.external_vulnerabilities_db}")
         self.get_external_db_as_csv()
 
+    @staticmethod
+    def extract_product_info(service: dict) -> str:
+        prod = f'{service.get("product", "")} {service.get("version", "")}'
+
+        if prod != ' ':
+            return prod
+        else:
+            logger.warning('Cannot extract product info')
+            return ''
+
+    @staticmethod
+    def clean_output_attribute(output: str) -> list[str]:
+        """
+
+        Args:
+            output: Raw output of the nmap for a given por vulnerabilities
+
+        Returns: a list of raw vulnerabilities found
+
+        """
+        out = re.sub('cve.*.csv.*:\n', '', output).replace(' |nb| \n\n', '')
+        return out.split(' |nb| ')
+
+    @staticmethod
+    def extract_vulnerability_id(attributes: list[str]) -> str | None:
+        try:
+            return attributes[0]
+        except IndexError:
+            logger.error(f'Failed to extract vulnerability ID from'
+                         f' {attributes}')
+            return None
+
+    @staticmethod
+    def extract_vulnerability_score(attributes: list[str]) -> float | None:
+        str_score = ''
+        try:
+            str_score = attributes[2]
+            return float(str_score)
+        except IndexError:
+            logger.warning(f'Score not found in {attributes}')
+
+        except ValueError:
+            logger.warning(f'Found score {str_score} not in proper format')
+
+    @staticmethod
+    def get_attributes_from_element(element: ElementTree.Element, name: str) -> dict:
+        try:
+            return element.find(name).attrib
+        except AttributeError:
+            logger.warning(f'Attributes not found for name {name}')
+            return {}
+
+    def extract_basic_info_from_xml_port(self, port: ElementTree.Element) \
+            -> list[VulnerabilitiesInfo] | None:
+        """
+
+        Args:
+            port:
+
+        Returns:
+
+        """
+        logger.debug('Extraction product info')
+        product = self.extract_product_info(
+            self.get_attributes_from_element(port, 'service')
+        )
+
+        logger.debug('Extracting output info')
+        script = self.get_attributes_from_element(port, 'script')
+
+        if not product or not script.get('output'):
+            return None
+
+        vulnerabilities = self.clean_output_attribute(script.get('output'))
+
+        logger.info('Extracting vulnerabilities id and score')
+        clean_vulns: list[VulnerabilitiesInfo] = []
+
+        for vuln in vulnerabilities:
+            vuln_attrs = vuln.split(' |,| ')
+            identifier = self.extract_vulnerability_id(vuln_attrs)
+            if identifier is None:
+                continue
+
+            score = self.extract_vulnerability_score(attributes=vuln_attrs)
+            clean_vulns.append(VulnerabilitiesInfo(product=product,
+                                                   vulnerability_id=identifier,
+                                                   score=score))
+
+        return clean_vulns
+
+    @staticmethod
+    def extract_ports_with_vulnerabilities(file: str = cte.VULSCAN_OUT_FILE) \
+            -> list[ElementTree.Element]:
+        """
+
+        """
+        if not os.path.exists(file):
+            logger.warning('')
+            return []
+        ports = ElementTree.parse(cte.VULSCAN_OUT_FILE).\
+            getroot().findall('host/ports/port')
+
+        if not ports:
+            # No ports extraction either means that no vulnerabilities have been
+            # found or something went wrong on the scan
+            logger.debug('No ports with vulnerabilities detected (or something '
+                         'went wrong on the scan')
+            return []
+
+        return ports
+    
     def parse_vulscan_xml(self):
         """ Parses the nmap output XML file and gives back the list of formatted
         vulnerabilities
 
         :return: list of CVE vulnerabilities
         """
-        if not os.path.exists(cte.VULSCAN_OUT_FILE):
-            return None
-
-        ports = ElementTree.parse(cte.VULSCAN_OUT_FILE).getroot().findall('host/ports/port')
+        ports = self.extract_ports_with_vulnerabilities()
 
         vulnerabilities = []
         for port in ports:
-
-            service_attrs = port.find('service').attrib
-
-            product: str = service_attrs.get('product', '')
-            product += f' {service_attrs.get("version", "")}'
-
-            script = port.find('script')
-            try:
-                output = script.attrib.get('output')
-
-            except AttributeError:
-                continue
-            if output and product:
-
-                output = re.sub('cve.*.csv.*:\n', '', output).replace(' |nb| \n\n', '')
-                vulnerabilities_found = output.split(' |nb| ')
-                self.logger.info(f"Parsing list of found vulnerabilities for {product}")
-                for vuln in vulnerabilities_found:
-                    vulnerability_info = {'product': product}
-                    vuln_attrs = vuln.split(' |,| ')
-                    self.logger.info(f'Parsing vulnerability: {product}')
-                    try:
-                        vulnerability_id, _ = vuln_attrs[0:2]
-                        score = vuln_attrs[-1]
-                    except (IndexError, ValueError) as ex:
-                        self.logger.error(
-                            f"Failed to parse vulnerability {vuln_attrs}: {str(ex)}")
-
-                        continue
-
-                    vulnerability_info['vulnerability-id'] = vulnerability_id
-                    if score:
-                        try:
-                            vulnerability_info['vulnerability-score'] = float(score)
-                        except ValueError:
-                            self.logger.exception(
-                                f"Vulnerability score ({score}) not in a proper "
-                                f"format. Score discarded...")
-
-                    vulnerabilities.append(vulnerability_info)
+            tmp_port = self.extract_basic_info_from_xml_port(port)
+            if tmp_port:
+                vulnerabilities = vulnerabilities + tmp_port
 
         return vulnerabilities
 
@@ -338,8 +421,8 @@ class Security:
         Returns:
 
         """
-        temp_vulnerabilities: list = []
-        self.logger.info(f'Running scan on DBs {self.vulscan_dbs}')
+        temp_vulnerabilities: list[VulnerabilitiesInfo] = []
+        logger.info(f'Running scan on DBs {self.vulscan_dbs}')
         for vulscan_db in self.vulscan_dbs:
             nmap_scan_cmd: list[str] = \
                 ['nice', '-n', '15',
@@ -352,16 +435,16 @@ class Security:
                  '-oX', cte.VULSCAN_OUT_FILE]
 
             # 1 - get CVE vulnerabilities
-            self.logger.info(f"Running nmap Vulscan: {nmap_scan_cmd}")
+            logger.info(f"Running nmap Vulscan: {nmap_scan_cmd}")
             cve_scan = self.run_cve_scan(nmap_scan_cmd)
 
             if cve_scan:
-                self.logger.info(f"Parsing nmap scan result from: "
+                logger.info(f"Parsing nmap scan result from: "
                                  f"{cte.VULSCAN_OUT_FILE}")
                 parsed_vulnerabilities = self.parse_vulscan_xml()
                 temp_vulnerabilities += parsed_vulnerabilities
 
-        self.logger.info(f'Found {len(temp_vulnerabilities)} vulnerabilities')
+        logger.info(f'Found {len(temp_vulnerabilities)} vulnerabilities')
         if temp_vulnerabilities:
             with open(FILE_NAMES.VULNERABILITIES_FILE, 'w', encoding='UTF-8') as file:
                 json.dump(temp_vulnerabilities, file)

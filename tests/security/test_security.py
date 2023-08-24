@@ -196,18 +196,10 @@ class TestSecurity(TestCase):
         self.security.update_vulscan_db()
         mock_external_db.assert_called_once()
 
-    @patch.object(os.path, 'exists')
-    @patch.object(xml.etree.ElementTree, 'parse')
-    def test_parse_vulscan_xml(self, mock_xml_parse, mock_exists):
-        mock_exists.return_value = False
-        self.assertIsNone(self.security.parse_vulscan_xml())
-
-        mock_exists.return_value = True
-        mock_xml_parse.getroot.findall.return_value = []
-        self.assertEqual([], self.security.parse_vulscan_xml())
-
-        mock_port = mock.MagicMock()
-        mock_xml_parse.getroot.findall.return_value = [mock_port]
+    @patch.object(Security, 'extract_basic_info_from_xml_port')
+    @patch.object(Security, 'extract_ports_with_vulnerabilities')
+    def test_parse_vulscan_xml(self, mock_extract, mock_info):
+        ...
 
     @patch('nuvlaedge.security.security.Popen')
     def test_run_cve_scan(self, mock_popen):

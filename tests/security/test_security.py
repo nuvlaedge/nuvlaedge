@@ -16,8 +16,7 @@ from nuvlaedge.security.security import (
     VulnerabilitiesInfo,
     Security,
     SecurityConfig,
-    timeout,
-    raise_timeout)
+    timeout, raise_timeout)
 from nuvlaedge.security.constants import (
     ONLINE_VULSCAN_DB_PREFIX,
     DATE_FORMAT)
@@ -25,14 +24,14 @@ from nuvlaedge.security.constants import (
 
 class TestSecurityUtils(TestCase):
     def test_timeout(self):
-        with self.assertRaises(TimeoutError):
-            with timeout(1):
-                time.sleep(1.1)
-
         with patch.object(signal, 'signal') as mock_signal:
             with timeout(1):
                 pass
             self.assertEqual(2, mock_signal.call_count)
+
+    def test_raise_timeout(self):
+        with self.assertRaises(TimeoutError):
+            raise_timeout('sig', 'frame')
 
 
 class TestSecurity(TestCase):

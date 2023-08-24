@@ -56,7 +56,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     :returns XML filename where to write the nmap output
     """
 
-    logger.info("Scanning open ports...")
+    logger.info(f"Scanning ModBus ports in address {host}")
 
     command = "nmap --script {} --script-args='modbus-discover.aggressive=true' -p- {} -T4 -oX {} > /dev/null"\
         .format(modbus_nse,
@@ -66,7 +66,6 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     os.system(command)
 
     return xml_file
-
 
 def parse_modbus_peripherals(namp_xml_output):
     """ Uses the output from the nmap port scan to find modbus
@@ -152,19 +151,22 @@ def manage_modbus_peripherals(ip_address):
     #    modbus.{port}.{interface}.{identifier}
 
     # Ask the NB agent for all modbus peripherals matching this pattern
-
+    logger.info(f'Starting modbus scan on {ip_address}')
     xml_file = scan_open_ports(ip_address)
     with open(xml_file) as ox:
         namp_xml_output = ox.read()
 
     all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
-
+    discovered_devices: dict = {}
     for per in all_modbus_devices:
         port = per.get("port", "nullport")
         interface = per.get("interface", "nullinterface")
         identifier = "modbus.{}.{}.{}".format(port, interface, per.get("identifier"))
         # Redefine the identifier
         per['identifier'] = identifier
+        discovered_devices[identifier] = per
+
+    return discovered_devices
 
 
 def main():

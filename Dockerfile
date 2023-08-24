@@ -290,6 +290,16 @@ RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/r
 RUN ln -s /app/my_init /usr/bin/my_init
 RUN ln -s $(which python3) /usr/bin/python3
 
+
+# ------------------------------------------------------------------------
+# Set up K8s credential manager
+# ------------------------------------------------------------------------
+COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
+RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh \
+    /usr/local/bin/kubernetes-credential-manager
+RUN chmod +x /usr/local/bin/kubernetes-credential-manager
+
+
 WORKDIR /opt/nuvlaedge/
 
 ENTRYPOINT ["my_init"]

@@ -14,7 +14,8 @@ def main():
     parse_arguments_and_initialize_logging('security')
     logger.info('Starting vulnerabilities scan module')
 
-    # If the configuration file is given as an env variable, use the default configuration. Overwritten by env variables
+    # If the configuration file is given as an env variable, use the default
+    # configuration. Overwritten by env variables
     config_file: str = os.getenv('SECURITY_CONFIG_FILE', '')
     if config_file:
         config: SecurityConfig = SecurityConfig.from_toml(Path(config_file))

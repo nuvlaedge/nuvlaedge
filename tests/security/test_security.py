@@ -6,16 +6,33 @@ from pathlib import Path
 from datetime import datetime
 import json
 import time
-
-import mock
-import nuvla
 from mock import patch, mock_open, Mock
+import signal
+
 import xml.etree.ElementTree
 
 import nuvlaedge.security.security
-from nuvlaedge.security.security import Security
-from nuvlaedge.security.settings import SecurityConfig
-from nuvlaedge.security.constants import ONLINE_VULSCAN_DB_PREFIX, DATE_FORMAT
+from nuvlaedge.security.security import (
+    VulnerabilitiesInfo,
+    Security,
+    SecurityConfig,
+    timeout,
+    raise_timeout)
+from nuvlaedge.security.constants import (
+    ONLINE_VULSCAN_DB_PREFIX,
+    DATE_FORMAT)
+
+
+class TestSecurityUtils(TestCase):
+    def test_timeout(self):
+        with self.assertRaises(TimeoutError):
+            with timeout(1):
+                time.sleep(1.1)
+
+        with patch.object(signal, 'signal') as mock_signal:
+            with timeout(1):
+                pass
+            self.assertEqual(2, mock_signal.call_count)
 
 
 class TestSecurity(TestCase):
@@ -30,6 +47,29 @@ class TestSecurity(TestCase):
 
         # Mock class
         self.security: Security = Security(self.config)
+
+    @patch.object(os, 'listdir')
+    @patch.object(Path, 'exists')
+    @patch.object(Path, 'mkdir')
+    @patch.object(Security, 'wait_for_nuvlaedge_ready')
+    def test_constructor(self, mock_wait, mock_mkdir, mock_exists, mock_listdir):
+        mock_exists.return_value = True
+        mock_wait.return_value = True
+        self.config = SecurityConfig(vulscan_db_dir='')
+        self.security = Security(self.config)
+        self.assertEqual([], self.security.offline_vulscan_db)
+        mock_listdir.assert_not_called()
+        mock_mkdir.assert_not_called()
+
+        mock_exists.return_value = False
+        self.config = SecurityConfig(vulscan_db_dir='VALUE')
+        mock_listdir.return_value = [ONLINE_VULSCAN_DB_PREFIX + 'DATA']
+        self.security = Security(self.config)
+        mock_mkdir.assert_called_once()
+        mock_listdir.assert_called_once()
+        self.assertEqual(
+            [ONLINE_VULSCAN_DB_PREFIX + 'DATA'],
+            self.security.offline_vulscan_db)
 
     @patch.object(os.path, 'exists')
     @patch('nuvlaedge.security.security.Api')
@@ -99,19 +139,28 @@ class TestSecurity(TestCase):
             mock_remove.assert_called_once()
 
     @patch('nuvlaedge.security.security.datetime')
-    def test_set_previous_external_db_update(self, mock_datetime):
-        date_mock = Mock()
-        date_mock.strftime.return_value = 'DATE'
-        mock_datetime.utcnow.return_value = date_mock
-        with patch.object(os.path, 'exists') as mock_exists, patch.object(os, 'mkdir') as mock_mkdir:
-            mock_exists.return_value = False
-            with patch("builtins.open", mock_open()) as mock_o:
-                self.security.set_previous_external_db_update()
-                mock_mkdir.assert_called_once()
+    @patch.object(os.path, 'exists')
+    @patch.object(os, 'mkdir')
+    def test_set_previous_external_db_update(
+            self,
+            mock_mkdir,
+            mock_exists,
+            mock_datetime):
 
-        with patch.object(os.path, 'exists') as mock_exists, patch.object(os, 'mkdir') as mock_mkdir:
-            mock_exists.return_value = True
+        mock_date = Mock()
+        mock_date.strftime.return_value = None
+        mock_datetime.utcnow.return_value = mock_date
+        mock_exists.return_value = True
+        mock_mkdir.return_value = None
+        with patch("builtins.open", mock_open()) as mock_file:
+            self.security.set_previous_external_db_update()
             mock_mkdir.assert_not_called()
+
+        mock_exists.return_value = False
+        mock_mkdir.return_value = None
+        with patch("builtins.open", mock_open()) as mock_file:
+            self.security.set_previous_external_db_update()
+            mock_mkdir.assert_called_once()
 
     @patch.object(logging, 'error')
     def test_execute_cmd(self, mock_log):
@@ -140,7 +189,6 @@ class TestSecurity(TestCase):
         with patch('nuvlaedge.security.security.run') as mock_run:
             mock_run.side_effect = subprocess.SubprocessError('ERR')
             self.assertIsNone(self.security.execute_cmd(['some']))
-
 
     @patch.object(os, 'listdir')
     def test_gather_external_db_file_names(self, mock_listdir):
@@ -196,10 +244,135 @@ class TestSecurity(TestCase):
         self.security.update_vulscan_db()
         mock_external_db.assert_called_once()
 
+    def test_extract_product_info(self):
+        mock_service = {}
+        self.assertFalse(self.security.extract_product_info(mock_service))
+
+        mock_service = {
+            'product': 'OPEN',
+            'version': '2'
+        }
+        self.assertEqual('OPEN 2', self.security.extract_product_info(mock_service))
+
+        mock_service = {
+            'product': 'OPEN'
+        }
+        self.assertEqual('OPEN ', self.security.extract_product_info(mock_service))
+
+    def test_clean_output_attribute(self):
+        sample_input = ''
+        self.assertEqual([''], self.security.clean_output_attribute(sample_input))
+
+        sample_input = 'cve_online.csv.9:\nCVE-2019-16905 |nb| MORETRUEINFO'
+        self.assertEqual(['CVE-2019-16905', 'MORETRUEINFO'],
+                         self.security.clean_output_attribute(sample_input))
+
+    def test_extract_vulnerability_id(self):
+        sample_attrs = []
+        self.assertIsNone(self.security.extract_vulnerability_id(sample_attrs))
+
+        sample_attrs = ['ID', 'NOT_ID']
+        self.assertEqual('ID', self.security.extract_vulnerability_id(sample_attrs))
+
+    def test_extract_vulnerability_score(self):
+        sample_attrs = []
+        self.assertIsNone(self.security.extract_vulnerability_score(sample_attrs))
+
+        sample_attrs = ['a', 'b', 'NOTANUMBER']
+        self.assertIsNone(self.security.extract_vulnerability_score(sample_attrs))
+
+        sample_attrs = ['4.9']
+        self.assertIsNone(self.security.extract_vulnerability_score(sample_attrs))
+
+        sample_attrs = ['id', 'description', '4.9']
+        self.assertEqual(4.9, self.security.extract_vulnerability_score(sample_attrs))
+
+    def test_get_attributes_from_element(self):
+        mock_element = Mock()
+        name = 'name'
+        mock_attr = Mock()
+        mock_attr.attrib = {'key': 'value'}
+        mock_element.find.return_value = mock_attr
+        self.assertEqual({'key': 'value'},
+                         self.security.get_attributes_from_element(mock_element, name))
+        mock_element.find.assert_called_with(name)
+
+        mock_element.reset_mock()
+        mock_element.find.side_effect = AttributeError('ERROR')
+        self.assertEqual({},
+                         self.security.get_attributes_from_element(mock_element, name))
+
+    @patch.object(Security, 'get_attributes_from_element')
+    @patch.object(Security, 'clean_output_attribute')
+    @patch.object(Security, 'extract_vulnerability_id')
+    @patch.object(Security, 'extract_vulnerability_score')
+    @patch.object(Security, 'extract_product_info')
+    def test_extract_basic_info_from_xml_port(
+            self,
+            mock_info,
+            mock_score,
+            mock_id,
+            mock_clean,
+            mock_attrs):
+
+        # If no product and/or output get None
+        mock_attrs.return_value = None
+        mock_info.return_value = None
+        self.assertIsNone(self.security.extract_basic_info_from_xml_port(Mock()))
+        mock_attrs.reset_mock()
+
+        mock_script = Mock()
+        mock_info.return_value = 'PRODUCT'
+        mock_script.get.return_value = 'OUTPUT'
+        mock_attrs.side_effect = [None, mock_script]
+        mock_clean.return_value = ['1 |,| 2']
+        mock_id.return_value = None
+        self.assertEqual([], self.security.extract_basic_info_from_xml_port(Mock()))
+        mock_id.assert_called_with(['1', '2'])
+
+        mock_id.return_value = 'id'
+        mock_id.assert_called_with(['1', '2'])
+        mock_score.return_value = 7.9
+        mock_attrs.side_effect = [None, mock_script]
+        self.assertEqual(
+            [VulnerabilitiesInfo(
+                product='PRODUCT',
+                vulnerability_id='id',
+                score=7.9
+            )],
+            self.security.extract_basic_info_from_xml_port(Mock())
+        )
+        # mock_score.assert_called_with(['1', '2'])
+
+    @patch.object(xml.etree.ElementTree, 'parse')
+    @patch.object(os.path, 'exists')
+    def test_extract_ports_with_vulnerabilities(self, mock_exists, mock_parse):
+        mock_exists.return_value = False
+        self.assertEqual([], self.security.extract_ports_with_vulnerabilities())
+
+        mock_exists.return_value = True
+        mock_element = Mock()
+        mock_element.getroot.return_value.findall.return_value = []
+        mock_parse.return_value = mock_element
+        self.assertEqual([], self.security.extract_ports_with_vulnerabilities())
+
+        mock_element.reset_mock()
+        mock_element.getroot.return_value.findall.return_value = ['ELEMENT']
+        mock_parse.return_value = mock_element
+        self.assertEqual(['ELEMENT'], self.security.extract_ports_with_vulnerabilities())
+
     @patch.object(Security, 'extract_basic_info_from_xml_port')
     @patch.object(Security, 'extract_ports_with_vulnerabilities')
     def test_parse_vulscan_xml(self, mock_extract, mock_info):
-        ...
+        mock_extract.return_value = ['VULN']
+        mock_info.return_value = None
+
+        self.assertEqual([], self.security.parse_vulscan_xml())
+        mock_info.assert_called_with('VULN')
+
+        mock_info.reset_mock()
+        mock_info.return_value = ['PARSED']
+        self.assertEqual(['PARSED'], self.security.parse_vulscan_xml())
 
     @patch('nuvlaedge.security.security.Popen')
     def test_run_cve_scan(self, mock_popen):

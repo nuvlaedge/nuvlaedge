@@ -280,7 +280,6 @@ class Security:
     @staticmethod
     def extract_product_info(service: dict) -> str:
         prod = f'{service.get("product", "")} {service.get("version", "")}'
-
         if prod != ' ':
             return prod
         else:
@@ -317,9 +316,11 @@ class Security:
             return float(str_score)
         except IndexError:
             logger.warning(f'Score not found in {attributes}')
+            return None
 
         except ValueError:
             logger.warning(f'Found score {str_score} not in proper format')
+            return None
 
     @staticmethod
     def get_attributes_from_element(element: ElementTree.Element, name: str) -> dict:
@@ -358,6 +359,7 @@ class Security:
         for vuln in vulnerabilities:
             vuln_attrs = vuln.split(' |,| ')
             identifier = self.extract_vulnerability_id(vuln_attrs)
+
             if identifier is None:
                 continue
 

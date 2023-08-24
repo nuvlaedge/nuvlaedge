@@ -136,16 +136,16 @@ class Security:
                        check=True)
 
         except OSError as ex:
-            logging.error(f"Trying to execute non existent file: {ex}")
+            self.logger.error(f"Trying to execute non existent file: {ex}")
 
         except ValueError as ex:
-            logging.error(f"Invalid arguments executed: {ex}")
+            self.logger.error(f"Invalid arguments executed: {ex}")
 
         except TimeoutExpired as ex:
-            logging.error(f"Timeout {ex} expired waiting for command: {command}")
+            self.logger.error(f"Timeout {ex} expired waiting for command: {command}")
 
         except SubprocessError as ex:
-            logging.error(f"Exception not identified: {ex}")
+            self.logger.error(f"Exception not identified: {ex}")
 
         return None
 

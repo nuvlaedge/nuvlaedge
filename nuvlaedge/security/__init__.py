@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 import logging
 from pathlib import Path
@@ -23,16 +24,9 @@ def main():
         config = SecurityConfig()
 
     scanner: Security = Security(config)
+    scanner.db_needs_update()
 
     logger.info('Starting NuvlaEdge security scan')
-
-    if scanner.config.external_vulnerabilities_db and scanner.nuvla_endpoint and \
-            (datetime.utcnow() - scanner.previous_external_db_update).total_seconds() >\
-            scanner.config.external_db_update_interval:
-        logger.info('Checking for updates on the vulnerability DB')
-        scanner.update_vulscan_db()
-
-    logger.info('Running vulnerability scan')
     scanner.run_scan()
 
 

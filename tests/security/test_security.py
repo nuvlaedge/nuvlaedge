@@ -3,7 +3,7 @@ import subprocess
 import logging
 from unittest import TestCase
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import time
 from mock import patch, mock_open, Mock
@@ -17,6 +17,7 @@ from nuvlaedge.security.security import (
     Security,
     SecurityConfig,
     timeout, raise_timeout)
+from nuvlaedge.security import main
 from nuvlaedge.security.constants import (
     ONLINE_VULSCAN_DB_PREFIX,
     DATE_FORMAT)
@@ -32,6 +33,46 @@ class TestSecurityUtils(TestCase):
     def test_raise_timeout(self):
         with self.assertRaises(TimeoutError):
             raise_timeout('sig', 'frame')
+
+
+class TestSecurityMain(TestCase):
+
+    @patch.object(nuvlaedge.security, 'parse_arguments_and_initialize_logging')
+    @patch.object(Security, 'wait_for_nuvlaedge_ready')
+    @patch.object(Security, 'get_previous_external_db_update')
+    @patch.object(Path, 'mkdir')
+    @patch.object(os, 'listdir')
+    @patch.object(Security, 'run_scan')
+    @patch.object(Security, 'db_needs_update')
+    @patch.object(os, 'getenv')
+    def test_main(
+            self,
+            mock_getenv,
+            mock_needs_update,
+            mock_scan,
+            mock_listdir,
+            mock_mkdir,
+            mock_db_updated,
+            mock_wait,
+            mock_parser):
+        mock_getenv.return_value = None
+        with patch.object(SecurityConfig, 'from_toml') as mock_toml:
+            mock_toml.return_value = SecurityConfig()
+            main()
+            mock_scan.assert_called_once()
+            mock_needs_update.assert_called_once()
+            mock_toml.assert_not_called()
+
+        mock_getenv.return_value = 'file'
+        mock_scan.reset_mock()
+        mock_needs_update.reset_mock()
+        mock_db_updated.return_value = datetime(1970, 1, 1)
+        with patch.object(SecurityConfig, 'from_toml') as mock_toml:
+            mock_toml.return_value = SecurityConfig()
+            main()
+            mock_toml.assert_called_once()
+            mock_scan.assert_called_once()
+            mock_needs_update.assert_called_once()
 
 
 class TestSecurity(TestCase):
@@ -383,6 +424,22 @@ class TestSecurity(TestCase):
 
         process.communicate.return_value = (b'STD', b'Err')
         self.assertTrue(self.security.run_cve_scan(['ls']))
+
+    @patch.object(Security, 'update_vulscan_db')
+    def test_db_needs_update(self, mock_update):
+        self.security.nuvla_endpoint = None
+        self.security.db_needs_update()
+        mock_update.assert_not_called()
+
+        self.security.nuvla_endpoint = 'nuvla.io'
+        self.security.previous_external_db_update = datetime.now()
+        self.security.db_needs_update()
+        mock_update.assert_not_called()
+
+        self.security.nuvla_endpoint = 'nuvla.io'
+        self.security.previous_external_db_update = datetime(1970, 1, 1)
+        self.security.db_needs_update()
+        mock_update.assert_called_once()
 
     @patch.object(Security, 'run_cve_scan')
     @patch.object(Security, 'parse_vulscan_xml')

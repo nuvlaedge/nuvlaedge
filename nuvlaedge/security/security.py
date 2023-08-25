@@ -126,13 +126,10 @@ class Security:
         # get Nuvla's conf parameters
         with open(FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION, encoding='UTF-8') as nuvla_conf:
             for line in nuvla_conf.read().split():
-                try:
-                    if line and 'NUVLA_ENDPOINT=' in line:
-                        self.nuvla_endpoint = line.split('=')[-1]
-                    if line and 'NUVLA_ENDPOINT_INSECURE=' in line:
-                        self.nuvla_endpoint_insecure = bool(line.split('=')[-1])
-                except IndexError:
-                    pass
+                if line and 'NUVLA_ENDPOINT=' in line:
+                    self.nuvla_endpoint = line.split('=')[-1]
+                if line and 'NUVLA_ENDPOINT_INSECURE=' in line:
+                    self.nuvla_endpoint_insecure = bool(line.split('=')[-1])
 
     @staticmethod
     def execute_cmd(command: list[str]) -> dict | CompletedProcess | None:
@@ -267,7 +264,7 @@ class Security:
         temp_db_last_update = nuvla_vul_db[0].data.get('updated')
 
         logger.info(f"Nuvla's vulnerability DB was last updated on "
-                         f"{temp_db_last_update}")
+                    f"{temp_db_last_update}")
 
         if self.local_db_last_update and \
                 temp_db_last_update < self.local_db_last_update:
@@ -417,12 +414,29 @@ class Security:
                 return False
         return True
 
+    def db_needs_update(self):
+        """
+
+        Returns:
+
+        """
+        if not self.config.external_vulnerabilities_db or not self.nuvla_endpoint:
+            return
+        elapsed_time = \
+            (datetime.utcnow() - self.previous_external_db_update).total_seconds()
+        logger.debug(f'Elapsed time since last db update: {elapsed_time}')
+
+        if elapsed_time > self.config.external_db_update_interval:
+            logger.info('Checking for updates on the vulnerability DB')
+            self.update_vulscan_db()
+
     def run_scan(self):
         """
         Iterates the stored files and seeks vulnerabilities by calling the nmap command
         Returns:
 
         """
+
         temp_vulnerabilities: list[VulnerabilitiesInfo] = []
         logger.info(f'Running scan on DBs {self.vulscan_dbs}')
         for vulscan_db in self.vulscan_dbs:

@@ -31,4 +31,4 @@ class NuvlaConfig(BaseSettings):
             """
             Allow overwriting file defined settings with environmental variables
             """
-            return env_settings, init_settings, file_secret_settings
+            return env_settings, init_settings, file_secret_settings  # pragma: no cover

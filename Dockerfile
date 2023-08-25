@@ -237,6 +237,14 @@ RUN apk add --no-cache libusb-dev udev
 # ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
 
+# ------------------------------------------------------------------------
+# Required package for vulnerabilities discovery
+# ------------------------------------------------------------------------
+# nmap nmap-scripts coreutils curl
+RUN apk add --no-cache coreutils
+COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
+COPY --link nuvlaedge/security/security-entrypoint.sh /usr/local/bin/security-entrypoint.sh
+RUN chmod +x /usr/local/bin/security-entrypoint.sh
 
 # ------------------------------------------------------------------------
 # Setup Compute-API
@@ -267,7 +275,7 @@ RUN ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedg
 # Copy configuration files
 # ------------------------------------------------------------------------
 COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
-
+COPY --link conf/example/* /etc/nuvlaedge/
 
 # ------------------------------------------------------------------------
 # Set up Job engine

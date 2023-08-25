@@ -33,6 +33,8 @@ def initialize_logging(log_level: str = '', config_file: str = ''):
     if log_level:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.getLevelName(log_level))
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
+        logging.getLogger("requests").setLevel(logging.WARNING)
 
 
 def nuvlaedge_arg_parser(component_name: str, additional_arguments: callable = None) -> ArgumentParser:

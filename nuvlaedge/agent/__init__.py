@@ -57,6 +57,7 @@ def preflight_check(activator: Activate, exit_flag: bool, nb_updated_date: str,
     nuvlaedge_resource: dict = activator.get_nuvlaedge_info()
 
     if nuvlaedge_resource.get('state', '').startswith('DECOMMISSION'):
+        root_logger.info(f"Remote NuvlaEdge resource state {nuvlaedge_resource.get('state', '')}, exiting agent")
         exit_flag = False
 
     vpn_server_id = nuvlaedge_resource.get("vpn-server-id")

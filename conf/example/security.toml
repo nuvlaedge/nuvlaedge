@@ -1,0 +1,12 @@
+#[General]
+scan_interval=1800
+slice_size=2000
+
+#[Database]
+external_vulnerabilities_db='https://github.com/nuvla/vuln-db/blob/main/databases/all.aggregated.csv.gz?raw=true'
+external_db_update_interval=86400
+vulscan_db_dir=''
+
+#[k8s]
+kubernetes_service_host=''
+namespace='nuvlaedge'

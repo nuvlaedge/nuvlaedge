@@ -21,7 +21,7 @@ class TimedAction:
             logger.debug(f'Action {self.name} not ready, time remaining: '
                          f'{self.remaining_time}s')
             return
-        ret = self.action(name=self.name, *args, **kwargs)
+        ret = self.action(*args, **kwargs)
         self.remaining_time = self.period
         return ret
 

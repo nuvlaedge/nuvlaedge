@@ -10,7 +10,7 @@ import time
 
 from threading import Event, Thread
 
-from common.timed_actions import ActionHandler, TimedAction
+from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
 from nuvlaedge.common.thread_tracer import signal_usr1

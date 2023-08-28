@@ -116,7 +116,7 @@ def main():
                                      daemon=True)
             watchdog_thread.start()
 
-        main_agent.run_single_cycle(action_handler.next)
+        main_agent.run_single_cycle(action_handler.next.action)
 
         # -------------------------------------------------------------------------------
 

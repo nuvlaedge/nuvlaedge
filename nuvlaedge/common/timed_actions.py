@@ -69,7 +69,7 @@ class ActionHandler:
     def _update(self, elapsed_time: float):
         [e.update_action(elapsed_time) for e in self._actions]
 
-    def edit_period(self, action: TimedAction, new_period: int):
+    def edit_period(self, action_id: str, new_period: int):
         for e in self._actions:
-            if e.uuid == action.uuid:
+            if e.uuid == action_id or e.name == action_id:
                 e.period = new_period

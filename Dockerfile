@@ -243,8 +243,8 @@ RUN apk add --no-cache bluez-dev
 # nmap nmap-scripts coreutils curl
 RUN apk add --no-cache coreutils
 COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
-COPY --link nuvlaedge/security/security-entrypoint.sh /usr/local/bin/security-entrypoint.sh
-RUN chmod +x /usr/local/bin/security-entrypoint.sh
+COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoint
+RUN chmod +x /usr/bin/security-entrypoint
 
 # ------------------------------------------------------------------------
 # Setup Compute-API
@@ -296,8 +296,8 @@ RUN ln -s $(which python3) /usr/bin/python3
 # ------------------------------------------------------------------------
 COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
 RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh \
-    /usr/local/bin/kubernetes-credential-manager
-RUN chmod +x /usr/local/bin/kubernetes-credential-manager
+    /usr/bin/kubernetes-credential-manager
+RUN chmod +x /usr/bin/kubernetes-credential-manager
 
 
 WORKDIR /opt/nuvlaedge/

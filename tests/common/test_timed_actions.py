@@ -19,7 +19,8 @@ class TestTimedAction(TestCase):
 
     def test_update_action(self):
         self.action.remaining_time = 3
-        self.assertEqual(1, self.action.update_action(2))
+        self.action.update_action(2)
+        self.assertEqual(1, self.action.remaining_time)
 
     def test_call(self):
         self.action.remaining_time = 1
@@ -33,12 +34,13 @@ class TestTimedAction(TestCase):
         dummy_action = TimedAction(
             name='Dummy',
             period=4,
-            action=dummy_function
+            action=dummy_function,
+            remaining_time=5
         )
         self.assertFalse(self.action > dummy_action)
-        self.assertFalse(self.action < dummy_action)
+        self.assertTrue(self.action < dummy_action)
 
-        dummy_action.period = 2
+        self.action.remaining_time = 10
         self.assertTrue(self.action > dummy_action)
         self.assertFalse(self.action < dummy_action)
 

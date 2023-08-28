@@ -57,14 +57,14 @@ class TestAgent(TestCase):
 
     @patch(os_makedir)
     @patch(atomic_write)
-    def test_send_heartbeat(self, atomic_write_mock, os_makedir_mock):
+    def test_send_telemetry(self, atomic_write_mock, os_makedir_mock):
         self.test_agent._telemetry = Mock()
         tel_mock = Mock()
         tel_mock.diff.return_value = ({}, ['a'])
         tel_mock.status.get.return_value = ''
         self.test_agent._telemetry = tel_mock
         with patch('logging.Logger.warning') as mock_warn:
-            self.test_agent.send_heartbeat()
+            self.test_agent.send_telemetry()
         self.assertEqual(tel_mock.status.update.call_count, 1)
 
         tel_mock.status.update.reset_mock()
@@ -75,13 +75,13 @@ class TestAgent(TestCase):
         ret_mock.data = "ret"
         api_mock.edit.return_value = ret_mock
         self.test_agent._telemetry.api.return_value = api_mock
-        self.assertEqual(self.test_agent.send_heartbeat(), "ret")
+        self.assertEqual(self.test_agent.send_telemetry(), "ret")
         self.assertEqual(tel_mock.status.update.call_count, 1)
         self.assertEqual(api_mock.edit.call_count, 1)
 
         self.test_agent._telemetry.api.side_effect = OSError
         with self.assertRaises(OSError):
-            self.test_agent.send_heartbeat()
+            self.test_agent.send_telemetry()
 
     @patch('nuvlaedge.agent.agent.Job')
     @patch('nuvlaedge.agent.job.Job.launch')
@@ -119,7 +119,7 @@ class TestAgent(TestCase):
             self.test_agent.handle_pull_jobs({'jobs': 'PI'})
             mock_warn.assert_called_once()
 
-    @patch('nuvlaedge.agent.agent.Agent.send_heartbeat')
+    @patch('nuvlaedge.agent.agent.Agent.send_telemetry')
     @patch('nuvlaedge.agent.agent.Agent.handle_pull_jobs')
     @patch('threading.Thread.start')
     @patch('nuvlaedge.agent.agent.Infrastructure')

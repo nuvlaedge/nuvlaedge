@@ -20,7 +20,7 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.agent.activate.Activate')
     def setUp(self, activate_mock, ne_mock, atomic_write_mock, os_makedir_mock) -> None:
         os.environ['NUVLAEDGE_UUID'] = 'fake-uuid'
-        self.test_agent: Agent = Agent(True)
+        self.test_agent: Agent = Agent()
         self.test_agent._activate = activate_mock
 
     def tearDown(self):
@@ -127,6 +127,6 @@ class TestAgent(TestCase):
         self.test_agent.telemetry_thread = False
         self.test_agent._telemetry = Mock()
         self.test_agent._infrastructure = Mock()
-        self.test_agent.run_single_cycle()
+        self.test_agent.run_single_cycle(self.test_agent.send_telemetry)
         self.assertEqual(mock_start.call_count, 3)
         pull_mock.assert_called_once()

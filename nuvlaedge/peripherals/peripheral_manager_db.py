@@ -95,7 +95,8 @@ class PeripheralsDBManager:
             'per_identifier_1': {peripheral_data},
             'per_identifier_2': {peripheral_data_2}
         }
-        If any of the peripherals don't container the compulsory fields, ignores it and reports as a warning
+        If any of the peripherals don't container the compulsory fields, ignores it and
+         reports as a warning
         :param new_peripherals: Newly received peripherals
         :return: A dictionary rearranging new peripherals.
         """

@@ -101,7 +101,8 @@ class Infrastructure(NuvlaEdgeCommon):
                 client_key = file.read()
 
         except (FileNotFoundError, IndexError):
-            self.logger.warning("Container orchestration API TLS keys have not been set yet!")
+            self.logger.warning("Container orchestration API TLS keys have not been"
+                                " set yet!")
             return []
 
         return client_ca, client_cert, client_key
@@ -115,7 +116,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         if not payload:
             self.logger.debug("Tried commissioning with empty payload. Nothing "
-                                    "to do")
+                              "to do")
             return
 
         self.logger.info("Commissioning the NuvlaEdge...{}".format(payload))
@@ -279,7 +280,7 @@ class Infrastructure(NuvlaEdgeCommon):
                 vpn_key = key.read()
         except TimeoutError:
             self.logger.error(f'Unable to lookup {self.vpn_key_file} and '
-                                    f'{self.vpn_csr_file}')
+                              f'{self.vpn_csr_file}')
             return None, None
 
         return vpn_csr, vpn_key

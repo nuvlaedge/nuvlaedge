@@ -116,7 +116,9 @@ class Activate(NuvlaEdgeCommon):
         :return: current and old NuvlaEdge resources
         """
 
-        self.authenticate(self.api(), self.user_info["api-key"], self.user_info["secret-key"])
+        self.authenticate(self.api(),
+                          self.user_info["api-key"],
+                          self.user_info["secret-key"])
         nuvlaedge_resource = self.get_nuvlaedge_info()
 
         old_nuvlaedge_resource = self.create_nb_document_file(nuvlaedge_resource)

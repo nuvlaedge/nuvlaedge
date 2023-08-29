@@ -55,6 +55,21 @@ class TestAgent(TestCase):
         self.assertTrue(self.test_agent.initialize_agent())
         act_mock.assert_called_once()
 
+    def test_send_heartbeat(self):
+        tel_mock = Mock()
+        self.test_agent._telemetry = tel_mock
+        sample_data_return = {
+            'jobs': ['j1', 'j2']
+        }
+        api_mock = Mock()
+        response_mock = Mock()
+        response_mock.data = sample_data_return
+
+        api_mock.operation.return_value = response_mock
+        self.test_agent._telemetry.api.return_value = api_mock
+        self.assertEqual(sample_data_return, self.test_agent.send_heartbeat())
+        api_mock.operation.assert_called_once_with('nuvlabox', 'heartbeat')
+
     @patch(os_makedir)
     @patch(atomic_write)
     def test_send_telemetry(self, atomic_write_mock, os_makedir_mock):

@@ -8,7 +8,7 @@ import os
 from copy import copy
 from threading import Event, Thread
 
-from nuvla.api.models import CimiResource
+from nuvla.api.models import CimiResource, CimiResponse
 from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
 from nuvlaedge.broker.file_broker import FileBroker
 
@@ -168,22 +168,17 @@ class Agent:
         self.activate_nuvlaedge()
         return True
 
-    def send_heartbeat(self) -> None:
+    def send_heartbeat(self) -> dict:
         """
 
         Returns: None
 
         """
-        # 1. Gather heartbeat
-        self.telemetry.api().operation('nuvlabox', 'heartbeat',)
-
-    def get_telemetry_data(self):
-        """
-
-        Returns:
-
-        """
-        ...
+        # 1. Send heartbeat
+        response: CimiResponse = self.telemetry.api().operation('nuvlabox', 'heartbeat')
+        self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
+                         f'heartbeat response')
+        return response.data
 
     def send_telemetry(self) -> dict:
         """

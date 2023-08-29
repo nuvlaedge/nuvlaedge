@@ -58,6 +58,7 @@ class Agent:
 
         self.heartbeat_period: int = 20
         self.telemetry_period: int = 60
+        self.nuvlabox_resource: CimiResource | None = None
 
     @property
     def peripheral_manager(self) -> PeripheralManager:
@@ -176,9 +177,13 @@ class Agent:
         Returns: None
 
         """
+        # Get the nuvlabox resource only once and reuse it to send the heartbeat operation
+        if self.nuvlabox_resource is None:
+            self.nuvlabox_resource = self.telemetry.api().get(self.telemetry.nuvlaedge_id)
+
         # 1. Send heartbeat
         response: CimiResponse = self.telemetry.api().operation(
-            self.telemetry.api().get(self.telemetry.nuvlaedge_id),
+            self.nuvlabox_resource,
             'heartbeat')
         self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
                          f'heartbeat response')

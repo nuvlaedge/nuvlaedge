@@ -89,11 +89,11 @@ def main():
     nuvlaedge_info_updated_date: str = ''
 
     action_handler: ActionHandler = ActionHandler([
-        # TimedAction(
-        #     name='heartbeat',
-        #     period=15,
-        #     action=main_agent.send_heartbeat
-        # ),
+        TimedAction(
+            name='heartbeat',
+            period=15,
+            action=main_agent.send_heartbeat
+        ),
         TimedAction(
             name='telemetry',
             period=60,
@@ -123,8 +123,8 @@ def main():
         # Account cycle time
         cycle_duration = time.time() - start_cycle
         next_cycle_in = action_handler.sleep_time()
-        root_logger.debug(f'End of cycle. Cycle duration: {cycle_duration} sec. Next '
-                          f'cycle in {next_cycle_in} sec.')
+        root_logger.info(f'End of cycle. Cycle duration: {cycle_duration} sec. Next '
+                         f'cycle in {next_cycle_in} sec.')
 
         main_event.wait(timeout=next_cycle_in)
 

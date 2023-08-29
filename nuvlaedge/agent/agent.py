@@ -9,6 +9,8 @@ from copy import copy
 from threading import Event, Thread
 
 from nuvla.api.models import CimiResource, CimiResponse
+
+from nuvlaedge.common.timed_actions import TimedAction
 from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
 from nuvlaedge.broker.file_broker import FileBroker
 
@@ -280,7 +282,7 @@ class Agent:
         else:
             self.logger.debug('No pull jobs to run')
 
-    def run_single_cycle(self, action: callable):
+    def run_single_cycle(self, action: TimedAction):
         """
         Controls the main functionalities of the agent:
             1. Sending heartbeat

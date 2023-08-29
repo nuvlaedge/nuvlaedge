@@ -67,6 +67,7 @@ class TestAgent(TestCase):
 
         api_mock.operation.return_value = response_mock
         self.test_agent._telemetry.api.return_value = api_mock
+        api_mock.get.return_value = 'nuvlabox'
         self.assertEqual(sample_data_return, self.test_agent.send_heartbeat())
         api_mock.operation.assert_called_once_with('nuvlabox', 'heartbeat')
 

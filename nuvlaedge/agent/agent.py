@@ -175,7 +175,9 @@ class Agent:
 
         """
         # 1. Send heartbeat
-        response: CimiResponse = self.telemetry.api().operation('nuvlabox', 'heartbeat')
+        response: CimiResponse = self.telemetry.api().operation(
+            self.telemetry.api().get(self.telemetry.nuvlaedge_id),
+            'heartbeat')
         self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
                          f'heartbeat response')
         return response.data

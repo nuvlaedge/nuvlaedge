@@ -59,8 +59,8 @@ def preflight_check(
         action_handler.edit_period('telemetry', refresh_interval)
         action_handler.edit_period('heartbeat', heartbeat_interval)
 
-        root_logger.info(f'NuvlaEdge resource updated. Refresh interval value: '
-                         f'{refresh_interval}')
+        root_logger.info(f'Telemetry period value: {refresh_interval}')
+        root_logger.info(f'Heartbeat period value: {heartbeat_interval}')
 
         old_nuvlaedge_resource = activator.create_nb_document_file(nuvlaedge_resource)
 

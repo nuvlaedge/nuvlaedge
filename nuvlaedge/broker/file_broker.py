@@ -8,7 +8,7 @@ import filelock
 
 from nuvlaedge.models.messages import NuvlaEdgeMessage
 from nuvlaedge.broker import NuvlaEdgeBroker
-from nuvlaedge.common.constants import DATETIME_FORMAT
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 
@@ -33,11 +33,11 @@ class FileBroker(NuvlaEdgeBroker):
         file_name = file_name.replace('.json', '')
         message: list = file_name.split('_')
 
-        return datetime.strptime(message[0], DATETIME_FORMAT), message[1]
+        return datetime.strptime(message[0], CTE.DATETIME_FORMAT), message[1]
 
     @staticmethod
     def compose_file_name(sender):
-        str_now = datetime.now().strftime(DATETIME_FORMAT)
+        str_now = datetime.now().strftime(CTE.DATETIME_FORMAT)
         file_name = f'{str_now}_{sender}.json'
         return file_name
 

@@ -12,14 +12,14 @@ from threading import Event, Thread
 
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
 from nuvlaedge.common.thread_tracer import signal_usr1
 
-# Nuvlaedge globals
-network_timeout: int = 10
-refresh_interval: int = 30
 
 root_logger: logging.Logger = logging.getLogger()
+
+action_handler: ActionHandler = ActionHandler([])
 
 
 def preflight_check(
@@ -39,7 +39,7 @@ def preflight_check(
     Returns:
 
     """
-    global refresh_interval
+
 
     nuvlaedge_resource: dict = activator.get_nuvlaedge_info()
 
@@ -51,7 +51,14 @@ def preflight_check(
     vpn_server_id = nuvlaedge_resource.get("vpn-server-id")
 
     if nb_updated_date != nuvlaedge_resource['updated'] and not exit_event.is_set():
-        refresh_interval = nuvlaedge_resource['refresh-interval']
+        # Update refreshing intervals
+        refresh_interval = nuvlaedge_resource.get('refresh-interval',
+                                                  CTE.REFRESH_INTERVAL)
+        heartbeat_interval = nuvlaedge_resource.get('heartbeat_interval',
+                                                    CTE.HEARTBEAT_INTERVAL)
+        action_handler.edit_period('telemetry', refresh_interval)
+        action_handler.edit_period('heartbeat', heartbeat_interval)
+
         root_logger.info(f'NuvlaEdge resource updated. Refresh interval value: '
                          f'{refresh_interval}')
 
@@ -78,7 +85,7 @@ def main():
     """
     signal.signal(signal.SIGUSR1, signal_usr1)
 
-    socket.setdefaulttimeout(network_timeout)
+    socket.setdefaulttimeout(CTE.network_timeout)
 
     main_event: Event = Event()
 
@@ -88,18 +95,18 @@ def main():
     watchdog_thread: Thread | None = None
     nuvlaedge_info_updated_date: str = ''
 
-    action_handler: ActionHandler = ActionHandler([
+    action_handler.add(
         TimedAction(
             name='heartbeat',
-            period=15,
+            period=CTE.HEARTBEAT_INTERVAL,
             action=main_agent.send_heartbeat
-        ),
+        ))
+    action_handler.add(
         TimedAction(
             name='telemetry',
-            period=60,
+            period=CTE.REFRESH_INTERVAL,
             action=main_agent.send_telemetry
-        )
-    ])
+        ))
 
     while not main_event.is_set():
         # Time Start

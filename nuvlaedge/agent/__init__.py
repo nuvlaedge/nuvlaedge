@@ -85,7 +85,7 @@ def main():
     """
     signal.signal(signal.SIGUSR1, signal_usr1)
 
-    socket.setdefaulttimeout(CTE.network_timeout)
+    socket.setdefaulttimeout(CTE.NETWORK_TIMEOUT)
 
     main_event: Event = Event()
 

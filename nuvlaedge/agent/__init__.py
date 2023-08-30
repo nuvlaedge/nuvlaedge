@@ -54,7 +54,7 @@ def preflight_check(
         # Update refreshing intervals
         refresh_interval = nuvlaedge_resource.get('refresh-interval',
                                                   CTE.REFRESH_INTERVAL)
-        heartbeat_interval = nuvlaedge_resource.get('heartbeat_interval',
+        heartbeat_interval = nuvlaedge_resource.get('heartbeat-interval',
                                                     CTE.HEARTBEAT_INTERVAL)
         action_handler.edit_period('telemetry', refresh_interval)
         action_handler.edit_period('heartbeat', heartbeat_interval)

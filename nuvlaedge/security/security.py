@@ -3,7 +3,7 @@ Module for the security scanner class
 """
 from contextlib import contextmanager
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import signal
 import json
 import logging
@@ -463,4 +463,4 @@ class Security:
         logger.info(f'Found {len(temp_vulnerabilities)} vulnerabilities')
         if temp_vulnerabilities:
             with open(FILE_NAMES.VULNERABILITIES_FILE, 'w', encoding='UTF-8') as file:
-                json.dump(temp_vulnerabilities, file)
+                json.dump([asdict(t) for t in temp_vulnerabilities], file)

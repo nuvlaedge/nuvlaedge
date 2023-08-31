@@ -1,6 +1,7 @@
 import os
 import subprocess
 import logging
+import dataclasses
 from unittest import TestCase
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -443,7 +444,8 @@ class TestSecurity(TestCase):
 
     @patch.object(Security, 'run_cve_scan')
     @patch.object(Security, 'parse_vulscan_xml')
-    def test_run_scan(self, mock_parser, mock_run_cve):
+    @patch.object(dataclasses, 'asdict')
+    def test_run_scan(self, mock_asdict, mock_parser, mock_run_cve):
 
         self.security.vulscan_dbs = ['database']
         mock_run_cve.return_value = None

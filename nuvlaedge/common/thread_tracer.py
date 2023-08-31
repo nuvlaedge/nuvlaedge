@@ -1,10 +1,10 @@
+import sys
+import threading
+import traceback
+import faulthandler
 
 
 def log_threads_stacks_traces():
-    import sys
-    import threading
-    import traceback
-    import faulthandler
     print_args = dict(file=sys.stderr, flush=True)
     print("\nfaulthandler.dump_traceback()", **print_args)
     faulthandler.dump_traceback()

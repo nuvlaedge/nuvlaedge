@@ -56,8 +56,6 @@ class Agent:
         self.telemetry_thread = None
         self.peripherals_thread = None
 
-        self.heartbeat_period: int = 20
-        self.telemetry_period: int = 60
         self.nuvlabox_resource: CimiResource | None = None
 
     @property
@@ -178,7 +176,7 @@ class Agent:
 
         """
         # Get the nuvlabox resource only once and reuse it to send the heartbeat operation
-        if self.nuvlabox_resource is None:
+        if not self.nuvlabox_resource:
             self.nuvlabox_resource = self.telemetry.api().get(self.telemetry.nuvlaedge_id)
 
         # 1. Send heartbeat
@@ -233,7 +231,7 @@ class Agent:
 
             self.telemetry.status_on_nuvla.update(status)
 
-        except:
+        except Exception:
             self.logger.error("Unable to update NuvlaEdge status in Nuvla")
             raise
 

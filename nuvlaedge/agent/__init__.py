@@ -40,7 +40,6 @@ def preflight_check(
 
     """
 
-
     nuvlaedge_resource: dict = activator.get_nuvlaedge_info()
 
     if nuvlaedge_resource.get('state', '').startswith('DECOMMISSION'):
@@ -74,6 +73,25 @@ def preflight_check(
         infra.watch_vpn_credential(vpn_server_id)
 
 
+def sync_nuvla_resources():
+    ...
+
+
+def initialize_actions(main_agent: Agent):
+    action_handler.add(
+        TimedAction(
+            name='heartbeat',
+            period=CTE.HEARTBEAT_INTERVAL,
+            action=main_agent.send_heartbeat
+        ))
+    action_handler.add(
+        TimedAction(
+            name='telemetry',
+            period=CTE.REFRESH_INTERVAL,
+            action=main_agent.send_telemetry
+        ))
+
+
 def main():
     """
     Initialize the main agent class. This class will also initialize submodules:
@@ -94,19 +112,6 @@ def main():
 
     watchdog_thread: Thread | None = None
     nuvlaedge_info_updated_date: str = ''
-
-    action_handler.add(
-        TimedAction(
-            name='heartbeat',
-            period=CTE.HEARTBEAT_INTERVAL,
-            action=main_agent.send_heartbeat
-        ))
-    action_handler.add(
-        TimedAction(
-            name='telemetry',
-            period=CTE.REFRESH_INTERVAL,
-            action=main_agent.send_telemetry
-        ))
 
     while not main_event.is_set():
         # Time Start

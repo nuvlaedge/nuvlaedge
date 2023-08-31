@@ -379,7 +379,7 @@ class TestSecurity(TestCase):
             [VulnerabilitiesInfo(
                 product='PRODUCT',
                 vulnerability_id='id',
-                score=7.9
+                vulnerability_score=7.9
             )],
             self.security.extract_basic_info_from_xml_port(Mock())
         )

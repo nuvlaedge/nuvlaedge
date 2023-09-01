@@ -444,8 +444,7 @@ class TestSecurity(TestCase):
 
     @patch.object(Security, 'run_cve_scan')
     @patch.object(Security, 'parse_vulscan_xml')
-    @patch.object(dataclasses, 'asdict')
-    def test_run_scan(self, mock_asdict, mock_parser, mock_run_cve):
+    def test_run_scan(self, mock_parser, mock_run_cve):
 
         self.security.vulscan_dbs = ['database']
         mock_run_cve.return_value = None
@@ -453,7 +452,8 @@ class TestSecurity(TestCase):
         mock_parser.assert_not_called()
 
         mock_run_cve.return_value = 'Scan'
-        with patch("builtins.open", mock_open()) as mock_file, patch.object(json, 'dump') as mock_dump:
+        with patch("builtins.open", mock_open()) as mock_file, \
+                patch.object(json, 'dump') as mock_dump:
             self.security.run_scan()
             mock_parser.assert_called_once()
             mock_dump.assert_called_once()

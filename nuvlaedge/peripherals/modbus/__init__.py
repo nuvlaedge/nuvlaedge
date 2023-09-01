@@ -192,8 +192,8 @@ def parse_modbus_peripherals_new(nmap_xml_file):
 
     :returns List of modbus devices"""
 
-    namp_odict = xmltodict.parse(namp_xml_output, process_namespaces=True)
-    
+    namp_odict = xmltodict.parse(nmap_xml_output, process_namespaces=True)
+
     ports = ElementTree.parse(nmap_xml_file).getroot().findall('host/ports/port')
 
     modbus = []
@@ -265,11 +265,11 @@ def manage_modbus_peripherals(ip_address):
     logger.info(f'Starting modbus scan on {ip_address}')
     xml_file = scan_open_ports(ip_address)
     with open(xml_file) as ox:
-        namp_xml_output = ox.read()
+        nmap_xml_output = ox.read()
 
-    all_modbus_devices = parse_modbus_peripherals_new(xml_file)
+    ## all_modbus_devices = parse_modbus_peripherals_new(xml_file)
 
-    all_modbus_devices = parse_modbus_peripherals(namp_xml_output)
+    all_modbus_devices = parse_modbus_peripherals(nmap_xml_output)
    
     discovered_devices: dict = {}
     for per in all_modbus_devices:

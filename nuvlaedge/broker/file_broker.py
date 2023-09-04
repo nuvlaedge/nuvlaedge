@@ -28,7 +28,8 @@ class FileBroker(NuvlaEdgeBroker):
 
     def decode_message_from_file_name(self, file_name):
         if not re.match(self.FILE_PATTERN, file_name):
-            raise MessageFormatError(f'Filename {file_name} not following the message pattern {self.FILE_PATTERN}')
+            raise MessageFormatError(f'Filename {file_name} not following the message '
+                                     f'pattern {self.FILE_PATTERN}')
 
         file_name = file_name.replace('.json', '')
         message: list = file_name.split('_')

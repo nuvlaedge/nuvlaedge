@@ -2,7 +2,6 @@
 Main entrypoint script for the agent component in the NuvlaEdge engine
 Controls all the functionalities of the Agent
 """
-from dataclasses import dataclass
 import logging.config
 import signal
 import socket

@@ -3,7 +3,6 @@ Module for the security scanner class
 """
 from contextlib import contextmanager
 from datetime import datetime
-from dataclasses import dataclass
 import signal
 import json
 import logging
@@ -24,6 +23,7 @@ from subprocess import (run,
 from xml.etree import ElementTree
 from nuvla.api import Api
 
+from nuvlaedge.models import NuvlaEdgeBaseModel
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.security.settings import SecurityConfig
 import nuvlaedge.security.constants as cte
@@ -49,11 +49,10 @@ def raise_timeout(signum, frame):
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-@dataclass
-class VulnerabilitiesInfo:
+class VulnerabilitiesInfo(NuvlaEdgeBaseModel):
     product: str
     vulnerability_id: str
-    score: float | None = None
+    vulnerability_score: float | None = None
 
 
 class Security:
@@ -363,7 +362,7 @@ class Security:
             score = self.extract_vulnerability_score(attributes=vuln_attrs)
             clean_vulns.append(VulnerabilitiesInfo(product=product,
                                                    vulnerability_id=identifier,
-                                                   score=score))
+                                                   vulnerability_score=score))
 
         return clean_vulns
 
@@ -463,4 +462,7 @@ class Security:
         logger.info(f'Found {len(temp_vulnerabilities)} vulnerabilities')
         if temp_vulnerabilities:
             with open(FILE_NAMES.VULNERABILITIES_FILE, 'w', encoding='UTF-8') as file:
-                json.dump(temp_vulnerabilities, file)
+                json.dump(
+                    [t.dict(by_alias=True, exclude_none=True)
+                     for t in temp_vulnerabilities],
+                    file)

@@ -270,7 +270,7 @@ COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agen
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-RUN apk add --no-cache gettext docker-cli
+RUN apk add --no-cache gettext docker-cli docker-cli-compose
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
 COPY --link --from=job-lite /app/* /app/

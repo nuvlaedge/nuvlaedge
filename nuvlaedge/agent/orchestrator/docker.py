@@ -285,7 +285,7 @@ class DockerClient(COEClient):
             command += ' --api-insecure'
 
         environment = {k: v for k, v in os.environ.items()
-                       if k.startswith('NE_IMAGE_') or k.startswith('NE_JOB_')}
+                       if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
 
         logger.info(f'Starting job "{job_id}" with docker image "{image}" and command: "{command}"')
 

@@ -6,7 +6,7 @@ ARG GOLANG_VERSION="1.20.4"
 ARG PYTHON_CRYPTOGRAPHY_VERSION="40.0.2"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
-ARG JOB_LITE_VERSION="3.4.2"
+ARG JOB_LITE_VERSION="3.6.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -139,8 +139,6 @@ COPY --link --from=network-builder        ${PYTHON_LOCAL_SITE_PACKAGES}       ${
 COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
-
-RUN pip install --no-build-isolation docker-compose
 
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
@@ -280,7 +278,7 @@ COPY --link conf/example/* /etc/nuvlaedge/
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-RUN apk add --no-cache gettext docker-cli
+RUN apk add --no-cache gettext docker-cli docker-cli-compose
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
 COPY --link --from=job-lite /app/* /app/

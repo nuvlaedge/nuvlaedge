@@ -102,7 +102,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
 
     return xml_file
 
-def parse_modbus_peripherals(namp_xml_output):
+def parse_modbus_peripherals(nmap_xml_output):
     """ Uses the output from the nmap port scan to find modbus
     services.
     Plain output example:
@@ -118,7 +118,7 @@ def parse_modbus_peripherals(namp_xml_output):
 
     :returns List of modbus devices"""
 
-    namp_odict = xmltodict.parse(namp_xml_output, process_namespaces=True)
+    namp_odict = xmltodict.parse(nmap_xml_output, process_namespaces=True)
 
     modbus = []
     try:
@@ -205,6 +205,8 @@ def parse_modbus_peripherals_new(nmap_xml_file):
     except Exception as e:
         logger.exception("Unknown error while processing ports scan", e)
         return modbus
+    
+    logger.info("The ordered dictionary is:\n %s",xmltodict.unparse(all_ports, full_document=False, pretty=True))
 
     for port in all_ports:
         logger.info('Port is: %s',port)

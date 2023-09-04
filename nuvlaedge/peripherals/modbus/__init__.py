@@ -120,6 +120,8 @@ def parse_modbus_peripherals(nmap_xml_output):
 
     namp_odict = xmltodict.parse(nmap_xml_output, process_namespaces=True)
 
+    logger.info("The ordered dictionary is:\n %s",xmltodict.unparse(all_ports, full_document=False, pretty=True))
+
     modbus = []
     try:
         all_ports = namp_odict['nmaprun']['host']['ports']['port']

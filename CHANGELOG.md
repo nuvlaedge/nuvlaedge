@@ -1,5 +1,44 @@
 # Changelog
 
+## [2.11.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.11.0) (2023-09-05)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.4...2.11.0)
+
+**Implemented enhancements:**
+
+- Update docker-compose usage to compose V2 [\#115](https://github.com/nuvlaedge/nuvlaedge/issues/115)
+- feat: integrate vulnerabilities scan module  [\#107](https://github.com/nuvlaedge/nuvlaedge/issues/107)
+- feat: Add support for validation log retrieval as artefacts [\#105](https://github.com/nuvlaedge/nuvlaedge/issues/105)
+- rename container runtime to container orchestration engine [\#98](https://github.com/nuvlaedge/nuvlaedge/issues/98)
+- integrate k8s cred manager into nuvlaedge/nuvlaedge repo [\#76](https://github.com/nuvlaedge/nuvlaedge/issues/76)
+- address TODOs and FIXMEs in the code [\#68](https://github.com/nuvlaedge/nuvlaedge/issues/68)
+- Merge security component [\#108](https://github.com/nuvlaedge/nuvlaedge/pull/108) ([ignacio-penas](https://github.com/ignacio-penas))
+- Add validation logs retrieval. Validation release 1.2.0 [\#106](https://github.com/nuvlaedge/nuvlaedge/pull/106) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: Validation workflow refactor [\#102](https://github.com/nuvlaedge/nuvlaedge/pull/102) ([ignacio-penas](https://github.com/ignacio-penas))
+- Add credentials to the job engine Job specification [\#86](https://github.com/nuvlaedge/nuvlaedge/pull/86) ([giovannibianco](https://github.com/giovannibianco))
+
+**Fixed bugs:**
+
+- Security Dataclass parsing bug [\#119](https://github.com/nuvlaedge/nuvlaedge/issues/119)
+- \[Bug\] ModBus not reporting discovered device [\#111](https://github.com/nuvlaedge/nuvlaedge/issues/111)
+- \[Fix\] Validation not working due to version mismatch [\#100](https://github.com/nuvlaedge/nuvlaedge/issues/100)
+- \[BUG\] on k8s adding ssh key doesn't work because docker driver is used [\#83](https://github.com/nuvlaedge/nuvlaedge/issues/83)
+- Fixes modbus discovery [\#112](https://github.com/nuvlaedge/nuvlaedge/pull/112) ([ignacio-penas](https://github.com/ignacio-penas))
+- fix: Dockerfile fix for cython 3.0.0 release on PyYaml dependency [\#103](https://github.com/nuvlaedge/nuvlaedge/pull/103) ([ignacio-penas](https://github.com/ignacio-penas))
+
+**Closed issues:**
+
+- Deleting ssh key does not work [\#109](https://github.com/nuvlaedge/nuvlaedge/issues/109)
+- K8s: investigate generic-device-plugin for discovery and allocation of devices to containers on K8s at the edge [\#82](https://github.com/nuvlaedge/nuvlaedge/issues/82)
+
+**Merged pull requests:**
+
+- Fix dataclass json serialization [\#118](https://github.com/nuvlaedge/nuvlaedge/pull/118) ([ignacio-penas](https://github.com/ignacio-penas))
+- Removed old docker-compose v1 and job executors improvements [\#113](https://github.com/nuvlaedge/nuvlaedge/pull/113) ([ignacio-penas](https://github.com/ignacio-penas))
+- Merge credentials manager [\#110](https://github.com/nuvlaedge/nuvlaedge/pull/110) ([ignacio-penas](https://github.com/ignacio-penas))
+- rename: Docker and Kubernetes are not CR but COE [\#99](https://github.com/nuvlaedge/nuvlaedge/pull/99) ([konstan](https://github.com/konstan))
+- fix: remove outdated TODOS and move relevant ones into issues [\#70](https://github.com/nuvlaedge/nuvlaedge/pull/70) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.10.4](https://github.com/nuvlaedge/nuvlaedge/tree/2.10.4) (2023-07-16)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.3...2.10.4)

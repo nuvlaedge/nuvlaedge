@@ -337,8 +337,8 @@ class Agent:
                 target=self.peripheral_manager.run)
 
         response: dict = action()
-
-        self.handle_pull_jobs(response)
+        if response:
+            self.handle_pull_jobs(response)
 
         if is_thread_creation_needed('Infrastructure', self.infrastructure_thread):
             self.infrastructure_thread = create_start_thread(

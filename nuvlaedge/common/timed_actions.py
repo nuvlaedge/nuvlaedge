@@ -2,8 +2,8 @@ import datetime
 import logging
 import time
 import uuid
-from dataclasses import dataclass
-
+from dataclasses import dataclass, field
+from collections import defaultdict
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -14,14 +14,24 @@ class TimedAction:
     action: callable
     period: int
     remaining_time: float = 0  # Allow configurability for delayed starts
+    karguments: dict[str, any] = field(default_factory=dict)
+    arguments: tuple[any] | None = None
     uuid: str = uuid.uuid4()
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self):
         if self.remaining_time > 0:
             logger.debug(f'Action {self.name} not ready, time remaining: '
                          f'{self.remaining_time}s')
             return
-        ret = self.action(*args, **kwargs)
+
+        if not self.arguments:
+            self.arguments = tuple()
+
+        if not self.karguments:
+            self.karguments = {}
+
+        ret = self.action(*self.arguments, **self.karguments)
+
         self.remaining_time = self.period
         return ret
 

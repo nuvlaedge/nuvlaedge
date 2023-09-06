@@ -43,11 +43,11 @@ class NmapOutputXMLParser:
 
     def __get_modbus_hosts(self) -> []:
         """
-            Get all the host addresses
+            Get all the host addresses (IPv4)
         :return: A list of host addresses
         """
         hosts = []
-        for host_addr in self.root.findall('host'):
+        for host_addr in self.root.findall('.//host/address[@addrtype = \'ipv4\']/..'):
             hosts.append(host_addr.find('address').attrib['addr'])
         return hosts
 

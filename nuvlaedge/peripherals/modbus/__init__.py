@@ -80,10 +80,8 @@ def manage_modbus_peripherals(ip_address):
     # Ask the NB agent for all modbus peripherals matching this pattern
     logger.info(f'Starting modbus scan on {ip_address}')
     xml_file = scan_open_ports(ip_address)
-    with open(xml_file) as ox:
-        nmap_xml_output = ox.read()
 
-    parser = NmapOutputXMLParser(nmap_xml_output)
+    parser = NmapOutputXMLParser(xml_file)
     parser.parse()
 
     all_modbus_devices = parser.get_modbus_details()

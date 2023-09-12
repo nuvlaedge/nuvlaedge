@@ -17,13 +17,11 @@ It provides:
 import socket
 import struct
 import os
-import xmltodict
 import logging
-import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
-from nuvlaedge.common.NmapOutputXMLParser import NmapOutputXMLParser
+from nuvlaedge.common.nmap_output_xml_parser import NmapOutputXMLParser
 
 logger = logging.getLogger(__name__)
 

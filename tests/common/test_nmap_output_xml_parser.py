@@ -2,7 +2,7 @@ import unittest
 import mock
 from unittest.mock import patch, Mock, MagicMock
 
-from nuvlaedge.common.NmapOutputXMLParser import NmapOutputXMLParser
+from nuvlaedge.common.nmap_output_xml_parser import NmapOutputXMLParser
 from xml.etree.ElementTree import ElementTree
 from xml.etree.ElementTree import Element
 

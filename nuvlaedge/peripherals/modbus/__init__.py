@@ -94,7 +94,11 @@ def manage_modbus_peripherals(ip_address):
         identifiers = per.get("identifiers").copy()
         del per["identifiers"]
         for ident in identifiers:
-            identifier = "modbus.{}.{}.{}".format(port, interface, ident)
+            _id = ident['key']
+            per['classes'] = ident['classes']
+            per['vendor'] = ident['vendor']
+            per['name'] = ident['name']
+            identifier = "modbus.{}.{}.{}".format(port, interface, _id)
             # Redefine the identifier
             per['identifier'] = identifier
             discovered_devices[identifier] = per.copy()

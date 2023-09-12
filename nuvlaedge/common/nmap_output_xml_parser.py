@@ -82,4 +82,17 @@ class NmapOutputXMLParser:
         details['identifiers'] = []
         for ids in port_ele.findall('.//table'):
             _id: str = ids.attrib['key']
-            details['identifiers'].append(int(_id.split()[1], 16))
+            _portinfo: dict = {'key': int(_id.split()[1], 16)}
+            for elements in ids.findall('.//elem'):
+                element_key: str = elements.attrib['key']
+                if element_key == 'Slave ID data':
+                    _portinfo['classes'] = [str(elements.text)]
+                elif element_key == 'Device identification':
+                    _portinfo['vendor'] = elements.text
+                else:
+                    logger.warning("Modbus device with slave ID {} cannot be categorized: {}".format(_id,
+                                                                                                     element_key))
+            _portinfo['name'] = "Modbus {}/{} {} - {}".format(details['port'], details['interface'],
+                                                              ' '.join(_portinfo['classes']),
+                                                              _portinfo['key'])
+            details['identifiers'].append(_portinfo)

@@ -47,21 +47,32 @@ class TestNmapOutputXMLParser(unittest.TestCase):
         port_attrib_mock.attrib.__contains__.side_effect = port_attrs.__contains__
         port_attrib_mock.find.return_value.attrib.__getitem__.side_effect = port_state_attr.__getitem__
         identifier_1 = {'key': 'sid 0xf5'}
-        identifier_2 = {'key': 'sid 0x5'}
         identifier_mock_1 = MagicMock()
         identifier_mock_1.attrib.__getitem__.side_effect = identifier_1.__getitem__
-        identifier_mock_2 = MagicMock()
-        identifier_mock_2.attrib.__getitem__.side_effect = identifier_2.__getitem__
+        identifier_element_1_mock = MagicMock()
+        identifier_element_2_mock = MagicMock()
+        identifier_element_3_mock = MagicMock()
+        identifier_mock_1.findall.return_value = [identifier_element_1_mock, identifier_element_2_mock, identifier_element_3_mock]
+        identifier_element_1_attrib = {'key': 'Slave ID data'}
+        identifier_element_1_mock.text = 'Pymodbus-PM-2.3.0\xFF'
+        identifier_element_2_attrib = {'key': 'Device identification'}
+        identifier_element_2_mock.text = 'Pymodbus-PM-2.3.0'
+        identifier_element_3_attrib = {'key': 'Random'}
+        identifier_element_1_mock.attrib.__getitem__.side_effect = identifier_element_1_attrib.__getitem__
+        identifier_element_2_mock.attrib.__getitem__.side_effect = identifier_element_2_attrib.__getitem__
+        identifier_element_3_mock.attrib.__getitem__.side_effect = identifier_element_3_attrib.__getitem__
 
         mock_getroot.return_value.findall.side_effect = [
             [host_mock],
             [port_attrib_mock]
         ]
-        port_attrib_mock.findall.return_value = [identifier_mock_1, identifier_mock_2]
+        port_attrib_mock.findall.return_value = [identifier_mock_1]
         details = self.parser.get_modbus_details()
         expected = {
             '127.0.0.1': [
-                {'port': 54000, 'interface': 'TCP', 'available': True, 'identifiers': [245, 5]}
+                {'port': 54000, 'interface': 'TCP', 'available': True, 'identifiers': [{'key': 245, 'classes':
+                    ['Pymodbus-PM-2.3.0\xFF'], 'vendor': 'Pymodbus-PM-2.3.0', 'name': 'Modbus 54000/TCP '
+                                                                                    'Pymodbus-PM-2.3.0\xFF - 245'}]}
             ]
         }
         mock_getroot.return_value.findall.assert_called()

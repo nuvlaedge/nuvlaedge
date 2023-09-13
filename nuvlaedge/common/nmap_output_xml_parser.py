@@ -66,14 +66,15 @@ class NmapOutputXMLParser:
                 "port": int(attributes['portid']) if "portid" in attributes else None,
                 "available": True if port_id.find('state').attrib['state'] == "open" else False
             }
-            self.__get_port_identifiers(port_id, port_details)
+            self.__get_modbus_port_identifiers(port_id, port_details)
             ports.append(port_details)
         return ports
 
     @staticmethod
-    def __get_port_identifiers(port_ele: ElementTree.Element, details: dict):
+    def __get_modbus_port_identifiers(port_ele: ElementTree.Element, details: dict):
         """
-        Collect all the slave identifiers from the table section
+        Collect all identifiers for the port
+        along with their details.
 
         :param port_ele: Port element in the xml tree
         :param details: dict that needs to be filled
@@ -83,16 +84,27 @@ class NmapOutputXMLParser:
         for ids in port_ele.findall('.//table'):
             _id: str = ids.attrib['key']
             _portinfo: dict = {'key': int(_id.split()[1], 16)}
-            for elements in ids.findall('.//elem'):
-                element_key: str = elements.attrib['key']
-                if element_key == 'Slave ID data':
-                    _portinfo['classes'] = [str(elements.text)]
-                elif element_key == 'Device identification':
-                    _portinfo['vendor'] = elements.text
-                else:
-                    logger.warning("Modbus device with slave ID {} cannot be categorized: {}".format(_id,
-                                                                                                     element_key))
+
+            NmapOutputXMLParser.__get_modbus_port_identifier_details(ids, _portinfo)
             _portinfo['name'] = "Modbus {}/{} {} - {}".format(details['port'], details['interface'],
                                                               ' '.join(_portinfo['classes']),
                                                               _portinfo['key'])
             details['identifiers'].append(_portinfo)
+
+    @staticmethod
+    def __get_modbus_port_identifier_details(table: ElementTree.Element, _portinfo: dict):
+        """
+        Collects the classes, vendor for each of the elements in the port section
+        :param table: The table section inside each port
+        :param _portinfo: Contains details about each table inside the port section
+        :return:
+        """
+        for elements in table.findall('.//elem'):
+            element_key: str = elements.attrib['key']
+            if element_key == 'Slave ID data':
+                _portinfo['classes'] = [str(elements.text)]
+            elif element_key == 'Device identification':
+                _portinfo['vendor'] = elements.text
+            else:
+                logger.warning("Modbus device with slave ID {} cannot be categorized: {}".format(_portinfo['key'],
+                                                                                                 element_key))

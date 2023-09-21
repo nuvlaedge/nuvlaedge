@@ -120,6 +120,7 @@ jobs:
           poetry export -f requirements.txt --output requirements.modbus.txt --without-hashes --without-urls --with modbus
           poetry export -f requirements.txt --output requirements.gpu.txt --without-hashes --without-urls --with gpu
           poetry export -f requirements.txt --output requirements.job-engine.txt --without-hashes --without-urls --with job-engine
+          poetry export -f requirements.txt --output requirements.bluetooth.txt --without-hashes --without-urls --with bluetooth
 
       - name: SetUp QEMU
         uses: docker/setup-qemu-action@v2

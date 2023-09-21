@@ -317,7 +317,7 @@ async def bluetooth_manager():
                 "identifier": device.get("identifier"),
                 "interface": device.get("interface", "Bluetooth"),
             }
-
+    logger.info(f'Final Output {output}')
     return output
 
 

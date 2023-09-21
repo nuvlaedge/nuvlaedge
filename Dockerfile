@@ -44,6 +44,9 @@ RUN git checkout 4d46ce1
 
 RUN python setup.py install
 
+COPY --link requirements.bluetooth.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
 
 # ------------------------------------------------------------------------
 # Network Peripheral builder

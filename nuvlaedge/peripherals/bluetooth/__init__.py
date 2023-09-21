@@ -6,7 +6,7 @@ This service provides bluetooth device discovery.
 
 import bluetooth as bt
 import logging
-from bleak import BleakScanner, BLEDevice, AdvertisementData
+from bleak import BleakScanner, BLEDevice, AdvertisementData, BleakClient
 from bleak.backends._manufacturers import MANUFACTURERS
 from typing import List
 from bleak.uuids import uuidstr_to_str
@@ -36,30 +36,43 @@ async def ble_device_discovery() -> dict:
         ble_devices[dev_id] = {}
         ble_devices[dev_id]['available'] = True
         ble_devices[dev_id]['interface'] = "Bluetooth-LE"
+        ble_devices[dev_id]['identifier'] = dev_id
+        ble_devices[dev_id]['classes'] = []
         if ble_device[0].name != "":
             ble_devices[dev_id]['name'] = ble_device[0].name
         ble_devices[dev_id]['address'] = ble_device[0].address
         ble_devices[dev_id]['rssi'] = ble_device[1].rssi
         man_dict = ble_device[1].manufacturer_data
+        ble_devices[dev_id]['vendor'] = ''
         for company_id in man_dict.keys():
-            ble_devices[dev_id]['company'] += MANUFACTURERS[company_id] + ', '
-        ble_devices[dev_id]['company'] = ble_devices[dev_id]['company'][:-2]
+            if company_id in MANUFACTURERS:
+                ble_devices[dev_id]['vendor'] += MANUFACTURERS[company_id] + ', '
+        if ble_devices[dev_id]['vendor'] != '':
+            ble_devices[dev_id]['vendor'] = ble_devices[dev_id]['vendor'][:-2]
+        else:
+            del ble_devices[dev_id]['vendor']
         uuids: List = ble_device[1].service_uuids
+        if ble_device[1].platform_data[1] is not None:
+            get_info_from_raw_data(ble_device[1].platform_data[1], ble_devices[dev_id])
         fill_service_desc(uuids, ble_devices[dev_id])
     return ble_devices
 
 
+def get_info_from_raw_data(raw_data: dict, device_info: dict):
+    for key, value in raw_data.items():
+        if key == 'Class':
+            device_info['classes'] = cod_converter(value)
+        elif key == 'Name':
+            device_info['name'] = value
+
+
 def fill_service_desc(uuids: List, device_info: dict):
-    if uuids is not None or uuids != []:
-        device_info['services'] = ''
+    if device_info['classes']:
+        return
     for service_id in uuids:
         service_desc = uuidstr_to_str(service_id)
-        if service_desc != 'Unknown':
-            device_info['services'] += service_desc + ', '
-    if device_info['services'] != '':
-        device_info['services'] = device_info['services'][:-2]
-    else:
-        del device_info['services']
+        if service_desc != "Unknown" and service_desc != device_info['vendor']:
+            device_info['classes'].append(service_desc)
 
 
 def compare_bluetooth(bluetooth, ble):
@@ -281,7 +294,6 @@ def cod_converter(cod_decimal_string):
 
 
 async def bluetooth_manager():
-
     try:
         # list
         bluetooth_devices = device_discovery()
@@ -291,6 +303,7 @@ async def bluetooth_manager():
         logger.exception("Failed to discover BT devices", e)
 
     ble_devices = await ble_device_discovery()
+    logger.info(f'BLE Devices {ble_devices}')
 
     bluetooth = compare_bluetooth(bluetooth_devices, ble_devices)
     output = ble_devices
@@ -313,9 +326,9 @@ async def main():
 
     logger.info('Starting bluetooth manager')
 
-    bluetooth_peripheral: Peripheral = Peripheral('bluetooth')
+    bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True)
 
-    bluetooth_peripheral.run(bluetooth_manager)
+    await bluetooth_peripheral.run(bluetooth_manager)
 
 
 if __name__ == "__main__":

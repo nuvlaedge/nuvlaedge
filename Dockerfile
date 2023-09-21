@@ -44,6 +44,9 @@ RUN git checkout 4d46ce1
 
 RUN python setup.py install
 
+# this environment variable is set to fasten the install of dbus-fast.
+# it will be fixed in the later versions of dbus-fast
+ENV SKIP_CYTHON=false
 COPY --link requirements.bluetooth.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 

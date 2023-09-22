@@ -278,7 +278,7 @@ COPY --link conf/example/* /etc/nuvlaedge/
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-RUN apk add --no-cache gettext docker-cli docker-cli-compose
+RUN apk add --no-cache gettext docker-cli docker-cli-compose helm
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
 COPY --link --from=job-lite /app/* /app/

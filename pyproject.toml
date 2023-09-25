@@ -52,7 +52,7 @@ pytest-cov = "4.0.0"
 mock = "5.0.2"
 
 [tool.poetry.group.system-manager.dependencies]
-pyopenssl = "23.1.1"
+pyopenssl = "^23.1.1"
 
 [tool.poetry.group.gpu.dependencies]
 packaging = "23.1"

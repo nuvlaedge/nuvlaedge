@@ -54,8 +54,6 @@ class NuvlaEdgeCommon:
         self.host_user_home_file = f'{self.data_volume}/.host_user_home'
         self.installation_home = self.set_installation_home(FILE_NAMES.HOST_USER_HOME)
 
-        # FIXME: Delete and fix tests
-        self.nuvlaedge_nuvla_configuration = f'{self.data_volume}/.nuvla-configuration'
         self.nuvla_endpoint, self.nuvla_endpoint_insecure = self.set_nuvla_endpoint()
         # Also store the Nuvla connection details for future restarts
         conf = f"{self.nuvla_endpoint_key}={self.nuvla_endpoint}\n" \

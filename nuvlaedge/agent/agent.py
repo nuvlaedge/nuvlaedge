@@ -57,6 +57,7 @@ class Agent:
         self.peripherals_thread = None
 
         self.nuvlabox_resource: CimiResource | None = None
+        self.nuvlabox_status_resource: CimiResource | None = None
 
     @property
     def peripheral_manager(self) -> PeripheralManager:
@@ -175,13 +176,16 @@ class Agent:
         Returns: None
 
         """
-        # Get the nuvlabox resource only once and reuse it to send the heartbeat operation
-        if not self.nuvlabox_resource:
-            self.nuvlabox_resource = self.telemetry.api().get(self.telemetry.nuvlaedge_id)
+        # Get the nuvlabox status resource only once and reuse it to send the
+        # heartbeat operation. This should be updated periodically by the telemetry
+        # report.
+        if not self.nuvlabox_status_resource:
+            self.nuvlabox_status_resource = \
+                self.telemetry.api().get(self.nuvlaedge_status_id)
 
         # 1. Send heartbeat
         response: CimiResponse = self.telemetry.api().operation(
-            self.nuvlabox_resource,
+            self.nuvlabox_status_resource,
             'heartbeat')
         self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
                          f'heartbeat response')
@@ -224,7 +228,7 @@ class Agent:
                              f'{", ".join(del_attr)}')
 
         try:
-            resource: CimiResource = self.telemetry.api().edit(
+            self.nuvlabox_status_resource = self.telemetry.api().edit(
                 self.nuvlaedge_status_id,
                 data=status,
                 select=del_attr)
@@ -237,7 +241,7 @@ class Agent:
 
         self.past_status_time = copy(status_current_time)
 
-        return resource.data
+        return self.nuvlabox_status_resource.data
 
     def run_pull_jobs(self, job_list):
         """

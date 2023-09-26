@@ -294,7 +294,7 @@ class Infrastructure(NuvlaEdgeCommon):
         """
 
         # NUVLA_JOB_PULL if job-engine-lite has been deployed with the NBE
-        commissioning_dict['capabilities'] = []
+        commissioning_dict['capabilities'] = ['NUVLA_HEARTBEAT']
         if self.coe_client.has_pull_job_capability():
             commissioning_dict['capabilities'].append('NUVLA_JOB_PULL')
 

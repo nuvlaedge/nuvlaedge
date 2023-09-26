@@ -1,6 +1,7 @@
 import os
 import subprocess
 import logging
+import dataclasses
 from unittest import TestCase
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -378,7 +379,7 @@ class TestSecurity(TestCase):
             [VulnerabilitiesInfo(
                 product='PRODUCT',
                 vulnerability_id='id',
-                score=7.9
+                vulnerability_score=7.9
             )],
             self.security.extract_basic_info_from_xml_port(Mock())
         )
@@ -451,7 +452,8 @@ class TestSecurity(TestCase):
         mock_parser.assert_not_called()
 
         mock_run_cve.return_value = 'Scan'
-        with patch("builtins.open", mock_open()) as mock_file, patch.object(json, 'dump') as mock_dump:
+        with patch("builtins.open", mock_open()) as mock_file, \
+                patch.object(json, 'dump') as mock_dump:
             self.security.run_scan()
             mock_parser.assert_called_once()
             mock_dump.assert_called_once()

@@ -3,10 +3,10 @@
 ARG ALPINE_MAJ_MIN_VERSION="3.18"
 ARG PYTHON_MAJ_MIN_VERSION="3.11"
 ARG GOLANG_VERSION="1.20.4"
-ARG PYTHON_CRYPTOGRAPHY_VERSION="40.0.2"
+ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
-ARG JOB_LITE_VERSION="3.6.0"
+ARG JOB_LITE_VERSION="3.7.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -281,7 +281,7 @@ COPY --link conf/example/* /etc/nuvlaedge/
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-RUN apk add --no-cache gettext docker-cli docker-cli-compose
+RUN apk add --no-cache gettext docker-cli docker-cli-compose helm
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
 COPY --link --from=job-lite /app/* /app/

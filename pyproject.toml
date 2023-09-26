@@ -52,6 +52,7 @@ pytest-cov = "4.0.0"
 mock = "5.0.2"
 
 [tool.poetry.group.system-manager.dependencies]
+cryptography = "41.0.3"  # Hardcode cryptography to the same version available in Alpine
 pyopenssl = "^23.1.1"
 
 [tool.poetry.group.gpu.dependencies]

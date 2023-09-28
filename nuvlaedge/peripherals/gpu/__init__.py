@@ -16,6 +16,7 @@ import os
 import csv
 import json
 import re
+import asyncio
 
 from shutil import which
 
@@ -403,15 +404,15 @@ def gpu_check(api_url):
     return False
 
 
-def main():
+async def main():
     global logger
     parse_arguments_and_initialize_logging('GPU Peripheral')
 
     logger = logging.getLogger(__name__)
     gpu_peripheral: Peripheral = Peripheral('gpu')
 
-    gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)
+    await gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

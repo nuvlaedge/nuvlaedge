@@ -310,7 +310,7 @@ def network_manager(**kwargs):
     return output
 
 
-def main():
+async def main():
     global logger
     parse_arguments_and_initialize_logging('Network Peripheral')
 
@@ -328,4 +328,4 @@ def main():
 
     ws_daemon = WSDiscovery()
 
-    network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)
+    await network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)

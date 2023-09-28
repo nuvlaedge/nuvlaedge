@@ -12,10 +12,10 @@ system-manager = "nuvlaedge.system_manager.__main__:entry"
 on-stop = "nuvlaedge.on_stop:main"
 agent = "nuvlaedge.agent:entry"
 # Peripherals
-network = "nuvlaedge.peripherals.network:main"
+network = "nuvlaedge.peripherals.network.__main__:entry"
 bluetooth = "nuvlaedge.peripherals.bluetooth.__main__:entry"
 modbus = "nuvlaedge.peripherals.modbus.__main__:entry"
-gpu = "nuvlaedge.peripherals.gpu:main"
+gpu = "nuvlaedge.peripherals.gpu.__main__:entry"
 security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]

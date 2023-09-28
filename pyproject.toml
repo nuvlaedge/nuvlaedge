@@ -14,7 +14,7 @@ agent = "nuvlaedge.agent:entry"
 # Peripherals
 network = "nuvlaedge.peripherals.network:main"
 bluetooth = "nuvlaedge.peripherals.bluetooth.__main__:entry"
-modbus = "nuvlaedge.peripherals.modbus:main"
+modbus = "nuvlaedge.peripherals.modbus.__main__:entry"
 gpu = "nuvlaedge.peripherals.gpu:main"
 security = "nuvlaedge.security:main"
 

@@ -18,6 +18,7 @@ import socket
 import struct
 import os
 import logging
+import asyncio
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -106,7 +107,7 @@ def manage_modbus_peripherals(ip_address):
     return discovered_devices
 
 
-def main():
+async def main():
     global logger
 
     parse_arguments_and_initialize_logging('Modbus Peripheral')
@@ -117,8 +118,8 @@ def main():
 
     modbus_peripheral: Peripheral = Peripheral('modbus')
 
-    modbus_peripheral.run(manage_modbus_peripherals, ip_address=gateway_ip)
+    await modbus_peripheral.run(manage_modbus_peripherals, ip_address=gateway_ip)
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

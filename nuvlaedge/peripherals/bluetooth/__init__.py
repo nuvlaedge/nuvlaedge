@@ -331,5 +331,9 @@ async def main():
     await bluetooth_peripheral.run(bluetooth_manager)
 
 
+def entry():
+    asyncio.run(main())
+
+
 if __name__ == "__main__":
     asyncio.run(main())

@@ -121,5 +121,9 @@ async def main():
     await modbus_peripheral.run(manage_modbus_peripherals, ip_address=gateway_ip)
 
 
+def entry():
+    asyncio.run(main())
+
+
 if __name__ == '__main__':
     asyncio.run(main())

@@ -1,6 +1,5 @@
 from nuvlaedge.peripherals.bluetooth import main
 import asyncio
 
-
-def entry():
+if __name__ == "__main__":
     asyncio.run(main())

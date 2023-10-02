@@ -18,6 +18,8 @@ import socket
 import struct
 import os
 import logging
+import fileinput
+import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -42,11 +44,11 @@ def get_default_gateway_ip():
 
             return socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
         
-def nmap_replace_port(file, searchExp, replaceExp):
+def nmap_replace_port(file, search_exp, replace_exp):
     '''testing only'''
     for line in fileinput.input(file, inplace=1):
-        if searchExp in line:
-            line = line.replace(searchExp,replaceExp)
+        if search_exp in line:
+            line = line.replace(search_exp,replace_exp)
         sys.stdout.write(line)
 
 def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_scan.xml"):

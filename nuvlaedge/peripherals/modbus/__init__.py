@@ -62,7 +62,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     :returns XML filename where to write the nmap output
     """
     
-    net_mask = "27"
+    net_mask = "24"
     ports_range = "-p-"
     alternate_modbus_port = "5020"
     if alternate_modbus_port:
@@ -78,11 +78,11 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
         # check if a MY_HOST_NODE_IP has been defined
         if os.getenv('MY_HOST_NODE_IP'):
             host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
-        logging.info('The host list in k8ss has been set to:\n%s',host)
+        logging.info('The host list in k8s has been set to:\n%s',host)
         # FIX ME testing only
         nmap_replace_port("/usr/share/nmap/scripts/" + \
             modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
-        host = "10.42.0.159"
+        host = host + "185.19.31.148"
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

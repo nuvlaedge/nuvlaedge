@@ -20,7 +20,6 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 docker_socket_file_default = '/var/run/docker.sock'
 
-
 class InferIPError(Exception):
     ...
 
@@ -245,13 +244,20 @@ class DockerClient(COEClient):
             logger.debug(f'Failed to find {service_name} container by project and service name: {e}')
             raise
 
+    def _create_container(self, **create_kwargs):
+        try:
+            return self.client.containers.create(**create_kwargs)
+        except docker.errors.ImageNotFound:
+            self.client.images.pull(create_kwargs['image'])
+            return self.client.containers.create(**create_kwargs)
+
     def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
                    docker_image=None):
 
         image = docker_image if docker_image else self.job_engine_lite_image
         if not image:
-            image = 'sixsq/nuvlaedge:latest'
+            image = util.fallback_image
             logger.error('Failed to find docker image name to execute job. Fallback image will be used')
 
         # Get the compute-api network
@@ -279,7 +285,7 @@ class DockerClient(COEClient):
             command += ' --api-insecure'
 
         environment = {k: v for k, v in os.environ.items()
-                       if k.startswith('NE_IMAGE_')}
+                       if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
 
         logger.info(f'Starting job "{job_id}" with docker image "{image}" and command: "{command}"')
 
@@ -296,10 +302,15 @@ class DockerClient(COEClient):
         )
         try:
             try:
-                container = self.client.containers.create(**create_kwargs)
-            except docker.errors.ImageNotFound:
-                self.client.images.pull(image)
-                container = self.client.containers.create(**create_kwargs)
+                container = self._create_container(**create_kwargs)
+            except Exception as e:
+                create_kwargs['image'] = self.current_image if image != self.current_image else util.fallback_image
+
+                logger.error(f'Failed to create container to execute job "{job_id}" with image "{image}": {e}. \n'
+                             f'Retrying with image "{create_kwargs["image"]}" as fallback.')
+
+                container = self._create_container(**create_kwargs)
+
         except Exception as e:
             logger.critical(f'Failed to create container to execute job "{job_id}": {e}')
             try:

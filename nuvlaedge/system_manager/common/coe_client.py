@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from nuvlaedge.system_manager.common import utils
+from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator.docker import DockerClient, docker_socket_file_default
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
@@ -36,7 +37,7 @@ class COEClient(ABC):
         self.client = None
         self.logging = logging
 
-        self.current_image = 'sixsq/nuvlaedge:latest'
+        self.current_image = util.fallback_image
 
     @abstractmethod
     def list_internal_components(self, base_label=utils.base_label):

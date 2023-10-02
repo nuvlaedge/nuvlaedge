@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.10.4"
+version = "2.11.1"
 description = "NuvlaEdge source code"
 authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"
@@ -16,6 +16,7 @@ network = "nuvlaedge.peripherals.network:main"
 bluetooth = "nuvlaedge.peripherals.bluetooth:main"
 modbus = "nuvlaedge.peripherals.modbus:main"
 gpu = "nuvlaedge.peripherals.gpu:main"
+security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -51,7 +52,8 @@ pytest-cov = "4.0.0"
 mock = "5.0.2"
 
 [tool.poetry.group.system-manager.dependencies]
-pyopenssl = "23.1.1"
+cryptography = "41.0.3"  # Hardcode cryptography to the same version available in Alpine
+pyopenssl = "^23.1.1"
 
 [tool.poetry.group.gpu.dependencies]
 packaging = "23.1"

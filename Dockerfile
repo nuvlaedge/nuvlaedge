@@ -3,10 +3,10 @@
 ARG ALPINE_MAJ_MIN_VERSION="3.18"
 ARG PYTHON_MAJ_MIN_VERSION="3.11"
 ARG GOLANG_VERSION="1.20.4"
-ARG PYTHON_CRYPTOGRAPHY_VERSION="40.0.2"
+ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
-ARG JOB_LITE_VERSION="3.4.2"
+ARG JOB_LITE_VERSION="3.7.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -140,8 +140,6 @@ COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${
 COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 
-RUN pip install --no-build-isolation docker-compose
-
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
 
@@ -237,6 +235,14 @@ RUN apk add --no-cache libusb-dev udev
 # ------------------------------------------------------------------------
 RUN apk add --no-cache bluez-dev
 
+# ------------------------------------------------------------------------
+# Required package for vulnerabilities discovery
+# ------------------------------------------------------------------------
+# nmap nmap-scripts coreutils curl
+RUN apk add --no-cache coreutils
+COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
+COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoint
+RUN chmod +x /usr/bin/security-entrypoint
 
 # ------------------------------------------------------------------------
 # Setup Compute-API
@@ -267,12 +273,12 @@ RUN ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedg
 # Copy configuration files
 # ------------------------------------------------------------------------
 COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
-
+COPY --link conf/example/* /etc/nuvlaedge/
 
 # ------------------------------------------------------------------------
 # Set up Job engine
 # ------------------------------------------------------------------------
-RUN apk add --no-cache gettext docker-cli
+RUN apk add --no-cache gettext docker-cli docker-cli-compose helm
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
 COPY --link --from=job-lite /app/* /app/
@@ -288,8 +294,8 @@ RUN ln -s $(which python3) /usr/bin/python3
 # ------------------------------------------------------------------------
 COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
 RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh \
-    /usr/local/bin/kubernetes-credential-manager
-RUN chmod +x /usr/local/bin/kubernetes-credential-manager
+    /usr/bin/kubernetes-credential-manager
+RUN chmod +x /usr/bin/kubernetes-credential-manager
 
 
 WORKDIR /opt/nuvlaedge/

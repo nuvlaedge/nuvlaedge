@@ -61,7 +61,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
 
     :returns XML filename where to write the nmap output
     """
-    
+
     net_mask = "24"
     ports_range = "-p-"
     alternate_modbus_port = "5020"
@@ -112,7 +112,6 @@ def manage_modbus_peripherals(ip_address):
     # probably the kubernetes stuff should go here?
     # why not?
 
-    
     logger.info(f'Starting modbus scan on {ip_address}')
     xml_file = scan_open_ports(ip_address)
 
@@ -127,7 +126,8 @@ def manage_modbus_peripherals(ip_address):
       #   logger.warning(f'No Modbus Info found for host : {ip_address}')
         # return discovered_devices
 
-    for per in all_modbus_devices[ip_address]:
+    # for per in all_modbus_devices[ip_address]:
+    for per in all_modbus_devices:
         port = per.get("port", "nullport")
         interface = per.get("interface", "nullinterface")
         identifiers = per.get("identifiers").copy()
@@ -157,6 +157,8 @@ def main():
     gateway_ip = get_default_gateway_ip()
 
     modbus_peripheral: Peripheral = Peripheral('modbus')
+
+    # do the ip address thing here?
 
     modbus_peripheral.run(manage_modbus_peripherals, ip_address=gateway_ip)
 

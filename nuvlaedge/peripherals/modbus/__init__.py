@@ -116,6 +116,8 @@ def manage_modbus_peripherals(ip_address):
     parser.parse()
 
     all_modbus_devices = parser.get_modbus_details()
+    logger.info(f"All modbus devices:\n {all_modbus_devices}")
+    
     discovered_devices: dict = {}
     if ip_address not in all_modbus_devices:
         logger.warning(f'No Modbus Info found for host : {ip_address}')

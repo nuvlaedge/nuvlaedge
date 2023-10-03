@@ -109,6 +109,10 @@ def manage_modbus_peripherals(ip_address):
     #    modbus.{port}.{interface}.{identifier}
 
     # Ask the NB agent for all modbus peripherals matching this pattern
+    # probably the kubernetes stuff should go here?
+    # why not?
+
+    
     logger.info(f'Starting modbus scan on {ip_address}')
     xml_file = scan_open_ports(ip_address)
 
@@ -117,11 +121,11 @@ def manage_modbus_peripherals(ip_address):
 
     all_modbus_devices = parser.get_modbus_details()
     logger.info(f"All modbus devices:\n {all_modbus_devices}")
-    
+
     discovered_devices: dict = {}
-    if ip_address not in all_modbus_devices:
-        logger.warning(f'No Modbus Info found for host : {ip_address}')
-        return discovered_devices
+    # if ip_address not in all_modbus_devices:
+      #   logger.warning(f'No Modbus Info found for host : {ip_address}')
+        # return discovered_devices
 
     for per in all_modbus_devices[ip_address]:
         port = per.get("port", "nullport")

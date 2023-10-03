@@ -82,7 +82,7 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
         # FIX ME testing only
         nmap_replace_port("/usr/share/nmap/scripts/" + \
             modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
-        host = host + "185.19.31.148"
+        host = host + " 185.19.31.148"
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

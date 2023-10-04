@@ -70,19 +70,8 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
 
     logger.info("Scanning open ports...")
 
-    # FIXME we could determine which port to target based on the configuration of the nmap script?
-    # Saves scanning all those open ports?
-    # the default gateway for kubernetes is the CNI gateway. All kubernetes pods will be in this namespace...
-    if os.getenv('KUBERNETES_SERVICE_HOST'):
-        host = host + "/" + net_mask # set the host to CIDR range
-        # check if a MY_HOST_NODE_IP has been defined
-        if os.getenv('MY_HOST_NODE_IP'):
-            host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
-        logging.info('The host list in k8s has been set to:\n%s',host)
-        # FIX ME testing only
-        nmap_replace_port("/usr/share/nmap/scripts/" + \
-            modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
-        host = host + " 185.19.31.148"
+    nmap_replace_port("/usr/share/nmap/scripts/" + \
+        modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\
@@ -126,39 +115,42 @@ def manage_modbus_peripherals(ip_address):
       #   logger.warning(f'No Modbus Info found for host : {ip_address}')
         # return discovered_devices
 
-    for per in all_modbus_devices[ip_address]:
-        port = per.get("port", "nullport")
-        interface = per.get("interface", "nullinterface")
-        identifiers = per.get("identifiers").copy()
-        del per["identifiers"]
-        for ident in identifiers:
-            _id = ident['key']
-            per['classes'] = ident['classes']
-            per['vendor'] = ident['vendor']
-            per['name'] = ident['name']
-            identifier = "modbus.{}.{}.{}".format(port, interface, _id)
-            # Redefine the identifier
-            per['identifier'] = identifier
-            discovered_devices[identifier] = per.copy()
+    ## need to generate an ip address list from the results...
+
+    for returned_ip_address in all_modbus_devices.items():
+        for per in all_modbus_devices[returned_ip_address]:
+            port = per.get("port", "nullport")
+            interface = per.get("interface", "nullinterface")
+            identifiers = per.get("identifiers").copy()
+            del per["identifiers"]
+            for ident in identifiers:
+                _id = ident['key']
+                per['classes'] = ident['classes']
+                per['vendor'] = ident['vendor']
+                per['name'] = ident['name']
+                identifier = "modbus.{}.{}.{}".format(port, interface, _id)
+                # Redefine the identifier
+                per['identifier'] = identifier
+                discovered_devices[identifier] = per.copy()
 
     logger.info(f"discovered devices:\n {discovered_devices}")
 
     return discovered_devices
 
-def determine_ip_addresses(self, gateway_ip):
+def determine_ip_addresses(list_of_ip_addresses):
     """Some text"""
 
     net_mask = "24"
 
     if os.getenv('KUBERNETES_SERVICE_HOST'):
-        host = host + "/" + net_mask # set the host to CIDR range
+        list_of_ip_addresses = list_of_ip_addresses + "/" + net_mask # set the host to CIDR range
         # check if a MY_HOST_NODE_IP has been defined
         if os.getenv('MY_HOST_NODE_IP'):
             host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
         logging.info('The host list in k8s has been set to:\n%s',host)
-        # FIX ME testing only
-        
-        host = host + " 185.19.31.148"
+        # FIX ME testing only  
+        list_of_ip_addresses = list_of_ip_addresses + " 185.19.31.148"
+
     return list_of_ip_addresses
 
 
@@ -175,7 +167,9 @@ def main():
 
     # do the ip address thing here?
 
-    modbus_peripheral.run(manage_modbus_peripherals, ip_address=gateway_ip)
+    list_of_ip_addresses = determine_ip_addresses(gateway_ip)
+
+    modbus_peripheral.run(manage_modbus_peripherals, ip_address=list_of_ip_addresses)
 
 
 if __name__ == '__main__':

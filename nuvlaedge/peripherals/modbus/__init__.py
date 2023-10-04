@@ -117,7 +117,7 @@ def manage_modbus_peripherals(ip_address):
 
     ## need to generate an ip address list from the results...
 
-    for returned_ip_address in all_modbus_devices.items():
+    for returned_ip_address in all_modbus_devices.keys():
         for per in all_modbus_devices[returned_ip_address]:
             port = per.get("port", "nullport")
             interface = per.get("interface", "nullinterface")

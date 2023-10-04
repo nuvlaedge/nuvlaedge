@@ -143,13 +143,13 @@ def determine_ip_addresses(list_of_ip_addresses):
     net_mask = "24"
 
     if os.getenv('KUBERNETES_SERVICE_HOST'):
-        list_of_ip_addresses = list_of_ip_addresses + "/" + net_mask # set the host to CIDR range
-        # check if a MY_HOST_NODE_IP has been defined
+        list_of_ip_addresses = list_of_ip_addresses  + "/" + net_mask # set the host to CIDR range
         if os.getenv('MY_HOST_NODE_IP'):
-            host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
-        logging.info('The host list in k8s has been set to:\n%s',host)
+            list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
         # FIX ME testing only  
         list_of_ip_addresses = list_of_ip_addresses + " 185.19.31.148"
+    
+    logging.info('The list of IP addresses has been set to:\n%s',list_of_ip_addresses)
 
     return list_of_ip_addresses
 

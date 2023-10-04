@@ -142,6 +142,14 @@ def determine_ip_addresses(list_of_ip_addresses):
 
     net_mask = "24"
 
+    command = "ip -4 -br a s"
+    
+    logger.info('Generated command:\n%s',command) # FIXME
+
+    known_ip_addresses = os.system(command)
+
+    logger.info(f"Known IP addresses:\n {known_ip_addresses}") # FIXME
+
     if os.getenv('KUBERNETES_SERVICE_HOST'):
         list_of_ip_addresses = list_of_ip_addresses  + "/" + net_mask # set the host to CIDR range
         if os.getenv('MY_HOST_NODE_IP'):

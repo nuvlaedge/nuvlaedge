@@ -126,8 +126,7 @@ def manage_modbus_peripherals(ip_address):
       #   logger.warning(f'No Modbus Info found for host : {ip_address}')
         # return discovered_devices
 
-    # for per in all_modbus_devices[ip_address]:
-    for per in all_modbus_devices:
+    for per in all_modbus_devices[ip_address]:
         port = per.get("port", "nullport")
         interface = per.get("interface", "nullinterface")
         identifiers = per.get("identifiers").copy()
@@ -145,6 +144,22 @@ def manage_modbus_peripherals(ip_address):
     logger.info(f"discovered devices:\n {discovered_devices}")
 
     return discovered_devices
+
+def determine_ip_addresses(self, gateway_ip):
+    """Some text"""
+
+    net_mask = "24"
+
+    if os.getenv('KUBERNETES_SERVICE_HOST'):
+        host = host + "/" + net_mask # set the host to CIDR range
+        # check if a MY_HOST_NODE_IP has been defined
+        if os.getenv('MY_HOST_NODE_IP'):
+            host = host + ' ' + os.getenv('MY_HOST_NODE_IP')
+        logging.info('The host list in k8s has been set to:\n%s',host)
+        # FIX ME testing only
+        
+        host = host + " 185.19.31.148"
+    return list_of_ip_addresses
 
 
 def main():

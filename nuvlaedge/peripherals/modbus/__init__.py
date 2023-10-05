@@ -151,12 +151,10 @@ def determine_ip_addresses(list_of_ip_addresses):
     logger.info(f"Known IP addresses:\n {known_ip_addresses}") # FIXME
 
     if os.getenv('KUBERNETES_SERVICE_HOST'):
-        list_of_ip_addresses = list_of_ip_addresses  + "/" + net_mask # set the host to CIDR range
+        # list_of_ip_addresses = list_of_ip_addresses  + "/" + net_mask # set the host to CIDR range
         if os.getenv('MY_HOST_NODE_IP'):
             list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
-        # FIX ME testing only  
-        list_of_ip_addresses = list_of_ip_addresses + " 185.19.31.148"
-    
+
     logging.info('The list of IP addresses has been set to:\n%s',list_of_ip_addresses)
 
     return list_of_ip_addresses

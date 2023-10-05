@@ -128,6 +128,7 @@ def manage_modbus_peripherals(ip_address):
                 per['classes'] = ident['classes']
                 per['vendor'] = ident['vendor']
                 per['name'] = ident['name']
+                per['testhost'] = returned_ip_address
                 identifier = "modbus.{}:{}.{}.{}".format(returned_ip_address, port, interface, _id)
                 # Redefine the identifier
                 per['identifier'] = identifier

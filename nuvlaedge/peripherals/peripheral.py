@@ -33,7 +33,7 @@ class Peripheral:
         # do with the repetition
 
         if discovered_peripherals:
-            self.logger.info(f'New devices discovered in {self._name} peripheral:  {discovered_peripherals.keys()}')
+            self.logger.info(f'New devices discovered in {self._name} peripheral:  {discovered_peripherals}')
             self.broker.publish(FILE_NAMES.PERIPHERALS_FOLDER.name + '/' + self._name,
                                 discovered_peripherals,
                                 self._name)

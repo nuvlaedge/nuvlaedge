@@ -65,13 +65,13 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     net_mask = "24"
     ports_range = "-p-"
     alternate_modbus_port = "5020"
+    alternate_modbus_port = ""
     if alternate_modbus_port:
         ports_range = "-p " + alternate_modbus_port
-
+        nmap_replace_port("/usr/share/nmap/scripts/" + \
+            modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
+    
     logger.info("Scanning open ports...")
-
-    nmap_replace_port("/usr/share/nmap/scripts/" + \
-        modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
 
     command = \
         "nmap --script {} --script-args='modbus-discover.aggressive=true' {} {} -T4 -oX {} > /dev/null"\

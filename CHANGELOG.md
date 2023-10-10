@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.11.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.11.1) (2023-09-26)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.11.0...2.11.1)
+
+**Implemented enhancements:**
+
+- Refarctor Mod bus XML parser [\#121](https://github.com/nuvlaedge/nuvlaedge/issues/121)
+
+**Merged pull requests:**
+
+- Support for fixing the update mechanism for kubernetes deployed Nuvlaedges [\#124](https://github.com/nuvlaedge/nuvlaedge/pull/124) ([giovannibianco](https://github.com/giovannibianco))
+- Refractor Modbus XML Parser [\#122](https://github.com/nuvlaedge/nuvlaedge/pull/122) ([amitbhanja](https://github.com/amitbhanja))
+
 ## [2.11.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.11.0) (2023-09-05)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.10.4...2.11.0)

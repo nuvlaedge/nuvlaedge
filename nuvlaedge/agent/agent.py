@@ -179,13 +179,14 @@ class Agent:
         # Get the nuvlabox status resource only once and reuse it to send the
         # heartbeat operation. This should be updated periodically by the telemetry
         # report.
-        if not self.nuvlabox_status_resource:
-            self.nuvlabox_status_resource = \
-                self.telemetry.api().get(self.nuvlaedge_status_id)
+        if not self.nuvlabox_resource:
+            self.nuvlabox_resource = self.telemetry.api().get(
+                self.telemetry.nuvlaedge_id
+            )
 
         # 1. Send heartbeat
         response: CimiResponse = self.telemetry.api().operation(
-            self.nuvlabox_status_resource,
+            self.nuvlabox_resource,
             'heartbeat')
         self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
                          f'heartbeat response')

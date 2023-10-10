@@ -62,14 +62,12 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
     :returns XML filename where to write the nmap output
     """
 
-    net_mask = "24"
     ports_range = "-p-"
-    alternate_modbus_port = "5020"
-    alternate_modbus_port = ""
-    if alternate_modbus_port:
-        ports_range = "-p " + alternate_modbus_port
-        nmap_replace_port("/usr/share/nmap/scripts/" + \
-            modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
+    # alternate_modbus_port = ""
+    # if alternate_modbus_port:
+      #   ports_range = "-p " + alternate_modbus_port
+        # nmap_replace_port("/usr/share/nmap/scripts/" + \
+          #   modbus_nse, "port_or_service(502,", "port_or_service(" + alternate_modbus_port + ",")
 
     logger.info("Scanning open ports...")
 
@@ -80,11 +78,9 @@ def scan_open_ports(host, modbus_nse="modbus-discover.nse", xml_file="/tmp/nmap_
                 host,
                 xml_file)
 
-    logger.info('Generated command:\n%s',command) # FIXME
+    logger.debug(f'Generated command:\n{command}')
 
     os.system(command)
-
-    logger.info('Completed...') # FIXME
 
     return xml_file
 
@@ -144,18 +140,16 @@ def determine_ip_addresses(list_of_ip_addresses):
     net_mask = "24"
 
     command = "ip -4 -br a s"
-    logger.info('Generated command:\n%s',command) # FIXME
+    logger.debug(f'IP address command:\n{command}')
 
     known_ip_addresses = os.system(command)
 
-    logger.info(f"Known IP addresses:\n {known_ip_addresses}") # FIXME
+    logger.debug(f"Known IP addresses:\n {known_ip_addresses}")
 
-    if os.getenv('KUBERNETES_SERVICE_HOST'):
-        # list_of_ip_addresses = list_of_ip_addresses  + "/" + net_mask # set the host to CIDR range
-        if os.getenv('MY_HOST_NODE_IP'):
-            list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
+    if os.getenv('KUBERNETES_SERVICE_HOST') and os.getenv('MY_HOST_NODE_IP'):
+        list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
 
-    logging.info('The list of IP addresses has been set to:\n%s',list_of_ip_addresses)
+    logging.debug(f'The list of IP addresses has been set to:\n{list_of_ip_addresses}')
 
     return list_of_ip_addresses
 

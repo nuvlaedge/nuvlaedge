@@ -129,7 +129,7 @@ def manage_modbus_peripherals(ip_address):
                 per['vendor'] = ident['vendor']
                 per['name'] = ident['name']
                 per['testhost'] = returned_ip_address
-                identifier = "modbus.{}:{}.{}.{}".format(returned_ip_address, port, interface, _id)
+                identifier = "host {}:{} interface {} id {}".format(returned_ip_address, port, interface, _id)
                 # Redefine the identifier
                 per['identifier'] = identifier
                 discovered_devices[identifier] = per.copy()
@@ -144,7 +144,6 @@ def determine_ip_addresses(list_of_ip_addresses):
     net_mask = "24"
 
     command = "ip -4 -br a s"
-    
     logger.info('Generated command:\n%s',command) # FIXME
 
     known_ip_addresses = os.system(command)

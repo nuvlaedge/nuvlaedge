@@ -134,7 +134,7 @@ def manage_modbus_peripherals(ip_address):
                 per['identifier'] = identifier
                 discovered_devices[identifier] = per.copy()
 
-    logger.info(f"discovered devices:\n {discovered_devices}")
+    logger.debug(f"discovered devices:\n {discovered_devices}")
 
     return discovered_devices
 

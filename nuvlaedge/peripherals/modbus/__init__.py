@@ -107,11 +107,6 @@ def manage_modbus_peripherals(ip_address):
     logger.debug(f"All modbus devices:\n {all_modbus_devices}")
 
     discovered_devices: dict = {}
-    # if ip_address not in all_modbus_devices:
-      #   logger.warning(f'No Modbus Info found for host : {ip_address}')
-        # return discovered_devices
-
-    ## need to generate an ip address list from the results...
 
     for returned_ip_address in all_modbus_devices.keys():
         for per in all_modbus_devices[returned_ip_address]:
@@ -135,9 +130,7 @@ def manage_modbus_peripherals(ip_address):
     return discovered_devices
 
 def determine_ip_addresses(list_of_ip_addresses):
-    """Some text"""
-
-    net_mask = "24"
+    """Determine the list of IP addresses to be scanned."""
 
     command = "ip -4 -br a s"
     logger.debug(f'IP address command:\n{command}')

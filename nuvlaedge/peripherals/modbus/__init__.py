@@ -43,9 +43,13 @@ def get_default_gateway_ip():
                 continue
 
             return socket.inet_ntoa(struct.pack("<L", int(fields[2], 16)))
-        
+
 def nmap_replace_port(file, search_exp, replace_exp):
-    '''testing only'''
+    '''
+    Use this to change the port number in the nmap modbus script
+    We keep this as a reminder that this may need to be done in the future.
+    '''
+
     for line in fileinput.input(file, inplace=1):
         if search_exp in line:
             line = line.replace(search_exp,replace_exp)

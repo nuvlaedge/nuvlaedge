@@ -28,13 +28,6 @@ class GeoLocationMonitor(Monitor):
             "longitude_key": "longitude",
             "latitude_key": "latitude",
             "altitude_key": None
-        },
-        "ipgeolocation.com": {
-            "url": "https://ipgeolocation.com/?json=1",
-            "coordinates_key": "coords",
-            "longitude_key": None,
-            "latitude_key": None,
-            "altitude_key": None
         }
     }
 
@@ -115,9 +108,8 @@ class GeoLocationMonitor(Monitor):
                 try:
                     self.data.coordinates = \
                         self.parse_geolocation(service, info, it_response)
-                except TypeError:
-                    self.logger.error(f'Error parsing coordinates on service '
-                                          f'{service}')
+                except (TypeError, KeyError):
+                    self.logger.error(f'Error parsing coordinates on service {service}')
                     continue
 
                 self.data.timestamp = \

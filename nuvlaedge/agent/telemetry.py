@@ -25,6 +25,7 @@ from nuvlaedge.agent.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.monitor.components import get_monitor, active_monitors
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
 
 
 class MonitoredDict(dict):
@@ -269,35 +270,37 @@ class Telemetry(NuvlaEdgeCommon):
         """
         monitor_process_time: Dict = {}
 
+        def create_new_monitor_thread(name, telemetry: Telemetry, **kwargs):
+            th = get_monitor(name)(name, telemetry, True, **kwargs)
+            th.start()
+            return th
+
         for monitor_name, it_monitor in self.monitor_list.items():
             self.logger.debug(f' --- Monitor: {it_monitor.name} -- '
                                 f'Threaded: {it_monitor.is_thread} -- '
                                 f'Alive: {it_monitor.is_alive()}-')
 
-            if it_monitor.is_thread and not it_monitor.is_alive():
-                if it_monitor.ident:
-                    it_monitor.join()
-                    self.logger.warning(f'Monitor {monitor_name} offline. '
-                                        f'Re-initializing...')
-                    self.monitor_list[monitor_name] = \
-                        get_monitor(monitor_name)(monitor_name, self, True)
+            if is_thread_creation_needed(
+                    monitor_name,
+                    it_monitor,
+                    log_not_alive=(logging.INFO, 'Recreating {} thread.'),
+                    log_alive=(logging.DEBUG, 'Thread {} is alive'),
+                    log_not_exist=(logging.INFO, 'Creating {} thread.')):
 
-                self.logger.info(f'Starting monitor {it_monitor.name} '
-                                 f'thread for first time')
-                it_monitor.start()
+                self.monitor_list[monitor_name] = create_new_monitor_thread(monitor_name,
+                                                                            self)
 
             else:
-                if not it_monitor.is_alive():
-                    init_time: float = time.time()
+                init_time: float = time.time()
 
-                    try:
-                        it_monitor.update_data()
-                        it_monitor.updated = True
-                    except Exception as ex:
-                        self.logger.exception(f'Something went wrong updating monitor '
-                                              f'{monitor_name}. Error: {ex}', ex)
+                try:
+                    it_monitor.update_data()
+                    it_monitor.updated = True
+                except Exception as ex:
+                    self.logger.exception(f'Something went wrong updating monitor '
+                                          f'{monitor_name}. Error: {ex}', ex)
 
-                    monitor_process_time[it_monitor.name] = time.time() - init_time
+                monitor_process_time[it_monitor.name] = time.time() - init_time
 
         self.logger.debug(f'Monitors processing time '
                           f'{json.dumps(monitor_process_time, indent=4)}')

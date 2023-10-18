@@ -463,7 +463,18 @@ class KubernetesClient(COEClient):
 
     def get_all_nuvlaedge_components(self) -> list:
         # TODO: implement.
-        return []
+        # filter_labels = [util.base_label]
+        project_name = self.get_nuvlaedge_project_name()
+
+        log.info(f"The project name is: {project_name}")
+        # if project_name:
+            # filter_labels.append(f'com.docker.compose.project={project_name}')
+
+        # filters = {'label': filter_labels}
+
+        log.info(f"The container list is: {self.list_containers()}")
+        
+        return self.list_containers()
 
     def _namespace(self, **kwargs):
         return kwargs.get('namespace', self.namespace)

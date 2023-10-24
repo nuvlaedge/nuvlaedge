@@ -473,7 +473,7 @@ class KubernetesClient(COEClient):
         # filters = {'label': filter_labels}
 
         log.info(f"The container list is: {self.list_containers()}")
-        
+
         return self.list_containers()
 
     def _namespace(self, **kwargs):

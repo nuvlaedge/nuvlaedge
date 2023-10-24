@@ -429,7 +429,7 @@ class KubernetesClient(COEClient):
         if any(list(map(lambda n: n.type == 'Ready' and n.status == 'True', node.status.conditions))):
             return node.metadata.name
 
-        return None
+        return None/
 
     def get_container_plugins(self):
         # TODO

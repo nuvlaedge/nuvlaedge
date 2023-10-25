@@ -100,7 +100,7 @@ class OnStopTestCase(unittest.TestCase):
         # One Exception (retry works)
         network.remove.side_effect = [Exception("1st"), mock.DEFAULT]
         on_stop.cleanup_networks('')
-        self.assertEquals(network.remove.call_count, 2)
+        self.assertEqual(network.remove.call_count, 2)
 
         # reset
         network.remove.reset_mock()
@@ -155,7 +155,7 @@ class OnStopTestCase(unittest.TestCase):
         # One Exception (retry works)
         container.remove.side_effect = [Exception("1st"), mock.DEFAULT]
         on_stop.cleanup_datagateway(False)
-        self.assertEquals(container.remove.call_count, 2)
+        self.assertEqual(container.remove.call_count, 2)
 
         # reset
         container.remove.reset_mock()

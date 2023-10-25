@@ -171,8 +171,11 @@ class Agent:
         return True
 
     def _log_jobs(self, response, source=''):
-        jobs_count = len(response.data.get("jobs"))
-        self.logger.info(f'{jobs_count} jobs received in the {source} response')
+        try:
+            jobs_count = len(response.data.get("jobs", []))
+            self.logger.info(f'{jobs_count} jobs received in the {source} response')
+        except Exception as e:
+            self.logger.debug(f'Failed to log jobs count: {e}')
 
     def send_heartbeat(self) -> dict:
         """
@@ -192,7 +195,9 @@ class Agent:
         response: CimiResponse = self.telemetry.api().operation(
             self.nuvlaedge_resource,
             'heartbeat')
+
         self._log_jobs(response, 'heartbeat')
+
         return response.data
 
     def send_telemetry(self) -> dict:

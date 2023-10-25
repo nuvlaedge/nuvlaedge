@@ -45,6 +45,7 @@ class NuvlaEdgeCommon:
         """
         self.logger: logging.Logger = logging.getLogger(__name__)
 
+        self._api = None
         self.hostfs = coe_client.hostfs
         self.data_volume = shared_data_volume
         self.coe_client: COEClient = coe_client
@@ -303,11 +304,13 @@ class NuvlaEdgeCommon:
 
     def api(self):
         """ Returns an Api object """
-
-        return Api(endpoint='https://{}'.format(self.nuvla_endpoint),
-                   insecure=self.nuvla_endpoint_insecure,
-                   reauthenticate=True,
-                   compress=True)
+        if self._api is None:
+            self.logger.debug('Instantiating Api class')
+            self._api = Api(endpoint='https://{}'.format(self.nuvla_endpoint),
+                            insecure=self.nuvla_endpoint_insecure,
+                            reauthenticate=True,
+                            compress=True)
+        return self._api
 
     def push_event(self, data):
         """

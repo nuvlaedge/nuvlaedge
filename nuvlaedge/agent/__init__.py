@@ -7,13 +7,13 @@ import signal
 import socket
 import time
 
-from threading import Event, Thread
+from threading import Event
 
-from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
-from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
-from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
+from nuvlaedge.common.constants import CTE
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 from nuvlaedge.common.thread_tracer import signal_usr1
+from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 
 
 root_logger: logging.Logger = logging.getLogger()
@@ -21,11 +21,11 @@ root_logger: logging.Logger = logging.getLogger()
 action_handler: ActionHandler = ActionHandler([])
 
 
-def update_periods(nuvlabox_resource: dict):
+def update_periods(nuvlaedge_resource: dict):
     # Update refreshing intervals
-    refresh_interval = nuvlabox_resource.get('refresh-interval',
-                                             CTE.REFRESH_INTERVAL)
-    heartbeat_interval = nuvlabox_resource.get('heartbeat-interval',
+    refresh_interval = nuvlaedge_resource.get('refresh-interval',
+                                              CTE.REFRESH_INTERVAL)
+    heartbeat_interval = nuvlaedge_resource.get('heartbeat-interval',
                                                CTE.HEARTBEAT_INTERVAL)
 
     action_handler.edit_period('telemetry', refresh_interval)
@@ -36,23 +36,23 @@ def update_periods(nuvlabox_resource: dict):
 
 
 def update_nuvlaedge_configuration(
-        current_nuvlabox_res: dict,
-        old_nuvlabox_res: dict,
+        current_nuvlaedge_res: dict,
+        old_nuvlaedge_res: dict,
         infra: Infrastructure):
     """
-    Checks new the new nuvlabox resource configuration for differences on the local
+    Checks new the new nuvlaedge resource configuration for differences on the local
     registered one and updates (if required) the vpn and/or the heartbeat and telemetry
     periodic reports
     Args:
-        current_nuvlabox_res:
-        old_nuvlabox_res:
+        current_nuvlaedge_res:
+        old_nuvlaedge_res:
         infra:
     """
-    if old_nuvlabox_res['updated'] != current_nuvlabox_res['updated']:
-        update_periods(current_nuvlabox_res)
-        vpn_server_id = current_nuvlabox_res.get("vpn-server-id")
+    if old_nuvlaedge_res['updated'] != current_nuvlaedge_res['updated']:
+        update_periods(current_nuvlaedge_res)
+        vpn_server_id = current_nuvlaedge_res.get("vpn-server-id")
 
-        if vpn_server_id != old_nuvlabox_res.get("vpn-server-id"):
+        if vpn_server_id != old_nuvlaedge_res.get("vpn-server-id"):
             root_logger.info(f'VPN Server ID has been added/changed in Nuvla: '
                              f'{vpn_server_id}')
             infra.commission_vpn()

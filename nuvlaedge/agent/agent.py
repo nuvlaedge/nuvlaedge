@@ -10,9 +10,10 @@ from threading import Event, Thread
 
 from nuvla.api.models import CimiResource, CimiResponse
 
+from nuvlaedge.broker.file_broker import FileBroker
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import TimedAction
 from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
-from nuvlaedge.broker.file_broker import FileBroker
 
 from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common import util
@@ -56,8 +57,8 @@ class Agent:
         self.telemetry_thread = None
         self.peripherals_thread = None
 
-        self.nuvlabox_resource: CimiResource | None = None
-        self.nuvlabox_status_resource: CimiResource | None = None
+        self.nuvlaedge_resource: CimiResource | None = None
+        self.nuvlaedge_status_resource: CimiResource | None = None
 
     @property
     def peripheral_manager(self) -> PeripheralManager:
@@ -141,7 +142,7 @@ class Agent:
 
         # Gather resources post-activation
         nuvlaedge_resource, _ = self.activate.update_nuvlaedge_resource()
-        self.nuvlaedge_status_id = nuvlaedge_resource["nuvlabox-status"]
+        self.nuvlaedge_status_id = nuvlaedge_resource[CTE.NUVLAEDGE_STATUS_RES_NAME]
         self.logger.info(f'NuvlaEdge status id {self.nuvlaedge_status_id}')
 
     def initialize_infrastructure(self) -> None:
@@ -176,17 +177,17 @@ class Agent:
         Returns: None
 
         """
-        # Get the nuvlabox status resource only once and reuse it to send the
+        # Get the nuvlaedge status resource only once and reuse it to send the
         # heartbeat operation. This should be updated periodically by the telemetry
         # report.
-        if not self.nuvlabox_resource:
-            self.nuvlabox_resource = self.telemetry.api().get(
+        if not self.nuvlaedge_resource:
+            self.nuvlaedge_resource = self.telemetry.api().get(
                 self.telemetry.nuvlaedge_id
             )
 
         # 1. Send heartbeat
         response: CimiResponse = self.telemetry.api().operation(
-            self.nuvlabox_resource,
+            self.nuvlaedge_resource,
             'heartbeat')
         self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
                          f'heartbeat response')
@@ -229,7 +230,7 @@ class Agent:
                              f'{", ".join(del_attr)}')
 
         try:
-            self.nuvlabox_status_resource = self.telemetry.api().edit(
+            self.nuvlaedge_status_resource = self.telemetry.api().edit(
                 self.nuvlaedge_status_id,
                 data=status,
                 select=del_attr)
@@ -242,7 +243,7 @@ class Agent:
 
         self.past_status_time = copy(status_current_time)
 
-        return self.nuvlabox_status_resource.data
+        return self.nuvlaedge_status_resource.data
 
     def run_pull_jobs(self, job_list):
         """

@@ -2,6 +2,8 @@ import os
 import sys
 import threading
 
+from nuvla.api.models import CimiResource
+
 import nuvlaedge.agent.infrastructure
 from nuvlaedge.agent.agent import Agent
 from nuvlaedge.agent.activate import Activate
@@ -65,11 +67,18 @@ class TestAgent(TestCase):
         response_mock = Mock()
         response_mock.data = sample_data_return
 
+        # Heartbeat not supported on Nuvla server
         api_mock.operation.return_value = response_mock
         self.test_agent._telemetry.api.return_value = api_mock
-        api_mock.get.return_value = 'nuvlabox'
+        self.assertEqual({}, self.test_agent.send_heartbeat())
+
+        # Heartbeat supported on Nuvla server
+        nuvlaedge_resource = CimiResource(
+            {'operations': [{'href': 'nuvlabox/<uuid>/heartbeat',
+                            'rel': 'heartbeat'}]})
+        self.test_agent.activate.nuvlaedge_resource = nuvlaedge_resource
         self.assertEqual(sample_data_return, self.test_agent.send_heartbeat())
-        api_mock.operation.assert_called_once_with('nuvlabox', 'heartbeat')
+        api_mock.operation.assert_called_once_with(nuvlaedge_resource, 'heartbeat')
 
     @patch(os_makedir)
     @patch(atomic_write)

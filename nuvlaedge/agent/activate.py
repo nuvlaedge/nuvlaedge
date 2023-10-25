@@ -8,6 +8,8 @@ It takes care of activating a new NuvlaEdge
 import logging
 import requests
 
+from nuvla.api.models import CimiResource
+
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
@@ -33,6 +35,7 @@ class Activate(NuvlaEdgeCommon):
 
         self.activate_logger: logging.Logger = logging.getLogger(__name__)
         self.user_info = {}
+        self.nuvlaedge_resource: CimiResource | None = None
 
     def activation_is_possible(self):
         """ Checks for any hints of a previous activation
@@ -105,10 +108,13 @@ class Activate(NuvlaEdgeCommon):
 
         return current_context
 
-    def get_nuvlaedge_info(self):
+    def get_nuvlaedge(self) -> CimiResource:
         """ Retrieves the respective resource from Nuvla """
+        self.nuvlaedge_resource = self.api().get(self.nuvlaedge_id)
+        return self.nuvlaedge_resource
 
-        return self.api().get(self.nuvlaedge_id).data
+    def get_nuvlaedge_info(self) -> dict:
+        return self.get_nuvlaedge().data
 
     def update_nuvlaedge_resource(self) -> tuple:
         """ Updates the static information about the NuvlaEdge
@@ -119,8 +125,9 @@ class Activate(NuvlaEdgeCommon):
         self.authenticate(self.api(),
                           self.user_info["api-key"],
                           self.user_info["secret-key"])
-        nuvlaedge_resource = self.get_nuvlaedge_info()
 
-        old_nuvlaedge_resource = self.create_nb_document_file(nuvlaedge_resource)
+        nuvlaedge_resource_data = self.get_nuvlaedge_info()
 
-        return nuvlaedge_resource, old_nuvlaedge_resource
+        old_nuvlaedge_resource_data = self.create_nb_document_file(nuvlaedge_resource_data)
+
+        return nuvlaedge_resource_data, old_nuvlaedge_resource_data

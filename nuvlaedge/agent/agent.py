@@ -42,8 +42,8 @@ class Agent:
 
         # Main NuvlaEdge data
         self.nuvlaedge_status_id: str = ''
-        self.past_status_time: str = ''
         self.nuvlaedge_updated_date: str = ''
+        self.past_status_time: str = ''
 
         self.excluded_monitors = os.environ.get('NUVLAEDGE_EXCLUDED_MONITORS', '')
 
@@ -56,8 +56,6 @@ class Agent:
         self.infrastructure_thread = None
         self.telemetry_thread = None
         self.peripherals_thread = None
-
-        self.nuvlaedge_resource: CimiResource | None = None
 
     @property
     def peripheral_manager(self) -> PeripheralManager:
@@ -140,9 +138,23 @@ class Agent:
             self.activate.activate()
 
         # Gather resources post-activation
-        nuvlaedge_resource, _ = self.activate.update_nuvlaedge_resource()
-        self.nuvlaedge_status_id = nuvlaedge_resource[CTE.NUVLAEDGE_STATUS_RES_NAME]
+        nuvlaedge_resource_data, _ = self.activate.update_nuvlaedge_resource()
+        self.nuvlaedge_status_id = nuvlaedge_resource_data[CTE.NUVLAEDGE_STATUS_RES_NAME]
         self.logger.info(f'NuvlaEdge status id {self.nuvlaedge_status_id}')
+
+    @property
+    def nuvlaedge_resource(self):
+        if not self.activate.nuvlaedge_resource:
+            self.activate.get_nuvlaedge()
+        return self.activate.nuvlaedge_resource
+
+    @property
+    def nuvlaedge_operations(self) -> dict:
+        return self.nuvlaedge_resource.operations
+
+    @property
+    def is_heartbeat_supported_server_side(self):
+        return 'heartbeat' in self.nuvlaedge_operations
 
     def initialize_infrastructure(self) -> None:
         """
@@ -179,22 +191,16 @@ class Agent:
 
     def send_heartbeat(self) -> dict:
         """
+        Send heartbeat
 
-        Returns: None
-
+        Returns: a dict with the response from Nuvla
         """
-        # Get the nuvlaedge status resource only once and reuse it to send the
-        # heartbeat operation. This should be updated periodically by the telemetry
-        # report.
-        if not self.nuvlaedge_resource:
-            self.nuvlaedge_resource = self.telemetry.api().get(
-                self.telemetry.nuvlaedge_id
-            )
+        if not self.is_heartbeat_supported_server_side:
+            self.logger.info('Heartbeat not supported by Nuvla server. Skipping heartbeat')
+            return {}
 
-        # 1. Send heartbeat
         response: CimiResponse = self.telemetry.api().operation(
-            self.nuvlaedge_resource,
-            'heartbeat')
+            self.nuvlaedge_resource, 'heartbeat')
 
         self._log_jobs(response, 'heartbeat')
 

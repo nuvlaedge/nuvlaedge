@@ -58,7 +58,6 @@ class Agent:
         self.peripherals_thread = None
 
         self.nuvlaedge_resource: CimiResource | None = None
-        self.nuvlaedge_status_resource: CimiResource | None = None
 
     @property
     def peripheral_manager(self) -> PeripheralManager:
@@ -171,6 +170,10 @@ class Agent:
         self.activate_nuvlaedge()
         return True
 
+    def _log_jobs(self, response, source=''):
+        jobs_count = len(response.data.get("jobs"))
+        self.logger.info(f'{jobs_count} jobs received in the {source} response')
+
     def send_heartbeat(self) -> dict:
         """
 
@@ -189,8 +192,7 @@ class Agent:
         response: CimiResponse = self.telemetry.api().operation(
             self.nuvlaedge_resource,
             'heartbeat')
-        self.logger.info(f'{len(response.data.get("jobs"))} Jobs received in the '
-                         f'heartbeat response')
+        self._log_jobs(response, 'heartbeat')
         return response.data
 
     def send_telemetry(self) -> dict:
@@ -230,12 +232,14 @@ class Agent:
                              f'{", ".join(del_attr)}')
 
         try:
-            self.nuvlaedge_status_resource = self.telemetry.api().edit(
+            response: CimiResponse = self.telemetry.api().edit(
                 self.nuvlaedge_status_id,
                 data=status,
                 select=del_attr)
 
             self.telemetry.status_on_nuvla.update(status)
+
+            self._log_jobs(response, 'telemetry')
 
         except Exception:
             self.logger.error("Unable to update NuvlaEdge status in Nuvla")
@@ -243,7 +247,7 @@ class Agent:
 
         self.past_status_time = copy(status_current_time)
 
-        return self.nuvlaedge_status_resource.data
+        return response.data
 
     def run_pull_jobs(self, job_list):
         """
@@ -276,12 +280,11 @@ class Agent:
         """
         pull_jobs: list = response.get('jobs', [])
         if not isinstance(pull_jobs, list):
-            self.logger.warning(f'Jobs received on format {response.get("jobs")} '
-                                f'not compatible')
+            self.logger.warning(f'Jobs received on format not compatible: {response.get("jobs")}')
             return
 
         if pull_jobs:
-            self.logger.info(f'Processing jobs {pull_jobs} in pull mode')
+            self.logger.info(f'Processing following jobs in pull mode: {pull_jobs}')
 
             Thread(
                 target=self.run_pull_jobs,

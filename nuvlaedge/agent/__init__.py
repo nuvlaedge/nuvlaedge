@@ -156,6 +156,7 @@ def main():
         # Account cycle time
         cycle_duration = time.time() - start_cycle
         next_cycle_in = action_handler.sleep_time()
+
         root_logger.info(f'Action "{action.name}" completed in {cycle_duration:.2f} seconds. '
                          f'Next action "{action_handler._actions[0].name}" will be run in {next_cycle_in:.2f} seconds.')
 

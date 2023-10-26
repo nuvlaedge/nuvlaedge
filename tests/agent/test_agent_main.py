@@ -100,6 +100,7 @@ class TestAgentMain(TestCase):
                   mock_socket,
                   mock_signal,
                   mock_init_actions):
+        mock_action.sleep_time.return_value = 10
         mock_event.side_effect = [False, True]
         agent.main()
         self.assertEqual(2, mock_event.call_count)

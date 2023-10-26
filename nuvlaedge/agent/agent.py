@@ -252,8 +252,8 @@ class Agent:
 
             self._log_jobs(response, 'telemetry')
 
-        except Exception:
-            self.logger.error("Unable to update NuvlaEdge status in Nuvla")
+        except Exception as e:
+            self.logger.error(f'Unable to send telemetry to Nuvla: {e}')
             raise
 
         self.past_status_time = copy(status_current_time)
@@ -342,19 +342,20 @@ class Agent:
             th.start()
             return th
 
-        if is_thread_creation_needed('Telemetry', self.telemetry_thread,
-                                     log_not_alive=(logging.DEBUG,
-                                                    'Recreating {} thread.'),
-                                     log_alive=(logging.WARNING,
-                                                'Thread {} taking too long to complete')):
-            self.telemetry_thread = create_start_thread(
-                name='Telemetry',
-                target=self.telemetry.update_status)
+        if action.name == 'telemetry':
+            if is_thread_creation_needed('Telemetry', self.telemetry_thread,
+                                         log_not_alive=(logging.DEBUG,
+                                                        'Recreating {} thread.'),
+                                         log_alive=(logging.WARNING,
+                                                    'Thread {} taking too long to complete')):
+                self.telemetry_thread = create_start_thread(
+                    name='Telemetry',
+                    target=self.telemetry.update_status)
 
-        if is_thread_creation_needed('PeripheralManager', self.peripherals_thread):
-            self.peripherals_thread = create_start_thread(
-                name='PeripheralManager',
-                target=self.peripheral_manager.run)
+            if is_thread_creation_needed('PeripheralManager', self.peripherals_thread):
+                self.peripherals_thread = create_start_thread(
+                    name='PeripheralManager',
+                    target=self.peripheral_manager.run)
 
         response: dict = action()
         if response:

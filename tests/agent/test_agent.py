@@ -7,6 +7,9 @@ from nuvla.api.models import CimiResource
 import nuvlaedge.agent.infrastructure
 from nuvlaedge.agent.agent import Agent
 from nuvlaedge.agent.activate import Activate
+
+from nuvlaedge.common.timed_actions import TimedAction
+
 from mock import Mock, patch
 from unittest import TestCase
 
@@ -152,6 +155,12 @@ class TestAgent(TestCase):
         self.test_agent.telemetry_thread = False
         self.test_agent._telemetry = Mock()
         self.test_agent._infrastructure = Mock()
-        self.test_agent.run_single_cycle(self.test_agent.send_telemetry)
+
+        action = TimedAction(
+            name='telemetry',
+            period=60,
+            action=self.test_agent.send_telemetry)
+
+        self.test_agent.run_single_cycle(action)
         self.assertEqual(mock_start.call_count, 3)
         pull_mock.assert_called_once()

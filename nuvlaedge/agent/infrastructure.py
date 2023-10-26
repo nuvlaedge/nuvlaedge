@@ -499,7 +499,7 @@ class Infrastructure(NuvlaEdgeCommon):
         my_vpn_ip = self.telemetry_instance.get_vpn_ip()
         api_endpoint, _ = self.get_compute_endpoint(my_vpn_ip)
         infra_service = self.coe_client.define_nuvla_infra_service(api_endpoint,
-                                                                          *self.get_tls_keys())
+                                                                   *self.get_tls_keys())
 
         # 1st time commissioning the IS, so we need to also pass the keys, even if they
         # haven't changed

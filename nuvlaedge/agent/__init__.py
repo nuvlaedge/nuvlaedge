@@ -151,11 +151,15 @@ def main():
         action = action_handler.next
         main_agent.run_single_cycle(action)
 
+        # root_logger.debug('Action summary after action_handler.next - ' + action_handler.actions_summary())
+
         # Account cycle time
         cycle_duration = time.time() - start_cycle
         next_cycle_in = action_handler.sleep_time()
-        root_logger.info(f'Action "{action.name}" completed in {cycle_duration} seconds. '
-                         f'Next action "{action_handler._actions[0].name}" will be run in {next_cycle_in} seconds.')
+        root_logger.info(f'Action "{action.name}" completed in {cycle_duration:.2f} seconds. '
+                         f'Next action "{action_handler._actions[0].name}" will be run in {next_cycle_in:.2f} seconds.')
+
+        root_logger.debug('Action summary after action_handler.sleep_time() - ' + action_handler.actions_summary())
 
         main_event.wait(timeout=next_cycle_in)
 

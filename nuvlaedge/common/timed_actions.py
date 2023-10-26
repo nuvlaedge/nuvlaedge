@@ -81,3 +81,9 @@ class ActionHandler:
         for e in self._actions:
             if e.uuid == action_id or e.name == action_id:
                 e.period = new_period
+
+    def actions_summary(self):
+        summary = f'Actions: \n{"Name":<15} {"Period":>10} {"Rem. Time":>10} \n'
+        for action in self._actions:
+            summary += f'{action.name:<15} {action.period:>10.2f} {action.remaining_time:>10.2f} \n'
+        return summary

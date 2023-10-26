@@ -50,8 +50,8 @@ def update_nuvlaedge_configuration(
     """
     if old_nuvlaedge_res['updated'] != current_nuvlaedge_res['updated']:
         update_periods(current_nuvlaedge_res)
-        vpn_server_id = current_nuvlaedge_res.get("vpn-server-id")
 
+        vpn_server_id = current_nuvlaedge_res.get("vpn-server-id")
         if vpn_server_id != old_nuvlaedge_res.get("vpn-server-id"):
             root_logger.info(f'VPN Server ID has been added/changed in Nuvla: '
                              f'{vpn_server_id}')
@@ -143,6 +143,7 @@ def main():
                       arguments=(main_agent.activate,
                                  main_event,
                                  main_agent.infrastructure))
+    update_periods(main_agent.nuvlaedge_resource.data)
 
     while not main_event.is_set():
         # Time Start

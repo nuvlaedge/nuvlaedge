@@ -41,8 +41,6 @@ class Agent:
         self.logger.debug('Instantiating Agent class')
 
         # Main NuvlaEdge data
-        self.nuvlaedge_status_id: str = ''
-        self.nuvlaedge_updated_date: str = ''
         self.past_status_time: str = ''
 
         self.excluded_monitors = os.environ.get('NUVLAEDGE_EXCLUDED_MONITORS', '')
@@ -139,13 +137,15 @@ class Agent:
 
         # Gather resources post-activation
         nuvlaedge_resource_data, _ = self.activate.update_nuvlaedge_resource()
-        self.nuvlaedge_status_id = nuvlaedge_resource_data[CTE.NUVLAEDGE_STATUS_RES_NAME]
         self.logger.info(f'NuvlaEdge status id {self.nuvlaedge_status_id}')
 
+    def get_nuvlaedge(self) -> CimiResource:
+        return self.activate.get_nuvlaedge()
+
     @property
-    def nuvlaedge_resource(self):
+    def nuvlaedge_resource(self) -> CimiResource:
         if not self.activate.nuvlaedge_resource:
-            self.activate.get_nuvlaedge()
+            self.get_nuvlaedge()
         return self.activate.nuvlaedge_resource
 
     @property
@@ -153,7 +153,15 @@ class Agent:
         return self.nuvlaedge_resource.operations
 
     @property
-    def is_heartbeat_supported_server_side(self):
+    def nuvlaedge_status_id(self) -> str:
+        return self.nuvlaedge_resource.data.get(CTE.NUVLAEDGE_STATUS_RES_NAME)
+
+    @property
+    def nuvlaedge_updated_date(self) -> str:
+        return self.nuvlaedge_resource.data.get('updated')
+
+    @property
+    def is_heartbeat_supported_server_side(self) -> bool:
         return 'heartbeat' in self.nuvlaedge_operations
 
     def initialize_infrastructure(self) -> None:
@@ -189,9 +197,12 @@ class Agent:
         except Exception as e:
             self.logger.debug(f'Failed to log jobs count: {e}')
 
-    def send_heartbeat(self) -> dict:
+    def send_heartbeat(self, update_periods=None) -> dict:
         """
         Send heartbeat
+
+        Args:
+            update_periods: function to call to update periods
 
         Returns: a dict with the response from Nuvla
         """
@@ -203,6 +214,12 @@ class Agent:
             self.nuvlaedge_resource, 'heartbeat')
 
         self._log_jobs(response, 'heartbeat')
+
+        doc_last_updated = response.data.get('doc-last-updated')
+        if doc_last_updated and doc_last_updated != self.nuvlaedge_updated_date:
+            self.get_nuvlaedge()
+            if update_periods:
+                update_periods(self.nuvlaedge_resource.data)
 
         return response.data
 

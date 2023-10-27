@@ -61,7 +61,7 @@ def update_nuvlaedge_configuration(
 def resource_synchronization(
         activator: Activate,
         exit_event: Event,
-        infra: Infrastructure):
+        infra: Infrastructure) -> dict:
     """
     Checks if the NuvlaEdge resource has been updated in Nuvla
 
@@ -80,7 +80,7 @@ def resource_synchronization(
         root_logger.info(f"Remote NuvlaEdge resource state "
                          f"{nuvlaedge_resource.get('state', '')}, exiting agent")
         exit_event.set()
-        return
+        return {}
 
     vpn_server_id = nuvlaedge_resource.get("vpn-server-id")
     old_nuvlaedge_resource = activator.create_nb_document_file(nuvlaedge_resource)
@@ -92,6 +92,8 @@ def resource_synchronization(
     # if there's a mention to the VPN server, then watch the VPN credential
     if vpn_server_id:
         infra.watch_vpn_credential(vpn_server_id)
+
+    return {}
 
 
 def initialize_action(name: str,
@@ -132,17 +134,19 @@ def main():
     initialize_action(name='heartbeat',
                       period=CTE.HEARTBEAT_INTERVAL,
                       remaining_time=CTE.HEARTBEAT_INTERVAL,
-                      action=main_agent.send_heartbeat)
+                      action=main_agent.send_heartbeat,
+                      arguments=(update_periods,))
     initialize_action(name='telemetry',
                       period=CTE.REFRESH_INTERVAL,
                       action=main_agent.send_telemetry,
                       remaining_time=CTE.REFRESH_INTERVAL/2)
     initialize_action(name='sync_resources',
-                      period=30,
+                      period=86400,
                       action=resource_synchronization,
                       arguments=(main_agent.activate,
                                  main_event,
                                  main_agent.infrastructure))
+
     update_periods(main_agent.nuvlaedge_resource.data)
 
     while not main_event.is_set():

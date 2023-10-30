@@ -8,9 +8,12 @@ import os
 from copy import copy
 from threading import Event, Thread
 
-from nuvla.api.models import CimiResource
-from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
+from nuvla.api.models import CimiResource, CimiResponse
+
 from nuvlaedge.broker.file_broker import FileBroker
+from nuvlaedge.common.constants import CTE
+from nuvlaedge.common.timed_actions import TimedAction
+from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
 
 from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common import util
@@ -34,16 +37,13 @@ class Agent:
     agent_event: Event = Event()
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, agent_flag: bool):
+    def __init__(self):
         # Class logger
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.logger.debug('Instantiating Agent class')
 
         # Main NuvlaEdge data
-        self.nuvlaedge_status_id: str = ''
         self.past_status_time: str = ''
-        self.nuvlaedge_updated_date: str = ''
-        self.agent_flag: bool = agent_flag
 
         self.excluded_monitors = os.environ.get('NUVLAEDGE_EXCLUDED_MONITORS', '')
 
@@ -59,7 +59,9 @@ class Agent:
 
     @property
     def peripheral_manager(self) -> PeripheralManager:
-        """ Class responsible for handling peripheral reports and posting them to Nuvla """
+        """
+        Class responsible for handling peripheral reports and posting them to Nuvla
+        """
         if not self._peripheral_manager:
             self.logger.info('Instantiating PeripheralManager class')
             self._peripheral_manager = PeripheralManager(
@@ -78,7 +80,10 @@ class Agent:
 
     @property
     def activate(self) -> Activate:
-        """ Class responsible for activating and controlling previous nuvla installations """
+        """
+        Class responsible for activating and controlling previous nuvla
+        installations
+        """
         if not self._activate:
             self.logger.info('Instantiating Activate class')
             self._activate = Activate(self.coe_client,
@@ -123,7 +128,8 @@ class Agent:
             if can_activate or user_info:
                 break
             else:
-                self.logger.info(f'Activation not yet possible {can_activate}-{user_info}')
+                self.logger.info(
+                    f'Activation not yet possible {can_activate}-{user_info}')
 
             self.agent_event.wait(timeout=3)
 
@@ -132,9 +138,33 @@ class Agent:
             self.activate.activate()
 
         # Gather resources post-activation
-        nuvlaedge_resource, _ = self.activate.update_nuvlaedge_resource()
-        self.nuvlaedge_status_id = nuvlaedge_resource["nuvlabox-status"]
+        nuvlaedge_resource_data, _ = self.activate.update_nuvlaedge_resource()
         self.logger.info(f'NuvlaEdge status id {self.nuvlaedge_status_id}')
+
+    def get_nuvlaedge(self) -> CimiResource:
+        return self.activate.get_nuvlaedge()
+
+    @property
+    def nuvlaedge_resource(self) -> CimiResource:
+        if not self.activate.nuvlaedge_resource:
+            self.get_nuvlaedge()
+        return self.activate.nuvlaedge_resource
+
+    @property
+    def nuvlaedge_operations(self) -> dict:
+        return self.nuvlaedge_resource.operations
+
+    @property
+    def nuvlaedge_status_id(self) -> str:
+        return self.nuvlaedge_resource.data.get(CTE.NUVLAEDGE_STATUS_RES_NAME)
+
+    @property
+    def nuvlaedge_updated_date(self) -> str:
+        return self.nuvlaedge_resource.data.get('updated')
+
+    @property
+    def is_heartbeat_supported_server_side(self) -> bool:
+        return 'heartbeat' in self.nuvlaedge_operations
 
     def initialize_infrastructure(self) -> None:
         """
@@ -162,13 +192,46 @@ class Agent:
         self.activate_nuvlaedge()
         return True
 
-    def send_heartbeat(self) -> dict:
+    def _log_jobs(self, response, source=''):
+        try:
+            jobs_count = len(response.data.get("jobs", []))
+            self.logger.info(f'{jobs_count} jobs received in the {source} response')
+        except Exception as e:
+            self.logger.debug(f'Failed to log jobs count: {e}')
+
+    def send_heartbeat(self, update_periods=None) -> dict:
+        """
+        Send heartbeat
+
+        Args:
+            update_periods: function to call to update periods
+
+        Returns: a dict with the response from Nuvla
+        """
+        if not self.is_heartbeat_supported_server_side:
+            self.logger.info('Heartbeat not supported by Nuvla server. Skipping heartbeat')
+            return {}
+
+        response: CimiResponse = self.telemetry.api().operation(
+            self.nuvlaedge_resource, 'heartbeat')
+
+        self._log_jobs(response, 'heartbeat')
+
+        doc_last_updated = response.data.get('doc-last-updated')
+        if doc_last_updated and doc_last_updated != self.nuvlaedge_updated_date:
+            self.get_nuvlaedge()
+            if update_periods:
+                update_periods(self.nuvlaedge_resource.data)
+
+        return response.data
+
+    def send_telemetry(self) -> dict:
         """
         Updates the NuvlaEdge Status according to the local status file
 
         Returns: a dict with the response from Nuvla
         """
-        self.logger.debug(f'send_heartbeat(, '
+        self.logger.debug(f'send_telemetry(, '
                           f'{self.telemetry}, {self.nuvlaedge_status_id},'
                           f' {self.past_status_time})')
 
@@ -177,7 +240,7 @@ class Agent:
                                                 self.telemetry.status)
         status_current_time = self.telemetry.status.get('current-time', '')
         del_attr: list = []
-        self.logger.debug(f'send_heartbeat: status_current_time = {status_current_time} '
+        self.logger.debug(f'send_telemetry: status_current_time = {status_current_time} '
                           f'_delete_attributes = {_del_attr}  status = {status}')
 
         if not status_current_time:
@@ -199,20 +262,22 @@ class Agent:
                              f'{", ".join(del_attr)}')
 
         try:
-            resource: CimiResource = self.telemetry.api().edit(
+            response: CimiResponse = self.telemetry.api().edit(
                 self.nuvlaedge_status_id,
                 data=status,
                 select=del_attr)
 
             self.telemetry.status_on_nuvla.update(status)
 
-        except:
-            self.logger.error("Unable to update NuvlaEdge status in Nuvla")
+            self._log_jobs(response, 'telemetry')
+
+        except Exception as e:
+            self.logger.error(f'Unable to send telemetry to Nuvla: {e}')
             raise
 
         self.past_status_time = copy(status_current_time)
 
-        return resource.data
+        return response.data
 
     def run_pull_jobs(self, job_list):
         """
@@ -245,11 +310,11 @@ class Agent:
         """
         pull_jobs: list = response.get('jobs', [])
         if not isinstance(pull_jobs, list):
-            self.logger.warning(f'Jobs received on format {response.get("jobs")} not compatible')
+            self.logger.warning(f'Jobs received on format not compatible: {response.get("jobs")}')
             return
 
         if pull_jobs:
-            self.logger.info(f'Processing jobs {pull_jobs} in pull mode')
+            self.logger.info(f'Processing following jobs in pull mode: {pull_jobs}')
 
             Thread(
                 target=self.run_pull_jobs,
@@ -259,28 +324,37 @@ class Agent:
         else:
             self.logger.debug('No pull jobs to run')
 
-    def run_single_cycle(self):
+    def run_single_cycle(self, action: TimedAction):
         """
         Controls the main functionalities of the agent:
             1. Sending heartbeat
             2. Running pull jobs
+
+        Args:
+            action: Action to be executed in the cycle
+
+        Returns: None
+
         """
 
-        if is_thread_creation_needed('Telemetry', self.telemetry_thread,
-                                     log_not_alive=(logging.DEBUG, 'Recreating {} thread.'),
-                                     log_alive=(logging.WARNING, 'Thread {} taking too long to complete')):
-            self.telemetry_thread = create_start_thread(name='Telemetry',
-                                                        target=self.telemetry.update_status)
+        if action.name == 'telemetry':
+            if is_thread_creation_needed('Telemetry', self.telemetry_thread,
+                                         log_not_alive=(logging.DEBUG, 'Recreating {} thread.'),
+                                         log_alive=(logging.WARNING, 'Thread {} taking too long to complete')):
+                self.telemetry_thread = create_start_thread(
+                    name='Telemetry',
+                    target=self.telemetry.update_status)
 
-        if is_thread_creation_needed('PeripheralManager', self.peripherals_thread):
-            self.peripherals_thread = create_start_thread(name='PeripheralManager',
-                                                          target=self.peripheral_manager.run)
+            if is_thread_creation_needed('PeripheralManager', self.peripherals_thread):
+                self.peripherals_thread = create_start_thread(
+                    name='PeripheralManager',
+                    target=self.peripheral_manager.run)
 
-        response: dict = self.send_heartbeat()
-
-        self.handle_pull_jobs(response)
+        response: dict = action()
+        if response:
+            self.handle_pull_jobs(response)
 
         if is_thread_creation_needed('Infrastructure', self.infrastructure_thread):
-            self.infrastructure_thread = create_start_thread(name='Infrastructure',
-                                                             target=self.infrastructure.run)
-
+            self.infrastructure_thread = create_start_thread(
+                name='Infrastructure',
+                target=self.infrastructure.run)

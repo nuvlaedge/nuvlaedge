@@ -7,7 +7,7 @@ from unittest import TestCase
 import mock
 
 from nuvlaedge.broker.file_broker import FileBroker, MessageFormatError
-from nuvlaedge.common.constants import DATETIME_FORMAT
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.models.messages import NuvlaEdgeMessage
 
 
@@ -18,12 +18,13 @@ class TestFileBroker(TestCase):
     def test_decode_message_from_file_name(self):
 
         # Test standard formatting without errors
-        sample_date: str = datetime.now().strftime(DATETIME_FORMAT)
+        sample_date: str = datetime.now().strftime(CTE.DATETIME_FORMAT)
         sample_sender = 'sender'
         sample_name: str = f'{sample_date}_{sample_sender}.json'
-        self.assertEqual(self.test_broker.decode_message_from_file_name(sample_name),
-                         (datetime.strptime(sample_date, DATETIME_FORMAT), sample_sender),
-                         'Failed')
+        self.assertEqual(
+            self.test_broker.decode_message_from_file_name(sample_name),
+            (datetime.strptime(sample_date, CTE.DATETIME_FORMAT), sample_sender),
+            'Failed')
 
         # Test regex comparison
         with self.assertRaises(MessageFormatError) as context:
@@ -36,7 +37,7 @@ class TestFileBroker(TestCase):
         mock_datetime.now.return_value = dummy_date
         sender = 'sender'
         self.assertEqual(self.test_broker.compose_file_name(sender),
-                         f'{dummy_date.strftime(DATETIME_FORMAT)}_{sender}.json')
+                         f'{dummy_date.strftime(CTE.DATETIME_FORMAT)}_{sender}.json')
 
     @mock.patch.object(Path, 'exists')
     @mock.patch.object(Path, 'iterdir')

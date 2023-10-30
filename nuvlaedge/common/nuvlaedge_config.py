@@ -9,7 +9,8 @@ import sys
 
 from argparse import ArgumentParser
 
-LOGGING_BASIC_FORMAT: str = '[%(asctime)s - %(name)s/%(funcName)s - %(levelname)s]: %(message)s'
+LOGGING_BASIC_FORMAT: str = '[%(asctime)s - %(name)s/%(funcName)s - ' \
+                            '%(levelname)s]: %(message)s'
 LOGGING_DEFAULT_LEVEL = 'INFO'
 
 
@@ -37,7 +38,10 @@ def initialize_logging(log_level: str = '', config_file: str = ''):
         logging.getLogger("requests").setLevel(logging.WARNING)
 
 
-def nuvlaedge_arg_parser(component_name: str, additional_arguments: callable = None) -> ArgumentParser:
+def nuvlaedge_arg_parser(
+        component_name: str,
+        additional_arguments: callable = None
+) -> ArgumentParser:
     """
     Common arguments creator for all NuvlaEdge components.
     It also receives a custom_arguments function to add extra arguments that
@@ -54,7 +58,8 @@ def nuvlaedge_arg_parser(component_name: str, additional_arguments: callable = N
                         action='store_const', const='DEBUG',
                         help='Set log level to debug')
 
-    # If more arguments are required, implement the function on the specific component and pass it
+    # If more arguments are required, implement the function on the specific
+    # component and pass it
     # to this function as an argument
     if additional_arguments:
         additional_arguments(parser)

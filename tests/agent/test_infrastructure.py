@@ -254,12 +254,13 @@ class InfrastructureTestCase(unittest.TestCase):
 
         # fn will change the given arg
         self.obj.get_nuvlaedge_capabilities(commission_payload)
-        self.assertEqual(commission_payload, {'capabilities': []},
+        self.assertEqual(commission_payload, {'capabilities': ['NUVLA_HEARTBEAT']},
                          'Failed to get NB capabilities when there is no PULL mode')
 
         self.obj.coe_client.has_pull_job_capability.return_value = True
         self.obj.get_nuvlaedge_capabilities(commission_payload)
-        self.assertEqual(commission_payload, {'capabilities': ['NUVLA_JOB_PULL']},
+        self.assertEqual(commission_payload,
+                         {'capabilities': ['NUVLA_HEARTBEAT', 'NUVLA_JOB_PULL']},
                          'Failed to get NB capabilities when PULL mode is set')
 
     @mock.patch('requests.get')

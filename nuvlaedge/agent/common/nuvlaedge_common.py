@@ -45,6 +45,7 @@ class NuvlaEdgeCommon:
         """
         self.logger: logging.Logger = logging.getLogger(__name__)
 
+        self._api = None
         self.hostfs = coe_client.hostfs
         self.data_volume = shared_data_volume
         self.coe_client: COEClient = coe_client
@@ -54,20 +55,22 @@ class NuvlaEdgeCommon:
         self.host_user_home_file = f'{self.data_volume}/.host_user_home'
         self.installation_home = self.set_installation_home(FILE_NAMES.HOST_USER_HOME)
 
-        self.nuvlaedge_nuvla_configuration = f'{self.data_volume}/.nuvla-configuration'
         self.nuvla_endpoint, self.nuvla_endpoint_insecure = self.set_nuvla_endpoint()
         # Also store the Nuvla connection details for future restarts
         conf = f"{self.nuvla_endpoint_key}={self.nuvla_endpoint}\n" \
                f"{self.nuvla_endpoint_insecure_key}={str(self.nuvla_endpoint_insecure)}"
         self.save_nuvla_configuration(FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION, conf)
 
-        self.activation_flag = "{}/.activated".format(self.data_volume)
+        # FIXME: Delete and fix tests
         self.nuvlaedge_status_file = "{}/.nuvlabox-status".format(self.data_volume)
 
+        # FIXME: Delete and fix tests
         self.ip_geolocation_file = "{}/.ipgeolocation".format(self.data_volume)
+        # FIXME: Delete and fix tests
         self.vulnerabilities_file = "{}/vulnerabilities".format(self.data_volume)
         self.previous_net_stats_file = f"{self.data_volume}/.previous_net_stats"
 
+        # FIXME: Delete and fix tests
         self.vpn_folder = "{}/vpn".format(self.data_volume)
         if not os.path.isdir(self.vpn_folder):
             os.makedirs(self.vpn_folder)
@@ -79,12 +82,12 @@ class NuvlaEdgeCommon:
         self.vpn_csr_file = f'{self.vpn_folder}/nuvlaedge-vpn.csr'
         self.vpn_config_extra = self.set_vpn_config_extra()
 
-        self.peripherals_dir = "{}/.peripherals".format(self.data_volume)
-
-        self.swarm_node_cert = f"{self.hostfs}/var/lib/docker/swarm/certificates/swarm-node.crt"
+        self.swarm_node_cert = \
+            f"{self.hostfs}/var/lib/docker/swarm/certificates/swarm-node.crt"
 
         self.nuvlaedge_id = self.set_nuvlaedge_id()
 
+        # FIXME: Delete and fix tests
         self.container_stats_json_file = f"{self.data_volume}/docker_stats.json"
 
     def set_vpn_config_extra(self) -> str:
@@ -120,7 +123,8 @@ class NuvlaEdgeCommon:
         """
         Finds the path for the HOME dir used during installation
 
-        :param host_user_home_file: location of the file where the previous installation home value was saved
+        :param host_user_home_file: location of the file where the previous installation
+        home value was saved
         :return: installation home path
         """
         if os.path.exists(host_user_home_file):
@@ -135,27 +139,37 @@ class NuvlaEdgeCommon:
 
         :return: clean Nuvla endpoint and whether it is insecure or not -> (str, bool)
         """
-        nuvla_endpoint_raw = os.environ["NUVLA_ENDPOINT"] if "NUVLA_ENDPOINT" in os.environ else "nuvla.io"
-        nuvla_endpoint_insecure_raw = os.environ[
-            "NUVLA_ENDPOINT_INSECURE"] if "NUVLA_ENDPOINT_INSECURE" in os.environ else False
+        nuvla_endpoint_raw = os.environ["NUVLA_ENDPOINT"] \
+            if "NUVLA_ENDPOINT" in os.environ else "nuvla.io"
+        nuvla_endpoint_insecure_raw = os.environ["NUVLA_ENDPOINT_INSECURE"] \
+            if "NUVLA_ENDPOINT_INSECURE" in os.environ else False
+
         try:
             with open(FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION) as nuvla_conf:
                 local_nuvla_conf = nuvla_conf.read().split()
 
-            nuvla_endpoint_line = list(filter(lambda x: x.startswith(self.nuvla_endpoint_key), local_nuvla_conf))
+            nuvla_endpoint_line = list(filter(
+                lambda x: x.startswith(self.nuvla_endpoint_key),
+                local_nuvla_conf))
+
             if nuvla_endpoint_line:
                 nuvla_endpoint_raw = nuvla_endpoint_line[0].split('=')[-1]
 
-            nuvla_endpoint_insecure_line = list(filter(lambda x: x.startswith(self.nuvla_endpoint_insecure_key),
-                                                       local_nuvla_conf))
+            nuvla_endpoint_insecure_line = \
+                list(filter(
+                    lambda x: x.startswith(self.nuvla_endpoint_insecure_key),
+                    local_nuvla_conf))
+
             if nuvla_endpoint_insecure_line:
-                nuvla_endpoint_insecure_raw = nuvla_endpoint_insecure_line[0].split('=')[-1]
+                nuvla_endpoint_insecure_raw = \
+                    nuvla_endpoint_insecure_line[0].split('=')[-1]
+
         except FileNotFoundError:
-            self.logger.debug(
-                'Local Nuvla configuration does not exist yet - first time running the NuvlaEdge Engine...')
+            self.logger.debug('Local Nuvla configuration does not exist yet - first time'
+                              ' running the NuvlaEdge Engine...')
         except IndexError as e:
-            self.logger.debug(
-                f'Unable to read Nuvla configuration from {FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION}: {str(e)}')
+            self.logger.debug(f'Unable to read Nuvla configuration from '
+                              f'{FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION}: {str(e)}')
 
         while nuvla_endpoint_raw[-1] == "/":
             nuvla_endpoint_raw = nuvla_endpoint_raw[:-1]
@@ -215,7 +229,8 @@ class NuvlaEdgeCommon:
 
     def set_nuvlaedge_id(self) -> str:
         """
-        Discovers the NuvlaEdge ID either from a previous run or from env or alternatively from the API session
+        Discovers the NuvlaEdge ID either from a previous run or from env or
+        alternatively from the API session
 
         :return: clean NuvlaEdge ID as a str
         """
@@ -229,34 +244,49 @@ class NuvlaEdgeCommon:
 
         if (context_nuvlaedge_id and env_nuvlaedge_id
                 and get_uuid(context_nuvlaedge_id) != get_uuid(env_nuvlaedge_id)):
-            raise RuntimeError(f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even though a '
-                               f'previous NuvlaEdge installation ({context_nuvlaedge_id}) still exists in the system! '
-                               f'You can either delete the previous installation (removing all data volumes) or '
-                               f'fix the NUVLAEDGE_UUID environment variable to match the old {context_nuvlaedge_id}')
+            raise RuntimeError(
+                f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
+                f'though a previous NuvlaEdge installation ({context_nuvlaedge_id}) '
+                f'still exists in the system! You can either delete the previous '
+                f'installation (removing all data volumes) or fix the NUVLAEDGE_UUID '
+                f'environment variable to match the old {context_nuvlaedge_id}')
 
-        if (context_nuvlaedge_id and session_nuvlaedge_id
-                and get_uuid(context_nuvlaedge_id) != get_uuid(session_nuvlaedge_id)):
+        if (
+                context_nuvlaedge_id
+                and session_nuvlaedge_id
+                and get_uuid(context_nuvlaedge_id) != get_uuid(session_nuvlaedge_id)
+        ):
             self.logger.warning(f'NuvlaEdge from context file ({context_nuvlaedge_id}) '
                                 f'do not match session identifier ({session_nuvlaedge_id})')
 
-        if (env_nuvlaedge_id and session_nuvlaedge_id
-                and get_uuid(env_nuvlaedge_id) != get_uuid(session_nuvlaedge_id)):
-            self.logger.warning(f'NuvlaEdge from environment variable ({env_nuvlaedge_id}) '
-                                f'do not match session identifier ({session_nuvlaedge_id})')
+        if (
+                env_nuvlaedge_id
+                and session_nuvlaedge_id
+                and get_uuid(env_nuvlaedge_id) != get_uuid(session_nuvlaedge_id)
+        ):
+            self.logger.warning(f'NuvlaEdge from environment variable '
+                                f'({env_nuvlaedge_id}) do not match session identifier '
+                                f'({session_nuvlaedge_id})')
 
         if context_nuvlaedge_id:
-            self.logger.info(f'Using NuvlaEdge uuid from context file: {context_nuvlaedge_id}')
+            self.logger.info(f'Using NuvlaEdge uuid from context file: '
+                             f'{context_nuvlaedge_id}')
             nuvlaedge_id = context_nuvlaedge_id
+
         elif env_nuvlaedge_id:
-            self.logger.info(f'Using NuvlaEdge uuid from environment variable: {env_nuvlaedge_id}')
+            self.logger.info(f'Using NuvlaEdge uuid from environment variable: '
+                             f'{env_nuvlaedge_id}')
             nuvlaedge_id = env_nuvlaedge_id
+
         elif session_nuvlaedge_id:
-            self.logger.info(f'Using NuvlaEdge uuid from api session: {session_nuvlaedge_id}')
+            self.logger.info(f'Using NuvlaEdge uuid from api session: '
+                             f'{session_nuvlaedge_id}')
             nuvlaedge_id = session_nuvlaedge_id
         else:
             raise RuntimeError('NUVLAEDGE_UUID not provided')
 
-        if not nuvlaedge_id.startswith("nuvlaedge/") and not nuvlaedge_id.startswith("nuvlabox/"):
+        if not nuvlaedge_id.startswith("nuvlaedge/") \
+                and not nuvlaedge_id.startswith("nuvlabox/"):
             nuvlaedge_id = 'nuvlabox/{}'.format(nuvlaedge_id)
 
         return nuvlaedge_id
@@ -274,9 +304,13 @@ class NuvlaEdgeCommon:
 
     def api(self):
         """ Returns an Api object """
-
-        return Api(endpoint='https://{}'.format(self.nuvla_endpoint),
-                   insecure=self.nuvla_endpoint_insecure, reauthenticate=True, compress=True)
+        if self._api is None:
+            self.logger.debug('Instantiating Api class')
+            self._api = Api(endpoint='https://{}'.format(self.nuvla_endpoint),
+                            insecure=self.nuvla_endpoint_insecure,
+                            reauthenticate=True,
+                            compress=True)
+        return self._api
 
     def push_event(self, data):
         """
@@ -338,8 +372,6 @@ class NuvlaEdgeCommon:
         """
         with open(file_path) as f:
             return json.load(f)
-
-
 
     def get_operational_status(self):
         """ Retrieves the operational status of the NuvlaEdge from the .status file """

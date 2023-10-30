@@ -16,6 +16,7 @@ import os
 import csv
 import json
 import re
+import asyncio
 
 from shutil import which
 
@@ -49,10 +50,10 @@ if KUBERNETES_SERVICE_HOST:
 else:
     if os.path.exists(docker_socket_file):
         import docker
+
         ORCHESTRATOR = 'docker'
     else:
         ORCHESTRATOR = None
-
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -140,7 +141,7 @@ def build_cuda_core_docker_cli(devices):
     if cuda_version == 'aarch64':
         libcuda = '{}/{}-linux-gnu/'.format(usr_lib_path, cuda_version)
         etc = '/etc/'
-        cli_volumes[etc] = {'bind':  etc, 'mode': 'ro'}
+        cli_volumes[etc] = {'bind': etc, 'mode': 'ro'}
         libs.extend([libcuda, etc])
     else:
         libcuda = '{}/{}-linux-gnu/libcuda.so'.format(usr_lib_path, cuda_version)
@@ -313,7 +314,6 @@ def read_runtime_files(path):
 
 
 def cuda_cores_information(nv_devices):
-
     devices, libs, _ = build_cuda_core_docker_cli(nv_devices)
     output = cuda_cores(devices, libs)
     if output != '':
@@ -403,15 +403,19 @@ def gpu_check(api_url):
     return False
 
 
-def main():
+async def main():
     global logger
     parse_arguments_and_initialize_logging('GPU Peripheral')
 
     logger = logging.getLogger(__name__)
     gpu_peripheral: Peripheral = Peripheral('gpu')
 
-    gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)
+    await gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)
+
+
+def entry():
+    asyncio.run(main())
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

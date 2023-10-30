@@ -6,20 +6,73 @@ This service provides bluetooth device discovery.
 
 import bluetooth as bt
 import logging
+from bleak import BleakScanner, BLEDevice, AdvertisementData, BleakClient
+from bleak.backends._manufacturers import MANUFACTURERS
+from typing import List
+from bleak.uuids import uuidstr_to_str
+import asyncio
 import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
-
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
 def device_discovery():
     """
-    Return all discoverable bluetooth devices.
+    Return all discoverable bluetooth class devices.
     """
     return bt.discover_devices(lookup_names=True, lookup_class=True)
+
+
+async def ble_device_discovery() -> dict:
+    """
+    Return all discoverable ble devices
+    """
+    devices: dict[str, tuple[BLEDevice, AdvertisementData]] = await BleakScanner.discover(timeout=4, return_adv=True)
+    ble_devices: dict = {}
+    for dev_id, ble_device in devices.items():
+        ble_devices[dev_id] = {}
+        ble_devices[dev_id]['available'] = True
+        ble_devices[dev_id]['interface'] = "Bluetooth-LE"
+        ble_devices[dev_id]['identifier'] = dev_id
+        ble_devices[dev_id]['classes'] = []
+        if ble_device[0].name != "":
+            ble_devices[dev_id]['name'] = ble_device[0].name
+        ble_devices[dev_id]['address'] = ble_device[0].address
+        ble_devices[dev_id]['rssi'] = ble_device[1].rssi
+        man_dict = ble_device[1].manufacturer_data
+        ble_devices[dev_id]['vendor'] = ''
+        for company_id in man_dict.keys():
+            if company_id in MANUFACTURERS:
+                ble_devices[dev_id]['vendor'] += MANUFACTURERS[company_id] + ', '
+        if ble_devices[dev_id]['vendor'] != '':
+            ble_devices[dev_id]['vendor'] = ble_devices[dev_id]['vendor'][:-2]
+        else:
+            del ble_devices[dev_id]['vendor']
+        uuids: List = ble_device[1].service_uuids
+        if ble_device[1].platform_data[1] is not None:
+            get_info_from_raw_data(ble_device[1].platform_data[1], ble_devices[dev_id])
+        fill_service_desc(uuids, ble_devices[dev_id])
+    return ble_devices
+
+
+def get_info_from_raw_data(raw_data: dict, device_info: dict):
+    for key, value in raw_data.items():
+        if key == 'Class':
+            device_info['classes'] = cod_converter(value)
+        elif key == 'Name':
+            device_info['name'] = value
+
+
+def fill_service_desc(uuids: List, device_info: dict):
+    if device_info['classes']:
+        return
+    for service_id in uuids:
+        service_desc = uuidstr_to_str(service_id)
+        if service_desc != "Unknown" and service_desc != device_info['vendor']:
+            device_info['classes'].append(service_desc)
 
 
 def compare_bluetooth(bluetooth, ble):
@@ -37,18 +90,6 @@ def compare_bluetooth(bluetooth, ble):
                 d["name"] = device[1]
 
             output.append(d)
-
-    for device_id, device_name in ble.items():
-        d = {
-            "identifier": device_id,
-            "class": "",
-            "interface": "Bluetooth-LE"
-        }
-
-        if device_name != "":
-            d["name"] = device_name
-
-        output.append(d)
 
     return output
 
@@ -252,9 +293,7 @@ def cod_converter(cod_decimal_string):
     return peripheral_classes
 
 
-def bluetooth_manager():
-    output = {}
-
+async def bluetooth_manager():
     try:
         # list
         bluetooth_devices = device_discovery()
@@ -263,9 +302,11 @@ def bluetooth_manager():
         bluetooth_devices = []
         logger.exception("Failed to discover BT devices", e)
 
-    ble_devices = {}
+    ble_devices = await ble_device_discovery()
+    logger.info(f'BLE Devices {ble_devices}')
 
     bluetooth = compare_bluetooth(bluetooth_devices, ble_devices)
+    output = ble_devices
     if len(bluetooth) > 0:
         for device in bluetooth:
             name = device.get("name", "unknown")
@@ -276,19 +317,23 @@ def bluetooth_manager():
                 "identifier": device.get("identifier"),
                 "interface": device.get("interface", "Bluetooth"),
             }
-
+    logger.info(f'Final Output {output}')
     return output
 
 
-def main():
+async def main():
     parse_arguments_and_initialize_logging('Bluetooth Peripheral')
 
     logger.info('Starting bluetooth manager')
 
-    bluetooth_peripheral: Peripheral = Peripheral('bluetooth')
+    bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True)
 
-    bluetooth_peripheral.run(bluetooth_manager)
+    await bluetooth_peripheral.run(bluetooth_manager)
+
+
+def entry():
+    asyncio.run(main())
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

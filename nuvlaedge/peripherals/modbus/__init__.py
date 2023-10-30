@@ -20,6 +20,7 @@ import os
 import logging
 import fileinput
 import sys
+import asyncio
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -151,7 +152,7 @@ def determine_ip_addresses(list_of_ip_addresses):
     return list_of_ip_addresses
 
 
-def main():
+async def main():
     global logger
 
     parse_arguments_and_initialize_logging('Modbus Peripheral')
@@ -163,11 +164,15 @@ def main():
     modbus_peripheral: Peripheral = Peripheral('modbus')
 
     # do the ip address thing here?
-
+    
     list_of_ip_addresses = determine_ip_addresses(gateway_ip)
+    
+    await modbus_peripheral.run(manage_modbus_peripherals, ip_address=list_of_ip_addresses)
+    
 
-    modbus_peripheral.run(manage_modbus_peripherals, ip_address=list_of_ip_addresses)
+def entry():
+    asyncio.run(main())
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())

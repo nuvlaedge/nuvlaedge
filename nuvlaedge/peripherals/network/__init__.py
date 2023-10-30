@@ -12,6 +12,7 @@ import os
 import xmltodict
 import re
 import base64
+import asyncio
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -107,7 +108,7 @@ def ssdp_manager():
         else:
             # new device
             location = device.get('location')
-            device_from_location = get_ssdp_device_xml_as_json(location)    # always a dict
+            device_from_location = get_ssdp_device_xml_as_json(location)  # always a dict
             alt_name = usn
             if 'x-friendly-name' in device:
                 try:
@@ -157,7 +158,7 @@ def ws_discovery_manager(ws_daemon):
     services = ws_daemon.searchServices(timeout=6)
     for service in services:
         identifier = str(service.getEPR()).split(':')[-1]
-        classes = [ re.split("/|:", str(c))[-1] for c in service.getTypes() ]
+        classes = [re.split("/|:", str(c))[-1] for c in service.getTypes()]
         name = " | ".join(classes)
         if identifier not in manager.keys():
             output = {
@@ -310,7 +311,7 @@ def network_manager(**kwargs):
     return output
 
 
-def main():
+async def main():
     global logger
     parse_arguments_and_initialize_logging('Network Peripheral')
 
@@ -328,4 +329,8 @@ def main():
 
     ws_daemon = WSDiscovery()
 
-    network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)
+    await network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)
+
+
+def entry():
+    asyncio.run(main())

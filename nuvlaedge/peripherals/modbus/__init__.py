@@ -21,6 +21,8 @@ import logging
 import fileinput
 import sys
 import asyncio
+import ipaddress
+import subprocess
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -134,7 +136,7 @@ def manage_modbus_peripherals(ip_address):
 
     return discovered_devices
 
-def determine_ip_addresses(list_of_ip_addresses):
+def determine_ip_addresses_old(list_of_ip_addresses):
     """Determine the list of IP addresses to be scanned."""
 
     command = "ip -4 -br a s"
@@ -149,6 +151,46 @@ def determine_ip_addresses(list_of_ip_addresses):
 
     logging.debug(f'The list of IP addresses has been set to:\n{list_of_ip_addresses}')
 
+    return list_of_ip_addresses
+
+
+def determine_ip_addresses(list_of_ip_addresses):
+    """
+    Determine the list of IP addresses to be scanned on the host.
+
+    Input: list_of_ip_addresses which is the default gateway
+
+    This function will detect all the IP addresses and remove non-routable 
+    IP addresses and networks.
+    This may need to be adjusted according to how customers deploy modbus
+    """
+    command="ip -4 -br a s | awk -F \" \" '{print $3}'"
+
+    try:
+        ip_list = subprocess.run(["sh", "-c", command], timeout=5, \
+            capture_output=True, check=True, encoding="UTF-8")
+    except FileNotFoundError as exc:
+        logging.error(f"Process failed because the executable could not be found.\n{exc}")
+    except subprocess.CalledProcessError as exc:
+        logging.error(
+            f"Process failed because did not return a successful return code. "
+            f"Returned {exc.returncode}\n{exc}"
+        )
+    except subprocess.TimeoutExpired as exc:
+        logging.error(f"Process timed out.\n{exc}")
+
+    for ip_add in ip_list.stdout.splitlines():
+        if ipaddress.ip_network(ip_add, strict=False):
+            if not ipaddress.ip_network(ip_add, strict=False).is_private:
+                logging.info(f"IP address {ip_add} is routable!")
+                list_of_ip_addresses = list_of_ip_addresses + ip_add
+        else:
+            if not ipaddress.ip_address(ip_add).is_private:
+                logging.info(f"IP address {ip_add} is routable!")
+                list_of_ip_addresses = list_of_ip_addresses + ip_add
+    if os.getenv('KUBERNETES_SERVICE_HOST') and os.getenv('MY_HOST_NODE_IP'):
+        list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
+        
     return list_of_ip_addresses
 
 

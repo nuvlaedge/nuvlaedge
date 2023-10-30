@@ -101,7 +101,8 @@ class Infrastructure(NuvlaEdgeCommon):
                 client_key = file.read()
 
         except (FileNotFoundError, IndexError):
-            self.logger.warning("Container orchestration API TLS keys have not been set yet!")
+            self.logger.warning("Container orchestration API TLS keys have not been"
+                                " set yet!")
             return []
 
         return client_ca, client_cert, client_key
@@ -115,7 +116,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         if not payload:
             self.logger.debug("Tried commissioning with empty payload. Nothing "
-                                    "to do")
+                              "to do")
             return
 
         self.logger.info("Commissioning the NuvlaEdge...{}".format(payload))
@@ -279,7 +280,7 @@ class Infrastructure(NuvlaEdgeCommon):
                 vpn_key = key.read()
         except TimeoutError:
             self.logger.error(f'Unable to lookup {self.vpn_key_file} and '
-                                    f'{self.vpn_csr_file}')
+                              f'{self.vpn_csr_file}')
             return None, None
 
         return vpn_csr, vpn_key
@@ -293,7 +294,7 @@ class Infrastructure(NuvlaEdgeCommon):
         """
 
         # NUVLA_JOB_PULL if job-engine-lite has been deployed with the NBE
-        commissioning_dict['capabilities'] = []
+        commissioning_dict['capabilities'] = ['NUVLA_HEARTBEAT']
         if self.coe_client.has_pull_job_capability():
             commissioning_dict['capabilities'].append('NUVLA_JOB_PULL')
 
@@ -498,7 +499,7 @@ class Infrastructure(NuvlaEdgeCommon):
         my_vpn_ip = self.telemetry_instance.get_vpn_ip()
         api_endpoint, _ = self.get_compute_endpoint(my_vpn_ip)
         infra_service = self.coe_client.define_nuvla_infra_service(api_endpoint,
-                                                                          *self.get_tls_keys())
+                                                                   *self.get_tls_keys())
 
         # 1st time commissioning the IS, so we need to also pass the keys, even if they
         # haven't changed

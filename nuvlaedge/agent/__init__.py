@@ -2,80 +2,114 @@
 Main entrypoint script for the agent component in the NuvlaEdge engine
 Controls all the functionalities of the Agent
 """
-
-import logging
 import logging.config
 import signal
 import socket
 import time
 
-from threading import Event, Thread
+from threading import Event
 
-from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
+from nuvlaedge.common.constants import CTE
+from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
+from nuvlaedge.common.thread_tracer import signal_usr1
+from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 
-
-# Nuvlaedge globals
-network_timeout: int = 10
-refresh_interval: int = 30
 
 root_logger: logging.Logger = logging.getLogger()
 
-
-def log_threads_stackstraces():
-    import sys
-    import threading
-    import traceback
-    import faulthandler
-    print_args = dict(file=sys.stderr, flush=True)
-    print("\nfaulthandler.dump_traceback()", **print_args)
-    faulthandler.dump_traceback()
-    print("\nthreading.enumerate()", **print_args)
-    for th in threading.enumerate():
-        print(th, **print_args)
-        traceback.print_stack(sys._current_frames()[th.ident])
-    print(**print_args)
+action_handler: ActionHandler = ActionHandler([])
 
 
-def signal_usr1(signum, frame):
-    log_threads_stackstraces()
+def update_periods(nuvlaedge_resource: dict):
+    # Update refreshing intervals
+    refresh_interval = nuvlaedge_resource.get('refresh-interval',
+                                              CTE.REFRESH_INTERVAL)
+    heartbeat_interval = nuvlaedge_resource.get('heartbeat-interval',
+                                               CTE.HEARTBEAT_INTERVAL)
+
+    action_handler.edit_period('telemetry', refresh_interval)
+    action_handler.edit_period('heartbeat', heartbeat_interval)
+
+    root_logger.info(f'Telemetry period: {refresh_interval}s')
+    root_logger.info(f'Heartbeat period: {heartbeat_interval}s')
 
 
-def preflight_check(activator: Activate, exit_flag: bool, nb_updated_date: str,
-                    infra: Infrastructure):
+def update_nuvlaedge_configuration(
+        current_nuvlaedge_res: dict,
+        old_nuvlaedge_res: dict,
+        infra: Infrastructure):
+    """
+    Checks new the new nuvlaedge resource configuration for differences on the local
+    registered one and updates (if required) the vpn and/or the heartbeat and telemetry
+    periodic reports
+    Args:
+        current_nuvlaedge_res:
+        old_nuvlaedge_res:
+        infra:
+    """
+    if old_nuvlaedge_res['updated'] != current_nuvlaedge_res['updated']:
+        update_periods(current_nuvlaedge_res)
+
+        vpn_server_id = current_nuvlaedge_res.get("vpn-server-id")
+        if vpn_server_id != old_nuvlaedge_res.get("vpn-server-id"):
+            root_logger.info(f'VPN Server ID has been added/changed in Nuvla: '
+                             f'{vpn_server_id}')
+            infra.commission_vpn()
+
+
+def resource_synchronization(
+        activator: Activate,
+        exit_event: Event,
+        infra: Infrastructure) -> dict:
     """
     Checks if the NuvlaEdge resource has been updated in Nuvla
 
     Args:
-        activator: instance of Activate
+        activator:
+        exit_event:
         infra:
-        nb_updated_date:
-        exit_flag:
+
+    Returns:
+
     """
-    global refresh_interval
 
     nuvlaedge_resource: dict = activator.get_nuvlaedge_info()
 
     if nuvlaedge_resource.get('state', '').startswith('DECOMMISSION'):
-        root_logger.info(f"Remote NuvlaEdge resource state {nuvlaedge_resource.get('state', '')}, exiting agent")
-        exit_flag = False
+        root_logger.info(f"Remote NuvlaEdge resource state "
+                         f"{nuvlaedge_resource.get('state', '')}, exiting agent")
+        exit_event.set()
+        return {}
 
     vpn_server_id = nuvlaedge_resource.get("vpn-server-id")
+    old_nuvlaedge_resource = activator.create_nb_document_file(nuvlaedge_resource)
 
-    if nb_updated_date != nuvlaedge_resource['updated'] and exit_flag:
-        refresh_interval = nuvlaedge_resource['refresh-interval']
-        root_logger.info(f'NuvlaEdge resource updated. Refresh interval value: '
-                         f'{refresh_interval}')
-
-        old_nuvlaedge_resource = activator.create_nb_document_file(nuvlaedge_resource)
-
-        if vpn_server_id != old_nuvlaedge_resource.get("vpn-server-id"):
-            root_logger.info(f'VPN Server ID has been added/changed in Nuvla: {vpn_server_id}')
-            infra.commission_vpn()
+    update_nuvlaedge_configuration(nuvlaedge_resource,
+                                   old_nuvlaedge_resource,
+                                   infra)
 
     # if there's a mention to the VPN server, then watch the VPN credential
     if vpn_server_id:
         infra.watch_vpn_credential(vpn_server_id)
+
+    return {}
+
+
+def initialize_action(name: str,
+                      period: int,
+                      action: callable,
+                      remaining_time: float = 0,
+                      arguments: tuple | None = None,
+                      karguments: dict | None = None):
+    action_handler.add(
+        TimedAction(
+            name=name,
+            period=period,
+            action=action,
+            remaining_time=remaining_time,
+            arguments=arguments,
+            karguments=karguments))
 
 
 def main():
@@ -89,41 +123,49 @@ def main():
     """
     signal.signal(signal.SIGUSR1, signal_usr1)
 
-    socket.setdefaulttimeout(network_timeout)
+    socket.setdefaulttimeout(CTE.NETWORK_TIMEOUT)
 
     main_event: Event = Event()
-    agent_exit_flag: bool = True
 
-    main_agent: Agent = Agent(agent_exit_flag)
+    main_agent: Agent = Agent()
     main_agent.initialize_agent()
 
-    watchdog_thread: Thread | None = None
-    nuvlaedge_info_updated_date: str = ''
+    # Adds the main agent actions to the agent handler
+    initialize_action(name='heartbeat',
+                      period=CTE.HEARTBEAT_INTERVAL,
+                      remaining_time=CTE.HEARTBEAT_INTERVAL,
+                      action=main_agent.send_heartbeat,
+                      arguments=(update_periods,))
+    initialize_action(name='telemetry',
+                      period=CTE.REFRESH_INTERVAL,
+                      action=main_agent.send_telemetry,
+                      remaining_time=CTE.REFRESH_INTERVAL/2)
+    initialize_action(name='sync_resources',
+                      period=86400,
+                      action=resource_synchronization,
+                      arguments=(main_agent.activate,
+                                 main_event,
+                                 main_agent.infrastructure))
 
-    while agent_exit_flag:
+    update_periods(main_agent.nuvlaedge_resource.data)
+
+    while not main_event.is_set():
         # Time Start
         start_cycle: float = time.time()
-        # ----------------------- Main Agent functionality ------------------------------
 
-        if not watchdog_thread or not watchdog_thread.is_alive():
-            watchdog_thread = Thread(target=preflight_check,
-                                     args=(main_agent.activate,
-                                           agent_exit_flag,
-                                           nuvlaedge_info_updated_date,
-                                           main_agent.infrastructure
-                                           ,),
-                                     daemon=True)
-            watchdog_thread.start()
+        action = action_handler.next
+        main_agent.run_single_cycle(action)
 
-        main_agent.run_single_cycle()
-
-        # -------------------------------------------------------------------------------
+        # root_logger.debug('Action summary after action_handler.next - ' + action_handler.actions_summary())
 
         # Account cycle time
         cycle_duration = time.time() - start_cycle
-        next_cycle_in = refresh_interval - cycle_duration - 1
-        root_logger.debug(f'End of cycle. Cycle duration: {cycle_duration} sec. Next '
-                          f'cycle in {next_cycle_in} sec.')
+        next_cycle_in = action_handler.sleep_time()
+
+        root_logger.info(f'Action "{action.name}" completed in {cycle_duration:.2f} seconds. '
+                         f'Next action "{action_handler._actions[0].name}" will be run in {next_cycle_in:.2f} seconds.')
+
+        root_logger.debug('Action summary after action_handler.sleep_time() - ' + action_handler.actions_summary())
 
         main_event.wait(timeout=next_cycle_in)
 
@@ -131,7 +173,9 @@ def main():
 def entry():
     # Global logging configuration
     logging_config_file = '/etc/nuvlaedge/agent/config/agent_logger_config.conf'
-    parse_arguments_and_initialize_logging('Agent', logging_config_file=logging_config_file)
+    parse_arguments_and_initialize_logging(
+        'Agent',
+        logging_config_file=logging_config_file)
 
     # Logger for the root script
     root_logger.info('Configuring Agent class and main script')

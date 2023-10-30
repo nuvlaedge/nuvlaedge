@@ -12,7 +12,7 @@ from nuvla.api import Api
 from nuvla.api.models import CimiCollection, CimiResponse
 from nuvlaedge.models.peripheral import PeripheralData
 from nuvlaedge.models.nuvla_resources import NuvlaBoxPeripheralResource as PeripheralResource
-from nuvlaedge.common.constants import PERIPHERAL_RESOURCE_NAME, PERIPHERAL_SCHEMA_VERSION
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 
@@ -57,8 +57,9 @@ class PeripheralsDBManager:
         """
         # Raise a warning if the systems are desynchronized
         # Retrieve all the resources related to this NuvlaEdge with the parent field
-        nuvla_peripherals: CimiCollection = self.nuvla_client.search('nuvlabox-peripheral',
-                                                                     filter=f'parent="{self.uuid}"')
+        nuvla_peripherals: CimiCollection = \
+            self.nuvla_client.search(CTE.PERIPHERAL_RES_NAME,
+                                     filter=f'parent="{self.uuid}"')
         if nuvla_peripherals.count == 0:
             self.logger.info('No resources registered in Nuvla to update')
             self._local_db = {}
@@ -95,7 +96,8 @@ class PeripheralsDBManager:
             'per_identifier_1': {peripheral_data},
             'per_identifier_2': {peripheral_data_2}
         }
-        If any of the peripherals don't container the compulsory fields, ignores it and reports as a warning
+        If any of the peripherals don't container the compulsory fields, ignores it and
+         reports as a warning
         :param new_peripherals: Newly received peripherals
         :return: A dictionary rearranging new peripherals.
         """
@@ -116,7 +118,7 @@ class PeripheralsDBManager:
         res: PeripheralResource = PeripheralResource.parse_obj(peripheral)
         # When adding a peripheral to Nuvla both Parent and Version fields must be filled
         res.parent = self.uuid
-        res.version = PERIPHERAL_SCHEMA_VERSION
+        res.version = CTE.PERIPHERAL_SCHEMA_VERSION
 
         # Add to remote,
         peripheral_id, reg_status = self.add_remote_peripheral(res)
@@ -151,8 +153,10 @@ class PeripheralsDBManager:
         # If nuvla returns ID, add it to the PeripheralData structure
         # if success, return ID and None
         # else return None, Error code
-        response: CimiResponse = self.nuvla_client.add(PERIPHERAL_RESOURCE_NAME, peripheral.dict(by_alias=True,
-                                                                                                 exclude_none=True))
+        response: CimiResponse = self.nuvla_client.add(
+            CTE.PERIPHERAL_RES_NAME,
+            peripheral.dict(by_alias=True,
+                            exclude_none=True))
         p_id = response.data.get('resource-id')
         p_status = response.data.get('status')
         self.logger.debug(f'Peripheral {peripheral.identifier} registered with status {p_status}')

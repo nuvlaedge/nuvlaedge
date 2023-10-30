@@ -1,4 +1,6 @@
 from nuvlaedge.peripherals.modbus import main
+import asyncio
 
-if __name__ == "__main__":
-    main()
+
+if __name__ == '__main__':
+    asyncio.run(main())

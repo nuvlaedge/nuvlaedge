@@ -11,4 +11,5 @@ poetry export -f requirements.txt --output ${OUTPUT_DIR}/requirements.tests.txt 
     --with network \
     --with modbus \
     --with gpu \
-    --with job-engine
+    --with job-engine \
+    --with bluetooth

@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.12.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.12.0) (2023-10-31)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.11.2...2.12.0)
+
+**Implemented enhancements:**
+
+- Bluetooth peripheral discovery: add support for BLE device discovery [\#123](https://github.com/nuvlaedge/nuvlaedge/issues/123)
+- feat\(agent\): Use the new heartbeat operation of the api-server [\#88](https://github.com/nuvlaedge/nuvlaedge/issues/88)
+- feat\(agent\): Add heartbeat operation [\#117](https://github.com/nuvlaedge/nuvlaedge/pull/117) ([ignacio-penas](https://github.com/ignacio-penas))
+
+**Closed issues:**
+
+- NE on K8s: validate peripheral discovery works on K8s [\#81](https://github.com/nuvlaedge/nuvlaedge/issues/81)
+- feat\(agent\): Execute jobs returned by the server even if the telemetry update request failed server-side [\#91](https://github.com/nuvlaedge/nuvlaedge/issues/91)
+
+**Merged pull requests:**
+
+- Added exception catch to prevent errors from faulty server responses [\#129](https://github.com/nuvlaedge/nuvlaedge/pull/129) ([ignacio-penas](https://github.com/ignacio-penas))
+- Improved thread handling in telemetry class [\#128](https://github.com/nuvlaedge/nuvlaedge/pull/128) ([ignacio-penas](https://github.com/ignacio-penas))
+- Adding ble support [\#125](https://github.com/nuvlaedge/nuvlaedge/pull/125) ([amitbhanja](https://github.com/amitbhanja))
+
+## [2.11.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.11.2) (2023-10-02)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.11.1...2.11.2)
+
 ## [2.11.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.11.1) (2023-09-26)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.11.0...2.11.1)

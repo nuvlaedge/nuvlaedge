@@ -184,9 +184,13 @@ def determine_ip_addresses(list_of_ip_addresses):
             if not ipaddress.ip_network(ip_add, strict=False).is_private:
                 logging.info(f"IP address {ip_add} is routable. Adding to list")
                 list_of_ip_addresses = list_of_ip_addresses + ip_add
+            else:
+                list_of_ip_addresses = list_of_ip_addresses + ip_add
         else:
             if not ipaddress.ip_address(ip_add).is_private:
                 logging.info(f"IP address {ip_add} is routable. Adding to list")
+                list_of_ip_addresses = list_of_ip_addresses + ip_add
+            else:
                 list_of_ip_addresses = list_of_ip_addresses + ip_add
     if os.getenv('KUBERNETES_SERVICE_HOST') and os.getenv('MY_HOST_NODE_IP'):
         list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')

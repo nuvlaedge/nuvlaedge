@@ -180,6 +180,7 @@ def determine_ip_addresses(list_of_ip_addresses):
         logging.error(f"Process timed out.\n{exc}")
 
     for ip_add in ip_list.stdout.splitlines():
+        logging.info(f"Checking IP address: {ip_add}")
         if ipaddress.ip_network(ip_add, strict=False):
             if not ipaddress.ip_network(ip_add, strict=False).is_private:
                 logging.info(f"IP address {ip_add} is routable. Adding to list")

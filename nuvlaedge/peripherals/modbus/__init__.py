@@ -139,67 +139,12 @@ def manage_modbus_peripherals(ip_address):
 def determine_ip_addresses(list_of_ip_addresses):
     """Determine the list of IP addresses to be scanned."""
 
-    command = "ip -4 -br a s"
-    logger.info(f'IP address command:\n{command}')
-
-    known_ip_addresses = os.system(command)
-
-    logger.info(f"Known IP addresses:\n {known_ip_addresses}")
-
     if os.getenv('KUBERNETES_SERVICE_HOST') and os.getenv('MY_HOST_NODE_IP'):
         list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
 
     logging.info(f'The list of IP addresses has been set to:\n{list_of_ip_addresses}')
 
     return list_of_ip_addresses
-
-
-def determine_ip_addresses_new(list_of_ip_addresses):
-    """
-    Determine the list of IP addresses to be scanned on the host.
-
-    Input: list_of_ip_addresses which is the default gateway
-
-    This function will detect all the IP addresses and remove non-routable 
-    IP addresses and networks.
-    This may need to be adjusted according to how customers deploy modbus
-    """
-    command="ip -4 -br a s | awk -F \" \" '{print $3}'"
-
-    try:
-        ip_list = subprocess.run(["sh", "-c", command], timeout=5, \
-            capture_output=True, check=True, encoding="UTF-8")
-    except FileNotFoundError as exc:
-        logging.error(f"Process failed because the executable could not be found.\n{exc}")
-    except subprocess.CalledProcessError as exc:
-        logging.error(
-            f"Process failed because did not return a successful return code. "
-            f"Returned {exc.returncode}\n{exc}"
-        )
-    except subprocess.TimeoutExpired as exc:
-        logging.error(f"Process timed out.\n{exc}")
-
-    for ip_add in ip_list.stdout.splitlines():
-        logging.info(f"Checking IP address: {ip_add}")
-        if ipaddress.ip_network(ip_add, strict=False):
-            if not ipaddress.ip_network(ip_add, strict=False).is_private:
-                logging.info(f"IP address {ip_add} is routable. Adding to list")
-                list_of_ip_addresses = list_of_ip_addresses + " " + ip_add
-            else:
-                list_of_ip_addresses = list_of_ip_addresses + " " + ip_add
-        else:
-            if not ipaddress.ip_address(ip_add).is_private:
-                logging.info(f"IP address {ip_add} is routable. Adding to list")
-                list_of_ip_addresses = list_of_ip_addresses + " " + ip_add
-            else:
-                list_of_ip_addresses = list_of_ip_addresses + " " + ip_add
-    if os.getenv('KUBERNETES_SERVICE_HOST') and os.getenv('MY_HOST_NODE_IP'):
-        list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
-
-    logging.info(f"The returned list of IP addresses:\n {list_of_ip_addresses}")
-
-    return list_of_ip_addresses
-
 
 async def main():
     global logger
@@ -209,6 +154,8 @@ async def main():
     logger = logging.getLogger(__name__)
 
     gateway_ip = get_default_gateway_ip()
+
+    logging.info(f"Gateway IP found {gateway_ip}")
 
     modbus_peripheral: Peripheral = Peripheral('modbus')
 

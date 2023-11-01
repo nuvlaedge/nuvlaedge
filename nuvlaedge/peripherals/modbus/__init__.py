@@ -136,25 +136,25 @@ def manage_modbus_peripherals(ip_address):
 
     return discovered_devices
 
-def determine_ip_addresses_old(list_of_ip_addresses):
+def determine_ip_addresses(list_of_ip_addresses):
     """Determine the list of IP addresses to be scanned."""
 
     command = "ip -4 -br a s"
-    logger.debug(f'IP address command:\n{command}')
+    logger.info(f'IP address command:\n{command}')
 
     known_ip_addresses = os.system(command)
 
-    logger.debug(f"Known IP addresses:\n {known_ip_addresses}")
+    logger.info(f"Known IP addresses:\n {known_ip_addresses}")
 
     if os.getenv('KUBERNETES_SERVICE_HOST') and os.getenv('MY_HOST_NODE_IP'):
         list_of_ip_addresses = list_of_ip_addresses + ' ' + os.getenv('MY_HOST_NODE_IP')
 
-    logging.debug(f'The list of IP addresses has been set to:\n{list_of_ip_addresses}')
+    logging.info(f'The list of IP addresses has been set to:\n{list_of_ip_addresses}')
 
     return list_of_ip_addresses
 
 
-def determine_ip_addresses(list_of_ip_addresses):
+def determine_ip_addresses_new(list_of_ip_addresses):
     """
     Determine the list of IP addresses to be scanned on the host.
 

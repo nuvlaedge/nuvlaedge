@@ -49,12 +49,12 @@ async def ble_device_discovery() -> dict:
                 ble_devices[dev_id]['vendor'] += MANUFACTURERS[company_id] + ', '
         if ble_devices[dev_id]['vendor'] != '':
             ble_devices[dev_id]['vendor'] = ble_devices[dev_id]['vendor'][:-2]
-        else:
-            del ble_devices[dev_id]['vendor']
         uuids: List = ble_device[1].service_uuids
         if ble_device[1].platform_data[1] is not None:
             get_info_from_raw_data(ble_device[1].platform_data[1], ble_devices[dev_id])
         fill_service_desc(uuids, ble_devices[dev_id])
+        if ble_devices[dev_id]['vendor'] == '':
+            del ble_devices[dev_id]['vendor']
     return ble_devices
 
 

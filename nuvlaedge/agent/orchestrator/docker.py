@@ -191,12 +191,10 @@ class DockerClient(COEClient):
 
         try:
             if job_container.status.lower() in ['running', 'restarting']:
-                logger.info(f'Job {job_id} is already running in container '
-                             f'{job_container.name}')
+                logger.info(f'Job {job_id} is already running in container {job_container.name}')
                 return True
             elif job_container.status.lower() in ['created']:
-                logger.warning(f'Job {job_id} was created by not started. Removing it '
-                                f'and starting a new one')
+                logger.warning(f'Job {job_id} was created but not started. Removing it and starting a new one')
                 job_container.remove()
             else:
                 # then it is stopped or dead. force kill it and re-initiate

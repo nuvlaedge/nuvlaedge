@@ -2,9 +2,14 @@ import os
 import sys
 import threading
 
+from nuvla.api.models import CimiResource
+
 import nuvlaedge.agent.infrastructure
 from nuvlaedge.agent.agent import Agent
 from nuvlaedge.agent.activate import Activate
+
+from nuvlaedge.common.timed_actions import TimedAction
+
 from mock import Mock, patch
 from unittest import TestCase
 
@@ -20,7 +25,7 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.agent.activate.Activate')
     def setUp(self, activate_mock, ne_mock, atomic_write_mock, os_makedir_mock) -> None:
         os.environ['NUVLAEDGE_UUID'] = 'fake-uuid'
-        self.test_agent: Agent = Agent(True)
+        self.test_agent: Agent = Agent()
         self.test_agent._activate = activate_mock
 
     def tearDown(self):
@@ -55,16 +60,39 @@ class TestAgent(TestCase):
         self.assertTrue(self.test_agent.initialize_agent())
         act_mock.assert_called_once()
 
+    def test_send_heartbeat(self):
+        tel_mock = Mock()
+        self.test_agent._telemetry = tel_mock
+        sample_data_return = {
+            'jobs': ['j1', 'j2']
+        }
+        api_mock = Mock()
+        response_mock = Mock()
+        response_mock.data = sample_data_return
+
+        # Heartbeat not supported on Nuvla server
+        api_mock.operation.return_value = response_mock
+        self.test_agent._telemetry.api.return_value = api_mock
+        self.assertEqual({}, self.test_agent.send_heartbeat())
+
+        # Heartbeat supported on Nuvla server
+        nuvlaedge_resource = CimiResource(
+            {'operations': [{'href': 'nuvlabox/<uuid>/heartbeat',
+                            'rel': 'heartbeat'}]})
+        self.test_agent.activate.nuvlaedge_resource = nuvlaedge_resource
+        self.assertEqual(sample_data_return, self.test_agent.send_heartbeat())
+        api_mock.operation.assert_called_once_with(nuvlaedge_resource, 'heartbeat')
+
     @patch(os_makedir)
     @patch(atomic_write)
-    def test_send_heartbeat(self, atomic_write_mock, os_makedir_mock):
+    def test_send_telemetry(self, atomic_write_mock, os_makedir_mock):
         self.test_agent._telemetry = Mock()
         tel_mock = Mock()
         tel_mock.diff.return_value = ({}, ['a'])
         tel_mock.status.get.return_value = ''
         self.test_agent._telemetry = tel_mock
         with patch('logging.Logger.warning') as mock_warn:
-            self.test_agent.send_heartbeat()
+            self.test_agent.send_telemetry()
         self.assertEqual(tel_mock.status.update.call_count, 1)
 
         tel_mock.status.update.reset_mock()
@@ -75,13 +103,13 @@ class TestAgent(TestCase):
         ret_mock.data = "ret"
         api_mock.edit.return_value = ret_mock
         self.test_agent._telemetry.api.return_value = api_mock
-        self.assertEqual(self.test_agent.send_heartbeat(), "ret")
+        self.assertEqual(self.test_agent.send_telemetry(), "ret")
         self.assertEqual(tel_mock.status.update.call_count, 1)
         self.assertEqual(api_mock.edit.call_count, 1)
 
         self.test_agent._telemetry.api.side_effect = OSError
         with self.assertRaises(OSError):
-            self.test_agent.send_heartbeat()
+            self.test_agent.send_telemetry()
 
     @patch('nuvlaedge.agent.agent.Job')
     @patch('nuvlaedge.agent.job.Job.launch')
@@ -119,7 +147,7 @@ class TestAgent(TestCase):
             self.test_agent.handle_pull_jobs({'jobs': 'PI'})
             mock_warn.assert_called_once()
 
-    @patch('nuvlaedge.agent.agent.Agent.send_heartbeat')
+    @patch('nuvlaedge.agent.agent.Agent.send_telemetry')
     @patch('nuvlaedge.agent.agent.Agent.handle_pull_jobs')
     @patch('threading.Thread.start')
     @patch('nuvlaedge.agent.agent.Infrastructure')
@@ -127,6 +155,12 @@ class TestAgent(TestCase):
         self.test_agent.telemetry_thread = False
         self.test_agent._telemetry = Mock()
         self.test_agent._infrastructure = Mock()
-        self.test_agent.run_single_cycle()
+
+        action = TimedAction(
+            name='telemetry',
+            period=60,
+            action=self.test_agent.send_telemetry)
+
+        self.test_agent.run_single_cycle(action)
         self.assertEqual(mock_start.call_count, 3)
         pull_mock.assert_called_once()

@@ -222,6 +222,7 @@ class FakeNuvlaApi(object):
         def __init__(self, id, data):
             self.data = {**{'id': id}, **data}
             self.resources = [json.loads(json.dumps(self.data), object_hook=lambda d: SimpleNamespace(**d))]
+            self.operations = {}
 
     def get(self, id, **kwargs):
         return self.Response(id, self.kwargs.get('data', {}))

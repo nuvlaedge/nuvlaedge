@@ -84,6 +84,7 @@ jobs:
 
       - name: Download Validation Framework dependency
         run: |
+          mkdir -p dist/
           wget \
           -O dist/${{ env.VALIDATION_PACKAGE_NAME }} \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}

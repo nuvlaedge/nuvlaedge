@@ -72,6 +72,7 @@ jobs:
 
       - name: Retrieve target configuration
         run: |
+          mkdir -p conf/targets/
           wget \
           -O conf/targets/${{ matrix.board-config }}.toml \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ matrix.board-config }}.toml
@@ -83,6 +84,7 @@ jobs:
 
       - name: Download Validation Framework dependency
         run: |
+          mkdir -p dist/
           wget \
           -O dist/${{ env.VALIDATION_PACKAGE_NAME }} \
           https://github.com/nuvlaedge/validation/releases/latest/download/${{ env.VALIDATION_PACKAGE_NAME }}

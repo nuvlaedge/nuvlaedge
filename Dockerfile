@@ -15,12 +15,43 @@ ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/s
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
+# Import job-lite image
 FROM ${JOB_LITE_IMG_ORG}/job-lite:${JOB_LITE_VERSION} AS job-lite
+
+
+# ------------------------------------------------------------------------
+# NuvlaEdge base image for labels and environments variables
+# ------------------------------------------------------------------------
+FROM ${BASE_IMAGE} AS nuvlaedge-base
+
+ARG GIT_BRANCH
+ARG GIT_COMMIT_ID
+ARG GIT_BUILD_TIME
+ARG GITHUB_RUN_NUMBER
+ARG GITHUB_RUN_ID
+ARG PROJECT_URL
+
+ARG JOB_LITE_VERSION
+ENV JOB_LITE_VERSION=${JOB_LITE_VERSION}
+
+LABEL git.branch=${GIT_BRANCH} \
+      git.commit.id=${GIT_COMMIT_ID} \
+      git.build.time=${GIT_BUILD_TIME} \
+      git.run.number=${GITHUB_RUN_NUMBER} \
+      git.run.id=${GITHUB_RUN_ID}
+LABEL org.opencontainers.image.authors="support@sixsq.com" \
+      org.opencontainers.image.created=${GIT_BUILD_TIME} \
+      org.opencontainers.image.url=${PROJECT_URL} \
+      org.opencontainers.image.vendor="SixSq SA" \
+      org.opencontainers.image.title="NuvlaEdge" \
+      org.opencontainers.image.description="Common image for NuvlaEdge software components"
+
 
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
 # ------------------------------------------------------------------------
 FROM ${BASE_IMAGE} AS base-builder
+
 RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev
 
@@ -32,6 +63,7 @@ RUN pip install -r /tmp/requirements.txt
 # Bluetooth Peripheral builder
 # ------------------------------------------------------------------------
 FROM base-builder AS bt-builder
+
 RUN apk add git g++ bluez-dev
 
 WORKDIR /tmp/
@@ -79,10 +111,25 @@ RUN pip install -r /tmp/requirements.txt
 
 
 # ------------------------------------------------------------------------
+# USB Peripheral builder
+# ------------------------------------------------------------------------
+FROM ${GO_BASE_IMAGE} AS golang-builder
+
+# Build Golang usb peripehral
+RUN apk update
+RUN apk add libusb-dev udev pkgconfig gcc musl-dev
+
+COPY --link nuvlaedge/peripherals/usb/ /opt/usb/
+WORKDIR /opt/usb/
+
+RUN go mod tidy && go build
+
+
+# ------------------------------------------------------------------------
 # System Manager builder
 # ------------------------------------------------------------------------
 FROM base-builder AS system-manager-builder
-ARG PYTHON_MAJ_MIN_VERSION
+
 ARG PYTHON_CRYPTOGRAPHY_VERSION
 ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
@@ -110,6 +157,7 @@ RUN pip install -r /tmp/requirements.txt
 # Job Engine builder
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
+
 ARG PYTHON_MAJ_MIN_VERSION
 ARG PYTHON_BCRYPT_VERSION
 ARG PYTHON_NACL_VERSION
@@ -132,7 +180,7 @@ RUN pip install -r /tmp/requirements.lite.txt
 # NuvlaEdge builder
 # ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
-ARG PYTHON_MAJ_MIN_VERSION
+
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Extract and separate requirements from package install to accelerate building process.
@@ -140,168 +188,105 @@ ARG PYTHON_LOCAL_SITE_PACKAGES
 COPY --link --from=agent-builder          ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=system-manager-builder ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=job-engine-builder     ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
-COPY --link --from=job-lite               ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla
 COPY --link --from=network-builder        ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=job-lite               ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla
 
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
 
-# ------------------------------------------------------------------------
-# USB Peripheral builder
-# ------------------------------------------------------------------------
-FROM ${GO_BASE_IMAGE} AS golang-builder
-# Build Golang usb peripehral
-RUN apk update
-RUN apk add libusb-dev udev pkgconfig gcc musl-dev
-
-COPY --link nuvlaedge/peripherals/usb/ /opt/usb/
-WORKDIR /opt/usb/
-
-RUN go mod tidy && go build
+# Cleanup python bytecode files
+RUN find ${PYTHON_LOCAL_SITE_PACKAGES} -name '*.py?' -delete
 
 
 # ------------------------------------------------------------------------
 # Final NuvlaEdge image
 # ------------------------------------------------------------------------
-FROM ${BASE_IMAGE}
-ARG PYTHON_MAJ_MIN_VERSION
+FROM nuvlaedge-base
+
 ARG PYTHON_LOCAL_SITE_PACKAGES
-ARG JOB_LITE_VERSION
-ENV JOB_LITE_VERSION=${JOB_LITE_VERSION}
 
-LABEL git.branch=${GIT_BRANCH}
-LABEL git.commit.id=${GIT_COMMIT_ID}
-LABEL git.build.time=${GIT_BUILD_TIME}
-LABEL git.run.number=${GITHUB_RUN_NUMBER}
-LABEL git.run.id=${GITHUB_RUN_ID}
-LABEL org.opencontainers.image.authors="support@sixsq.com"
-LABEL org.opencontainers.image.created=${GIT_BUILD_TIME}
-LABEL org.opencontainers.image.url=${PROJECT_URL}
-LABEL org.opencontainers.image.vendor="SixSq SA"
-LABEL org.opencontainers.image.title="NuvlaEdge"
-LABEL org.opencontainers.image.description="Common image for NuvlaEdge software components"
-
-# ------------------------------------------------------------------------
 # License
-# ------------------------------------------------------------------------
 COPY LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
 RUN chmod +x /opt/nuvlaedge/license.sh
 ONBUILD RUN ./license.sh
 
-# ------------------------------------------------------------------------
-# USB peripheral discovery binary
-# ------------------------------------------------------------------------
-COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
+# Required packages
+RUN apk add --no-cache \
+        # Agent
+        procps curl mosquitto-clients lsblk openssl iproute2 \
+        # Modbus
+        nmap nmap-scripts \
+        # USB
+        libusb-dev udev \ 
+        # Bluetooth
+        bluez-dev \
+        # Security
+        coreutils \
+        # Compute-API
+        socat \
+        # OpenVPN
+        openvpn \
+		# Job-Engine
+		gettext docker-cli docker-cli-compose helm
+# Job-Engine and Kubernetes Credential Manager
+RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
-# ------------------------------------------------------------------------
-# Required alpine packages
-# ------------------------------------------------------------------------
+# Required python packages
 COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
-
-
-# ------------------------------------------------------------------------
 # Library required by py-cryptography (pyopenssl).
 # By copying it from base builder we save up ~100MB of the gcc library
-# ------------------------------------------------------------------------
 COPY --link --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
+# Peripheral discovery: USB
+COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 
-# ------------------------------------------------------------------------
-# GPU Peripheral setup
-# ------------------------------------------------------------------------
+# Peripheral discovery: GPU
 RUN mkdir /opt/scripts/
 COPY --link nuvlaedge/peripherals/gpu/cuda_scan.py /opt/nuvlaedge/scripts/gpu/
 COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 
-
-# ------------------------------------------------------------------------
-# Required packages for the Agent
-# ------------------------------------------------------------------------
-RUN apk add --no-cache procps curl mosquitto-clients lsblk openssl iproute2
-
-
-# ------------------------------------------------------------------------
-# Required packages for modbus peripheral discovery
-# ------------------------------------------------------------------------
-RUN apk add --no-cache nmap nmap-scripts
-
-
-# ------------------------------------------------------------------------
-# Required packages for USB peripheral discovery
-# ------------------------------------------------------------------------
-RUN apk add --no-cache libusb-dev udev
-
-
-# ------------------------------------------------------------------------
-# Required package for bluetooth discovery
-# ------------------------------------------------------------------------
-RUN apk add --no-cache bluez-dev
-
-# ------------------------------------------------------------------------
-# Required package for vulnerabilities discovery
-# ------------------------------------------------------------------------
+# Security module
 # nmap nmap-scripts coreutils curl
-RUN apk add --no-cache coreutils
 COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
 COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoint
 RUN chmod +x /usr/bin/security-entrypoint
 
-# ------------------------------------------------------------------------
-# Setup Compute-API
-# ------------------------------------------------------------------------
-RUN apk add --no-cache socat
-
+# Compute API
 COPY scripts/compute-api/api.sh /usr/bin/api
 RUN chmod +x /usr/bin/api
 
-
-# ------------------------------------------------------------------------
-# Setup VPN Client
-# ------------------------------------------------------------------------
-RUN apk add --no-cache openvpn
-
+# VPN Client
 COPY --link scripts/vpn-client/* /opt/nuvlaedge/scripts/vpn-client/
-RUN mv /opt/nuvlaedge/scripts/vpn-client/openvpn-client.sh /usr/bin/openvpn-client
-RUN chmod +x /usr/bin/openvpn-client
-RUN chmod +x /opt/nuvlaedge/scripts/vpn-client/get_ip.sh
-RUN chmod +x /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh
-
+RUN mv /opt/nuvlaedge/scripts/vpn-client/openvpn-client.sh /usr/bin/openvpn-client && \
+    chmod +x /usr/bin/openvpn-client && \
+    chmod +x /opt/nuvlaedge/scripts/vpn-client/get_ip.sh && \
+    chmod +x /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh
 # For backward compatibility with existing vpn/nuvlaedge.conf file
-RUN ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh
-RUN ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
+RUN ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh && \
+    ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
 
+# Kubernetes credential manager
+COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
+RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh /usr/bin/kubernetes-credential-manager && \
+    chmod +x /usr/bin/kubernetes-credential-manager
 
-# ------------------------------------------------------------------------
-# Copy configuration files
-# ------------------------------------------------------------------------
-COPY --link  nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
+# Configuration files
+COPY --link nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
 COPY --link conf/example/* /etc/nuvlaedge/
 
-# ------------------------------------------------------------------------
-# Set up Job engine
-# ------------------------------------------------------------------------
-RUN apk add --no-cache gettext docker-cli docker-cli-compose helm
-RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
-
+# Job engine
 COPY --link --from=job-lite /app/* /app/
+
+# my_init
 WORKDIR /app
 RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/rel-0.9.19/image/bin/my_init && \
-    chmod 700 /app/my_init
-RUN ln -s /app/my_init /usr/bin/my_init
-RUN ln -s $(which python3) /usr/bin/python3
-
-
-# ------------------------------------------------------------------------
-# Set up K8s credential manager
-# ------------------------------------------------------------------------
-COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
-RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh \
-    /usr/bin/kubernetes-credential-manager
-RUN chmod +x /usr/bin/kubernetes-credential-manager
+    chmod 700 /app/my_init && \
+    ln -s /app/my_init /usr/bin/my_init && \
+    ln -s $(which python3) /usr/bin/python3
 
 
 WORKDIR /opt/nuvlaedge/

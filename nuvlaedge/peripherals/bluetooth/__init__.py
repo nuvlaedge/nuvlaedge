@@ -302,7 +302,11 @@ async def bluetooth_manager():
         bluetooth_devices = []
         logger.exception(f"Failed to discover BT devices: {e}")
 
-    ble_devices = await ble_device_discovery()
+    try:
+        ble_devices = await ble_device_discovery()
+    except Exception as e:
+        ble_devices = {}
+        logger.exception(f"Failed to discover BLE devices: {e}")
     logger.info(f'BLE Devices {ble_devices}')
 
     bluetooth = compare_bluetooth(bluetooth_devices, ble_devices)

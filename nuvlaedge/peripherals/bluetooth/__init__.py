@@ -271,7 +271,7 @@ def cod_converter(cod_decimal_string):
             except ValueError:
                 continue
             except Exception as e:
-                logger.exception("Failed to evaluate minor device class with key %s" % key, e)
+                logger.exception(f"Failed to evaluate minor device class with key {key}: {e}")
                 continue
 
             if minor_number & minor_key:
@@ -300,7 +300,7 @@ async def bluetooth_manager():
         logger.info(bluetooth_devices)
     except Exception as e:
         bluetooth_devices = []
-        logger.exception("Failed to discover BT devices", e)
+        logger.exception(f"Failed to discover BT devices: {e}")
 
     ble_devices = await ble_device_discovery()
     logger.info(f'BLE Devices {ble_devices}')

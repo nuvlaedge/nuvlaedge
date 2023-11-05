@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.12.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.12.1) (2023-11-05)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.12.0...2.12.1)
+
+**Implemented enhancements:**
+
+- Bluetooth peripheral discovery: add support for BLE device discovery [\#123](https://github.com/nuvlaedge/nuvlaedge/issues/123)
+
+**Fixed bugs:**
+
+- Add a time-to-live to the kubernetes-credential manager [\#134](https://github.com/nuvlaedge/nuvlaedge/issues/134)
+
+**Merged pull requests:**
+
+- Exception Check for BLE devices [\#137](https://github.com/nuvlaedge/nuvlaedge/pull/137) ([amitbhanja](https://github.com/amitbhanja))
+- Minor changes for BLE [\#136](https://github.com/nuvlaedge/nuvlaedge/pull/136) ([amitbhanja](https://github.com/amitbhanja))
+- Fix validation workflow [\#135](https://github.com/nuvlaedge/nuvlaedge/pull/135) ([ignacio-penas](https://github.com/ignacio-penas))
+- Fix the modbus detection from kubernetes NuvlaEdge [\#116](https://github.com/nuvlaedge/nuvlaedge/pull/116) ([giovannibianco](https://github.com/giovannibianco))
+
 ## [2.12.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.12.0) (2023-10-31)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.11.2...2.12.0)

@@ -85,10 +85,16 @@ class NuvlaEdgeCommon:
         self.swarm_node_cert = \
             f"{self.hostfs}/var/lib/docker/swarm/certificates/swarm-node.crt"
 
-        self.nuvlaedge_id = self.set_nuvlaedge_id()
+        self._nuvlaedge_id = None
 
         # FIXME: Delete and fix tests
         self.container_stats_json_file = f"{self.data_volume}/docker_stats.json"
+
+    @property
+    def nuvlaedge_id(self):
+        if not self._nuvlaedge_id:
+            self._nuvlaedge_id = self.set_nuvlaedge_id()
+        return self._nuvlaedge_id
 
     def set_vpn_config_extra(self) -> str:
         """

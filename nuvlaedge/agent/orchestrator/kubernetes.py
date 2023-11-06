@@ -84,7 +84,8 @@ class KubernetesClient(COEClient):
 
         temp_result = self.client.list_namespaced_pod(self.namespace)\
 
-        logging.info(f"pods names:\n {temp_result.items[0].metadata.name}")
+        for pod in temp_result.items:
+            logging.info(f"pod name -->>  {pod.metadata.name}")
 
         return self.client.list_namespaced_pod(self.namespace, pretty='true')
 

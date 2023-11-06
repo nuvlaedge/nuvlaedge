@@ -81,7 +81,7 @@ class KubernetesClient(COEClient):
     def list_containers(self):
         # return self.client.list_pod_for_all_namespaces().items
         # return self.client.list_pod_for_all_namespaces()
-        return self.client.list_namespaced_pod(self.namespace, pretty='true').to_dict()
+        return self.client.list_namespaced_pod(self.namespace, pretty='true')
 
     def get_cluster_info(self, default_cluster_name=None):
         node_info = self.get_node_info()

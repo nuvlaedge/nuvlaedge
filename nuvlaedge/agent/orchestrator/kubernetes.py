@@ -81,11 +81,12 @@ class KubernetesClient(COEClient):
     def list_containers(self):
 
         pod_string=""
-        temp_result = self.client.list_namespaced_pod(self.namespace)
 
-        for pod in temp_result.items:
-            logging.debug(f"pod name -->>  {pod.metadata.name}")
-            pod_string = pod_string + " " + pod.metadata.name
+        temp_result = self.client_apps.list_namespaced_deployment(self.namespace)
+
+        for deployment in temp_result.items:
+            logging.debug(f"pod name -->>  {deployment.metadata.name}")
+            pod_string = pod_string + " " + deployment.metadata.name
 
         pod_list=pod_string.split()
 

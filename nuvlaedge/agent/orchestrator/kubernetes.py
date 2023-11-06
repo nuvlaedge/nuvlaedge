@@ -78,19 +78,17 @@ class KubernetesClient(COEClient):
     def list_nodes(self, optional_filter: dict = None):
         return self.client.list_node().items
 
-    def list_containers(self):
+    def list_deployments(self):
 
-        pod_string=""
+        deployment_list = []
 
         temp_result = self.client_apps.list_namespaced_deployment(self.namespace)
 
         for deployment in temp_result.items:
             logging.debug(f"pod name -->>  {deployment.metadata.name}")
-            pod_string = pod_string + " " + deployment.metadata.name
+            deployment_list += deployment.metadata.name
 
-        pod_list=pod_string.split()
-
-        return pod_list
+        return deployment_list
 
     def get_cluster_info(self, default_cluster_name=None):
         node_info = self.get_node_info()
@@ -473,19 +471,8 @@ class KubernetesClient(COEClient):
         return {}
 
     def get_all_nuvlaedge_components(self) -> list:
-        # TODO: implement.
-        # filter_labels = [util.base_label]
-        project_name = self.get_nuvlaedge_project_name()
 
-        log.info(f"The project name is: {project_name}")
-        # if project_name:
-            # filter_labels.append(f'com.docker.compose.project={project_name}')
-
-        # filters = {'label': filter_labels}
-
-        log.info(f"The container list is:\n\n {self.list_containers()}\n\n")
-
-        return self.list_containers()
+        return self.list_deployments()
 
     def _namespace(self, **kwargs):
         return kwargs.get('namespace', self.namespace)

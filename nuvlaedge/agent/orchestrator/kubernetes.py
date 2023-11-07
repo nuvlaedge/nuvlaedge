@@ -86,7 +86,7 @@ class KubernetesClient(COEClient):
 
         for deployment in temp_result.items:
             logging.debug(f"pod name -->>  {deployment.metadata.name}")
-            deployment_list += str(deployment.metadata.name).strip()
+            deployment_list += [deployment.metadata.name]
 
         return deployment_list
 

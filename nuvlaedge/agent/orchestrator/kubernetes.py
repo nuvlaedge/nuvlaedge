@@ -526,7 +526,8 @@ class KubernetesClient(COEClient):
                                   name=name,
                                   command=command,
                                   volume_mounts=volume_mounts,
-                                  args=args)
+                                  image_pull_policy="Always",
+                                  args=args,)
 
     @staticmethod
     def _pod_spec(container: client.V1Container,

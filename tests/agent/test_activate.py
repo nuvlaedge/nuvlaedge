@@ -8,6 +8,8 @@ import requests
 import unittest
 from tests.agent.utils.fake import Fake, FakeNuvlaApi
 
+from nuvla.api.models import CimiResource
+
 from nuvlaedge.agent.activate import Activate
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
@@ -102,44 +104,30 @@ class ActivateTestCase(unittest.TestCase):
         # if context file does not exist, the old NB resource should be empty
         mock_read_json_file.side_effect = FileNotFoundError
         mock_write_to_file.return_value = None
-        self.assertEqual(self.obj.create_nb_document_file({'foo': 'bar'}), {},
+        self.assertEqual(self.obj.read_ne_document_file(), {},
                          'Returned an old NuvlaEdge resource when there should not be one')
         mock_read_json_file.assert_called_once()
-        mock_write_to_file.assert_called_once()
+        mock_write_to_file.assert_not_called()
 
         # if there is a context file already, its content will be returned as the old NuvlaEdge resource context
         old_nuvlaedge_context = {'id': 'nuvlabox/fake-old'}
         mock_read_json_file.reset_mock(side_effect=True)
         mock_write_to_file.reset_mock()
         mock_read_json_file.return_value = old_nuvlaedge_context
-        self.assertEqual(self.obj.create_nb_document_file({'foo': 'bar'}), old_nuvlaedge_context,
+        self.assertEqual(self.obj.read_ne_document_file(), old_nuvlaedge_context,
                          'Unable to get old NuvlaEdge context when creating new NB document')
+        self.obj.nuvlaedge_resource = CimiResource(old_nuvlaedge_context)
+        self.assertEqual(self.obj.write_ne_document_file(), True,
+                         'Unable to write NuvlaEdge context when creating new NB document')
         mock_write_to_file.assert_called_once()
 
     @mock.patch.object(Activate, 'api')
-    def test_get_nuvlaedge_info(self, mock_api):
+    def test_get_fetch_nuvlaedge(self, mock_api):
         mock_api.return_value = self.set_nuvla_api(json.loads(self.api_key_content))
 
         # Nuvla should return the NuvlaEdge resource
-        returned_nuvlaedge_resource = self.obj.get_nuvlaedge_info()
+        returned_nuvlaedge_resource = self.obj.fetch_nuvlaedge().data
         self.assertIsInstance(returned_nuvlaedge_resource, dict)
         self.assertEqual(self.obj.nuvlaedge_id, returned_nuvlaedge_resource.get('id'),
                          'Did not get the expected NuvlaEdge resource')
         mock_api.assert_called_once()
-
-    @mock.patch.object(Activate, 'create_nb_document_file')
-    @mock.patch.object(Activate, 'get_nuvlaedge_info')
-    @mock.patch.object(Activate, 'authenticate')
-    def test_update_nuvlaedge_resource(self, mock_authenticate, mock_get_nuvlaedge_info, mock_create_nb_doc):
-        self.obj.user_info = json.loads(self.api_key_content)
-        mock_authenticate.return_value = self.set_nuvla_api(self.obj.user_info)
-        old_nuvlaedge_resource = {'id': self.obj.nuvlaedge_id}
-        new_nuvlaedge_resource = {**old_nuvlaedge_resource, **{'new-attr': True}}
-        mock_get_nuvlaedge_info.return_value = new_nuvlaedge_resource
-        mock_create_nb_doc.return_value = old_nuvlaedge_resource
-
-        # when called, it shall get the NB resource from Nuvla,
-        # overwrite the existing NB doc,
-        # and return both old and new NB resources
-        self.assertEqual(self.obj.update_nuvlaedge_resource(), (new_nuvlaedge_resource, old_nuvlaedge_resource),
-                         'Failed to update NuvlaEdge resource: unexpected "new" and "old" NB resources')

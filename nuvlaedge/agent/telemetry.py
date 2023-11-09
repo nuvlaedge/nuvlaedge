@@ -270,25 +270,22 @@ class Telemetry(NuvlaEdgeCommon):
         """
         monitor_process_time: Dict = {}
 
-        def create_new_monitor_thread(name, telemetry: Telemetry, **kwargs):
-            th = get_monitor(name)(name, telemetry, True, **kwargs)
-            th.start()
-            return th
-
         for monitor_name, it_monitor in self.monitor_list.items():
-            self.logger.debug(f' --- Monitor: {it_monitor.name} -- '
-                                f'Threaded: {it_monitor.is_thread} -- '
-                                f'Alive: {it_monitor.is_alive()}-')
+            self.logger.debug(f'Monitor: {it_monitor.name} - '
+                              f'Threaded: {it_monitor.is_thread} - '
+                              f'Alive: {it_monitor.is_alive()}')
 
-            if is_thread_creation_needed(
-                    monitor_name,
-                    it_monitor,
-                    log_not_alive=(logging.INFO, 'Recreating {} thread.'),
-                    log_alive=(logging.DEBUG, 'Thread {} is alive'),
-                    log_not_exist=(logging.INFO, 'Creating {} thread.')):
+            if it_monitor.is_thread:
+                if is_thread_creation_needed(
+                        monitor_name,
+                        it_monitor,
+                        log_not_alive=(logging.INFO, 'Recreating {} thread.'),
+                        log_alive=(logging.DEBUG, 'Thread {} is alive'),
+                        log_not_exist=(logging.INFO, 'Creating {} thread.')):
 
-                self.monitor_list[monitor_name] = create_new_monitor_thread(monitor_name,
-                                                                            self)
+                    monitor = get_monitor(monitor_name)(monitor_name, self, True)
+                    monitor.start()
+                    self.monitor_list[monitor_name] = monitor
 
             else:
                 init_time: float = time.time()

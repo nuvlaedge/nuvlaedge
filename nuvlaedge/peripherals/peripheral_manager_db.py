@@ -248,7 +248,7 @@ class PeripheralsDBManager:
                 update_flag = True
                 self.remove_peripheral(p)
 
-        self.logger.info('After removing in the local DB, backup to file')
+        self.logger.debug('After removing in the local DB, backup to file')
         if update_flag:
             self.update_local_storage()
 
@@ -262,5 +262,5 @@ class PeripheralsDBManager:
         for identifier, data in new_peripherals.items():
             self._latest_update[identifier] = datetime.now()
 
-        self.logger.info('After editing the local DB, backup to file')
+        self.logger.debug('After editing the local DB, backup to file')
         self.update_local_storage()

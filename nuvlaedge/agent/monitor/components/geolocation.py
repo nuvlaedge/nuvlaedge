@@ -98,7 +98,7 @@ class GeoLocationMonitor(Monitor):
 
     def update_data(self):
         if not self.is_thread:
-            if time.time() - self.last_update < self.thread_period:
+            if (time.time() - self.last_update) < self.thread_period:
                 return
 
         for service, info in self._LOCATION_SERVICES.items():

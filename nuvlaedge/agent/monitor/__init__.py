@@ -19,7 +19,7 @@ class Monitor(ABC, Thread):
     along the device.
     """
     def __init__(self, name: str, data_type: Type, enable_monitor: bool,
-                 thread_period: int = 10):
+                 thread_period: int = 60):
         super().__init__()
         # Define default thread attributes
         self.daemon = True

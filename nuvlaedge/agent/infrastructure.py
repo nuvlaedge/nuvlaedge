@@ -211,7 +211,7 @@ class Infrastructure(NuvlaEdgeCommon):
     def commission_vpn(self):
         """ (re)Commissions the NB via the agent API
 
-        :return:
+        :return: True on success, False otherwise
         """
         self.logger.info('Starting VPN commissioning...')
 
@@ -659,7 +659,7 @@ class Infrastructure(NuvlaEdgeCommon):
             credential_id = None
 
         if not credential_id:
-            # If you cannot find a VPN credential in Nuvla, then it is either in the
+            # If a VPN credential cannot be found on Nuvla, then it is either in the
             # process of being created or it has been removed from Nuvla
             self.logger.info("VPN server is set but cannot find VPN credential in Nuvla."
                              " Commissioning VPN...")

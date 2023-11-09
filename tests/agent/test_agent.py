@@ -36,11 +36,11 @@ class TestAgent(TestCase):
     def test_activate_nuvlaedge(self, wait_mock, atomic_write_mock):
         self.test_agent.activate.activation_is_possible.side_effect = [(False, None), (True, None)]
 
-        self.test_agent.activate.update_nuvlaedge_resource.return_value = \
+        self.test_agent.activate.nuvla_login.return_value = \
             ({'nuvlabox-status': 1}, None)
         self.test_agent.activate_nuvlaedge()
         self.assertEqual(self.test_agent.activate.activation_is_possible.call_count, 2)
-        self.assertEqual(self.test_agent.activate.update_nuvlaedge_resource.call_count, 1)
+        self.assertEqual(self.test_agent.activate.nuvla_login.call_count, 1)
 
     @patch('nuvlaedge.agent.agent.Infrastructure')
     def test_initialize_infrastructure(self, infra_mock):
@@ -164,3 +164,71 @@ class TestAgent(TestCase):
         self.test_agent.run_single_cycle(action)
         self.assertEqual(mock_start.call_count, 3)
         pull_mock.assert_called_once()
+
+    def test_update_nuvlaedge_configuration(self):
+        mock_current = {
+            'updated': 0,
+            'vpn-server-id': 'ID'
+        }
+        mock_old = {
+            'updated': 0,
+            'vpn-server-id': 'ID'
+        }
+        self.test_agent.old_nuvlaedge_data = mock_old.copy()
+        self.test_agent.activate.nuvlaedge_resource = CimiResource(mock_current)
+
+        mock_update_periods = Mock()
+        self.test_agent.on_nuvlaedge_update = mock_update_periods
+
+        mock_infra = Mock()
+        self.test_agent._infrastructure = mock_infra
+
+        # Resource hasn't been updated since the last check, do nothing
+        self.test_agent.old_nuvlaedge_data = mock_old.copy()
+        self.test_agent._update_nuvlaedge_configuration()
+        mock_infra.commission_vpn.assert_not_called()
+        mock_update_periods.assert_not_called()
+
+        # Resource changed, with same vpn id
+        mock_current['updated'] = 1
+        self.test_agent.old_nuvlaedge_data = mock_old.copy()
+        self.test_agent._update_nuvlaedge_configuration()
+        mock_update_periods.assert_called_once()
+        mock_infra.commission_vpn.assert_not_called()
+        mock_update_periods.reset_mock()
+
+        # Everything has changed
+        mock_current['vpn-server-id'] = 'ID_BIS'
+        self.test_agent.old_nuvlaedge_data = mock_old.copy()
+        self.test_agent._update_nuvlaedge_configuration()
+        mock_update_periods.assert_called_once()
+        mock_infra.commission_vpn.assert_called_once()
+
+    @patch('nuvlaedge.agent.agent.Agent.fetch_nuvlaedge_resource')
+    @patch('nuvlaedge.agent.agent.Agent._update_nuvlaedge_configuration')
+    def test_resource_synchronization(self, mock_update_config, mock_fetch_nuvlaedge):
+        mock_activator = Mock()
+        self.test_agent._activate = mock_activator
+
+        mock_exit = Mock()
+        self.test_agent.exit_event = mock_exit
+
+        mock_infra = Mock()
+        self.test_agent._infrastructure = mock_infra
+
+        # If the nuvlaedge has been decommissioned
+        mock_activator.nuvlaedge_resource = CimiResource({'state': 'DECOMMISSIONING'})
+        self.test_agent.sync_nuvlaedge_resource()
+        mock_exit.set.assert_called_once()
+
+        # Normal state
+        mock_activator.nuvlaedge_resource = CimiResource({'state': 'ACTIVATED',
+                                                          'vpn-server-id': None})
+        self.test_agent.sync_nuvlaedge_resource()
+        mock_update_config.assert_called_once()
+        mock_infra.watch_vpn_credential.assert_not_called()
+
+        mock_activator.nuvlaedge_resource = CimiResource({'state': 'ACTIVATED',
+                                                          'vpn-server-id': 'ID'})
+        self.test_agent.sync_nuvlaedge_resource()
+        mock_infra.watch_vpn_credential.assert_called_with('ID')

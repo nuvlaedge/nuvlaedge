@@ -194,6 +194,8 @@ class TestNetworkMonitor(unittest.TestCase):
                                        'dev': 'eth0',
                                        'prefsrc': addr1}]
             test_ip_monitor.set_local_data()
+            # TODO: Fix this test which fail from time to time with:
+            # AssertionError: Lists differ: [IP(address='40.40.40.40')] != [IP(address='40.40.40.40'), IP(address='40.40.40.40')]
             self.assertEqual(test_ip_monitor.data.interfaces['eth0'].ips,
                              [IP(address=addr1), IP(address=addr2)])
 

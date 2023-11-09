@@ -39,6 +39,7 @@ class Monitor(ABC, Thread):
         # Enable flag
         self._enabled_monitor: bool = enable_monitor
         self.updated: bool = False
+        self.last_process_duration = None
 
     @property
     def enabled_monitor(self):
@@ -77,12 +78,32 @@ class Monitor(ABC, Thread):
         """
         ...
 
-    def run(self) -> None:
-        while True:
+    def run_update_data(self, raise_on_exception=False, monitor_name=None):
+        if not monitor_name:
+            monitor_name = self.name
+
+        init_time: float = time.perf_counter()
+        try:
             self.update_data()
             self.updated = True
+        except Exception as e:
+            self.logger.exception(f'Something went wrong updating monitor {monitor_name}: {e}', e)
+            if raise_on_exception:
+                raise
+        finally:
+            self.last_process_duration = time.perf_counter() - init_time
 
-            time.sleep(self.thread_period)
+    def run(self) -> None:
+        while True:
+            t0 = time.perf_counter()
+            self.run_update_data()
+            run_time = time.perf_counter() - t0
+            wait_time = self.thread_period - run_time
+            if wait_time > 0:
+                time.sleep(wait_time)
+            else:
+                self.logger.warning(f'Monitor {self.name} took too long to complete '
+                                    f'({run_time} > {self.thread_period})')
 
 
 def underscore_to_hyphen(field_name: str) -> str:

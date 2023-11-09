@@ -268,7 +268,6 @@ class Telemetry(NuvlaEdgeCommon):
             status_dict: dictionary containing the report for Nuvla to be updated by
             each monitor
         """
-        monitor_process_time: Dict = {}
 
         for monitor_name, it_monitor in self.monitor_list.items():
             self.logger.debug(f'Monitor: {it_monitor.name} - '
@@ -288,19 +287,11 @@ class Telemetry(NuvlaEdgeCommon):
                     self.monitor_list[monitor_name] = monitor
 
             else:
-                init_time: float = time.time()
+                it_monitor.run_update_data(monitor_name=monitor_name)
 
-                try:
-                    it_monitor.update_data()
-                    it_monitor.updated = True
-                except Exception as ex:
-                    self.logger.exception(f'Something went wrong updating monitor '
-                                          f'{monitor_name}. Error: {ex}', ex)
-
-                monitor_process_time[it_monitor.name] = time.time() - init_time
-
-        self.logger.debug(f'Monitors processing time '
-                          f'{json.dumps(monitor_process_time, indent=4)}')
+        monitor_process_duration = {k: v.last_process_duration for k, v in self.monitor_list.items()}
+        self.logger.debug(f'Monitors processing duration: '
+                          f'{json.dumps(monitor_process_duration, indent=4)}')
 
         # Retrieve monitoring data
         for it_monitor in self.monitor_list.values():

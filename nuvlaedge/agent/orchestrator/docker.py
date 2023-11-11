@@ -264,7 +264,7 @@ class DockerClient(COEClient):
             compute_api = self._get_component_container(util.compute_api_service_name)
             local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
         except Exception as e:
-            logger.info(f'Cannot infer compute-api network for local job {job_id}: {e}')
+            logger.debug(f'Cannot infer compute-api network for local job {job_id}: {e}')
 
         # Get environment variables and volumes from job-engine-lite container
         volumes = {

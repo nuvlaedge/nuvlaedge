@@ -138,10 +138,10 @@ class Telemetry(NuvlaEdgeCommon):
         """
         Auxiliary function to extract some control from the class initialization
         It gathers the available monitors and initializes them saving the reference into
-        the monitor_list attribute of Telemtry
+        the monitor_list attribute of Telemetry
         """
         for mon in active_monitors:
-            if mon.split('_')[0] in self.excluded_monitors:
+            if mon.rsplit('_', 1)[0] in self.excluded_monitors:
                 continue
             self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
 

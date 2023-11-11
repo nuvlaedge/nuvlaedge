@@ -48,7 +48,7 @@ class Agent:
         self.logger.debug('Instantiating Agent class')
 
         self.exit_event = exit_event
-        self.on_nuvlaedge_update: Callable[dict] | None = on_nuvlaedge_update
+        self.on_nuvlaedge_update: Callable[[dict], None] | None = on_nuvlaedge_update
 
         # Main NuvlaEdge data
         self.past_status_time: str = ''
@@ -364,7 +364,6 @@ class Agent:
                            self.infrastructure.coe_client.job_engine_lite_image)
 
             if not job.do_nothing:
-
                 try:
                     job.launch()
                 except Exception as ex:

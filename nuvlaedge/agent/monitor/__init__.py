@@ -78,7 +78,7 @@ class Monitor(ABC, Thread):
         """
         ...
 
-    def run_update_data(self, raise_on_exception=False, monitor_name=None):
+    def run_update_data(self, monitor_name=None):
         if not monitor_name:
             monitor_name = self.name
 
@@ -88,8 +88,6 @@ class Monitor(ABC, Thread):
             self.updated = True
         except Exception as e:
             self.logger.exception(f'Something went wrong updating monitor {monitor_name}: {e}', e)
-            if raise_on_exception:
-                raise
         finally:
             self.last_process_duration = time.perf_counter() - init_time
 

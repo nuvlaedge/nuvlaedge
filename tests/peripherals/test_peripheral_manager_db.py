@@ -37,6 +37,7 @@ class TestPeripheralsDBManager(TestCase):
             test_content = self.test_db.content
             self.assertEqual(test_content, {})
             self.assertEqual(self.test_db._last_synch, 3*61)
+            self.assertEqual(self.test_db.content, {})
 
     @mock.patch.object(PeripheralsDBManager, 'decode_new_peripherals')
     @mock.patch.object(PeripheralsDBManager, 'update_local_storage')
@@ -145,7 +146,7 @@ class TestPeripheralsDBManager(TestCase):
                          'Partial response should return partial results')
 
     @mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.content',
-                ew_callable=mock.PropertyMock)
+                new_callable=mock.PropertyMock)
     def test_remove_peripheral(self, mock_content):
         with mock.patch.object(PeripheralsDBManager, 'remove_local_peripheral') as mock_remove_local, \
                 mock.patch.object(PeripheralsDBManager, 'remove_remote_peripheral') as mock_remove_remote:
@@ -175,20 +176,30 @@ class TestPeripheralsDBManager(TestCase):
 
         self.assertEqual(self.test_db.remove_remote_peripheral('id'), 200)
 
-    @mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.keys',
-                new_callable=mock.PropertyMock)
-    def test_add(self, mock_keys_property):
-        with mock.patch.object(PeripheralsDBManager, 'add_peripheral') as mock_add_peripheral, \
-                mock.patch.object(PeripheralsDBManager, 'update_local_storage') as mock_update_local:
+    def test_add(self):
+        with mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.keys',
+                        new_callable=mock.PropertyMock) as mock_keys_property:
+            with mock.patch.object(PeripheralsDBManager, 'add_peripheral') as mock_add_peripheral, \
+                    mock.patch.object(PeripheralsDBManager, 'update_local_storage') as mock_update_local:
 
-            test_data = self.get_sample_peripheral_data()
-            mock_keys_property.return_value = ['id']
-            self.test_db.add({'id': test_data})
-            mock_add_peripheral.assert_not_called()
-            mock_update_local.assert_called_once()
+                test_data = self.get_sample_peripheral_data()
+                mock_keys_property.return_value = ['id']
+                self.test_db.add({'id': test_data})
+                mock_add_peripheral.assert_not_called()
+                mock_update_local.assert_called_once()
+
+            with mock.patch.object(PeripheralsDBManager, 'add_peripheral') as mock_add_peripheral, \
+                    mock.patch.object(PeripheralsDBManager, 'update_local_storage') as mock_update_local:
+
+                test_data = self.get_sample_peripheral_data()
+                mock_keys_property.return_value = []
+                self.test_db.add({'id': test_data})
+                mock_add_peripheral.assert_called_once()
+                mock_update_local.assert_called_once()
 
         with mock.patch.object(PeripheralsDBManager, 'add_peripheral') as mock_add_peripheral, \
-                mock.patch.object(PeripheralsDBManager, 'update_local_storage') as mock_update_local:
+                mock.patch.object(PeripheralsDBManager, 'update_local_storage') as mock_update_local, \
+                mock.patch.object(PeripheralsDBManager, 'synchronize') as mock_sync:
 
             test_data = self.get_sample_peripheral_data()
             mock_keys_property.return_value = []
@@ -202,6 +213,21 @@ class TestPeripheralsDBManager(TestCase):
 
         self.test_db._latest_update = {'id': datetime.now() - timedelta(seconds=self.test_db.EXPIRATION_TIME+1)}
         self.assertTrue(self.test_db.peripheral_expired('id'))
+
+    @mock.patch.object(PeripheralsDBManager, 'synchronize')
+    @mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.keys', new_callable=mock.PropertyMock)
+    @mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.peripheral_expired')
+    @mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.remove_peripheral')
+    @mock.patch('nuvlaedge.peripherals.peripheral_manager_db.PeripheralsDBManager.update_local_storage')
+    def test_remove(self, mock_update_storage, mock_remove, mock_expired, mock_keys, mock_sync):
+        self.test_db.remove(set())
+        mock_update_storage.assert_not_called()
+
+        mock_keys.return_value = ['id1', 'id2']
+        mock_expired.side_effect = (True, False)
+        self.test_db.remove({'id1', 'key', 'id2'})
+        mock_update_storage.assert_called_once()
+        mock_remove.assert_called_once()
 
     def test_edit(self):
         test_data = {'id': self.get_sample_peripheral_data()}

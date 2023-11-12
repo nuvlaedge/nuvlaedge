@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os
+
 import mock
 import unittest
 import socket
@@ -82,7 +84,7 @@ class TelemetryTestCase(unittest.TestCase):
             }
         }
         ###
-        logging.disable(logging.CRITICAL)
+        logging.disable(logging.INFO)
 
     def tearDown(self):
         logging.disable(logging.NOTSET)
@@ -303,14 +305,43 @@ class TelemetryTestCase(unittest.TestCase):
             self.assertEqual(self.obj.get_vpn_ip(), '1.1.1.1',
                              'Failed to get VPN IP')
 
-    @mock.patch('nuvlaedge.agent.monitor.Monitor.run_update_data')
-    def test_update_monitors(self, mock_run_update_data):
-        self.obj.initialize_monitors()
-        status = {}
-        self.obj.update_monitors(status)
-
-        monitor = self.obj.monitor_list[list(self.obj.monitor_list)[0]]
-        monitor.updated = True
-        with mock.patch.object(monitor, 'populate_nb_report') as mock_populate_nb_report:
-            mock_populate_nb_report.side_effect = KeyError
+    @mock.patch('time.sleep', return_value=None)
+    def test_update_monitors(self, mock_sleep):
+        with mock.patch('nuvlaedge.agent.monitor.Monitor.run_update_data') as mock_run_update_data:
+            self.obj.initialize_monitors()
+            status = {}
             self.obj.update_monitors(status)
+
+            monitor = self.obj.monitor_list[list(self.obj.monitor_list)[0]]
+            monitor.updated = True
+            with mock.patch.object(monitor, 'populate_nb_report') as mock_populate_nb_report:
+                mock_populate_nb_report.side_effect = KeyError
+                self.obj.update_monitors(status)
+
+            # Test threaded
+            self.obj.monitor_list = {}
+            os.environ['NUVLAEDGE_THREAD_MONITORS'] = 'True'
+            self.obj.initialize_monitors()
+            self.obj.update_monitors(status)
+
+            monitor_name = list(self.obj.monitor_list)[0]
+            monitor = self.obj.monitor_list[monitor_name]
+            monitor.is_thread = True
+            monitor.thread_period = 0.1
+            self.obj.monitor_list = {monitor_name: monitor}
+            with self.assertLogs(level='WARNING') as log:
+                self.obj.update_monitors(status)
+                monitor.join(1)
+                self.assertTrue(log.output)
+            del os.environ['NUVLAEDGE_THREAD_MONITORS']
+
+        self.obj.monitor_list = {}
+        self.obj.initialize_monitors()
+        monitor_name = list(self.obj.monitor_list)[0]
+        monitor = self.obj.monitor_list[monitor_name]
+        monitor.is_thread = False
+        monitor.update_data = mock.Mock(side_effect=KeyError)
+        self.obj.monitor_list = {monitor_name: monitor}
+        self.obj.update_monitors(status)
+        monitor.update_data.assert_called_once()
+

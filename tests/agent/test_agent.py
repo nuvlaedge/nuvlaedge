@@ -49,6 +49,10 @@ class TestAgent(TestCase):
         self.test_agent.activate.nuvla_endpoint_insecure = False
         self.test_agent.activate_nuvlaedge()
 
+        self.test_agent._activate = None
+        with patch('nuvlaedge.agent.agent.Activate') as mock_activate:
+            self.test_agent.activate
+
     @patch('nuvlaedge.agent.agent.Infrastructure')
     def test_initialize_infrastructure(self, infra_mock):
         it_mock = Mock()
@@ -298,3 +302,8 @@ class TestAgent(TestCase):
                                                           'vpn-server-id': 'ID'})
         self.test_agent.sync_nuvlaedge_resource()
         mock_infra.watch_vpn_credential.assert_called_with('ID')
+
+        # without exit_event
+        self.test_agent.exit_event = None
+        mock_activator.nuvlaedge_resource = CimiResource({'state': 'DECOMMISSIONING'})
+        self.test_agent.sync_nuvlaedge_resource()

@@ -28,7 +28,7 @@ class ActivateTestCase(unittest.TestCase):
         self.obj.nuvla_endpoint = "https://fake-nuvla.io"
         self.obj.data_volume = self.shared_volume
         self.obj.context = 'path/to/fake/context/file'
-        logging.disable(logging.CRITICAL)
+        logging.disable(logging.INFO)
 
     def tearDown(self):
         logging.disable(logging.NOTSET)
@@ -121,6 +121,18 @@ class ActivateTestCase(unittest.TestCase):
                          'Unable to write NuvlaEdge context when creating new NB document')
         mock_write_to_file.assert_called_once()
 
+        # exception during read
+        mock_read_json_file.side_effect = [FileNotFoundError, OSError]
+        with self.assertLogs(level='WARNING'):
+            self.assertEqual({}, self.obj.read_ne_document_file())
+        with self.assertLogs(level='ERROR'):
+            self.assertEqual({}, self.obj.read_ne_document_file())
+
+        # exception during write
+        mock_write_to_file.side_effect = OSError
+        with self.assertLogs(level='ERROR'):
+            self.assertFalse(self.obj.write_ne_document_file())
+
     @mock.patch.object(Activate, 'api')
     def test_get_fetch_nuvlaedge(self, mock_api):
         mock_api.return_value = self.set_nuvla_api(json.loads(self.api_key_content))
@@ -131,3 +143,9 @@ class ActivateTestCase(unittest.TestCase):
         self.assertEqual(self.obj.nuvlaedge_id, returned_nuvlaedge_resource.get('id'),
                          'Did not get the expected NuvlaEdge resource')
         mock_api.assert_called_once()
+
+    @mock.patch.object(Activate, 'api')
+    def test_nuvla_login(self, mock_api):
+        self.obj.user_info = {'api-key': 'credential/id', 'secret-key': 'secret'}
+        self.obj.nuvla_login()
+

@@ -55,8 +55,7 @@ class Activate(NuvlaEdgeCommon):
             # But maybe the API was provided via env?
             api_key, api_secret = self.get_api_keys()
             if api_key and api_secret:
-                self.activate_logger.info(f'Found API key set in environment, with key'
-                                          f' value {api_key}')
+                self.activate_logger.info(f'Found API key set in environment, with key value {api_key}')
                 self.user_info = {
                     "api-key": api_key,
                     "secret-key": api_secret

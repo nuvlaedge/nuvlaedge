@@ -74,7 +74,7 @@ def cleanup_networks(network_driver):
             try:
                 network.remove()
             except Exception as e:
-                logging.debug(f'Exception {e} retrying removal of network {network.name}')
+                logging.debug(f'Exception retrying removal of network {network.name}: {e}')
                 logging.error(f'Cannot remove {network.name}')
 
 
@@ -105,7 +105,7 @@ def cleanup_datagateway(is_cluster_manager):
             try:
                 remove_container_or_service(dg_svc)
             except Exception as e:
-                logging.debug(f'Exception {e} retrying removal of component {dg_svc.name}')
+                logging.debug(f'Exception retrying removal of component {dg_svc.name}: {e}')
                 logging.error(f'Cannot remove {dg_svc.name}')
 
 

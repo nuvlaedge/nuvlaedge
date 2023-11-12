@@ -113,8 +113,8 @@ def ssdp_manager():
             if 'x-friendly-name' in device:
                 try:
                     alt_name = base64.b64decode(device.get('x-friendly-name')).decode()
-                except Exception as ex:
-                    logger.debug('Exception decoding name', ex)
+                except Exception:
+                    logger.debug('Exception decoding name', exc_info=True)
 
             name = device_from_location.get('friendlyName', alt_name)
             description = device_from_location.get('modelDescription',
@@ -256,10 +256,10 @@ def format_zeroconf_services(services):
                         output[identifier]['class'].append(dict_properties['class'])
             except Exception as ex:
                 # this is only to get additional info on the peripheral, if it fails, we can live without it
-                logger.debug('Failed gathering extra information from peripheral', ex)
+                logger.debug('Failed gathering extra information from peripheral', exc_info=True)
 
         except Exception as ex:
-            logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}', ex)
+            logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}')
             continue
 
     return output

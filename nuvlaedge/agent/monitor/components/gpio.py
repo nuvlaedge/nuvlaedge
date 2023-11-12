@@ -95,8 +95,8 @@ class GpioMonitor(Monitor):
         except KeyError:
             # if there's any other issue while doing so, it means the provided argument
             # is not valid
-            self.logger.error(f"Invalid list of indexes {indexes} for GPIO pin "
-                              f"in {line}. Cannot parse this pin")
+            self.logger.error(f"Invalid list of indexes {indexes} for GPIO pin in {line}. "
+                              f"Cannot parse this pin")
             return None
 
     def parse_pin_line(self, pin_line: str) -> \
@@ -127,9 +127,7 @@ class GpioMonitor(Monitor):
             self.logger.error(f"Subprocess class error: {ex}")
 
         except FileNotFoundError as ex:
-            self.logger.error(
-                f"No command {ex} found, GPIO monitor shouldn't be active if the command"
-                f" is not present")
+            self.logger.error(f"No command {ex} found, GPIO monitor shouldn't be active if the command is not present")
         return []
 
     def update_data(self):

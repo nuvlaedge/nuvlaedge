@@ -129,8 +129,7 @@ class Telemetry(NuvlaEdgeCommon):
         self.edge_status: EdgeStatus = EdgeStatus()
 
         self.excluded_monitors: List[str] = excluded_monitors.replace("'", "").split(',')
-        self.logger.info(f'Excluded monitors received in Telemetry'
-                         f' {self.excluded_monitors}')
+        self.logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
         self.monitor_list: Dict[str, Monitor] = {}
         self.initialize_monitors()
 
@@ -194,8 +193,7 @@ class Telemetry(NuvlaEdgeCommon):
                             f' {self.mqtt_broker_host}')
             return
         except socket.gaierror:
-            logging.warning("The NuvlaEdge MQTT broker is not reachable...trying again"
-                            " later")
+            logging.warning("The NuvlaEdge MQTT broker is not reachable...trying again later")
             self.mqtt_telemetry.disconnect()
             return
 
@@ -299,11 +297,9 @@ class Telemetry(NuvlaEdgeCommon):
                 if it_monitor.updated:
                     it_monitor.populate_nb_report(status_dict)
                 else:
-                    self.logger.info(f'Data not updated yet in monitor '
-                                     f'{it_monitor.name}')
-            except Exception as ex:
-                self.logger.exception(f'Error retrieving data from monitor '
-                                      f'{it_monitor.name}.', ex)
+                    self.logger.info(f'Data not updated yet in monitor {it_monitor.name}')
+            except Exception:
+                self.logger.exception(f'Error retrieving data from monitor {it_monitor.name}.')
 
     def get_status(self):
         """ Gets several types of information to populate the NuvlaEdge status """

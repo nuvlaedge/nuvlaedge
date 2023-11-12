@@ -87,7 +87,7 @@ class Monitor(ABC, Thread):
             self.update_data()
             self.updated = True
         except Exception as e:
-            self.logger.exception(f'Something went wrong updating monitor {monitor_name}: {e}', e)
+            self.logger.exception(f'Something went wrong updating monitor {monitor_name}: {e}')
         finally:
             self.last_process_duration = time.perf_counter() - init_time
 

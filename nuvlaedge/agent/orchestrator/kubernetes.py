@@ -664,8 +664,7 @@ class KubernetesClient(COEClient):
             self.client.delete_namespaced_pod(name, namespace)
             self._wait_pod_deleted(namespace, name)
         except ApiException as ex:
-            log.warning('Failed removing pod %s in %s: %s', name, namespace,
-                        ex.reason)
+            log.warning('Failed removing pod %s in %s: %s', name, namespace, ex.reason)
         except TimeoutException as ex_timeout:
             log.warning('Timeout waiting for pod to be deleted: %s', ex_timeout)
 

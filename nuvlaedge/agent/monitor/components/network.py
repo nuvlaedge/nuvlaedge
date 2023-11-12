@@ -52,8 +52,7 @@ class NetworkMonitor(Monitor):
         self._ip_route_image: str = self.coe_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()
-        self.logger.info(f'Running network monitor for project '
-                         f'{self.engine_project_name}')
+        self.logger.info(f'Running network monitor for project {self.engine_project_name}')
         self.iproute_container_name: str = f'{self.engine_project_name}-iproute'
 
         self.last_public_ip: float = 0.0
@@ -82,7 +81,7 @@ class NetworkMonitor(Monitor):
 
         except requests.Timeout as ex:
             reason: str = f'Connection to server timed out: {ex}'
-            self.logger.error(f'Cannot retrieve public IP. {reason}')
+            self.logger.error(f'Cannot retrieve public IP: {reason}')
         except Exception as e:
             self.logger.error(f'Cannot retrieve public IP: {e}')
 
@@ -173,8 +172,7 @@ class NetworkMonitor(Monitor):
                 with open(f"{stats}/tx_bytes", encoding='UTF-8') as tx_file:
                     tx_bytes = int(tx_file.read())
             except (FileNotFoundError, NotADirectoryError):
-                self.logger.warning(
-                    f"Cannot calculate net usage for interface {interface}")
+                self.logger.warning(f"Cannot calculate net usage for interface {interface}")
                 continue
 
             # we compute the net stats since the beginning of the NB lifetime
@@ -185,8 +183,8 @@ class NetworkMonitor(Monitor):
                         self.first_net_stats[interface].get('bytes-transmitted', 0):
 
                     # then the system counters were reset
-                    self.logger.warning(f'Host network counters seem to have '
-                                        f'been reset for network interface {interface}')
+                    self.logger.warning(f'Host network counters seem to have been reset for network interface '
+                                        f'{interface}')
 
                     if interface in previous_net_stats:
                         # in this case, because the numbers no longer correlate,

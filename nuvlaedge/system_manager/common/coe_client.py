@@ -429,7 +429,7 @@ class Docker(COEClient):
 
         if docker_major_version < self.minimum_version:
             self.logging.error("Your Docker version is too old: {}. MIN REQUIREMENTS: Docker {} or newer"
-                           .format(docker_major_version, self.minimum_version))
+                               .format(docker_major_version, self.minimum_version))
             return False
 
         return True

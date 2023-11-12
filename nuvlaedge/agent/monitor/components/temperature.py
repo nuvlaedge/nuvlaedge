@@ -93,16 +93,15 @@ class TemperatureMonitor(Monitor):
             zone_name, temp_value = self.read_temperature_file(zone_path, temp_path)
 
             if not zone_name or not temp_value:
-                self.logger.warning(f'Thermal zone {zone_path} or temperature '
-                                    f'{temp_path} value is missing')
+                self.logger.warning(f'Thermal zone {zone_path} or temperature {temp_path} value is missing')
                 continue
 
             try:
                 self.update_temperature_entry(zone_name, float(temp_value)/1000)
 
             except (ValueError, TypeError) as ex:
-                self.logger.warning(f'Cannot convert temperature {temp_value} at '
-                                    f'{temp_path}. Reason: {str(ex)}')
+                self.logger.warning(f'Cannot convert temperature {temp_value} at {temp_path}. '
+                                    f'Reason: {str(ex)}')
 
     def update_data(self):
         if not self.data.temperatures:

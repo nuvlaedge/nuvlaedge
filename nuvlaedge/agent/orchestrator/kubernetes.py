@@ -588,8 +588,9 @@ class KubernetesClient(COEClient):
 
         container = self._container_def(image, name,
                                         volume_mounts=container_volume_mounts,
-                                        image_pull_policy=self.set_image_pull_policy
-                                        command=command, args=args)
+                                        image_pull_policy=self.set_image_pull_policy,
+                                        command=command, 
+                                        args=args,)
 
         return self._pod_spec(container,
                               network=network,

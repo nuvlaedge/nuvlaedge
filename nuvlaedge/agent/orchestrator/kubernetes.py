@@ -52,6 +52,7 @@ class KubernetesClient(COEClient):
         self.host_node_ip = os.getenv('MY_HOST_NODE_IP')
         self.host_node_name = os.getenv('MY_HOST_NODE_NAME')
         self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
+        self.set_image_pull_policy = os.getenv('TEST_IMAGE_PULL_POLICY') or "IfNotPresent"
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
     def get_node_info(self):
@@ -509,6 +510,7 @@ class KubernetesClient(COEClient):
     def _container_def(image, name,
                        volume_mounts: List[client.V1VolumeMount] | None,
                        command: str = None,
+                       image_pull_policy: str = None,
                        args: str = None) -> client.V1Container:
         def parse_cmd_args(cmd, arg):
             if cmd:
@@ -526,7 +528,7 @@ class KubernetesClient(COEClient):
                                   name=name,
                                   command=command,
                                   volume_mounts=volume_mounts,
-                                  image_pull_policy="Always",
+                                  image_pull_policy=image_pull_policy,
                                   args=args,)
 
     @staticmethod
@@ -586,6 +588,7 @@ class KubernetesClient(COEClient):
 
         container = self._container_def(image, name,
                                         volume_mounts=container_volume_mounts,
+                                        image_pull_policy=self.set_image_pull_policy
                                         command=command, args=args)
 
         return self._pod_spec(container,

@@ -254,11 +254,11 @@ def format_zeroconf_services(services):
                     # for additional classes
                     if 'class' in dict_properties:
                         output[identifier]['class'].append(dict_properties['class'])
-            except Exception as ex:
+            except Exception:
                 # this is only to get additional info on the peripheral, if it fails, we can live without it
                 logger.debug('Failed gathering extra information from peripheral', exc_info=True)
 
-        except Exception as ex:
+        except Exception:
             logger.exception(f'Unable to categorize Zeroconf peripheral {service_name} with data: {service_data}')
             continue
 

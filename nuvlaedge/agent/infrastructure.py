@@ -101,7 +101,7 @@ class Infrastructure(NuvlaEdgeCommon):
                 client_key = file.read()
 
         except (FileNotFoundError, IndexError):
-            self.logger.warning("Container orchestration API TLS keys have not been set yet!")
+            self.logger.debug("Container orchestration API TLS keys have not been set yet!")
             return []
 
         return client_ca, client_cert, client_key

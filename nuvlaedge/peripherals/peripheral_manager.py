@@ -47,11 +47,11 @@ class PeripheralManager(Thread):
         Checks which peripheral scanners are currently running
         :return:
         """
-        self.logger.info(f'Getting peripheral status from: {FILE_NAMES.PERIPHERALS_FOLDER}')
+        self.logger.debug(f'Getting peripheral status from: {FILE_NAMES.PERIPHERALS_FOLDER}')
 
         for f in FILE_NAMES.PERIPHERALS_FOLDER.iterdir():
             if f.is_dir():
-                self.logger.info(f'{f} peripheral manager running')
+                self.logger.debug(f'{f} peripheral manager running')
                 self.running_peripherals.add(f)
 
     def process_new_peripherals(self, new_peripherals: dict[str, PeripheralData]):

@@ -172,7 +172,7 @@ class PeripheralsDBManager:
         del_status = self.remove_remote_peripheral(self.content.get(peripheral_id).id)
 
         if del_status in [200, 201]:
-            self.logger.info(f'Peripheral {peripheral_id} successfully removed from Nuvla, removing from local')
+            self.logger.info(f'Peripheral "{peripheral_id}" successfully removed from Nuvla, removing from local')
             self.remove_local_peripheral(peripheral_id)
         else:
             self.logger.warning(f'Error {del_status} deleting peripheral from Nuvla')
@@ -244,7 +244,7 @@ class PeripheralsDBManager:
 
             # Updated field should always be filled, either when updating from Nuvla or when creating the Peripheral
             if self.peripheral_expired(p):
-                self.logger.info(f'Peripheral last report more than {self.EXPIRATION_TIME/60} min ago, removing')
+                self.logger.info(f'Peripheral "{p}" last report more than {self.EXPIRATION_TIME/60} min ago, removing')
                 update_flag = True
                 self.remove_peripheral(p)
 

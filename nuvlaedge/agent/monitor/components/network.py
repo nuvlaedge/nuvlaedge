@@ -363,7 +363,7 @@ class NetworkMonitor(Monitor):
         # 2.- Default Local Gateway
         # 3.- Public
         # 4.- Swarm
-        self.logger.info('Updating data in Network monitor')
+        self.logger.debug('Updating data in Network monitor')
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
 

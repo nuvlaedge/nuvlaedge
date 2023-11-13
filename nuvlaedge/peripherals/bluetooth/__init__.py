@@ -79,17 +79,19 @@ def compare_bluetooth(bluetooth, ble):
     output = []
 
     for device in bluetooth:
-        if device[0] not in ble:
-            d = {
-                "identifier": device[0],
-                "class": device[2],
-                "interface": "Bluetooth"
-            }
+        device_id = device[0]
+        # if device_id not in ble:
+        d = {
+            "identifier": device_id,
+            "class": device[2],
+            "interface": "Bluetooth"
+        }
+        if device[1] != "":
+            d["name"] = device[1]
+        output.append(d)
 
-            if device[1] != "":
-                d["name"] = device[1]
-
-            output.append(d)
+        # elif device[1] and not ble[device_id].get('name'):
+        #     ble[device_id]['name'] = device[1]
 
     return output
 
@@ -294,20 +296,27 @@ def cod_converter(cod_decimal_string):
 
 
 async def bluetooth_manager():
-    try:
-        # list
-        bluetooth_devices = device_discovery()
-        logger.info(bluetooth_devices)
-    except Exception as e:
-        bluetooth_devices = []
-        logger.exception(f"Failed to discover BT devices: {e}")
 
+    bluetooth_devices = []
+    try:
+        bluetooth_devices = device_discovery()
+        logger.debug(f'Bluetooth devices: {bluetooth_devices}')
+    except Exception as e:
+        logger.error(f"Failed to discover BT devices: {e}")
+        logger.debug("Exception", exc_info=e)
+
+    ble_devices = {}
     try:
         ble_devices = await ble_device_discovery()
+        logger.debug(f'BLE devices: {ble_devices}')
     except Exception as e:
-        ble_devices = {}
-        logger.exception(f"Failed to discover BLE devices: {e}")
-    logger.info(f'BLE Devices {ble_devices}')
+        logger.error(f"Failed to discover BLE devices: {e}")
+        logger.debug("Exception", exc_info=e)
+
+    if bluetooth_devices or ble_devices:
+        logger.info(f'Found {len(bluetooth_devices)} Bluetooth devices and {len(ble_devices)} BLE devices')
+    else:
+        logger.info('No device found')
 
     bluetooth = compare_bluetooth(bluetooth_devices, ble_devices)
     output = ble_devices

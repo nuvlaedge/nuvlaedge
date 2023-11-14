@@ -48,11 +48,28 @@ class KubernetesClient(COEClient):
         self.client_apps = client.AppsV1Api()
         self.client_batch_api = client.BatchV1Api()
         self.namespace = self.get_nuvlaedge_project_name(util.default_project_name)
-        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
+        self.job_engine_lite_image = \
+            os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
         self.host_node_ip = os.getenv('MY_HOST_NODE_IP')
         self.host_node_name = os.getenv('MY_HOST_NODE_NAME')
-        self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
+        self.vpn_client_component = \
+            os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
+        self.set_image_pull_policy = self.checked_image_pull_policy()
         self.data_gateway_name = f"data-gateway.{self.namespace}"
+
+    def checked_image_pull_policy(self):
+
+        valid_pull_policies = ["Always","IfNotPresent","Never"]
+
+        image_pull_policy = os.getenv('TEST_IMAGE_PULL_POLICY')
+
+        if image_pull_policy in valid_pull_policies:
+            return image_pull_policy
+
+        log.info(f"The image pull policy was set to an invalid string: \
+            {image_pull_policy}")
+
+        return "IfNotPresent"
 
     def get_node_info(self):
         if self.host_node_name:
@@ -78,8 +95,17 @@ class KubernetesClient(COEClient):
     def list_nodes(self, optional_filter: dict = None):
         return self.client.list_node().items
 
-    def list_containers(self):
-        return self.client.list_pod_for_all_namespaces().items
+    def list_deployments(self):
+
+        deployment_list = []
+
+        temp_result = self.client_apps.list_namespaced_deployment(self.namespace)
+
+        for deployment in temp_result.items:
+            logging.debug(f"pod name -->>  {deployment.metadata.name}")
+            deployment_list += [deployment.metadata.name]
+
+        return deployment_list
 
     def get_cluster_info(self, default_cluster_name=None):
         node_info = self.get_node_info()
@@ -462,8 +488,8 @@ class KubernetesClient(COEClient):
         return {}
 
     def get_all_nuvlaedge_components(self) -> list:
-        # TODO: implement.
-        return []
+
+        return self.list_deployments()
 
     def _namespace(self, **kwargs):
         return kwargs.get('namespace', self.namespace)
@@ -500,6 +526,7 @@ class KubernetesClient(COEClient):
     def _container_def(image, name,
                        volume_mounts: List[client.V1VolumeMount] | None,
                        command: str = None,
+                       image_pull_policy: str = None,
                        args: str = None) -> client.V1Container:
         def parse_cmd_args(cmd, arg):
             if cmd:
@@ -517,7 +544,8 @@ class KubernetesClient(COEClient):
                                   name=name,
                                   command=command,
                                   volume_mounts=volume_mounts,
-                                  args=args)
+                                  image_pull_policy=image_pull_policy,
+                                  args=args,)
 
     @staticmethod
     def _pod_spec(container: client.V1Container,
@@ -576,7 +604,9 @@ class KubernetesClient(COEClient):
 
         container = self._container_def(image, name,
                                         volume_mounts=container_volume_mounts,
-                                        command=command, args=args)
+                                        image_pull_policy=self.set_image_pull_policy,
+                                        command=command,
+                                        args=args,)
 
         return self._pod_spec(container,
                               network=network,

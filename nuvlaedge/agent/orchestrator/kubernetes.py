@@ -47,12 +47,35 @@ class KubernetesClient(COEClient):
         self.client = client.CoreV1Api()
         self.client_apps = client.AppsV1Api()
         self.client_batch_api = client.BatchV1Api()
-        self.namespace = self.get_nuvlaedge_project_name(util.default_project_name)
-        self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
+        self.namespace = \
+            self.get_nuvlaedge_project_name(util.default_project_name)
+        self.job_engine_lite_image = \
+            os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
         self.host_node_ip = os.getenv('MY_HOST_NODE_IP')
         self.host_node_name = os.getenv('MY_HOST_NODE_NAME')
-        self.vpn_client_component = os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
+        self.vpn_client_component = \
+            os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
+        self.set_image_pull_policy = self.checked_image_pull_policy()
         self.data_gateway_name = f"data-gateway.{self.namespace}"
+
+    def checked_image_pull_policy(self):
+        '''
+        Check if the image pull policy is valid
+        If not, return a sane value of IfNotPresent
+        '''
+
+        valid_pull_policies = ["Always","IfNotPresent","Never"]
+
+        image_pull_policy = os.getenv('TEST_IMAGE_PULL_POLICY')
+
+        if image_pull_policy in valid_pull_policies:
+            return image_pull_policy
+
+        log.info(f"The image pull policy was set to an invalid string: \
+            {image_pull_policy}")
+
+        return "IfNotPresent"
+   
 
     def get_node_info(self):
         if self.host_node_name:
@@ -500,7 +523,8 @@ class KubernetesClient(COEClient):
     def _container_def(image, name,
                        volume_mounts: List[client.V1VolumeMount] | None,
                        command: str = None,
-                       args: str = None) -> client.V1Container:
+                       image_pull_policy: str = None,
+                       args: str = None,) -> client.V1Container:
         def parse_cmd_args(cmd, arg):
             if cmd:
                 cmd = cmd.split()
@@ -517,7 +541,8 @@ class KubernetesClient(COEClient):
                                   name=name,
                                   command=command,
                                   volume_mounts=volume_mounts,
-                                  args=args)
+                                  image_pull_policy=image_pull_policy,
+                                  args=args,)
 
     @staticmethod
     def _pod_spec(container: client.V1Container,

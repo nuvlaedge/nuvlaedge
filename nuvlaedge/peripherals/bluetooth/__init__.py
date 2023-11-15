@@ -1,17 +1,21 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """NuvlaEdge Peripheral Manager Bluetooth
+
 This service provides bluetooth device discovery.
+
 """
 
-import bluetooth as bt
 import logging
+
+from typing import List
+
+import bluetooth as bt
+
 from bleak import BleakScanner, BLEDevice, AdvertisementData, BleakClient
 from bleak.backends._manufacturers import MANUFACTURERS
-from typing import List
 from bleak.uuids import uuidstr_to_str
-import asyncio
-import sys
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -334,19 +338,19 @@ async def bluetooth_manager():
     return output
 
 
-async def main():
+def main():
     parse_arguments_and_initialize_logging('Bluetooth Peripheral')
 
     logger.info('Starting bluetooth manager')
 
     bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True)
 
-    await bluetooth_peripheral.run(bluetooth_manager)
+    bluetooth_peripheral.run(bluetooth_manager)
 
 
 def entry():
-    asyncio.run(main())
+    main()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

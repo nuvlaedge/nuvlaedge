@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-
 # -*- coding: utf-8 -*-
 
 """NuvlaEdge Peripheral Manager Network
+
 This service provides network devices discovery.
+
 """
 
-import logging
-import requests
-import os
-import xmltodict
-import re
 import base64
-import asyncio
+import logging
+import os
+import re
+import requests
+import xmltodict
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -24,7 +24,6 @@ from urllib.parse import urlparse
 from wsdiscovery.discovery import ThreadedWSDiscovery as WSDiscovery
 from zeroconf import ZeroconfServiceTypes, ServiceBrowser, Zeroconf
 
-scanning_interval = 30
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -311,7 +310,7 @@ def network_manager(**kwargs):
     return output
 
 
-async def main():
+def main():
     global logger
     parse_arguments_and_initialize_logging('Network Peripheral')
 
@@ -329,8 +328,12 @@ async def main():
 
     ws_daemon = WSDiscovery()
 
-    await network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)
+    network_peripheral.run(network_manager, zc_obj=zeroconf, zc_listener=zeroconf_listener, wsdaemon=ws_daemon)
 
 
 def entry():
-    asyncio.run(main())
+    main()
+
+
+if __name__ == "__main__":
+    main()

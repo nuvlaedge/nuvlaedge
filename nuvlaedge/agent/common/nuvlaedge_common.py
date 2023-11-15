@@ -29,6 +29,7 @@ class NuvlaEdgeCommon:
 
     ssh_pub_key = os.getenv('NUVLAEDGE_IMMUTABLE_SSH_PUB_KEY')
     vpn_interface_name = os.getenv('VPN_INTERFACE_NAME', 'tun')
+    vpn_client_enable = os.getenv('NUVLAEDGE_VPN_CLIENT_ENABLE')
 
     swarm_manager_token_file = "swarm-manager-token"
     swarm_worker_token_file = "swarm-worker-token"
@@ -417,6 +418,17 @@ class NuvlaEdgeCommon:
         :param operational_status: status of the NuvlaEdge
         """
         util.atomic_write(FILE_NAMES.STATUS_FILE, operational_status)
+
+    @staticmethod
+    def get_vpn_ip():
+        """ Discovers the NuvlaEdge VPN IP  """
+
+        if FILE_NAMES.VPN_IP_FILE.exists() and FILE_NAMES.VPN_IP_FILE.stat().st_size != 0:
+            with FILE_NAMES.VPN_IP_FILE.open('r') as vpn_file:
+                return vpn_file.read().splitlines()[0]
+        else:
+            logging.debug("Cannot infer the NuvlaEdge VPN IP!")
+            return None
 
     @staticmethod
     def write_vpn_conf(values):

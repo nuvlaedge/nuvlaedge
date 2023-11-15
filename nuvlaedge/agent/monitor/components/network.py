@@ -38,6 +38,7 @@ class NetworkMonitor(Monitor):
 
         super().__init__(self.__class__.__name__, NetworkingData,
                          enable_monitor=enable_monitor)
+        self.telemetry = telemetry
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
@@ -312,18 +313,9 @@ class NetworkMonitor(Monitor):
     def set_vpn_data(self) -> None:
         """ Discovers the NuvlaEdge VPN IP  """
 
-        # Check if file exists and not empty
-        if FILE_NAMES.VPN_IP_FILE.exists() and \
-                FILE_NAMES.VPN_IP_FILE.stat().st_size != 0:
-            with FILE_NAMES.VPN_IP_FILE.open() as file:
-                it_line = file.read()
-                ip_address: str = str(it_line.splitlines()[0])
-
-            if self.data.ips.vpn != ip_address:
-                self.data.ips.vpn = ip_address
-
-        else:
-            self.logger.warning("Cannot infer the NuvlaEdge VPN IP!")
+        vpn_ip = self.telemetry.get_vpn_ip()
+        if vpn_ip and self.data.ips.vpn != vpn_ip:
+            self.data.ips.vpn = vpn_ip
 
     def set_swarm_data(self) -> None:
         """ Discovers the host SWARM IP address """

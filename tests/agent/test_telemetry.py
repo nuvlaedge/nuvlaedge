@@ -285,26 +285,6 @@ class TelemetryTestCase(unittest.TestCase):
         self.obj.status_on_nuvla = {'id': 'ID'}
         self.assertEqual('ID', self.obj.status_on_nuvla['id'])
 
-    @mock.patch.object(Path, 'exists')
-    @mock.patch.object(Path, 'stat')
-    def test_get_vpn_ip(self, mock_stat, mock_exists):
-        # if vpn file does not exist or is empty, get None
-        mock_exists.return_value = False
-        self.assertIsNone(self.obj.get_vpn_ip(),
-                          'Returned VPN IP when VPN file does not exist')
-        mock_exists.return_value = True
-        mock_stat.return_value.st_size = 0
-        self.assertIsNone(self.obj.get_vpn_ip(),
-                          'Returned VPN IP when VPN file is empty')
-
-        # otherwise, read the file and return the IP
-        mock_stat.return_value.st_size = 1
-        # with mock.patch(self.agent_telemetry_open, mock.mock_open(read_data='1.1.1.1')):
-
-        with mock.patch.object(Path, 'open', mock.mock_open(read_data='1.1.1.1')):
-            self.assertEqual(self.obj.get_vpn_ip(), '1.1.1.1',
-                             'Failed to get VPN IP')
-
     @mock.patch('time.sleep', return_value=None)
     @mock.patch('nuvlaedge.agent.monitor.Monitor.start')
     def test_update_monitors(self, mock_start, mock_sleep):

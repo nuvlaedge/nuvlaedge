@@ -7,9 +7,9 @@ from typing import List, Dict, Any
 from pathlib import Path
 
 import requests
-from docker import errors as docker_err
 from mock import Mock, mock_open, patch, MagicMock
 
+from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.monitor.components import network as monitor
 from nuvlaedge.agent.monitor.data.network_data import NetworkInterface, NetworkingData, IP
 from nuvlaedge.agent.monitor.edge_status import EdgeStatus
@@ -212,9 +212,11 @@ class TestNetworkMonitor(unittest.TestCase):
     def test_set_vpn_data(self, mock_stat, mock_exists):
         vpn_file = Mock()
         status = Mock()
+        mock_telemetry = Mock()
+        mock_telemetry.get_vpn_ip = NuvlaEdgeCommon.get_vpn_ip
         status.iface_data = None
         test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor(vpn_file, Mock(), status)
+            monitor.NetworkMonitor(vpn_file, mock_telemetry, status)
 
         it_ip: str = generate_random_ip_address()
         mock_stat.return_value.st_size = 1

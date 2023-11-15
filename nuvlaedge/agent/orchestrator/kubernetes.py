@@ -66,7 +66,7 @@ class KubernetesClient(COEClient):
 
         valid_pull_policies = ["Always","IfNotPresent","Never"]
 
-        image_pull_policy = os.getenv('TEST_IMAGE_PULL_POLICY')
+        image_pull_policy = os.getenv('JOB_ENGINE_IMAGE_PULL_POLICY')
 
         if image_pull_policy in valid_pull_policies:
             return image_pull_policy

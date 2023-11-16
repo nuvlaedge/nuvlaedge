@@ -78,8 +78,17 @@ class KubernetesClient(COEClient):
     def list_nodes(self, optional_filter: dict = None):
         return self.client.list_node().items
 
-    def list_containers(self):
-        return self.client.list_pod_for_all_namespaces().items
+    def list_deployments(self):
+
+        deployment_list = []
+
+        temp_result = self.client_apps.list_namespaced_deployment(self.namespace)
+
+        for deployment in temp_result.items:
+            logging.debug(f"pod name -->>  {deployment.metadata.name}")
+            deployment_list += [deployment.metadata.name]
+
+        return deployment_list
 
     def get_cluster_info(self, default_cluster_name=None):
         node_info = self.get_node_info()
@@ -462,8 +471,8 @@ class KubernetesClient(COEClient):
         return {}
 
     def get_all_nuvlaedge_components(self) -> list:
-        # TODO: implement.
-        return []
+
+        return self.list_deployments()
 
     def _namespace(self, **kwargs):
         return kwargs.get('namespace', self.namespace)

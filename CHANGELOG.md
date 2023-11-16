@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.12.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.12.2) (2023-11-16)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.12.1...2.12.2)
+
+**Fixed bugs:**
+
+- Update the list of components for kubernetes NE deployments [\#130](https://github.com/nuvlaedge/nuvlaedge/issues/130)
+- Get the component list for the deployment of a Kubernetes NE [\#131](https://github.com/nuvlaedge/nuvlaedge/pull/131) ([giovannibianco](https://github.com/giovannibianco))
+
+**Merged pull requests:**
+
+- Refactor and bugfixes [\#140](https://github.com/nuvlaedge/nuvlaedge/pull/140) ([schaubl](https://github.com/schaubl))
+
 ## [2.12.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.12.1) (2023-11-05)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.12.0...2.12.1)

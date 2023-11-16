@@ -105,6 +105,16 @@ class TestGeoLocationMonitor(unittest.TestCase):
             test_geo.update_data()
             self.assertIsNone(test_geo.data.coordinates)
 
+        with patch(self._patch_send_req, autospec=True) as test_send_req, \
+                patch(self._patch_parse_geo, autospec=True) as test_parse:
+            test_parse.return_value = [1, 2]
+            test_send_req.return_value = 'not_none'
+            test_geo.update_data()
+            self.assertEqual(test_geo.data.latitude, 2)
+            self.assertEqual(test_geo.data.longitude, 1)
+        test_geo.data.timestamp = None
+        test_geo.data.coordinates = None
+
         test_geo.is_thread = True
         # Void control
         with patch(self._patch_send_req, autospec=True) as test_send_req:
@@ -141,6 +151,8 @@ class TestGeoLocationMonitor(unittest.TestCase):
         body: dict = {}
         with patch(self._patch_send_req, autospec=True) as test_send_req, \
                 patch(self._patch_parse_geo, autospec=True) as test_parse:
+            test_geo.populate_nb_report(body)
+
             test_parse.return_value = [-1, -1]
             test_send_req.return_value = 'not_none'
 

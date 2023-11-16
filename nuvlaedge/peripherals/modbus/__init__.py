@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 # -*- coding: utf-8 -*-
 
 """NuvlaEdge Peripheral Manager Modbus
@@ -14,15 +13,12 @@ It provides:
  - modbus2mqtt on demand
 """
 
+import fileinput
+import logging
+import os
 import socket
 import struct
-import os
-import logging
-import fileinput
 import sys
-import asyncio
-import ipaddress
-import subprocess
 
 from nuvlaedge.peripherals.peripheral import Peripheral
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
@@ -146,7 +142,7 @@ def determine_ip_addresses(list_of_ip_addresses):
 
     return list_of_ip_addresses
 
-async def main():
+def main():
     global logger
 
     parse_arguments_and_initialize_logging('Modbus Peripheral')
@@ -163,12 +159,12 @@ async def main():
 
     list_of_ip_addresses = determine_ip_addresses(gateway_ip)
 
-    await modbus_peripheral.run(manage_modbus_peripherals, ip_address=list_of_ip_addresses)
+    modbus_peripheral.run(manage_modbus_peripherals, ip_address=list_of_ip_addresses)
 
 
 def entry():
-    asyncio.run(main())
+    main()
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

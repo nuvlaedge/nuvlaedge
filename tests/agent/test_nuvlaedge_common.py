@@ -320,6 +320,27 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             self.assertIsNone(self.obj.set_local_operational_status(''),
                               'Setting the operational status should return nothing')
 
+    @mock.patch.object(Path, 'exists')
+    @mock.patch.object(Path, 'stat')
+    def test_get_vpn_ip(self, mock_stat, mock_exists):
+        # if vpn file does not exist or is empty, get None
+        mock_exists.return_value = False
+        self.assertIsNone(self.obj.get_vpn_ip(),
+                          'Returned VPN IP when VPN file does not exist')
+        mock_exists.return_value = True
+        mock_stat.return_value.st_size = 0
+        self.assertIsNone(self.obj.get_vpn_ip(),
+                          'Returned VPN IP when VPN file is empty')
+
+        # otherwise, read the file and return the IP
+        mock_stat.return_value.st_size = 1
+        # with mock.patch(self.agent_telemetry_open, mock.mock_open(read_data='1.1.1.1')):
+
+        with mock.patch.object(Path, 'open', mock.mock_open(read_data='1.1.1.1')):
+            self.assertEqual(self.obj.get_vpn_ip(), '1.1.1.1',
+                             'Failed to get VPN IP')
+
+
     def test_write_vpn_conf(self):
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
              mock.patch(self.atomic_write):

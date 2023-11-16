@@ -54,8 +54,7 @@ class GeoLocationMonitor(Monitor):
             self.logger.debug(f"Inferring geolocation with 3rd party service {service}")
             return requests.get(service, allow_redirects=False, timeout=5).json()
         except requests.RequestException as e:
-            self.logger.error(f"Could not infer IP-based geolocation from "
-                              f"service {service}: {e}")
+            self.logger.error(f"Could not infer IP-based geolocation from service {service}: {e}")
             return None
 
     def parse_geolocation(self, service_name: str, service_info: dict,
@@ -98,7 +97,7 @@ class GeoLocationMonitor(Monitor):
 
     def update_data(self):
         if not self.is_thread:
-            if time.time() - self.last_update < self.thread_period:
+            if (time.time() - self.last_update) < self.thread_period:
                 return
 
         for service, info in self._LOCATION_SERVICES.items():

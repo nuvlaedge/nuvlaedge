@@ -178,8 +178,8 @@ class Supervise(Containers):
             try:
                 if '409' in str(e):
                     # already exists
-                    self.log.warning(f'Despite the request to launch the Data Gateway, '
-                                     f'{name} seems to exist already. Forcing its restart just in case')
+                    self.log.warning(f'Despite the request to launch the Data Gateway, {name} seems to exist already. '
+                                     f'Forcing its restart just in case')
                     if self.is_cluster_enabled and self.i_am_manager:
                         self.coe_client.client.services.get(name).force_update()
                     else:
@@ -592,8 +592,7 @@ class Supervise(Containers):
                         self.log.warning(f'Network {target_network.name} ceased to exist '
                                          f'during connectivity check. Nothing to do.')
                         return
-                    self.log.error(f'Unable to reconnect {container.name} to '
-                                   f'network {target_network.name}: {str(e)}')
+                    self.log.error(f'Unable to reconnect {container.name} to network {target_network.name}: {str(e)}')
                     self.operational_status.append((utils.status_degraded,
                                                     'NuvlaEdge containers lost their network connection'))
 
@@ -611,8 +610,8 @@ class Supervise(Containers):
 
         try:
             project_name = self.get_project_name()
-        except Exception as ex:
-            self.log.debug('Errors getting project name', ex)
+        except Exception:
+            self.log.debug('Errors getting project name', exc_info=True)
             return
 
         original_project_label = f'com.docker.compose.project={project_name}'

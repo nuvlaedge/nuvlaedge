@@ -5,7 +5,9 @@ Also controls the execution flow and provides utilities to the children dependen
 
 import logging
 import os
+
 from copy import copy
+from collections.abc import Callable
 from threading import Event, Thread
 
 from nuvla.api.models import CimiResource, CimiResponse
@@ -37,15 +39,23 @@ class Agent:
     agent_event: Event = Event()
 
     # pylint: disable=too-many-instance-attributes
-    def __init__(self):
+    def __init__(self,
+                 exit_event: Event | None = None,
+                 on_nuvlaedge_update: Callable[[dict], None] | None = None):
+
         # Class logger
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.logger.debug('Instantiating Agent class')
+
+        self.exit_event = exit_event
+        self.on_nuvlaedge_update: Callable[[dict], None] | None = on_nuvlaedge_update
 
         # Main NuvlaEdge data
         self.past_status_time: str = ''
 
         self.excluded_monitors = os.environ.get('NUVLAEDGE_EXCLUDED_MONITORS', '')
+
+        self.old_nuvlaedge_data = None
 
         self._activate = None
         self._coe_client = None
@@ -118,37 +128,42 @@ class Agent:
         of the NuvlaEdge. If it was activated before, it gathers the previous status.
         If not, it activates the device and again gathers the status
         """
-
         self.logger.info(f'Nuvla endpoint: {self.activate.nuvla_endpoint}')
-        self.logger.info(
-            f'Nuvla connection insecure: {str(self.activate.nuvla_endpoint_insecure)}')
+        if self.activate.nuvla_endpoint_insecure:
+            self.logger.info(f'Nuvla connection insecure: {self.activate.nuvla_endpoint_insecure}')
 
         while True:
             can_activate, user_info = self.activate.activation_is_possible()
             if can_activate or user_info:
                 break
             else:
-                self.logger.info(
-                    f'Activation not yet possible {can_activate}-{user_info}')
+                self.logger.info(f'Activation not yet possible: can_activate={can_activate} user_info={user_info}')
 
-            self.agent_event.wait(timeout=3)
+            self.agent_event.wait(timeout=5)
 
         if not user_info:
             self.logger.info('NuvlaEdge not yet activated, proceeding')
             self.activate.activate()
 
-        # Gather resources post-activation
-        nuvlaedge_resource_data, _ = self.activate.update_nuvlaedge_resource()
-        self.logger.info(f'NuvlaEdge status id {self.nuvlaedge_status_id}')
+        # Login to Nuvla
+        self.activate.nuvla_login()
 
-    def get_nuvlaedge(self) -> CimiResource:
-        return self.activate.get_nuvlaedge()
+        # Gather nuvlaedge resource post-activation
+        self.fetch_nuvlaedge_resource()
+        self.logger.info(f'NuvlaEdge status id: {self.nuvlaedge_status_id}')
+
+    def fetch_nuvlaedge_resource(self) -> CimiResource:
+        return self.activate.fetch_nuvlaedge()
 
     @property
     def nuvlaedge_resource(self) -> CimiResource:
         if not self.activate.nuvlaedge_resource:
-            self.get_nuvlaedge()
+            self.fetch_nuvlaedge_resource()
         return self.activate.nuvlaedge_resource
+
+    @property
+    def nuvlaedge_data(self) -> dict:
+        return self.nuvlaedge_resource.data
 
     @property
     def nuvlaedge_operations(self) -> dict:
@@ -156,7 +171,7 @@ class Agent:
 
     @property
     def nuvlaedge_status_id(self) -> str:
-        return self.nuvlaedge_resource.data.get(CTE.NUVLAEDGE_STATUS_RES_NAME)
+        return self.nuvlaedge_data.get(CTE.NUVLAEDGE_STATUS_RES_NAME)
 
     @property
     def nuvlaedge_updated_date(self) -> str:
@@ -199,12 +214,59 @@ class Agent:
         except Exception as e:
             self.logger.debug(f'Failed to log jobs count: {e}')
 
-    def send_heartbeat(self, update_periods=None) -> dict:
+    def _update_nuvlaedge_configuration(self):
+        """
+        Checks new the new nuvlaedge resource configuration for differences on the local
+        registered one and updates (if required) the vpn and/or the heartbeat and telemetry
+        periodic reports
+        """
+        if not self.old_nuvlaedge_data:
+            self.old_nuvlaedge_data = self.activate.read_ne_document_file()
+
+        old_nuvlaedge_res = self.old_nuvlaedge_data
+        current_nuvlaedge_res = self.nuvlaedge_data
+
+        if old_nuvlaedge_res.get('updated') != current_nuvlaedge_res['updated']:
+            if self.on_nuvlaedge_update:
+                self.on_nuvlaedge_update(self.nuvlaedge_data)
+
+            vpn_server_id = current_nuvlaedge_res.get("vpn-server-id")
+            old_vpn_server_id = old_nuvlaedge_res.get("vpn-server-id")
+            if old_nuvlaedge_res and vpn_server_id != old_vpn_server_id:
+                self.logger.info(f'VPN Server ID has been added/changed in Nuvla '
+                                 f'(from {old_vpn_server_id} to {vpn_server_id}. '
+                                 f'Recommissioning VPN.')
+                self.infrastructure.commission_vpn()
+
+            self.activate.write_ne_document_file()
+            self.old_nuvlaedge_data = current_nuvlaedge_res
+
+    def sync_nuvlaedge_resource(self) -> dict:
+        """
+        Get the NuvlaEdge resource from Nuvla
+        """
+        self.fetch_nuvlaedge_resource()
+
+        # Exit if state is DECOMMISSION(ING)
+        nuvlaedge_state = self.nuvlaedge_data.get('state', '')
+        if nuvlaedge_state.startswith('DECOMMISSION'):
+            self.logger.info(f"Remote NuvlaEdge resource state {nuvlaedge_state}, exiting agent")
+            if self.exit_event:
+                self.exit_event.set()
+            return {}
+
+        self._update_nuvlaedge_configuration()
+
+        # if there's a mention to the VPN server, then watch the VPN credential
+        vpn_server_id = self.nuvlaedge_data.get("vpn-server-id")
+        if vpn_server_id:
+            self.infrastructure.watch_vpn_credential(vpn_server_id)
+
+        return {}
+
+    def send_heartbeat(self) -> dict:
         """
         Send heartbeat
-
-        Args:
-            update_periods: function to call to update periods
 
         Returns: a dict with the response from Nuvla
         """
@@ -212,16 +274,20 @@ class Agent:
             self.logger.info('Heartbeat not supported by Nuvla server. Skipping heartbeat')
             return {}
 
-        response: CimiResponse = self.telemetry.api().operation(
-            self.nuvlaedge_resource, 'heartbeat')
+        response = self.telemetry.api().operation(self.nuvlaedge_resource, 'heartbeat')
 
         self._log_jobs(response, 'heartbeat')
 
         doc_last_updated = response.data.get('doc-last-updated')
-        if doc_last_updated and doc_last_updated != self.nuvlaedge_updated_date:
-            self.get_nuvlaedge()
-            if update_periods:
-                update_periods(self.nuvlaedge_resource.data)
+        nuvlaedge_updated_date = self.nuvlaedge_updated_date
+        old_nuvlaedge_updated_date = self.old_nuvlaedge_data.get('updated') if self.old_nuvlaedge_data else ''
+        if doc_last_updated and (doc_last_updated != nuvlaedge_updated_date
+                                 or doc_last_updated != old_nuvlaedge_updated_date):
+            self.logger.debug(f'send_heartbeat: '
+                              f'doc_last_updated={doc_last_updated} '
+                              f'nuvlaedge_updated_date={nuvlaedge_updated_date} '
+                              f'old_nuvlaedge_updated_date={old_nuvlaedge_updated_date}')
+            self.sync_nuvlaedge_resource()
 
         return response.data
 
@@ -231,6 +297,12 @@ class Agent:
 
         Returns: a dict with the response from Nuvla
         """
+
+        # If heartbeat is not supported by Nuvla server,
+        # the NuvlaEdge resource is fetched on each telemetry request
+        if not self.is_heartbeat_supported_server_side:
+            self.sync_nuvlaedge_resource()
+
         self.logger.debug(f'send_telemetry(, '
                           f'{self.telemetry}, {self.nuvlaedge_status_id},'
                           f' {self.past_status_time})')
@@ -292,7 +364,6 @@ class Agent:
                            self.infrastructure.coe_client.job_engine_lite_image)
 
             if not job.do_nothing:
-
                 try:
                     job.launch()
                 except Exception as ex:

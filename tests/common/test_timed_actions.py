@@ -4,8 +4,11 @@ from mock import Mock, patch
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 
 
-def dummy_function():
-    return '0'
+def dummy_function(*args, **kwargs):
+    if not args and not kwargs:
+        return '0'
+    else:
+        return f'{args} {kwargs}'
 
 
 class TestTimedAction(TestCase):
@@ -29,6 +32,11 @@ class TestTimedAction(TestCase):
         self.action.remaining_time = 0
         self.assertEqual('0', self.action())
         self.assertEqual(self.action.remaining_time, self.action.period)
+
+        self.action.args = [1, 2, 3]
+        self.action.kwargs = {'a': 1, 'b': 2}
+        self.action.remaining_time = 0
+        self.assertEqual("(1, 2, 3) {'a': 1, 'b': 2}", self.action())
 
     def test_gt_lt(self):
         dummy_action = TimedAction(
@@ -106,3 +114,6 @@ class TestActionHandler(TestCase):
     def test_edit_period(self):
         self.handler.edit_period('TestCase', new_period=5)
         self.assertEqual(5, self.handler.actions[1].period)
+
+    def test_actions_summary(self):
+        self.assertTrue(len(self.handler.actions_summary().splitlines()) == 4)

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import os
+
 import mock
 import unittest
 import socket
@@ -82,7 +84,7 @@ class TelemetryTestCase(unittest.TestCase):
             }
         }
         ###
-        logging.disable(logging.CRITICAL)
+        logging.disable(logging.INFO)
 
     def tearDown(self):
         logging.disable(logging.NOTSET)
@@ -97,11 +99,16 @@ class TelemetryTestCase(unittest.TestCase):
                          'Failed to initialized status structures')
         self.assertIsInstance(self.obj.mqtt_telemetry, mqtt.Client)
 
-    @mock.patch('nuvlaedge.agent.telemetry.active_monitors')
     @mock.patch('nuvlaedge.agent.telemetry.get_monitor')
-    def test_initialize_monitors(self, get_mock, act_mock):
+    def test_initialize_monitors(self, get_mock):
         get_mock.return_value = mock.Mock()
         self.obj.initialize_monitors()
+        monitor_count = len(self.obj.monitor_list)
+
+        self.obj.monitor_list = {}
+        self.obj.excluded_monitors = ['power', 'container_stats']
+        self.obj.initialize_monitors()
+        self.assertEqual(monitor_count-2, len(self.obj.monitor_list))
 
     @mock.patch('os.system')
     def test_send_mqtt(self, mock_system):
@@ -174,6 +181,24 @@ class TelemetryTestCase(unittest.TestCase):
         self.assertTrue(all(k in all_status for k in additional_fields),
                         'Failed to set additional status attributes for all_status, during get_status')
 
+        mock_send_mqtt.side_effect = AttributeError
+        _, all_status = self.obj.get_status()
+        self.assertNotIn('cpus', all_status)
+
+    def test_set_status_operational_status(self):
+        status = {}
+        mock_read_sys_issues = mock.Mock()
+        self.obj.coe_client.read_system_issues = mock_read_sys_issues
+
+        mock_read_sys_issues.return_value = ([], [])
+        self.obj.set_status_operational_status(status, {})
+
+        mock_read_sys_issues.return_value = (['system error'], [])
+        self.obj.installation_home = None
+        self.obj.set_status_operational_status(status, {})
+
+        self.assertEqual('DEGRADED', status['status'])
+
     def test_diff(self):
         # new values added, get new value and nothing to delete
         new = {'a': 1, 'b': 2}
@@ -210,6 +235,13 @@ class TelemetryTestCase(unittest.TestCase):
         self.assertEqual(self.obj.diff(old, new), expected,
                          'Failed to diff')
 
+        # one value is None
+        new = {'a': None, 'b': 2}
+        old = {'a': 1}
+        expected = ({'b': 2}, {'a'})
+        self.assertEqual(self.obj.diff(old, new), expected,
+                         'Failed to diff when a value is None')
+
     @mock.patch.object(Telemetry, 'diff')
     @mock.patch.object(Telemetry, 'get_status')
     def test_update_status(self, mock_get_status, mock_diff):
@@ -237,22 +269,60 @@ class TelemetryTestCase(unittest.TestCase):
         self.assertEqual(delete_attrs, set(),
                          'Saying there are attrs to delete when there are none')
 
-    @mock.patch.object(Path, 'exists')
-    @mock.patch.object(Path, 'stat')
-    def test_get_vpn_ip(self, mock_stat, mock_exists):
-        # if vpn file does not exist or is empty, get None
-        mock_exists.return_value = False
-        self.assertIsNone(self.obj.get_vpn_ip(),
-                          'Returned VPN IP when VPN file does not exist')
-        mock_exists.return_value = True
-        mock_stat.return_value.st_size = 0
-        self.assertIsNone(self.obj.get_vpn_ip(),
-                          'Returned VPN IP when VPN file is empty')
+    def test_status_setitem(self):
+        self.obj.status['id'] = 'my-id'
+        self.assertEqual('my-id', self.obj.status['id'])
 
-        # otherwise, read the file and return the IP
-        mock_stat.return_value.st_size = 1
-        # with mock.patch(self.agent_telemetry_open, mock.mock_open(read_data='1.1.1.1')):
+    def test_status_setter(self):
+        self.obj.status = {'id': 'my/id'}
+        self.assertEqual('my/id', self.obj.status['id'])
 
-        with mock.patch.object(Path, 'open', mock.mock_open(read_data='1.1.1.1')):
-            self.assertEqual(self.obj.get_vpn_ip(), '1.1.1.1',
-                             'Failed to get VPN IP')
+    def test_status_on_nuvla_setitem(self):
+        self.obj.status_on_nuvla['id'] = 'Id'
+        self.assertEqual('Id', self.obj.status_on_nuvla['id'])
+
+    def test_status_on_nuvla_setter(self):
+        self.obj.status_on_nuvla = {'id': 'ID'}
+        self.assertEqual('ID', self.obj.status_on_nuvla['id'])
+
+    @mock.patch('time.sleep', return_value=None)
+    @mock.patch('nuvlaedge.agent.monitor.Monitor.start')
+    def test_update_monitors(self, mock_start, mock_sleep):
+        with mock.patch('nuvlaedge.agent.monitor.Monitor.run_update_data') as mock_run_update_data:
+            self.obj.initialize_monitors()
+            status = {}
+            self.obj.update_monitors(status)
+
+            monitor = self.obj.monitor_list[list(self.obj.monitor_list)[0]]
+            monitor.updated = True
+            with mock.patch.object(monitor, 'populate_nb_report') as mock_populate_nb_report:
+                mock_populate_nb_report.side_effect = KeyError
+                self.obj.update_monitors(status)
+
+            # Test threaded
+            self.obj.monitor_list = {}
+            os.environ['NUVLAEDGE_THREAD_MONITORS'] = 'True'
+            self.obj.initialize_monitors()
+            self.obj.update_monitors(status)
+            del os.environ['NUVLAEDGE_THREAD_MONITORS']
+
+            monitor = self.obj.monitor_list[list(self.obj.monitor_list)[0]]
+
+            mock_run_update_data.side_effect = [mock.DEFAULT, StopIteration, mock.DEFAULT]
+            with self.assertRaises(StopIteration):
+                monitor.run()
+
+            mock_run_update_data.side_effect = [mock.DEFAULT, StopIteration, mock.DEFAULT]
+            monitor.thread_period = 0
+            with self.assertLogs(level='WARNING'):
+                with self.assertRaises(StopIteration):
+                    monitor.run()
+
+        monitor = self.obj.monitor_list[list(self.obj.monitor_list)[0]]
+        monitor.update_data = mock.Mock()
+        monitor.run_update_data()
+        monitor.update_data.assert_called_once()
+
+        monitor.update_data.side_effect = KeyError
+        with self.assertLogs(level='ERROR'):
+            monitor.run_update_data()

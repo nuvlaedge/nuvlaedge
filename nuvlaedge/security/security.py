@@ -256,8 +256,7 @@ class Security:
         self.api.logout()
 
         if not nuvla_vul_db:
-            logger.warning(f'Nuvla endpoint {self.nuvla_endpoint} does not '
-                                f'contain any vulnerability')
+            logger.warning(f'Nuvla endpoint {self.nuvla_endpoint} does not contain any vulnerability')
             return
 
         temp_db_last_update = nuvla_vul_db[0].data.get('updated')
@@ -300,8 +299,7 @@ class Security:
         try:
             return attributes[0]
         except IndexError:
-            logger.error(f'Failed to extract vulnerability ID from'
-                         f' {attributes}')
+            logger.error(f'Failed to extract vulnerability ID from {attributes}')
             return None
 
     @staticmethod

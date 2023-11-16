@@ -141,7 +141,7 @@ class COEClient(ABC):
         """
 
     @abstractmethod
-    def read_system_issues(self, node_info):
+    def read_system_issues(self, node_info) -> (list, list):
         """
         Checks if the underlying container management system is reporting any errors or
          warnings

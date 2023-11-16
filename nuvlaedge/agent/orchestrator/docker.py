@@ -63,8 +63,7 @@ class DockerClient(COEClient):
         except docker.errors.APIError as e:
             if self.lost_quorum_hint in str(e):
                 # quorum is lost
-                logger.warning('Quorum is lost. This node will no longer support '
-                               'Service and Cluster management')
+                logger.warning('Quorum is lost. This node will no longer support Service and Cluster management')
 
         return ()
 
@@ -106,8 +105,7 @@ class DockerClient(COEClient):
         try:
             return container.ports['5000/tcp'][0]['HostPort']
         except (KeyError, IndexError) as ex:
-            logger.warning(f'Cannot infer ComputeAPI external port, container attributes '
-                           f'not properly formatted: {ex}')
+            logger.warning(f'Cannot infer ComputeAPI external port, container attributes not properly formatted: {ex}')
         return ''
 
     def get_api_ip_port(self):
@@ -222,8 +220,8 @@ class DockerClient(COEClient):
         if containers_count < 1:
             raise docker.errors.NotFound(f'Container with the following labels not found: {labels}')
         elif containers_count > 1:
-            logger.warning(f'More than one component container found for '
-                           f'service name "{service_name}" and project name "{project_name}": {containers}')
+            logger.warning(f'More than one component container found for service name "{service_name}" '
+                           f'and project name "{project_name}": {containers}')
         return containers[0]
 
     def _get_component_container(self, service_name, container_name=None):
@@ -264,7 +262,7 @@ class DockerClient(COEClient):
             compute_api = self._get_component_container(util.compute_api_service_name)
             local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
         except Exception as e:
-            logger.info(f'Cannot infer compute-api network for local job {job_id}: {e}')
+            logger.debug(f'Cannot infer compute-api network for local job {job_id}: {e}')
 
         # Get environment variables and volumes from job-engine-lite container
         volumes = {
@@ -356,7 +354,7 @@ class DockerClient(COEClient):
                 cpu_percent = (cpu_delta / system_delta) * online_cpus * 100.0
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
             logger.warning('Failed to get CPU usage for container '
-                            f'{cs.get("id","?")[:12]} ({cs.get("name")}): {e}')
+                           f'{cs.get("id","?")[:12]} ({cs.get("name")}): {e}')
 
         return cpu_percent
 
@@ -383,7 +381,7 @@ class DockerClient(COEClient):
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
             mem_percent = mem_usage = mem_limit = 0.00
             logger.warning('Failed to get Memory consumption for container '
-                            f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                           f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
 
         return mem_percent, mem_usage, mem_limit
 
@@ -404,7 +402,7 @@ class DockerClient(COEClient):
                               for iface in cstats["networks"]) / 1000 / 1000
         except (IndexError, KeyError, ValueError) as e:
             logger.warning('Failed to get Network consumption for container '
-                            f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                           f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
 
         return net_in, net_out
 
@@ -424,12 +422,12 @@ class DockerClient(COEClient):
                 blk_in = float(io_bytes_recursive[0]["value"] / 1000 / 1000)
             except (IndexError, KeyError, TypeError) as e:
                 logger.warning('Failed to get block usage (In) for container '
-                                f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                               f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
             try:
                 blk_out = float(io_bytes_recursive[1]["value"] / 1000 / 1000)
             except (IndexError, KeyError, TypeError) as e:
                 logger.warning('Failed to get block usage (Out) for container '
-                                f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                               f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
 
         return blk_out, blk_in
 
@@ -463,7 +461,7 @@ class DockerClient(COEClient):
                 containers_stats.append((container, container.stats(stream=False)))
             except Exception as e:
                 logger.warning('Failed to get stats for container '
-                                f'{container.short_id} ({container.name}): {e}')
+                               f'{container.short_id} ({container.name}): {e}')
         return containers_stats
 
     def collect_container_metrics(self):
@@ -734,8 +732,7 @@ class DockerClient(COEClient):
             result = run(cmd, stdout=PIPE, stderr=PIPE, timeout=5,
                          encoding='UTF-8', shell=True).stdout
         except TimeoutExpired as e:
-            logger.warning(f'Could not infer if Kubernetes is also installed '
-                                f'on the host: {str(e)}')
+            logger.warning(f'Could not infer if Kubernetes is also installed on the host: {str(e)}')
             return k8s_cluster_info
 
         if not result:

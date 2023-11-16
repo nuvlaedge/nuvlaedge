@@ -129,8 +129,7 @@ class Telemetry(NuvlaEdgeCommon):
         self.edge_status: EdgeStatus = EdgeStatus()
 
         self.excluded_monitors: List[str] = excluded_monitors.replace("'", "").split(',')
-        self.logger.info(f'Excluded monitors received in Telemetry'
-                         f' {self.excluded_monitors}')
+        self.logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
         self.monitor_list: Dict[str, Monitor] = {}
         self.initialize_monitors()
 
@@ -138,10 +137,10 @@ class Telemetry(NuvlaEdgeCommon):
         """
         Auxiliary function to extract some control from the class initialization
         It gathers the available monitors and initializes them saving the reference into
-        the monitor_list attribute of Telemtry
+        the monitor_list attribute of Telemetry
         """
         for mon in active_monitors:
-            if mon.split('_')[0] in self.excluded_monitors:
+            if mon.rsplit('_', 1)[0] in self.excluded_monitors:
                 continue
             self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
 
@@ -194,8 +193,7 @@ class Telemetry(NuvlaEdgeCommon):
                             f' {self.mqtt_broker_host}')
             return
         except socket.gaierror:
-            logging.warning("The NuvlaEdge MQTT broker is not reachable...trying again"
-                            " later")
+            logging.warning("The NuvlaEdge MQTT broker is not reachable...trying again later")
             self.mqtt_telemetry.disconnect()
             return
 
@@ -268,42 +266,30 @@ class Telemetry(NuvlaEdgeCommon):
             status_dict: dictionary containing the report for Nuvla to be updated by
             each monitor
         """
-        monitor_process_time: Dict = {}
-
-        def create_new_monitor_thread(name, telemetry: Telemetry, **kwargs):
-            th = get_monitor(name)(name, telemetry, True, **kwargs)
-            th.start()
-            return th
 
         for monitor_name, it_monitor in self.monitor_list.items():
-            self.logger.debug(f' --- Monitor: {it_monitor.name} -- '
-                                f'Threaded: {it_monitor.is_thread} -- '
-                                f'Alive: {it_monitor.is_alive()}-')
+            self.logger.debug(f'Monitor: {it_monitor.name} - '
+                              f'Threaded: {it_monitor.is_thread} - '
+                              f'Alive: {it_monitor.is_alive()}')
 
-            if is_thread_creation_needed(
-                    monitor_name,
-                    it_monitor,
-                    log_not_alive=(logging.INFO, 'Recreating {} thread.'),
-                    log_alive=(logging.DEBUG, 'Thread {} is alive'),
-                    log_not_exist=(logging.INFO, 'Creating {} thread.')):
+            if it_monitor.is_thread:
+                if is_thread_creation_needed(
+                        monitor_name,
+                        it_monitor,
+                        log_not_alive=(logging.INFO, 'Recreating {} thread.'),
+                        log_alive=(logging.DEBUG, 'Thread {} is alive'),
+                        log_not_exist=(logging.INFO, 'Creating {} thread.')):
 
-                self.monitor_list[monitor_name] = create_new_monitor_thread(monitor_name,
-                                                                            self)
+                    monitor = get_monitor(monitor_name)(monitor_name, self, True)
+                    monitor.start()
+                    self.monitor_list[monitor_name] = monitor
 
             else:
-                init_time: float = time.time()
+                it_monitor.run_update_data(monitor_name=monitor_name)
 
-                try:
-                    it_monitor.update_data()
-                    it_monitor.updated = True
-                except Exception as ex:
-                    self.logger.exception(f'Something went wrong updating monitor '
-                                          f'{monitor_name}. Error: {ex}', ex)
-
-                monitor_process_time[it_monitor.name] = time.time() - init_time
-
-        self.logger.debug(f'Monitors processing time '
-                          f'{json.dumps(monitor_process_time, indent=4)}')
+        monitor_process_duration = {k: v.last_process_duration for k, v in self.monitor_list.items()}
+        self.logger.debug(f'Monitors processing duration: '
+                          f'{json.dumps(monitor_process_duration, indent=4)}')
 
         # Retrieve monitoring data
         for it_monitor in self.monitor_list.values():
@@ -311,11 +297,9 @@ class Telemetry(NuvlaEdgeCommon):
                 if it_monitor.updated:
                     it_monitor.populate_nb_report(status_dict)
                 else:
-                    self.logger.info(f'Data not updated yet in monitor '
-                                     f'{it_monitor.name}')
-            except Exception as ex:
-                self.logger.exception(f'Error retrieving data from monitor '
-                                      f'{it_monitor.name}.', ex)
+                    self.logger.info(f'Data not updated yet in monitor {it_monitor.name}')
+            except Exception:
+                self.logger.exception(f'Error retrieving data from monitor {it_monitor.name}.')
 
     def get_status(self):
         """ Gets several types of information to populate the NuvlaEdge status """
@@ -387,13 +371,3 @@ class Telemetry(NuvlaEdgeCommon):
                           json.dumps(all_status), encoding='UTF-8')
 
         self.status.update(new_status)
-
-    def get_vpn_ip(self):
-        """ Discovers the NuvlaEdge VPN IP  """
-
-        if FILE_NAMES.VPN_IP_FILE.exists() and FILE_NAMES.VPN_IP_FILE.stat().st_size != 0:
-            with FILE_NAMES.VPN_IP_FILE.open('r') as vpn_file:
-                return vpn_file.read().splitlines()[0]
-        else:
-            logging.warning("Cannot infer the NuvlaEdge VPN IP!")
-            return None

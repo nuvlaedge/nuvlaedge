@@ -12,8 +12,8 @@ class TimedAction:
     action: callable
     period: int
     remaining_time: float = 0  # Allow configurability for delayed starts
-    karguments: dict[str, any] = field(default_factory=dict)
-    arguments: tuple[any] | None = None
+    args: tuple[any] | None = None
+    kwargs: dict[str, any] = field(default_factory=dict)
     uuid: str = uuid.uuid4()
 
     def __call__(self):
@@ -22,13 +22,13 @@ class TimedAction:
                          f'{self.remaining_time}s')
             return
 
-        if not self.arguments:
-            self.arguments = tuple()
+        if not self.args:
+            self.args = tuple()
 
-        if not self.karguments:
-            self.karguments = {}
+        if not self.kwargs:
+            self.kwargs = {}
 
-        ret = self.action(*self.arguments, **self.karguments)
+        ret = self.action(*self.args, **self.kwargs)
 
         self.remaining_time = self.period
         return ret

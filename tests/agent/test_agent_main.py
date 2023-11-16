@@ -31,60 +31,6 @@ class TestAgentMain(TestCase):
         agent.update_periods({})
         self.assertEqual(2, mock_edit.call_count)
 
-    @patch('nuvlaedge.agent.update_periods')
-    def test_update_nuvlaedge_configuration(self, mock_update_periods):
-        mock_current = {
-            'updated': 0,
-            'vpn-server-id': 'ID'
-        }
-        mock_old = {
-            'updated': 0,
-            'vpn-server-id': 'ID'
-        }
-
-        mock_infra = Mock()
-        # Resource hasn't been updated since the last check, do nothing
-        agent.update_nuvlaedge_configuration(mock_current, mock_old, mock_infra)
-        mock_infra.commission_vpn.assert_not_called()
-        mock_update_periods.assert_not_called()
-
-        # Resource changed, with same vpn id
-        mock_current['updated'] = 1
-        agent.update_nuvlaedge_configuration(mock_current, mock_old, mock_infra)
-        mock_update_periods.assert_called_once()
-        mock_infra.commission_vpn.assert_not_called()
-        mock_update_periods.reset_mock()
-
-        # Everything has changed
-        mock_current['vpn-server-id'] = 'ID_BIS'
-        agent.update_nuvlaedge_configuration(mock_current, mock_old, mock_infra)
-        mock_update_periods.assert_called_once()
-        mock_infra.commission_vpn.assert_called_once()
-
-    @patch('nuvlaedge.agent.update_nuvlaedge_configuration')
-    def test_resource_synchronization(self, mock_update_config):
-        mock_activator = Mock()
-        mock_exit = Mock()
-        mock_infra = Mock()
-
-        # If the nuvlaedge has been decommissioned
-        mock_activator.get_nuvlaedge_info.return_value = {'state': 'DECOMMISSIONING'}
-        agent.resource_synchronization(mock_activator, mock_exit, mock_infra)
-        mock_exit.set.assert_called_once()
-
-        # Normal state
-        mock_activator.get_nuvlaedge_info.return_value = {'state': 'ACTIVATED',
-                                                          'vpn-server-id': None}
-        agent.resource_synchronization(mock_activator, mock_exit, mock_infra)
-        mock_update_config.assert_called_once()
-        mock_activator.create_nb_document_file.assert_called_once()
-        mock_infra.watch_vpn_credential.assert_not_called()
-
-        mock_activator.get_nuvlaedge_info.return_value = {'state': 'ACTIVATED',
-                                                          'vpn-server-id': 'ID'}
-        agent.resource_synchronization(mock_activator, mock_exit, mock_infra)
-        mock_infra.watch_vpn_credential.assert_called_with('ID')
-
     @patch('nuvlaedge.agent.initialize_action')
     @patch('nuvlaedge.agent.signal')
     @patch('nuvlaedge.agent.socket')

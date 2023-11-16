@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 # -*- coding: utf-8 -*-
 
 """NuvlaEdge Peripheral GPU Manager
@@ -16,7 +15,6 @@ import os
 import csv
 import json
 import re
-import asyncio
 
 from shutil import which
 
@@ -403,19 +401,19 @@ def gpu_check(api_url):
     return False
 
 
-async def main():
+def main():
     global logger
     parse_arguments_and_initialize_logging('GPU Peripheral')
 
     logger = logging.getLogger(__name__)
     gpu_peripheral: Peripheral = Peripheral('gpu')
 
-    await gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)
+    gpu_peripheral.run(flow, runtime=RUNTIME_PATH, host_files_path=HOST_FILES)
 
 
 def entry():
-    asyncio.run(main())
+    main()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

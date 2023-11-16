@@ -33,8 +33,7 @@ class VulnerabilitiesMonitor(Monitor):
                     try:
                         return json.loads(file_content)
                     except json.decoder.JSONDecodeError as ex:
-                        self.logger.error(f'Vulnerabilities content:[ {file_content} ] '
-                                          f'not properly formatted - {ex}')
+                        self.logger.error(f'Vulnerabilities content: [ {file_content} ] not properly formatted - {ex}')
                         return None
 
         return None

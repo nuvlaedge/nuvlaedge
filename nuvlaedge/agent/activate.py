@@ -55,8 +55,7 @@ class Activate(NuvlaEdgeCommon):
             # But maybe the API was provided via env?
             api_key, api_secret = self.get_api_keys()
             if api_key and api_secret:
-                self.activate_logger.info(f'Found API key set in environment, with key'
-                                          f' value {api_key}')
+                self.activate_logger.info(f'Found API key set in environment, with key value {api_key}')
                 self.user_info = {
                     "api-key": api_key,
                     "secret-key": api_secret
@@ -88,46 +87,42 @@ class Activate(NuvlaEdgeCommon):
 
         return self.user_info
 
-    def create_nb_document_file(self, nuvlaedge_resource: dict) -> dict:
-        """ Writes contextualization file with NB resource content
-
-        :param nuvlaedge_resource: nuvlaedge resource data
-        :return copy of the old NB resource context which is being overwritten
+    def write_ne_document_file(self):
         """
+        Write contextualization file with NE resource content
+        """
+        self.activate_logger.debug(f'Writing nuvlaedge document to file {FILE_NAMES.CONTEXT}')
+        try:
+            self.write_json_to_file(FILE_NAMES.CONTEXT, self.nuvlaedge_resource.data)
+        except Exception as e:
+            self.activate_logger.error(f'Failed to write nuvlaedge document to file {FILE_NAMES.CONTEXT}: {e}')
+            return False
+        return True
 
-        self.activate_logger.info('Managing NB context file {}'.format(FILE_NAMES.CONTEXT))
+    def read_ne_document_file(self) -> dict:
+        """
+        Read contextualization file with NE resource content
 
+        :return the content of the file
+        """
+        self.activate_logger.info(f'NuvlaEdge context file {FILE_NAMES.CONTEXT}')
+
+        current_context = {}
         try:
             current_context = self.read_json_file(FILE_NAMES.CONTEXT)
         except (ValueError, FileNotFoundError):
-            self.activate_logger.warning("Writing {} for the first "
-                                         "time".format(FILE_NAMES.CONTEXT))
-            current_context = {}
-
-        self.write_json_to_file(FILE_NAMES.CONTEXT, nuvlaedge_resource)
+            self.activate_logger.warning(f"Nuvlaedge document file ({FILE_NAMES.CONTEXT}) doesn't exist or is invalid")
+        except Exception as e:
+            self.activate_logger.error(f'Failed to read nuvlaedge document file ({FILE_NAMES.CONTEXT}): {e}')
 
         return current_context
 
-    def get_nuvlaedge(self) -> CimiResource:
-        """ Retrieves the respective resource from Nuvla """
+    def fetch_nuvlaedge(self) -> CimiResource:
+        """ Retrieve the NuvlaEdge resource from Nuvla """
         self.nuvlaedge_resource = self.api().get(self.nuvlaedge_id)
         return self.nuvlaedge_resource
 
-    def get_nuvlaedge_info(self) -> dict:
-        return self.get_nuvlaedge().data
-
-    def update_nuvlaedge_resource(self) -> tuple:
-        """ Updates the static information about the NuvlaEdge
-
-        :return: current and old NuvlaEdge resources
-        """
-
+    def nuvla_login(self):
         self.authenticate(self.api(),
                           self.user_info["api-key"],
                           self.user_info["secret-key"])
-
-        nuvlaedge_resource_data = self.get_nuvlaedge_info()
-
-        old_nuvlaedge_resource_data = self.create_nb_document_file(nuvlaedge_resource_data)
-
-        return nuvlaedge_resource_data, old_nuvlaedge_resource_data

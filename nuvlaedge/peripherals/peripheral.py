@@ -1,8 +1,7 @@
-"""
-
-"""
+import asyncio
 import json
 import logging
+
 from threading import Event
 
 from nuvlaedge.broker import NuvlaEdgeBroker
@@ -27,10 +26,10 @@ class Peripheral:
     def hash_discoveries(devices: dict) -> int:
         return hash(json.dumps(devices, sort_keys=True))
 
-    async def run_single_iteration(self, run_peripheral: callable, **kwargs):
+    def run_single_iteration(self, run_peripheral: callable, **kwargs):
         self.logger.info('Discovering peripherals')
         if self._async_mode:
-            discovered_peripherals: dict = await run_peripheral(**kwargs)
+            discovered_peripherals: dict = asyncio.run(run_peripheral(**kwargs))
         else:
             discovered_peripherals: dict = run_peripheral(**kwargs)
         # Maybe we should always publish, regardless of the previous device and let the manager decide what to
@@ -42,12 +41,12 @@ class Peripheral:
                                 discovered_peripherals,
                                 self._name)
 
-    async def run(self, run_peripheral: callable, **kwargs):
+    def run(self, run_peripheral: callable, **kwargs):
         """
         Runs the peripheral telemetry function
         :return:
         """
         e = Event()
         while True:
-            await self.run_single_iteration(run_peripheral, **kwargs)
+            self.run_single_iteration(run_peripheral, **kwargs)
             e.wait(timeout=self._scanning_interval)

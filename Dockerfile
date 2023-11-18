@@ -117,12 +117,14 @@ FROM ${GO_BASE_IMAGE} AS golang-builder
 
 # Build Golang usb peripehral
 RUN apk update
-RUN apk add libusb-dev udev pkgconfig gcc musl-dev
+RUN apk add libusb-dev udev pkgconfig gcc musl-dev upx
 
 COPY --link nuvlaedge/peripherals/usb/ /opt/usb/
 WORKDIR /opt/usb/
 
-RUN go mod tidy && go build
+RUN go mod tidy && \
+    go build && \
+    upx --lzma /opt/usb/nuvlaedge
 
 
 # ------------------------------------------------------------------------
@@ -214,25 +216,35 @@ RUN chmod +x /opt/nuvlaedge/license.sh
 ONBUILD RUN ./license.sh
 
 # Required packages
-RUN apk add --no-cache \
+RUN apk add --no-cache upx \
         # Agent
         procps curl mosquitto-clients lsblk openssl iproute2 \
-        # Modbus
-        nmap nmap-scripts \
+        # Modbus and Security
+        nmap \
         # USB
-        libusb-dev udev \ 
+        libusb-dev udev \
         # Bluetooth
         bluez-dev \
         # Security
         coreutils \
-        # Compute-API
+        # Compute API
         socat \
-        # OpenVPN
+        # VPN client
         openvpn \
-		# Job-Engine
-		gettext docker-cli docker-cli-compose helm
-# Job-Engine and Kubernetes Credential Manager
-RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
+		# Job-Engine (envsubst for k8s substitution)
+		gettext-envsubst docker-cli docker-cli-compose helm && \
+    # Job-Engine and Kubernetes Credential Manager
+    apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl && \
+    rm /usr/share/nmap/nmap-os-db && \
+    upx --lzma \
+        /usr/bin/docker \
+        /usr/bin/nmap  \
+        /usr/bin/coreutils  \
+        /usr/bin/openssl  \
+        /usr/bin/socat  \
+        /usr/bin/curl \
+        /usr/sbin/openvpn && \
+    apk del --no-cache upx
 
 # Required python packages
 COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
@@ -253,26 +265,33 @@ COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 # nmap nmap-scripts coreutils curl
 COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
 COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoint
-RUN chmod +x /usr/bin/security-entrypoint
 
 # Compute API
 COPY scripts/compute-api/api.sh /usr/bin/api
-RUN chmod +x /usr/bin/api
 
 # VPN Client
 COPY --link scripts/vpn-client/* /opt/nuvlaedge/scripts/vpn-client/
 RUN mv /opt/nuvlaedge/scripts/vpn-client/openvpn-client.sh /usr/bin/openvpn-client && \
-    chmod +x /usr/bin/openvpn-client && \
-    chmod +x /opt/nuvlaedge/scripts/vpn-client/get_ip.sh && \
-    chmod +x /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh
-# For backward compatibility with existing vpn/nuvlaedge.conf file
-RUN ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh && \
+    # For backward compatibility with existing vpn/nuvlaedge.conf file
+    ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh && \
     ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
 
 # Kubernetes credential manager
 COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
-RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh /usr/bin/kubernetes-credential-manager && \
-    chmod +x /usr/bin/kubernetes-credential-manager
+RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh /usr/bin/kubernetes-credential-manager
+
+# Give execution permission
+RUN chmod +x \
+    # Security
+    /usr/bin/security-entrypoint \
+    # Compute API
+    /usr/bin/api \
+    # VPN client
+    /usr/bin/openvpn-client \
+    /opt/nuvlaedge/scripts/vpn-client/get_ip.sh \
+    /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh \
+    # Kubernetes credential manager
+    /usr/bin/kubernetes-credential-manager
 
 # Configuration files
 COPY --link nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf

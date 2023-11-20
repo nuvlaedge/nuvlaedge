@@ -42,6 +42,8 @@ class KubernetesClient(COEClient):
     NE_DB_ROOT_HOSTPATH = '/var/lib/nuvlaedge'
     NE_DB_CONTAINER_PATH = str(FILE_NAMES.root_fs)
 
+    DEFAULT_IMAGE_PULL_POLICY = "Always"
+
     def __init__(self):
         super().__init__()
         config.load_incluster_config()

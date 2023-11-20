@@ -1,4 +1,5 @@
 import logging
+import pprint
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -14,13 +15,13 @@ class TimedAction:
     action: callable
     period: int
     remaining_time: float = 0  # Allow configurability for delayed starts
-    args: tuple[any] | None = None
+    args: tuple[any] = field(default_factory=tuple)
     kwargs: dict[str, any] = field(default_factory=dict)
     uuid: str = uuid.uuid4()
 
     tries: int = 0
     max_tries: int = CTE.TIMED_ACTIONS_TRIES
-    exceptions: list[Exception] = field(default=list)
+    exceptions: list[Exception] = field(default_factory=list)
 
     def _execute_action(self) -> any:
         """

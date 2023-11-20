@@ -3,6 +3,8 @@ import time
 import uuid
 from dataclasses import dataclass, field
 
+from nuvlaedge.common.constants import CTE
+
 logger: logging.Logger = logging.getLogger(__name__)
 
 
@@ -16,6 +18,37 @@ class TimedAction:
     kwargs: dict[str, any] = field(default_factory=dict)
     uuid: str = uuid.uuid4()
 
+    retries: int = 0
+    exceptions: list[Exception] = field(default=list)
+
+    def _execute_action(self) -> any:
+        """
+
+        Returns: whatever the action returns, None otherwise
+        Raises: The exceptions raised during the execution, including retries
+
+        """
+        try:
+            ret = self.action(*self.args, **self.kwargs)
+            # Reset retry system
+            self.retries = 0
+            self.exceptions = []
+            return ret
+
+        except Exception as ex:
+            logger.info(f"Error {ex.__class__.__name__} running {self.name}")
+
+            # If max retries reached, gather all the exceptions and raise a Group
+            if CTE.TIMED_ACTIONS_RETRIES - self.retries <= 0:
+                logger.warning(f"Max retries reached in {self.name} raising exceptions")
+                raise ExceptionGroup(f"error running {self.name}", self.exceptions)
+            # If not, save exception and increase retries
+            else:
+                logger.info(f"Remaining retries for {self.name}: {CTE.TIMED_ACTIONS_RETRIES - self.retries}")
+                self.retries += 1
+                self.exceptions.append(ex)
+            return None
+
     def __call__(self):
         if self.remaining_time > 0:
             logger.debug(f'Action {self.name} not ready, time remaining: '
@@ -28,7 +61,7 @@ class TimedAction:
         if not self.kwargs:
             self.kwargs = {}
 
-        ret = self.action(*self.args, **self.kwargs)
+        ret = self._execute_action()
 
         self.remaining_time = self.period
         return ret

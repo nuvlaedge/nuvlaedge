@@ -16,6 +16,7 @@ log: logging.Logger = logging.getLogger(__name__)
 
 JOB_TTL_SECONDS_AFTER_FINISHED = 60 * 2
 JOB_BACKOFF_LIMIT = 0
+DEFAULT_IMAGE_PULL_POLICY = "Always"
 
 
 class TimeoutException(Exception):
@@ -41,8 +42,6 @@ class KubernetesClient(COEClient):
     NE_DB_ROOT_HOSTPATH = '/var/lib/nuvlaedge'
     NE_DB_CONTAINER_PATH = str(FILE_NAMES.root_fs)
 
-    DEFAULT_IMAGE_PULL_POLICY = "IfNotPresent"
-
     def __init__(self):
         super().__init__()
         config.load_incluster_config()
@@ -57,27 +56,24 @@ class KubernetesClient(COEClient):
         self.host_node_name = os.getenv('MY_HOST_NODE_NAME')
         self.vpn_client_component = \
             os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
-        job_img_pull_policy = os.getenv('JOB_IMAGE_PULL_POLICY', 
-                                        self.DEFAULT_IMAGE_PULL_POLICY)
-        self.job_image_pull_policy = self.get_image_pull_policy(job_img_pull_policy)
+        self.job_image_pull_policy = os.getenv('JOB_IMAGE_PULL_POLICY', DEFAULT_IMAGE_PULL_POLICY)
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
     @staticmethod
-    def get_image_pull_policy(job_img_pull_policy):
-        '''
+    def get_image_pull_policy(image_pull_policy):
+        """
         Check if the image pull policy is valid
         If not, return a sane value of IfNotPresent
-        '''
+        """
 
-        valid_pull_policies = ["Always", "IfNotPresent", "Never",]
+        valid_pull_policies = ["Always", "IfNotPresent", "Never"]
 
-        if job_img_pull_policy in valid_pull_policies:
-            return job_img_pull_policy
+        if image_pull_policy in valid_pull_policies:
+            return image_pull_policy
 
-        log.warning(f"The image pull policy was set to an invalid string: "
-            f"{job_img_pull_policy}")
-
-        return "IfNotPresent"
+        log.warning(f'The image pull policy was set to an invalid string: {image_pull_policy}'
+                    f'Using "{DEFAULT_IMAGE_PULL_POLICY}" instead.')
+        return DEFAULT_IMAGE_PULL_POLICY
 
     def get_node_info(self):
         if self.host_node_name:
@@ -292,10 +288,7 @@ class KubernetesClient(COEClient):
 
         log.info(f'Launch Nuvla job {job_id} using {image} with: {cmd} {args}')
 
-        job = self._job_def(image, self._to_k8s_obj_name(job_execution_id),
-                            command=cmd, args=args,
-                            mount_ne_db=True,
-                            restart_policy='Never')
+        job = self._job_executor_job_def(image, job_execution_id, cmd, args)
 
         namespace = self._namespace(**kwargs)
         log.debug('Run job %s in namespace %s', job.to_str(), namespace)
@@ -521,30 +514,21 @@ class KubernetesClient(COEClient):
     def _to_k8s_obj_name(name: str) -> str:
         return name.replace('_', '-').replace('/', '-')
 
-    @staticmethod
-    def _container_def(image, name,
+    def _container_def(self, image, name,
                        volume_mounts: List[client.V1VolumeMount] | None,
                        command: str = None,
                        image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
-                       args: str = None,) -> client.V1Container:
-        def parse_cmd_args(cmd, arg):
-            if cmd:
-                cmd = cmd.split()
-            else:
-                cmd = None
-            if arg:
-                arg = arg.split()
-            else:
-                arg = None
-            return cmd, arg
-        command, args = parse_cmd_args(command, args)
+                       args: str = None) -> client.V1Container:
+
+        args = args.split() if args else None
+        command = command.split() if command else None
 
         return client.V1Container(image=image,
                                   name=name,
                                   command=command,
                                   volume_mounts=volume_mounts,
-                                  image_pull_policy=image_pull_policy,
-                                  args=args,)
+                                  image_pull_policy=self.get_image_pull_policy(image_pull_policy),
+                                  args=args)
 
     @staticmethod
     def _pod_spec(container: client.V1Container,
@@ -579,20 +563,29 @@ class KubernetesClient(COEClient):
 
         return pod_volume, container_volume_mount
 
-    def _pod_def(self, image, name, command: str = None, args: str = None,
-                 network: str = None, mount_ne_db=False,
+    def _pod_def(self, image, name,
+                 command: str = None,
+                 args: str = None,
+                 network: str = None,
+                 mount_ne_db: bool = False,
+                 image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
                  **kwargs) -> client.V1Pod:
 
         pod_spec = self._pod_spec_with_container(image, name,
                                                  command, args,
-                                                 network, mount_ne_db, **kwargs)
+                                                 network, mount_ne_db,
+                                                 image_pull_policy=image_pull_policy,
+                                                 **kwargs)
         return client.V1Pod(
             metadata=client.V1ObjectMeta(name=name, annotations={}),
             spec=pod_spec)
 
     def _pod_spec_with_container(self, image: str, name: str,
-                                 command: str = None, args: str = None,
-                                 network: str = None, mount_ne_db: bool = False,
+                                 command: str = None,
+                                 args: str = None,
+                                 network: str = None,
+                                 mount_ne_db: bool = False,
+                                 image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
                                  **kwargs):
 
         container_volume_mounts, pod_volumes = None, None
@@ -604,7 +597,7 @@ class KubernetesClient(COEClient):
         container = self._container_def(image, name,
                                         volume_mounts=container_volume_mounts,
                                         command=command,
-                                        image_pull_policy=self.job_image_pull_policy,
+                                        image_pull_policy=image_pull_policy,
                                         args=args)
 
         return self._pod_spec(container,
@@ -612,13 +605,19 @@ class KubernetesClient(COEClient):
                               volumes=pod_volumes,
                               **kwargs)
 
-    def _job_def(self, image, name, command: str = None, args: str = None,
-                 network: str = None, mount_ne_db=False,
+    def _job_def(self, image, name,
+                 command: str = None,
+                 args: str = None,
+                 network: str = None,
+                 mount_ne_db: bool = False,
+                 image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
                  **kwargs) -> client.V1Job:
 
         pod_spec = self._pod_spec_with_container(image, name,
                                                  command, args,
-                                                 network, mount_ne_db, **kwargs)
+                                                 network, mount_ne_db,
+                                                 image_pull_policy=image_pull_policy,
+                                                 **kwargs)
 
         job_spec = client.V1JobSpec(template=self._pod_template_spec(name, pod_spec))
 
@@ -636,11 +635,14 @@ class KubernetesClient(COEClient):
         return self._job_def(image, self._to_k8s_obj_name(name),
                              command=cmd, args=args,
                              mount_ne_db=True,
-                             restart_policy='Never')
+                             restart_policy='Never',
+                             image_pull_policy=self.job_image_pull_policy)
 
-    def container_run_command(self, image, name, command: str = None,
+    def container_run_command(self, image, name,
+                              command: str = None,
                               args: str = None,
-                              network: str = None, remove: bool = True,
+                              network: str = None,
+                              remove: bool = True,
                               no_output=False,
                               **kwargs) -> str:
         name = self._to_k8s_obj_name(name)
@@ -648,10 +650,14 @@ class KubernetesClient(COEClient):
         # To comply with docker, try to retrieve entrypoint when there is
         # no command (k8s entrypoint) defined
         command = command or kwargs.get('entrypoint')
+        image_pull_policy = kwargs.get('image_pull_policy', DEFAULT_IMAGE_PULL_POLICY)
 
         pod = self._pod_def(image, name,
-                            command=command, args=args,
-                            network=network, **kwargs)
+                            command=command,
+                            args=args,
+                            network=network,
+                            image_pull_policy=image_pull_policy,
+                            **kwargs)
 
         namespace = self._namespace(**kwargs)
 

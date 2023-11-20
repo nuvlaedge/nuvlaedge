@@ -59,11 +59,11 @@ class KubernetesClient(COEClient):
             os.getenv('NUVLAEDGE_VPN_COMPONENT_NAME', 'vpn-client')
         job_img_pull_policy = os.getenv('JOB_IMAGE_PULL_POLICY', 
                                         self.DEFAULT_IMAGE_PULL_POLICY)
-        self.job_image_pull_policy = self.checked_image_pull_policy(job_img_pull_policy)
+        self.job_image_pull_policy = self.get_image_pull_policy(job_img_pull_policy)
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
     @staticmethod
-    def checked_image_pull_policy(job_img_pull_policy):
+    def get_image_pull_policy(job_img_pull_policy):
         '''
         Check if the image pull policy is valid
         If not, return a sane value of IfNotPresent

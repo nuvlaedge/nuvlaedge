@@ -8,6 +8,7 @@ ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_VERSION="3.9.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
+ARG NMAP_VERSION="7.94"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -96,6 +97,9 @@ RUN pip install -r /tmp/requirements.txt
 # ModBus Peripheral builder
 # ------------------------------------------------------------------------
 FROM base-builder AS modbus-builder
+
+WORKDIR /tmp
+RUN wget https://nmap.org/dist/nmap-${NMAP_VERSION}.tgz -O nmap.tgz && tar -xzf nmap.tgz
 
 COPY --link requirements.modbus.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -220,7 +224,7 @@ RUN apk add --no-cache \
         # Modbus
         nmap nmap-scripts \
         # USB
-        libusb-dev udev \ 
+        libusb-dev udev \
         # Bluetooth
         bluez-dev \
         # Security
@@ -230,7 +234,8 @@ RUN apk add --no-cache \
         # OpenVPN
         openvpn \
 		# Job-Engine
-		gettext docker-cli docker-cli-compose helm
+		gettext docker-cli docker-cli-compose helm \
+
 # Job-Engine and Kubernetes Credential Manager
 RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
 
@@ -248,6 +253,10 @@ COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
 RUN mkdir /opt/scripts/
 COPY --link nuvlaedge/peripherals/gpu/cuda_scan.py /opt/nuvlaedge/scripts/gpu/
 COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
+
+# Peripheral discovery ModBus
+RUN mkdir -p /usr/share/nmap/
+COPY --link --from=modbus-builder /tmp/nmap-${NMAP_VERSION}/nse_main.lua /usr/share/nmap/nse_main.lua
 
 # Security module
 # nmap nmap-scripts coreutils curl

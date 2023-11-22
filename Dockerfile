@@ -8,6 +8,7 @@ ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_VERSION="3.9.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
+ARG NMAP_VERSION="7.93"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -96,6 +97,11 @@ RUN pip install -r /tmp/requirements.txt
 # ModBus Peripheral builder
 # ------------------------------------------------------------------------
 FROM base-builder AS modbus-builder
+
+ARG NMAP_VERSION
+
+WORKDIR /tmp
+RUN wget "https://nmap.org/dist/nmap-${NMAP_VERSION}.tgz" -O nmap.tgz && tar -xzf nmap.tgz
 
 COPY --link requirements.modbus.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -209,6 +215,7 @@ RUN find ${PYTHON_LOCAL_SITE_PACKAGES} -name '*.py?' -delete
 FROM nuvlaedge-base
 
 ARG PYTHON_LOCAL_SITE_PACKAGES
+ARG NMAP_VERSION
 
 # License
 COPY LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
@@ -220,7 +227,7 @@ RUN apk add --no-cache upx \
         # Agent
         procps curl mosquitto-clients lsblk openssl iproute2 \
         # Modbus and Security
-        nmap \
+        nmap nmap-nselibs \
         # USB
         libusb-dev udev \
         # Bluetooth
@@ -246,6 +253,7 @@ RUN apk add --no-cache upx \
         /usr/sbin/openvpn && \
     apk del --no-cache upx
 
+
 # Required python packages
 COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
@@ -253,21 +261,31 @@ COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 # By copying it from base builder we save up ~100MB of the gcc library
 COPY --link --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
+
 # Peripheral discovery: USB
 COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
+
 
 # Peripheral discovery: GPU
 RUN mkdir /opt/scripts/
 COPY --link nuvlaedge/peripherals/gpu/cuda_scan.py /opt/nuvlaedge/scripts/gpu/
 COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 
+
+# Peripheral discovery: ModBus
+RUN mkdir -p /usr/share/nmap/scripts/
+COPY --link --from=modbus-builder /tmp/nmap-${NMAP_VERSION}/scripts/modbus-discover.nse /usr/share/nmap/scripts/modbus-discover.nse
+
+
 # Security module
 # nmap nmap-scripts coreutils curl
 COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
 COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoint
 
+
 # Compute API
 COPY scripts/compute-api/api.sh /usr/bin/api
+
 
 # VPN Client
 COPY --link scripts/vpn-client/* /opt/nuvlaedge/scripts/vpn-client/
@@ -276,9 +294,11 @@ RUN mv /opt/nuvlaedge/scripts/vpn-client/openvpn-client.sh /usr/bin/openvpn-clie
     ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh && \
     ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
 
+
 # Kubernetes credential manager
 COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
 RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh /usr/bin/kubernetes-credential-manager
+
 
 # Give execution permission
 RUN chmod +x \

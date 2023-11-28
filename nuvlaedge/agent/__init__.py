@@ -26,7 +26,7 @@ def update_periods(nuvlaedge_resource: dict):
     refresh_interval = nuvlaedge_resource.get('refresh-interval',
                                               CTE.REFRESH_INTERVAL)
     heartbeat_interval = nuvlaedge_resource.get('heartbeat-interval',
-                                               CTE.HEARTBEAT_INTERVAL)
+                                                CTE.HEARTBEAT_INTERVAL)
 
     action_handler.edit_period('telemetry', refresh_interval)
     action_handler.edit_period('heartbeat', heartbeat_interval)

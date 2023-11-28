@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from nuvlaedge.models import NuvlaEdgeBaseModel
+from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 
 
 class NuvlaEdgeMessage(NuvlaEdgeBaseModel):

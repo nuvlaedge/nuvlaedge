@@ -23,7 +23,7 @@ from subprocess import (run,
 from xml.etree import ElementTree
 from nuvla.api import Api
 
-from nuvlaedge.models import NuvlaEdgeBaseModel
+from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.security.settings import SecurityConfig
 import nuvlaedge.security.constants as cte

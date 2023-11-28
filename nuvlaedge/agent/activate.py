@@ -16,22 +16,19 @@ from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator import COEClient
 
 
-class Activate(NuvlaEdgeCommon):
+logger: logging.Logger = logging.getLogger(__name__)
+
+
+class Activate:
     """ The Activate class, which includes all methods and
     properties necessary to activate a NuvlaEdge
 
-    Attributes:
-        data_volume: path to shared NuvlaEdge data
     """
 
-    def __init__(self,
-                 coe_client: COEClient,
-                 data_volume: str):
+    def __init__(self):
         """
         Constructs an Activation object
         """
-
-        super().__init__(coe_client=coe_client, shared_data_volume=data_volume)
 
         self.activate_logger: logging.Logger = logging.getLogger(__name__)
         self.user_info = {}

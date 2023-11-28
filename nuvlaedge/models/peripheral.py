@@ -1,6 +1,6 @@
 from pydantic import validator
 
-from nuvlaedge.models import NuvlaEdgeBaseModel
+from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 
 
 class PeripheralData(NuvlaEdgeBaseModel):

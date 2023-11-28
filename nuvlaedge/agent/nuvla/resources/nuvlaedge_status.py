@@ -68,6 +68,3 @@ class NuvlaEdgeStatusResource(NuvlaResourceBase,
     current_time: datetime
 
     vulnerabilities: Optional[dict]
-
-
-x = NuvlaEdgeStatusResource(status=Status.OPERATIONAL, current_time=datetime.now())

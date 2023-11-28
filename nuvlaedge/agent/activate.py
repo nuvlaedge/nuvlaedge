@@ -12,9 +12,7 @@ from nuvla.api.models import CimiResource
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.orchestrator import COEClient
-
+from nuvlaedge.common.utils import read_json_file, write_dict_to_file
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -42,7 +40,7 @@ class Activate:
         :return boolean and user info is available"""
 
         try:
-            self.user_info = self.read_json_file(FILE_NAMES.ACTIVATION_FLAG)
+            self.user_info = read_json_file(FILE_NAMES.ACTIVATION_FLAG)
 
             self.activate_logger.warning("{} already exists. Re-activation is not possible!".format(FILE_NAMES.ACTIVATION_FLAG))
             self.activate_logger.info("NuvlaEdge credential: {}".format(self.user_info["api-key"]))

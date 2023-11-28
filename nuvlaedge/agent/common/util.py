@@ -6,6 +6,8 @@ import os
 import logging
 import signal
 import tempfile
+from pathlib import Path
+
 import pkg_resources
 
 from contextlib import contextmanager
@@ -46,12 +48,16 @@ def str_if_value_or_none(value):
 
 
 def execute_cmd(command: list[str], method_flag: bool = True) -> dict | CompletedProcess | None:
-    """ Shell wrapper to execute a command
-
-    @param command: command to execute
-    @param method_flag: flag to witch between run and Popen command exection
-    @return: all outputs
     """
+    Shell wrapper to execute a command
+    Args:
+        command: command to execute
+        method_flag: flag to switch between run and Popen command execution
+
+    Returns: all outputs
+
+    """
+
     try:
         if method_flag:
             return run(command, stdout=PIPE, stderr=STDOUT, encoding='UTF-8')
@@ -76,38 +82,6 @@ def execute_cmd(command: list[str], method_flag: bool = True) -> dict | Complete
         logging.error(f"Exception not identified: {ex}")
 
     return None
-
-
-@contextmanager
-def atomic_writer(file, **kwargs):
-    """ Context manager to write to a file atomically
-
-    :param file: path of file
-    :param kwargs: kwargs passed to tempfile.NamedTemporaryFile()
-    """
-    path, prefix = os.path.split(file)
-    kwargs_ = dict(mode='w+', dir=path, prefix=f'tmp_{prefix}_')
-    kwargs_.update(kwargs)
-
-    with tempfile.NamedTemporaryFile(delete=False, **kwargs_) as tmpfile:
-        yield tmpfile
-    os.replace(tmpfile.name, file)
-
-
-def atomic_write(file, data, **kwargs):
-    """ Write data to a file atomically
-
-    :param file: path of file
-    :param data: data to write to the file
-    :param kwargs: kwargs passed to tempfile.NamedTemporaryFile
-    """
-    with atomic_writer(file, **kwargs) as f:
-        return f.write(data)
-
-
-def file_exists_and_not_empty(filename):
-    return (os.path.exists(filename)
-            and os.path.getsize(filename) > 0)
 
 
 def raise_timeout(signum, frame):

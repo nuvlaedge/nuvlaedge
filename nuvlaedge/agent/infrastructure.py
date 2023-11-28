@@ -25,7 +25,7 @@ from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.telemetry import Telemetry
 
 
-class Infrastructure(NuvlaEdgeCommon):
+class Infrastructure:
     """ The Infrastructure class includes all methods and
     properties necessary update the infrastructure services
     and respective credentials in Nuvla, whenever the local

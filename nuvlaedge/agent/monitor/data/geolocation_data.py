@@ -1,5 +1,5 @@
 """ Module for geolocation data structure reporting """
-from pydantic import root_validator
+from pydantic import model_validator
 
 from nuvlaedge.agent.monitor import BaseDataStructure
 
@@ -11,7 +11,7 @@ class GeoLocationData(BaseDataStructure):
     coordinates: list[float] | None
     timestamp: int | None
 
-    @root_validator
+    @model_validator(mode='after')
     def fill_longitude(cls, values):
         """
         Updates the values of the variable longitude and latitude variables based on

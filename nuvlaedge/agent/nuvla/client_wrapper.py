@@ -45,7 +45,7 @@ class NuvlaClientWrapper:
         self._host: str = host
         self._verify: bool = verify
 
-        self.__nuvlaedge_resource: NuvlaEdgeResource = NuvlaEdgeResource(id=nuvlaedge_uuid)
+        self.__nuvlaedge_resource: NuvlaEdgeResource | None = None #NuvlaEdgeResource(id=nuvlaedge_uuid)
         self.__nuvlaedge_status_resource: NuvlaEdgeStatusResource | None = None
 
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
@@ -98,7 +98,7 @@ class NuvlaClientWrapper:
         serial_session = NuvlaEdgeSession(
             endpoint=self._host,
             verify=self._verify,
-            credentials=self.nuvlaedge_credentials,
+            credentials=NuvlaApiKeyTemplate(key='keyme', secret='secretme'),
             nuvlaedge_uuid=self.nuvlaedge_uuid
         )
 
@@ -121,6 +121,7 @@ def get_nuvla_client(host: str = '', verify: bool = None, nuvlaedge_uuid: str = 
     global __nuvla_client
 
     if __nuvla_client is not None:
+        logger.warning(f"Trying to re-instantiate NuvlaClient.")
         return __nuvla_client
 
     __nuvla_client = NuvlaClientWrapper(host, verify, NuvlaID(nuvlaedge_uuid))
@@ -131,6 +132,7 @@ def get_client_from_session(session_file: Path):
     global __nuvla_client
 
     if __nuvla_client is not None:
+        logger.warning(f"Trying to re-instantiate NuvlaClient.")
         return __nuvla_client
 
     with session_file.open('r') as f:

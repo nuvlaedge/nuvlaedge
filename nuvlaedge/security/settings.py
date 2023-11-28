@@ -3,10 +3,10 @@ import json
 from pydantic import Field
 
 from nuvlaedge.security.constants import DEFAULT_NMAP_DIRECTORY
-from nuvlaedge.common.settings_parser import NuvlaConfig
+from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 
 
-class SecurityConfig(NuvlaConfig):
+class SecurityConfig(NuvlaEdgeBaseSettings):
     external_vulnerabilities_db: str = Field(
         'https://github.com/nuvla/vuln-db/blob/main/databases/all.aggregated.csv.gz?raw=true',
         env='EXTERNAL_CVE_VULNERABILITY_DB')

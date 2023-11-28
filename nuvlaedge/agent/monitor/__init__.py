@@ -10,7 +10,7 @@ from threading import Thread
 from abc import ABC, abstractmethod
 from typing import Type, Dict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Monitor(ABC, Thread):
@@ -121,11 +121,10 @@ class BaseDataStructure(BaseModel):
     Base data structure for providing a common configuration for all the
     structures.
     """
-    def dict(self, exclude_none: bool = True, **kwargs):
-        return super().dict(exclude_none=exclude_none, **kwargs)
+    """ Configuration class for base telemetry data """
+    model_config = ConfigDict(populate_by_name=True,
+                              alias_generator=underscore_to_hyphen,
+                              validate_assignment=True)
 
-    class Config:
-        """ Configuration class for base telemetry data """
-        allow_population_by_field_name = True
-        alias_generator = underscore_to_hyphen
-        validate_assignment = True
+    def dict(self, exclude_none: bool = True, **kwargs):
+        return super().model_dump(exclude_none=exclude_none, **kwargs)

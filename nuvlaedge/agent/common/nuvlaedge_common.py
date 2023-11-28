@@ -15,6 +15,7 @@ from nuvla.api import Api
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common import util
+from nuvlaedge.common import utils
 from nuvlaedge.agent.orchestrator import COEClient
 
 
@@ -110,7 +111,7 @@ class NuvlaEdgeCommon:
         if extra_config is not None:
             extra_config = extra_config.replace(r'\n', '\n')
             try:
-                util.atomic_write(extra_config_file, extra_config)
+                utils.atomic_write(extra_config_file, extra_config)
             except OSError:
                 self.logger.exception('Failed to write VPN extra config file')
             return extra_config
@@ -194,7 +195,7 @@ class NuvlaEdgeCommon:
     @staticmethod
     def save_nuvla_configuration(file_path, content):
         if not os.path.exists(file_path):
-            util.atomic_write(file_path, content)
+            utils.atomic_write(file_path, content)
 
     def _get_nuvlaedge_id_from_environment(self):
         nuvlaedge_id = os.getenv('NUVLAEDGE_UUID', os.getenv('NUVLABOX_UUID'))
@@ -340,45 +341,6 @@ class NuvlaEdgeCommon:
 
         return api_instance
 
-    @staticmethod
-    def shell_execute(cmd):
-        """ Shell wrapper to execute a command
-
-        :param cmd: command to execute
-        :return: all outputs
-        """
-
-        p = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        return {'stdout': stdout, 'stderr': stderr, 'returncode': p.returncode}
-
-    def write_json_to_file(self, file_path: str, content: dict, mode: str = 'w') -> bool:
-        """
-        Write JSON content into a file
-
-        :param file_path: path of the file to be written
-        :param content: JSON content
-        :param mode: mode in which to open the file for writing
-        :return: True if file was written with success. False otherwise
-        """
-        try:
-            util.atomic_write(file_path, json.dumps(content), mode=mode)
-        except Exception as e:
-            self.logger.exception(f'Exception in write_json_to_file: {e}')
-            return False
-
-        return True
-
-    @staticmethod
-    def read_json_file(file_path: str) -> dict:
-        """
-        Reads a JSON file. Error should be caught by the calling module
-
-        :param file_path: path of the file to be read
-        :return: content of the file, as a dict
-        """
-        with open(file_path) as f:
-            return json.load(f)
 
     def get_operational_status(self):
         """ Retrieves the operational status of the NuvlaEdge from the .status file """
@@ -417,7 +379,7 @@ class NuvlaEdgeCommon:
 
         :param operational_status: status of the NuvlaEdge
         """
-        util.atomic_write(FILE_NAMES.STATUS_FILE, operational_status)
+        utils.atomic_write(FILE_NAMES.STATUS_FILE, operational_status)
 
     @staticmethod
     def get_vpn_ip():
@@ -484,4 +446,4 @@ ${vpn_endpoints_mapped}
 ${vpn_extra_config}
 """)
 
-        util.atomic_write(FILE_NAMES.VPN_CLIENT_CONF_FILE, tpl.substitute(values))
+        utils.atomic_write(FILE_NAMES.VPN_CLIENT_CONF_FILE, tpl.substitute(values))

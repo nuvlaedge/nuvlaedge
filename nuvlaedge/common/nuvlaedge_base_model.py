@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 def underscore_to_hyphen(field_name: str) -> str:
@@ -17,11 +17,9 @@ class NuvlaEdgeBaseModel(BaseModel):
     """
     Base data structure for providing a common configuration for all data structures.
     """
-
-    class Config:
-        """ Configuration class for base telemetry data """
-        exclude_none = True
-        allow_population_by_field_name = True
-        alias_generator = underscore_to_hyphen
-        validate_assignment = True
-        use_enum_values = True
+    """ Configuration class for base telemetry data """
+    model_config = ConfigDict(validate_assignment=True,
+                              populate_by_name=True,
+                              use_enum_values=True,
+                              alias_generator=underscore_to_hyphen)
+                            # exclude_none = True

@@ -9,7 +9,7 @@ from pydantic import Field
 from nuvlaedge.agent.monitor import BaseDataStructure
 
 
-class IP(BaseDataStructure, allow_mutation=False):
+class IP(BaseDataStructure):
     """
     address: IP addresses
     """

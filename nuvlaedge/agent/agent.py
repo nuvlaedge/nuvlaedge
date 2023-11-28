@@ -12,6 +12,7 @@ from threading import Event, Thread
 
 from nuvla.api.models import CimiResource, CimiResponse
 
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.broker.file_broker import FileBroker
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import TimedAction
@@ -57,6 +58,7 @@ class Agent:
 
         self.old_nuvlaedge_data = None
 
+        self.nuvla_client: NuvlaClientWrapper | None = None
         self._activate = None
         self._coe_client = None
         self._infrastructure = None
@@ -196,6 +198,9 @@ class Agent:
                               encoding='UTF-8')
             self.infrastructure.set_immutable_ssh_key()
 
+    def assert_state(self):
+        ...
+
     def initialize_agent(self) -> bool:
         """
         This method sequentially initializes al the NuvlaEdge main components.
@@ -203,7 +208,9 @@ class Agent:
         Returns: True if the initialization is successful.  False, otherwise
 
         """
-        # 1. Proceed with the initialization of the NuvlaEdge
+        # Assert NuvlaEdge state comparing local configuration and parsed data. To compare:
+        #   - NE_UUID, API_KEYS, LOCAL FILE
+
         self.activate_nuvlaedge()
         return True
 

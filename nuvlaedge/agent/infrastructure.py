@@ -271,7 +271,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         try:
             wait = 0
-            while not os.path.exists(self.vpn_csr_file) or \
+            while not os.path.exists(self.vpn_csr_file) and \
                     not os.path.exists(self.vpn_key_file):
                 if wait > 25:
                     # appr 5 sec

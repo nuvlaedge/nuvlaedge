@@ -121,6 +121,8 @@ class TestSecurity(TestCase):
                 patch('json.loads') as mock_loads:
             # mock_open.reads.return_value = None
             self.assertIsNone(self.security.authenticate())
+            mock_loads.side_effect = json.decoder.JSONDecodeError
+            self.assertIsNone(self.security.authenticate())
 
         mock_exists.return_value = True
         with patch("builtins.open", mock_open(read_data="data")) as mock_file, \

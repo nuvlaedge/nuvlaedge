@@ -3,6 +3,8 @@
 
 import json
 import logging
+from pathlib import PosixPath
+
 import mock
 import requests
 import unittest
@@ -74,7 +76,8 @@ class ActivateTestCase(unittest.TestCase):
     @mock.patch.object(Activate, 'shell_execute')
     @mock.patch.object(Activate, 'write_json_to_file')
     @mock.patch.object(Activate, 'api')
-    def test_activate(self, mock_api, mock_write_file, mock_shell_exec):
+    @mock.patch.object(PosixPath, 'unlink')
+    def test_activate(self, mock_unlink, mock_api, mock_write_file, mock_shell_exec):
         # successful activation will return the API keys for the NuvlaEdge
         mock_api.return_value = self.set_nuvla_api(json.loads(self.api_key_content))
         mock_write_file.return_value = True
@@ -100,9 +103,11 @@ class ActivateTestCase(unittest.TestCase):
         mock_write_file.assert_called_once_with(FILE_NAMES.ACTIVATION_FLAG, json.loads(self.api_key_content))
 
         # if there is some issue with the writing to file
-        mock_api.reset_mock()
+        mock_api.side_effect = None
         mock_api.return_value = self.set_nuvla_api(json.loads(self.api_key_content))
         mock_write_file.return_value = False
+        self.assertEqual(self.obj.activate(), '',
+                         'Unable to activate the NuvlaEdge')
         mock_write_file.assert_called_with(FILE_NAMES.ACTIVATION_FLAG, json.loads(self.api_key_content))
 
     @mock.patch.object(Activate, 'write_json_to_file')

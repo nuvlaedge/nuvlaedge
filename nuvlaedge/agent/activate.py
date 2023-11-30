@@ -92,8 +92,9 @@ class Activate(NuvlaEdgeCommon):
         while not self.write_json_to_file(FILE_NAMES.ACTIVATION_FLAG, self.user_info):
             trials += 1
             if trials == maxtrials:
-                self.logger.error(f'Could not write user info to {FILE_NAMES.ACTIVATION_FLAG}')
+                self.activate_logger.error(f'Could not write user info to {FILE_NAMES.ACTIVATION_FLAG}')
                 FILE_NAMES.ACTIVATION_FLAG.unlink()
+                return ''
             time.sleep(timeout)
 
         return self.user_info

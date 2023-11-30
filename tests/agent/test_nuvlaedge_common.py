@@ -3,7 +3,7 @@
 
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PosixPath
 import mock
 import os
 import unittest
@@ -62,13 +62,25 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             self.assertEqual(self.obj.set_vpn_config_extra(), 'foo',
                              'Failed to read VPN extra config from persisted file')
 
+        with mock.patch(self.agent_nuvlaedge_common_open) as mock_open:
+            mock_open.side_effect = OSError
+            self.assertEqual(self.obj.set_vpn_config_extra(), '',
+                         'Failed to read VPN extra config from persisted file')
+
         # if not previously stored, read the extra config from the env, and save it into a file
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open:
-            mock_open.side_effect = [FileNotFoundError, mock.MagicMock()]
             os.environ.setdefault('VPN_CONFIG_EXTRA', r'--allow-pull-fqdn\n--client-nat snat network netmask alias')
             self.assertEqual(self.obj.set_vpn_config_extra(),
                              '--allow-pull-fqdn\n--client-nat snat network netmask alias',
                              'Failed to read extra VPN config from environment variable')
+
+        # add exceptions
+        with mock.patch('nuvlaedge.agent.common.util.atomic_write') as mock_atomic_write:
+            mock_atomic_write.side_effect = OSError
+            self.assertEqual(self.obj.set_vpn_config_extra(),
+                             '--allow-pull-fqdn\n--client-nat snat network netmask alias',
+                             'Failed to handle atomic write error')
+
 
     @mock.patch('os.path.exists')
     def test_set_installation_home(self, mock_exists):
@@ -256,6 +268,9 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             mock_json_dumps.side_effect = AttributeError
             self.assertFalse(self.obj.write_json_to_file('path2', {}),
                              'Returned True when there was an error with the JSON content')
+            mock_atomic_write.reset_mock(side_effect=False)
+            self.assertFalse(self.obj.write_json_to_file('path2', {}),
+                             'Returned True when there was an error with atomic write')
 
         # if all goes well, return True
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
@@ -314,10 +329,15 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     def test_set_local_operational_status(self):
         # should just write and return None
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-                mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write), mock.patch.object(PosixPath, 'exists') as mock_exists:
             mock_open.return_value.write.return_value = None
             self.assertIsNone(self.obj.set_local_operational_status(''),
                               'Setting the operational status should return nothing')
+            mock_exists.return_value = False
+            self.assertIsNone(self.obj.set_local_operational_status(''),
+                              'Setting the operational status should return nothing')
+
+
 
     @mock.patch.object(Path, 'exists')
     @mock.patch.object(Path, 'stat')
@@ -362,5 +382,8 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
                 'vpn_endpoints_mapped': 'endpoints',
                 'vpn_extra_config': 'some\nextra\nconf'
             }
+            self.assertIsNone(self.obj.write_vpn_conf(vpn_values),
+                              'Failed to write VPN conf')
+            mock_exists.return_value = False
             self.assertIsNone(self.obj.write_vpn_conf(vpn_values),
                               'Failed to write VPN conf')

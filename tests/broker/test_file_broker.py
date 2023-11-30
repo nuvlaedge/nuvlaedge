@@ -75,6 +75,14 @@ class TestFileBroker(TestCase):
 
                     mock_unlink.assert_called_once()
 
+            mock_unlink.reset_mock()
+            with mock.patch.object(Path, 'open', mocked_open):
+                with mock.patch("json.load", mock.MagicMock(side_effect=Exception)):
+                    mock_iterdir.return_value = [Path(FileBroker.compose_file_name('sender'))]
+                    self.assertEqual(self.test_broker.consume('myfolder'), [])
+
+                    mock_unlink.assert_called_once()
+
     @mock.patch.object(Path, 'mkdir')
     def test_create_channel(self, mock_mkdir):
         self.test_broker.create_channel(Path('channel'))

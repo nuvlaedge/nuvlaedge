@@ -135,4 +135,3 @@ class FileBroker(NuvlaEdgeBroker):
 
             else:
                 return self.publish_from_message(channel, data)
-        return False

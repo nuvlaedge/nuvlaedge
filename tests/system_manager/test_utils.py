@@ -23,6 +23,9 @@ class DockerTestCase(unittest.TestCase):
                               'Failed to set operational status')
             self.assertEqual(mock_open.call_count, 2,
                              'Should write two files when setting operational status')
+            mock_open.side_effect = Exception
+            self.assertIsNone(utils.set_operational_status('status', []),
+                              'Failed to set operational status')
 
     @mock.patch('os.path.exists')
     def test_status_file_exists(self, mock_exists):

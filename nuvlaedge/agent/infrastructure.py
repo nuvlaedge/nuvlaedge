@@ -132,6 +132,9 @@ class Infrastructure(NuvlaEdgeCommon):
             except FileNotFoundError:
                 self.logger.exception(f'{FILE_NAMES.CONTEXT} Not Found')
                 return False
+            except json.decoder.JSONDecodeError:
+                self.logger.exception(f'{FILE_NAMES.CONTEXT} json file coult not be loaded')
+                return False
 
             searcher_filter = self.build_vpn_credential_search_filter(vpn_server_id)
 

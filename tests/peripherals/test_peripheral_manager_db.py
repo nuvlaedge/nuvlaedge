@@ -86,6 +86,9 @@ class TestPeripheralsDBManager(TestCase):
                                                   default=str,
                                                   indent=4
                                                   )
+                mock_dump.reset_mock()
+                mock_dump.side_effect = Exception
+                self.test_db.update_local_storage()
 
     def test_decode_new_peripherals(self):
 

@@ -15,14 +15,11 @@ from threading import Thread
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.infrastructure import Infrastructure
 
-
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
-
 class InfrastructureTestCase(unittest.TestCase):
-
     agent_infrastructure_open = 'nuvlaedge.agent.infrastructure.open'
     atomic_write = 'nuvlaedge.agent.common.util.atomic_write'
 
@@ -31,7 +28,7 @@ class InfrastructureTestCase(unittest.TestCase):
         with mock.patch('nuvlaedge.agent.infrastructure.Telemetry') as mock_telemetry:
             mock_telemetry.return_value = mock.MagicMock()
             self.shared_volume = "mock/path"
-            self.refresh_period = 16    # change the default
+            self.refresh_period = 16  # change the default
             self.obj = Infrastructure(get_coe_client(),
                                       self.shared_volume,
                                       mock_telemetry,
@@ -78,7 +75,7 @@ class InfrastructureTestCase(unittest.TestCase):
         mock_json_dumps.return_value = ''
 
         with mock.patch("nuvlaedge.agent.infrastructure.open") as mock_open, \
-             mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write):
             mock_open.return_value.write.return_value = None
             self.assertEqual(self.obj.write_file('mock-file', 'something'), None,
                              'Unable to write raw string to file')
@@ -86,7 +83,7 @@ class InfrastructureTestCase(unittest.TestCase):
         mock_json_dumps.assert_not_called()
         # is JSON, then json.dumps must be called
         with mock.patch("nuvlaedge.agent.infrastructure.open") as mock_open, \
-             mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write):
             mock_open.return_value.write.return_value = None
             self.assertEqual(self.obj.write_file('mock-file', content, is_json=True), None,
                              'Unable to write JSON to file')
@@ -139,7 +136,7 @@ class InfrastructureTestCase(unittest.TestCase):
 
         # if file exists and content is the same, return empty dict
         with mock.patch.object(Path, 'open', mocked_open):
-        # with mock.patch(self.agent_infrastructure_open, mock.mock_open(read_data=files_content)):
+            # with mock.patch(self.agent_infrastructure_open, mock.mock_open(read_data=files_content)):
             self.assertEqual(self.obj.get_tls_keys(), (files_content, files_content, files_content),
                              'Unable to get TLS keys')
 
@@ -213,6 +210,15 @@ class InfrastructureTestCase(unittest.TestCase):
                 self.assertIn('vpn-endpoints-mapped', self.obj.do_commission(payload).keys(),
                               'Missing fields after commissioning with VPN CSR')
 
+            with mock.patch("json.load", mock.MagicMock(side_effect=FileNotFoundError)):
+                self.assertFalse(self.obj.do_commission(payload), 'Supposed to handle file not found exception')
+
+            with mock.patch("json.load", mock.MagicMock(side_effect=json.decoder.JSONDecodeError('error',
+                                                                                                 '{"vpn-server-id": '
+                                                                                                 '"test"}',
+                                                                                                 1))):
+                self.assertFalse(self.obj.do_commission(payload), 'Supposed to handle json load exception')
+
     def test_needs_commission(self):
         # if commission file is not found, return the same arg as input
         current_conf = {'foo': 'bar'}
@@ -247,6 +253,12 @@ class InfrastructureTestCase(unittest.TestCase):
                 self.assertEqual(self.obj.needs_commission(current_conf), new_conf,
                                  'Failed to calculate difference between new commissioning payload and old')
 
+        with mock.patch.object(Path, 'open', mocked_open) and mock.patch.object(pathlib.PosixPath, 'unlink'):
+            with mock.patch("json.load", mock.MagicMock(side_effect=json.decoder.JSONDecodeError('error', '{"old": '
+                                                                                                          '"var_new"}', 1))):
+                self.assertEqual(self.obj.needs_commission(current_conf), current_conf,
+                                 'Failed to take care of json decoder error')
+
     def test_get_nuvlaedge_capabilities(self):
         commission_payload = {}
         # monkeypatch the check for capability
@@ -265,7 +277,6 @@ class InfrastructureTestCase(unittest.TestCase):
 
     @mock.patch('requests.get')
     def test_compute_api_is_running(self, mock_get):
-
         # only works for non-k8s installations
         self.obj.coe_client.ORCHESTRATOR = 'kubernetes'
         self.assertFalse(self.obj.compute_api_is_running(),
@@ -303,6 +314,13 @@ class InfrastructureTestCase(unittest.TestCase):
             self.assertEqual(self.obj.get_local_nuvlaedge_status(), nb_status,
                              'Unable to get NuvlaEdge Status from local file')
 
+        with mock.patch(self.agent_infrastructure_open) and mock.patch.object(pathlib.PosixPath, 'unlink'):
+            with mock.patch('json.load') as mock_load:
+                mock_load.side_effect = json.decoder.JSONDecodeError('error', '{"foo": "bar"}', 1)
+                self.assertEqual(self.obj.get_local_nuvlaedge_status(), {},
+                                 'Unable to handle json decoder error')
+
+
     @mock.patch.object(Infrastructure, 'get_local_nuvlaedge_status')
     def test_get_node_role_from_status(self, mock_get_status):
         mock_get_status.return_value = {}
@@ -331,6 +349,11 @@ class InfrastructureTestCase(unittest.TestCase):
             with mock.patch("json.load", mock.MagicMock(side_effect=[commission_content])):
                 self.assertEqual(self.obj.read_commissioning_file(), commission_content,
                                  'Failed to read commissioning file')
+
+        with mock.patch.object(Path, 'open', mocked_open) and mock.patch.object(pathlib.PosixPath, 'unlink'):
+            with mock.patch("json.load", mock.MagicMock(side_effect=json.decoder.JSONDecodeError('error', '{"foo", "bar"}', 1))):
+                self.assertEqual(self.obj.read_commissioning_file(), {},
+                                 'Failed to handle json load failure')
 
     @mock.patch.object(Infrastructure, 'get_local_nuvlaedge_status')
     def test_needs_cluster_commission(self, mock_get_status):
@@ -443,7 +466,7 @@ class InfrastructureTestCase(unittest.TestCase):
         self.obj.commissioning_attr_has_changed(current, old, 'str-attr', payload)
         self.assertEqual(payload, {'str-attr': 'value2'},
                          'Failed to add modified string attribute to commission payload')
-        payload = {}    # reset payload for new test
+        payload = {}  # reset payload for new test
         self.obj.commissioning_attr_has_changed(current, old, 'list-attr', payload)
         self.assertEqual(payload, {'list-attr': ['3-value']},
                          'Failed to set modified list attribute in commission payload')
@@ -459,10 +482,24 @@ class InfrastructureTestCase(unittest.TestCase):
 
         with mock.patch.object(Path, 'open', mocked_open):
             with mock.patch("json.load", mock.MagicMock(side_effect=[{"str-attr": "older-value"}])):
-                self.obj.commissioning_attr_has_changed(current, old, 'str-attr', payload, compare_with_nb_resource=True)
+                self.obj.commissioning_attr_has_changed(current, old, 'str-attr', payload,
+                                                        compare_with_nb_resource=True)
                 # old has been updated
                 self.assertEqual(old['str-attr'], 'older-value',
                                  'Failed to update old commission payload based on attr value from NuvlaEdge context')
+                # payload still match with current, since it's old who was updated based on NB context
+                self.assertEqual(payload, {'str-attr': 'value'},
+                                 'Failed to add modified string attribute to commission payload, from NuvlaEdge context')
+
+        with mock.patch.object(Path, 'open', mocked_open) and mock.patch.object(pathlib.PosixPath, 'unlink'):
+            with mock.patch("json.load", mock.MagicMock(side_effect=json.decoder.JSONDecodeError('error', '{"foo": '
+                                                                                                          '"bar"}',
+                                                                                                 1))):
+                self.obj.commissioning_attr_has_changed(current, old, 'str-attr', payload,
+                                                        compare_with_nb_resource=True)
+                # old has not been updated
+                self.assertEqual(old['str-attr'], 'older-value',
+                                 'Old commission payload is updated based on attr value from NuvlaEdge context')
                 # payload still match with current, since it's old who was updated based on NB context
                 self.assertEqual(payload, {'str-attr': 'value'},
                                  'Failed to add modified string attribute to commission payload, from NuvlaEdge context')
@@ -481,7 +518,6 @@ class InfrastructureTestCase(unittest.TestCase):
                             mock_get_comp_endpoint, mock_attr_changed,
                             mock_swarm_token_diff, mock_get_capabilities, mock_needs_partial_decommission,
                             mock_do_commission, mock_write_file, mock_get_tls_keys):
-
         swarm_endpoint = 'https://127.1.1.1:5000'
 
         self.obj.coe_client.get_join_tokens.return_value = ()
@@ -520,8 +556,8 @@ class InfrastructureTestCase(unittest.TestCase):
 
         # if compute-api is running, the IS is defined
         self.obj.coe_client.compute_api_is_running.return_value = False
-        self.obj.coe_client.get_join_tokens.return_value = ('manager-token', 'worker-token') # ignored in this test
-        mock_do_commission.reset_mock()     # reset counters
+        self.obj.coe_client.get_join_tokens.return_value = ('manager-token', 'worker-token')  # ignored in this test
+        mock_do_commission.reset_mock()  # reset counters
 
         self.obj.try_commission()
 
@@ -659,7 +695,7 @@ class InfrastructureTestCase(unittest.TestCase):
         mock_commission_vpn.assert_called_once()
 
         # if credential is fetched from Nuvla
-        mock_api.reset_mock(side_effect=True)   # reset counters
+        mock_api.reset_mock(side_effect=True)  # reset counters
         mock_getsize.reset_mock()
         # GET is called
         # if local files exist, then simply validate
@@ -670,8 +706,6 @@ class InfrastructureTestCase(unittest.TestCase):
 
         self.assertEqual(mock_api.call_count, 2,
                          'There should have been one SEARCH and one GET requests to Nuvla, for the VPN credential')
-
-
 
         # but if local file does not match/exist, then fixing is needed
         mock_getsize.return_value = 0
@@ -758,7 +792,7 @@ class InfrastructureTestCase(unittest.TestCase):
 
         # even if there's an exception in the commissioning cycle, it just
         # restarts the cycle again
-        mock_commission.reset_mock()    # reset counters
+        mock_commission.reset_mock()  # reset counters
         mock_sleep.reset_mock()
         mock_commission.side_effect = RuntimeError
         self.assertRaises(InterruptedError, self.obj.run)

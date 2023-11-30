@@ -122,6 +122,7 @@ class TestSecurity(TestCase):
             # mock_open.reads.return_value = None
             self.assertIsNone(self.security.authenticate())
             mock_loads.side_effect = json.decoder.JSONDecodeError
+            mock_exists.return_value = True
             self.assertIsNone(self.security.authenticate())
 
         mock_exists.return_value = True

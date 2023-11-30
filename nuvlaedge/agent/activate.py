@@ -6,6 +6,8 @@ It takes care of activating a new NuvlaEdge
 """
 import json
 import logging
+import time
+
 import requests
 
 from nuvla.api.models import CimiResource
@@ -82,8 +84,17 @@ class Activate(NuvlaEdgeCommon):
                                        .format(self.nuvla_endpoint, conn_err))
             raise
 
+        timeout = 2 #seconds
+        maxtrials = 5
+
+        trials = 0
         # Flags that the activation has been done
-        self.write_json_to_file(FILE_NAMES.ACTIVATION_FLAG, self.user_info)
+        while not self.write_json_to_file(FILE_NAMES.ACTIVATION_FLAG, self.user_info):
+            trials += 1
+            if trials == maxtrials:
+                self.logger.error(f'Could not write user info to {FILE_NAMES.ACTIVATION_FLAG}')
+                FILE_NAMES.ACTIVATION_FLAG.unlink()
+            time.sleep(timeout)
 
         return self.user_info
 

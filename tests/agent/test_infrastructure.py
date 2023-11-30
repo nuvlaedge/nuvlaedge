@@ -572,11 +572,20 @@ class InfrastructureTestCase(unittest.TestCase):
         remote_content = {
             'updated': 'new'
         }
+        mock_commission_vpn.reset_mock()
+        mock_unlink.reset_mock()
         with mock.patch.object(Path, 'open', mocked_open):
             with mock.patch("json.load", mock.MagicMock(side_effect=[remote_content])):
                 self.obj.validate_local_vpn_credential(local_vpn_content)
                 mock_commission_vpn.assert_called_once()
                 mock_unlink.assert_called_once()
+
+        mock_commission_vpn.reset_mock()
+        mock_unlink.reset_mock()
+        with mock.patch.object(Path, 'open', side_effect=FileNotFoundError):
+            self.obj.validate_local_vpn_credential(local_vpn_content)
+            mock_commission_vpn.assert_not_called()
+            mock_unlink.assert_not_called()
 
     @mock.patch.object(Infrastructure, 'write_file')
     @mock.patch.object(Infrastructure, 'commission_vpn')

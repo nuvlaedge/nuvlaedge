@@ -585,18 +585,19 @@ class Infrastructure(NuvlaEdgeCommon):
         :return:
         """
         local_vpn_credential = {}
-        if not path.exists(FILE_NAMES.VPN_CREDENTIAL):
-            self.logger.error(f'{FILE_NAMES.VPN_CREDENTIAL} does not exist')
-            return
 
-        with FILE_NAMES.VPN_CREDENTIAL.open('r') as file:
-            try:
-                local_vpn_credential = json.load(file)
-            except Exception as e:
-                self.logger.error(f'Failed to read vpn credential files ({e}). Recommissioning.')
-                self.commission_vpn()
-                FILE_NAMES.VPN_CREDENTIAL.unlink(True)
-                return
+        try:
+            with FILE_NAMES.VPN_CREDENTIAL.open('r') as file:
+                try:
+                    local_vpn_credential = json.load(file)
+                except Exception as e:
+                    self.logger.error(f'Failed to read vpn credential files ({e}). Recommissioning.')
+                    self.commission_vpn()
+                    FILE_NAMES.VPN_CREDENTIAL.unlink(True)
+                    return
+        except Exception as ex:
+            self.logger.error(f'Unable to open {FILE_NAMES.VPN_CREDENTIAL}: {ex}')
+            return
 
         if online_vpn_credential['updated'] != local_vpn_credential['updated']:
             self.logger.warning(f"VPN credential has been modified in Nuvla at "

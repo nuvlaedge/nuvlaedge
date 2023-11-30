@@ -362,9 +362,10 @@ class NuvlaEdgeCommon:
         :return: True if file was written with success. False otherwise
         """
         try:
-            util.atomic_write(file_path, json.dumps(content), mode=mode)
+            if not util.atomic_write(file_path, json.dumps(content), mode=mode):
+                return False
         except Exception as e:
-            self.logger.exception(f'Exception in write_json_to_file: {e}')
+            self.logger.error(f'Exception in write_json_to_file: {e}')
             return False
 
         return True

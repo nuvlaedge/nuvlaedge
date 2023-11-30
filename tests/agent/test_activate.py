@@ -11,6 +11,7 @@ from tests.agent.utils.fake import Fake, FakeNuvlaApi
 from nuvla.api.models import CimiResource
 
 from nuvlaedge.agent.activate import Activate
+from nuvlaedge.agent.common import util
 from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
@@ -98,28 +99,34 @@ class ActivateTestCase(unittest.TestCase):
         mock_shell_exec.assert_called_once()
         mock_write_file.assert_called_once_with(FILE_NAMES.ACTIVATION_FLAG, json.loads(self.api_key_content))
 
+        # if there is some issue with the writing to file
+        mock_api.reset_mock()
+        mock_api.return_value = self.set_nuvla_api(json.loads(self.api_key_content))
+        mock_write_file.return_value = False
+        mock_write_file.assert_called_with(FILE_NAMES.ACTIVATION_FLAG, json.loads(self.api_key_content))
+
     @mock.patch.object(Activate, 'write_json_to_file')
     @mock.patch.object(Activate, 'read_json_file')
-    def test_create_nb_document(self, mock_read_json_file, mock_write_to_file):
+    def test_create_nb_document(self, mock_read_json_file, mock_write_json_file):
         # if context file does not exist, the old NB resource should be empty
         mock_read_json_file.side_effect = FileNotFoundError
-        mock_write_to_file.return_value = None
+        mock_write_json_file.return_value = None
         self.assertEqual(self.obj.read_ne_document_file(), {},
                          'Returned an old NuvlaEdge resource when there should not be one')
         mock_read_json_file.assert_called_once()
-        mock_write_to_file.assert_not_called()
+        mock_write_json_file.assert_not_called()
 
         # if there is a context file already, its content will be returned as the old NuvlaEdge resource context
         old_nuvlaedge_context = {'id': 'nuvlabox/fake-old'}
         mock_read_json_file.reset_mock(side_effect=True)
-        mock_write_to_file.reset_mock()
+        mock_write_json_file.reset_mock()
         mock_read_json_file.return_value = old_nuvlaedge_context
         self.assertEqual(self.obj.read_ne_document_file(), old_nuvlaedge_context,
                          'Unable to get old NuvlaEdge context when creating new NB document')
         self.obj.nuvlaedge_resource = CimiResource(old_nuvlaedge_context)
+        mock_write_json_file.return_value = True
         self.assertEqual(self.obj.write_ne_document_file(), True,
                          'Unable to write NuvlaEdge context when creating new NB document')
-        mock_write_to_file.assert_called_once()
 
         # exception during read
         mock_read_json_file.side_effect = [FileNotFoundError, OSError]
@@ -129,7 +136,7 @@ class ActivateTestCase(unittest.TestCase):
             self.assertEqual({}, self.obj.read_ne_document_file())
 
         # exception during write
-        mock_write_to_file.side_effect = OSError
+        mock_write_json_file.return_value = False
         with self.assertLogs(level='ERROR'):
             self.assertFalse(self.obj.write_ne_document_file())
 

@@ -52,7 +52,10 @@ class Activate(NuvlaEdgeCommon):
             self.activate_logger.warning("{} already exists. Re-activation is not possible!".format(FILE_NAMES.ACTIVATION_FLAG))
             self.activate_logger.info("NuvlaEdge credential: {}".format(self.user_info["api-key"]))
             return False, self.user_info
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
+        except json.decoder.JSONDecodeError as ex:
+            self.activate_logger.error(f'JSON Read Error for {FILE_NAMES.ACTIVATION_FLAG}')
+            raise
+        except FileNotFoundError:
             # file doesn't exist yet,
             # But maybe the API was provided via env?
             api_key, api_secret = self.get_api_keys()

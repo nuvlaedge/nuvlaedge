@@ -93,7 +93,7 @@ class Activate(NuvlaEdgeCommon):
         """
         self.activate_logger.debug(f'Writing nuvlaedge document to file {FILE_NAMES.CONTEXT}')
         if not self.write_json_to_file(FILE_NAMES.CONTEXT, self.nuvlaedge_resource.data):
-            self.activate_logger.error(f'Failed to write nuvlaedge document to file {FILE_NAMES.CONTEXT}: {e}')
+            self.activate_logger.error(f'Failed to write nuvlaedge document to file {FILE_NAMES.CONTEXT}')
             return False
         return True
 

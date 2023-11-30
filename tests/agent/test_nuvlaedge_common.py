@@ -17,7 +17,6 @@ from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
 class NuvlaEdgeCommonTestCase(unittest.TestCase):
-
     agent_nuvlaedge_common_open = 'nuvlaedge.agent.common.nuvlaedge_common.open'
     atomic_write = 'nuvlaedge.agent.common.util.atomic_write'
     get_ne_id_api = 'nuvlaedge.agent.common.nuvlaedge_common.NuvlaEdgeCommon._get_nuvlaedge_id_from_api_session'
@@ -30,7 +29,6 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     @mock.patch('nuvlaedge.agent.common.nuvlaedge_common.NuvlaEdgeCommon.set_installation_home')
     def setUp(self, mock_set_install_home, mock_set_nuvla_endpoint, mock_save_nuvla_conf,
               mock_set_nuvlaedge_id, mock_set_vpn_config_extra, mock_os_isdir) -> None:
-
         self.installation_home = '/home/fake'
         mock_set_install_home.return_value = self.installation_home
         mock_set_nuvla_endpoint.return_value = ('fake.nuvla.io', True)
@@ -68,7 +66,8 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open:
             mock_open.side_effect = [FileNotFoundError, mock.MagicMock()]
             os.environ.setdefault('VPN_CONFIG_EXTRA', r'--allow-pull-fqdn\n--client-nat snat network netmask alias')
-            self.assertEqual(self.obj.set_vpn_config_extra(), '--allow-pull-fqdn\n--client-nat snat network netmask alias',
+            self.assertEqual(self.obj.set_vpn_config_extra(),
+                             '--allow-pull-fqdn\n--client-nat snat network netmask alias',
                              'Failed to read extra VPN config from environment variable')
 
     @mock.patch('os.path.exists')
@@ -83,7 +82,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
         # if it exists, it reads the value from the file (with strip())
         mock_exists.return_value = True
         file_value = '/home/fake3'
-        with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data=file_value+'\n')):
+        with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data=file_value + '\n')):
             self.assertEqual(self.obj.set_installation_home('fake-file'), file_value,
                              'Unable to get installation home path from file')
 
@@ -130,7 +129,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     @mock.patch('os.path.exists')
     def test_save_nuvla_configuration(self, mock_exists):
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write):
             # if file exists, don't do anything
             mock_exists.return_value = True
             self.assertIsNone(self.obj.save_nuvla_configuration('', ''),
@@ -246,7 +245,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     @mock.patch('json.dumps')
     def test_write_json_to_file(self, mock_json_dumps):
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write) as mock_atomic_write:
+                mock.patch(self.atomic_write) as mock_atomic_write:
             # if there's an open error, return False
             mock_open.side_effect = FileNotFoundError
             mock_atomic_write.side_effect = FileNotFoundError
@@ -260,7 +259,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
 
         # if all goes well, return True
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write):
             mock_open.return_value.write.return_value = None
             mock_json_dumps.reset_mock(side_effect=True)
             self.assertTrue(self.obj.write_json_to_file('path', {}),
@@ -315,7 +314,7 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
     def test_set_local_operational_status(self):
         # should just write and return None
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write):
             mock_open.return_value.write.return_value = None
             self.assertIsNone(self.obj.set_local_operational_status(''),
                               'Setting the operational status should return nothing')
@@ -340,10 +339,11 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             self.assertEqual(self.obj.get_vpn_ip(), '1.1.1.1',
                              'Failed to get VPN IP')
 
-
-    def test_write_vpn_conf(self):
+    @mock.patch.object(Path, 'exists')
+    def test_write_vpn_conf(self, mock_exists):
+        mock_exists.return_value = True
         with mock.patch(self.agent_nuvlaedge_common_open) as mock_open, \
-             mock.patch(self.atomic_write):
+                mock.patch(self.atomic_write):
             mock_open.return_value.write.return_value = None
             # if vpn fiels are not dict, it should raise a TypeError
             self.assertRaises(TypeError, self.obj.write_vpn_conf, "wrong-type")
@@ -364,5 +364,3 @@ class NuvlaEdgeCommonTestCase(unittest.TestCase):
             }
             self.assertIsNone(self.obj.write_vpn_conf(vpn_values),
                               'Failed to write VPN conf')
-
-

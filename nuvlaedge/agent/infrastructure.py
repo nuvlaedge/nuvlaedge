@@ -585,7 +585,7 @@ class Infrastructure(NuvlaEdgeCommon):
         :return:
         """
         local_vpn_credential = {}
-        if not os.path.exists(FILE_NAMES.VPN_CREDENTIAL):
+        if not path.exists(FILE_NAMES.VPN_CREDENTIAL):
             self.logger.error(f'{FILE_NAMES.VPN_CREDENTIAL} does not exist')
             return
 

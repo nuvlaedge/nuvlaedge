@@ -253,11 +253,12 @@ class InfrastructureTestCase(unittest.TestCase):
                 self.assertEqual(self.obj.needs_commission(current_conf), new_conf,
                                  'Failed to calculate difference between new commissioning payload and old')
 
-        with mock.patch.object(Path, 'open', mocked_open) and mock.patch.object(pathlib.PosixPath, 'unlink'):
-            with mock.patch("json.load", mock.MagicMock(side_effect=json.decoder.JSONDecodeError('error', '{"old": '
+        with mock.patch.object(pathlib.PosixPath, 'open'):
+            with mock.patch.object(pathlib.PosixPath, 'unlink'):
+                with mock.patch("json.load", mock.MagicMock(side_effect=json.decoder.JSONDecodeError('error', '{"old": '
                                                                                                           '"var_new"}', 1))):
-                self.assertEqual(self.obj.needs_commission(current_conf), current_conf,
-                                 'Failed to take care of json decoder error')
+                    self.assertEqual(self.obj.needs_commission(current_conf), current_conf,
+                                     'Failed to take care of json decoder error')
 
     def test_get_nuvlaedge_capabilities(self):
         commission_payload = {}

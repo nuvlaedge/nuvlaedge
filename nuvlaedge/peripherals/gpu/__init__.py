@@ -62,10 +62,13 @@ def read_json(json_path):
     """
     JSON reader.
     """
-
-    with open(json_path) as f:
-        dic = json.load(f)
-        return dic
+    dic = {}
+    try:
+        with open(json_path) as f:
+            dic = json.load(f)
+    except (FileNotFoundError, json.decoder.JSONDecodeError):
+        logger.warning(f'Unable to read file {json_path}')
+    return dic
 
 
 def get_device_type():
@@ -267,7 +270,8 @@ def search_runtime(runtime_path, host_files_path):
 
         if 'daemon.json' in i:
             dic = read_json(f'{runtime_path}/{i}')
-
+            if not dic:
+                continue
             try:
                 if 'nvidia' in dic['runtimes'].keys():
                     a = read_runtime_files(host_files_path)

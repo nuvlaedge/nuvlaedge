@@ -68,11 +68,16 @@ class FileBroker(NuvlaEdgeBroker):
                 message_time, sender = self.decode_message_from_file_name(message.name)
 
                 with message.open(mode='r') as file:
-                    messages.append(NuvlaEdgeMessage(
-                        data=json.load(file),
-                        sender=sender,
-                        time=message_time
-                    ))
+                    try:
+                        data = json.load(file)
+                        messages.append(NuvlaEdgeMessage(
+                            data=data,
+                            sender=sender,
+                            time=message_time
+                        ))
+                    except Exception as ex:
+                        self.logger.warning(f'Could not load json file : {ex}')
+
                 message.unlink()
 
             return messages

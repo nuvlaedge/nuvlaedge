@@ -53,7 +53,7 @@ class Job(NuvlaEdgeCommon):
         try:
             with open(FILE_NAMES.ACTIVATION_FLAG) as a:
                 user_info = json.loads(a.read())
-        except FileNotFoundError:
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
             logging.error(f'Cannot find NuvlaEdge API key for job {self.job_id}')
             return
 

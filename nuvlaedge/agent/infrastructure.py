@@ -126,8 +126,12 @@ class Infrastructure(NuvlaEdgeCommon):
 
         if "vpn-csr" in payload:
             # get the respective VPN credential that was just created
-            with FILE_NAMES.CONTEXT.open('r') as file:
-                vpn_server_id = json.load(file).get("vpn-server-id")
+            try:
+                with FILE_NAMES.CONTEXT.open('r') as file:
+                    vpn_server_id = json.load(file).get("vpn-server-id")
+            except FileNotFoundError:
+                self.logger.exception(f'{FILE_NAMES.CONTEXT} Not Found')
+                return False
 
             searcher_filter = self.build_vpn_credential_search_filter(vpn_server_id)
 
@@ -200,8 +204,11 @@ class Infrastructure(NuvlaEdgeCommon):
                         diff_conf[key] = value
 
                     return diff_conf
-        except FileNotFoundError:
+        except (FileNotFoundError, json.decoder.JSONDecodeError) as ex:
             self.logger.info("Auto-commissioning the NuvlaEdge for the first time..")
+            if isinstance(ex, json.decoder.JSONDecodeError):
+                self.logger.warning(f'Invalid JSON file {FILE_NAMES.COMMISSIONING_FILE}')
+                FILE_NAMES.COMMISSIONING_FILE.unlink()
             return current_conf
 
     def commission_vpn(self):
@@ -261,7 +268,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         try:
             wait = 0
-            while not os.path.exists(self.vpn_csr_file) and \
+            while not os.path.exists(self.vpn_csr_file) or \
                     not os.path.exists(self.vpn_key_file):
                 if wait > 25:
                     # appr 5 sec
@@ -340,7 +347,10 @@ class Infrastructure(NuvlaEdgeCommon):
         try:
             with open(FILE_NAMES.NUVLAEDGE_STATUS_FILE) as ns:
                 return json.load(ns)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.decoder.JSONDecodeError) as ex:
+            if isinstance(ex, json.decoder.JSONDecodeError):
+                logging.getLogger(__name__).warning(f'Invalid JSON file {FILE_NAMES.NUVLAEDGE_STATUS_FILE}')
+                FILE_NAMES.NUVLAEDGE_STATUS_FILE.unlink()
             return {}
 
     def get_node_role_from_status(self) -> str or None:
@@ -363,7 +373,9 @@ class Infrastructure(NuvlaEdgeCommon):
         try:
             with FILE_NAMES.COMMISSIONING_FILE.open('r') as file:
                 commission_payload = json.load(file)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.decoder.JSONDecodeError) as ex:
+            if isinstance(ex, json.decoder.JSONDecodeError):
+                FILE_NAMES.COMMISSIONING_FILE.unlink()
             commission_payload = {}
 
         return commission_payload
@@ -465,12 +477,17 @@ class Infrastructure(NuvlaEdgeCommon):
         """
 
         if compare_with_nb_resource:
-            with FILE_NAMES.CONTEXT.open('r') as file:
-                # overwrite the old commissioning value with the one from the NB resource
-                # (source of truth)
-                old_value = json.load(file).get(attr_name)
-                if old_value:
-                    old[attr_name] = old_value
+            try:
+                with FILE_NAMES.CONTEXT.open('r') as file:
+                    # overwrite the old commissioning value with the one from the NB resource
+                    # (source of truth)
+                    old_value = json.load(file).get(attr_name)
+                    if old_value:
+                        old[attr_name] = old_value
+            except (FileNotFoundError, json.decoder.JSONDecodeError) as ex:
+                if isinstance(ex, json.decoder.JSONDecodeError):
+                    logging.getLogger(__name__).error(f'Invalid JSON file {FILE_NAMES.CONTEXT}. Deleting it')
+                    FILE_NAMES.CONTEXT.unlink()
 
         if isinstance(current[attr_name], str):
             if current[attr_name] != old.get(attr_name):
@@ -568,6 +585,9 @@ class Infrastructure(NuvlaEdgeCommon):
         :return:
         """
         local_vpn_credential = {}
+        if not os.path.exists(FILE_NAMES.VPN_CREDENTIAL):
+            self.logger.error(f'{FILE_NAMES.VPN_CREDENTIAL} does not exist')
+            return
 
         with FILE_NAMES.VPN_CREDENTIAL.open('r') as file:
             try:
@@ -714,9 +734,14 @@ class Infrastructure(NuvlaEdgeCommon):
 
                 self.push_event(event)
                 return
-
-            with FILE_NAMES.CONTEXT.open('r') as file:
-                nb_owner = json.load(file).get('owner')
+            try:
+                with FILE_NAMES.CONTEXT.open('r') as file:
+                    nb_owner = json.load(file).get('owner')
+            except (FileNotFoundError, json.decoder.JSONDecodeError) as ex:
+                if isinstance(ex, json.decoder.JSONDecodeError):
+                    self.logger.warning(f'Invalid JSON file {FILE_NAMES.CONTEXT}')
+                    FILE_NAMES.CONTEXT.unlink()
+                nb_owner = None
 
             event_owners = [nb_owner, self.nuvlaedge_id] if nb_owner \
                 else [self.nuvlaedge_id]

@@ -97,7 +97,11 @@ class Security:
 
         if os.path.exists(cte.APIKEY_FILE):
             with open(cte.APIKEY_FILE, encoding='UTF-8') as api_file:
-                apikey = json.loads(api_file.read())
+                try:
+                    apikey = json.loads(api_file.read())
+                except Exception as ex:
+                    logger.warning(f'Unable to read {cte.APIKEY_FILE} : {ex}')
+                    return None
         else:
             return None
 

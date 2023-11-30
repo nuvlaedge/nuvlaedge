@@ -129,7 +129,7 @@ class PowerMonitor(Monitor):
                                     metric_name=metric_combo[1],
                                     energy_consumption=float(metric_f.read().split()[0]),
                                     unit=metric_combo[2])
-                        except (IOError, IndexError, ValueError):
+                        except (FileNotFoundError, IOError, IndexError, ValueError):
                             return
 
     def update_data(self):

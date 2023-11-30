@@ -4,7 +4,7 @@
 
 It takes care of activating a new NuvlaEdge
 """
-
+import json
 import logging
 import requests
 
@@ -50,7 +50,7 @@ class Activate(NuvlaEdgeCommon):
             self.activate_logger.warning("{} already exists. Re-activation is not possible!".format(FILE_NAMES.ACTIVATION_FLAG))
             self.activate_logger.info("NuvlaEdge credential: {}".format(self.user_info["api-key"]))
             return False, self.user_info
-        except FileNotFoundError:
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
             # file doesn't exist yet,
             # But maybe the API was provided via env?
             api_key, api_secret = self.get_api_keys()
@@ -92,9 +92,7 @@ class Activate(NuvlaEdgeCommon):
         Write contextualization file with NE resource content
         """
         self.activate_logger.debug(f'Writing nuvlaedge document to file {FILE_NAMES.CONTEXT}')
-        try:
-            self.write_json_to_file(FILE_NAMES.CONTEXT, self.nuvlaedge_resource.data)
-        except Exception as e:
+        if not self.write_json_to_file(FILE_NAMES.CONTEXT, self.nuvlaedge_resource.data):
             self.activate_logger.error(f'Failed to write nuvlaedge document to file {FILE_NAMES.CONTEXT}: {e}')
             return False
         return True

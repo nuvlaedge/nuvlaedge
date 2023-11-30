@@ -56,19 +56,19 @@ class TemperatureMonitor(Monitor):
         :param temp_path: path to temperature_file
         :return: (metric_basename, temperature_value)
         """
-        with open(zone_path, encoding='UTF-8') as zone_file:
-            try:
+        try:
+            with open(zone_path, encoding='UTF-8') as zone_file:
                 metric_name = zone_file.read().split()[0]
-            except IndexError:
-                self.logger.warning(f'Cannot read thermal zone at {zone_path}')
-                metric_name = None
+        except (FileNotFoundError, IndexError):
+            self.logger.warning(f'Cannot read thermal zone at {zone_path}')
+            metric_name = None
 
-        with open(temp_path, encoding='UTF-8') as temp_file:
-            try:
+        try:
+            with open(temp_path, encoding='UTF-8') as temp_file:
                 temp_value = temp_file.read().split()[0]
-            except IndexError:
-                self.logger.warning(f'Cannot read temperature at {temp_path}')
-                temp_value = None
+        except (FileNotFoundError, IndexError):
+            self.logger.warning(f'Cannot read temperature at {temp_path}')
+            temp_value = None
 
         return metric_name, temp_value
 

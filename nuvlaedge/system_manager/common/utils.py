@@ -30,8 +30,11 @@ log = logging.getLogger(__name__)
 
 def set_operational_status(status: str, notes: list = []):
     log.debug(f'Write operational status "{status}" to file "{operational_status_file}"')
-    with open(operational_status_file, 'w') as s:
-        s.write(status)
+    try:
+        with open(operational_status_file, 'w') as s:
+            s.write(status)
+    except Exception as e:
+        log.warning(f'Failed to write status {status} in {operational_status_file}: {e}')
 
     try:
         notes_str = '\n'.join(notes)

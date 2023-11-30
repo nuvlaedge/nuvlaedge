@@ -101,6 +101,10 @@ def atomic_write(file, data, **kwargs):
     :param data: data to write to the file
     :param kwargs: kwargs passed to tempfile.NamedTemporaryFile
     """
+    if not os.path.exists(file):
+        logger.warning(f'{file} does not exist !!')
+        return None
+
     with atomic_writer(file, **kwargs) as f:
         return f.write(data)
 

@@ -378,7 +378,8 @@ class NuvlaEdgeCommon:
         :return: content of the file, as a dict
         """
         with open(file_path) as f:
-            return json.load(f)
+            result = json.load(f)
+        return result
 
     def get_operational_status(self):
         """ Retrieves the operational status of the NuvlaEdge from the .status file """
@@ -417,7 +418,10 @@ class NuvlaEdgeCommon:
 
         :param operational_status: status of the NuvlaEdge
         """
-        util.atomic_write(FILE_NAMES.STATUS_FILE, operational_status)
+        if FILE_NAMES.STATUS_FILE.exists():
+            util.atomic_write(FILE_NAMES.STATUS_FILE, operational_status)
+        else:
+            logging.warning(f'File {FILE_NAMES.STATUS_FILE} does not exist')
 
     @staticmethod
     def get_vpn_ip():
@@ -484,4 +488,7 @@ ${vpn_endpoints_mapped}
 ${vpn_extra_config}
 """)
 
-        util.atomic_write(FILE_NAMES.VPN_CLIENT_CONF_FILE, tpl.substitute(values))
+        if FILE_NAMES.VPN_CLIENT_CONF_FILE.exists():
+            util.atomic_write(FILE_NAMES.VPN_CLIENT_CONF_FILE, tpl.substitute(values))
+        else:
+            logging.warning(f'File {FILE_NAMES.VPN_CLIENT_CONF_FILE} does not exist')

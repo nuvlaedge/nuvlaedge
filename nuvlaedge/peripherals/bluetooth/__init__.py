@@ -343,7 +343,7 @@ def main():
 
     logger.info('Starting bluetooth manager')
 
-    bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True)
+    bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True, scanning_interval=10)
 
     bluetooth_peripheral.run(bluetooth_manager)
 

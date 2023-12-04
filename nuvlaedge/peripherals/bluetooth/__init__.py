@@ -318,7 +318,8 @@ async def bluetooth_manager():
     except Exception as e:
         logger.error(f"Failed to discover BLE devices: {e}")
         error = str(e)
-        if error.__contains__('DBus.Error.AccessDenied'):
+        if error.__contains__('DBus.Error'):
+            logger.debug("Restarting bluetooth application because of DBus Error")
             os.execv(sys.executable, ['python'] + sys.argv)
         logger.debug("Exception", exc_info=e)
 
@@ -348,7 +349,7 @@ def main():
 
     logger.info('Starting bluetooth manager')
 
-    bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True, scanning_interval=10)
+    bluetooth_peripheral: Peripheral = Peripheral(name='bluetooth', async_mode=True)
 
     bluetooth_peripheral.run(bluetooth_manager)
 

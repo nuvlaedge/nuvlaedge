@@ -319,7 +319,7 @@ async def bluetooth_manager():
         logger.error(f"Failed to discover BLE devices: {e}")
         error = str(e)
         if error.__contains__('DBus.Error.AccessDenied'):
-            os.execv(sys.argv[0], sys.argv)
+            os.execv(sys.executable, ['python'] + sys.argv)
         logger.debug("Exception", exc_info=e)
 
     if bluetooth_devices or ble_devices:

@@ -8,6 +8,8 @@ This service provides bluetooth device discovery.
 """
 
 import logging
+import sys
+import os
 
 from typing import List
 
@@ -315,6 +317,9 @@ async def bluetooth_manager():
         logger.debug(f'BLE devices: {ble_devices}')
     except Exception as e:
         logger.error(f"Failed to discover BLE devices: {e}")
+        error = str(e)
+        if error.__contains__('DBus.Error.AccessDenied'):
+            os.execv(sys.argv[0], sys.argv)
         logger.debug("Exception", exc_info=e)
 
     if bluetooth_devices or ble_devices:

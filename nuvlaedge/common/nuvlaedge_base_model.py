@@ -1,4 +1,8 @@
-from pydantic import BaseModel, ConfigDict
+import pprint
+from typing import ClassVar
+
+from pydantic import BaseModel, ConfigDict, Field
+from threading import Lock
 
 
 def underscore_to_hyphen(field_name: str) -> str:
@@ -21,5 +25,19 @@ class NuvlaEdgeBaseModel(BaseModel):
     model_config = ConfigDict(validate_assignment=True,
                               populate_by_name=True,
                               use_enum_values=True,
+                              arbitrary_types_allowed=True,
                               alias_generator=underscore_to_hyphen)
-                            # exclude_none = True
+
+
+class NuvlaEdgeStaticModel(NuvlaEdgeBaseModel):
+    update_lock: ClassVar[Lock] = Lock()
+
+    def update(self, data: dict[str, any] | BaseModel):
+        if isinstance(data, BaseModel):
+            data = data.model_dump(exclude_none=True, by_alias=True)
+
+        for k, v in data.items():
+            k = k.replace('-', '_')
+            if hasattr(self, k):
+                with self.update_lock:
+                    self.__setattr__(k, v)

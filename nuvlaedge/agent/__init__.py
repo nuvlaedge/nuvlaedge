@@ -9,7 +9,8 @@ import time
 
 from threading import Event
 
-from nuvlaedge.agent.agent import Agent, Activate, Infrastructure
+from nuvlaedge.agent.settings import agent_settings  # Import it first so it captures the initial agent configuration
+from nuvlaedge.agent.agent import Agent
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 from nuvlaedge.common.thread_tracer import signal_usr1

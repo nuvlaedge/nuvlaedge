@@ -1,5 +1,5 @@
 import logging
-import tomllib
+import toml
 from typing import Callable
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,7 +23,7 @@ class NuvlaEdgeBaseSettings(BaseSettings):
             raise FileNotFoundError(f'File {config_file}')
 
         with config_file.open('r') as f:
-            config_dict = tomllib.loads(f.read())
+            config_dict = toml.loads(f.read())
             return cls.model_validate(config_dict)
 
     @classmethod

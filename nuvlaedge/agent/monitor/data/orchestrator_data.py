@@ -1,6 +1,7 @@
 """
     NuvlaEdge data structure for container stats
 """
+from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.agent.monitor import BaseDataStructure
 
 
@@ -17,25 +18,25 @@ class ContainerStatsData(BaseDataStructure):
     restart_count: int | None
 
 
-class ClusterStatusData(BaseDataStructure):
+class ClusterStatusData(NuvlaEdgeBaseModel):
     """
     Cluster related data structure
     """
     # ID's
-    node_id: str | None
-    cluster_id: str | None
+    node_id: str | None = None
+    cluster_id: str | None = None
 
     # Cluster handling
-    orchestrator: str | None
-    cluster_node_role: str | None
-    cluster_managers: list | None
-    cluster_join_address: str | None
-    cluster_nodes: list | None
-    cluster_node_labels: list[dict] | None
+    orchestrator: str | None = None
+    cluster_node_role: str | None = None
+    cluster_managers: list | None = None
+    cluster_join_address: str | None = None
+    cluster_nodes: list | None = None
+    cluster_node_labels: list[dict] | None = None
 
 
 class DeploymentData(BaseDataStructure):
-    """ Data structure to gather the container stats together"""
+    """ Data structure to gather the container stats together """
     # Container information
     containers: dict[str, ContainerStatsData] | None
 

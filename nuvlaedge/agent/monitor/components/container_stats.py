@@ -5,7 +5,7 @@ from subprocess import CompletedProcess
 
 from docker import errors as docker_err
 
-from nuvlaedge.agent.common import nuvlaedge_common
+from nuvlaedge.agent.common import _nuvlaedge_common
 from nuvlaedge.agent.monitor.data.orchestrator_data import (DeploymentData, ContainerStatsData,
                                                   ClusterStatusData)
 from nuvlaedge.agent.monitor import Monitor

@@ -15,6 +15,9 @@ class State(UppercaseStrEnum):
     DECOMMISSIONED = auto()
     DECOMMISSIONING = auto()
 
+    # Used by NuvlaEdge to identify errors
+    UNKNOWN = auto()
+
 
 class NuvlaEdgeResource(NuvlaResourceBase):
     state:                          Optional[State]

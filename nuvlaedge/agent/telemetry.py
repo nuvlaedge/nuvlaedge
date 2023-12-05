@@ -17,76 +17,33 @@ import time
 
 import psutil
 import paho.mqtt.client as mqtt
-from nuvlaedge.common.constant_files import FILE_NAMES
 
-from nuvlaedge.agent.common import util
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.monitor.components import get_monitor, active_monitors
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
+from nuvlaedge.common import utils
+from nuvlaedge.common.constant_files import FILE_NAMES
 
 
-class MonitoredDict(dict):
+class Telemetry:
     """
-    Subclass of dict that use logging.debug to inform when a change is made.
-    """
-
-    def __init__(self, name, *args, **kwargs):
-        self.name = name
-        dict.__init__(self, *args, **kwargs)
-        self._log_caller()
-        logging.debug(f'{self.name} __init__: args: {args}, kwargs: {kwargs}')
-
-    def _log_caller(self):
-        stack = inspect.stack()
-        cls_fn_name = stack[1].function
-        caller = stack[2]
-        cc = caller.code_context
-        code_context = cc[0] if cc and len(cc) >= 1 else ''
-        logging.debug(
-            f'{self.name}.{cls_fn_name} called by {caller.filename}:{caller.lineno} '
-            f'{caller.function} {code_context}')
-
-    def __setitem__(self, key, value):
-        dict.__setitem__(self, key, value)
-        self._log_caller()
-        logging.debug(f'{self.name} set {key} = {value}')
-
-    def __repr__(self):
-        return '%s(%s)' % (type(self).__name__, dict.__repr__(self))
-
-    def update(self, *args, **kwargs):
-        dict.update(self, *args, **kwargs)
-        self._log_caller()
-        logging.debug(f'{self.name} update: args: {args}, kwargs: {kwargs}')
-        logging.debug(f'{self.name} updated: {self}')
-
-
-class Telemetry(NuvlaEdgeCommon):
-    """ The Telemetry class, which includes all methods and
+    The Telemetry class, which includes all methods and
     properties necessary to categorize a NuvlaEdge and send all
     data into the respective NuvlaEdge status at Nuvla
-
-    Attributes:
-        data_volume: path to shared NuvlaEdge data
     """
-
     def __init__(self,
                  coe_client: COEClient,
-                 data_volume: str,
                  nuvlaedge_status_id: str,
                  excluded_monitors: str = ''):
         """
-        Constructs an Telemetry object, with a status placeholder
+        Constructs a Telemetry object, with a status placeholder
         """
-
-        super().__init__(coe_client=coe_client,
-                         shared_data_volume=data_volume)
 
         self.logger: logging.Logger = logging.getLogger('Telemetry')
         self.nb_status_id = nuvlaedge_status_id
+        self.coe_client: COEClient = coe_client
 
         self.status_default = {
             'resources': None,
@@ -367,7 +324,7 @@ class Telemetry(NuvlaEdgeCommon):
 
         # write all status into the shared volume for the other
         # components to re-use if necessary
-        util.atomic_write(FILE_NAMES.NUVLAEDGE_STATUS_FILE,
-                          json.dumps(all_status), encoding='UTF-8')
+        utils.atomic_write(FILE_NAMES.NUVLAEDGE_STATUS_FILE,
+                           json.dumps(all_status), encoding='UTF-8')
 
         self.status.update(new_status)

@@ -35,6 +35,8 @@ class FileConstants(object):
     MODBUS_PERIPHERAL = PERIPHERALS_FOLDER + 'modbus'
     GPU_PERIPHERAL = PERIPHERALS_FOLDER + 'gpu'
 
+    NUVLAEDGE_SESSION = 'nuvlaedge_session.json'
+
     @property
     def root_fs(self):
         return self._root_fs

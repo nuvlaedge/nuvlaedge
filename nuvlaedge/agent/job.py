@@ -11,7 +11,7 @@ import json
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.common.constant_files import FILE_NAMES
 
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator import COEClient
 
 

@@ -75,7 +75,7 @@ class DockerClient(COEClient):
         node_info = self.get_node_info()
         swarm_info = node_info['Swarm']
 
-        if swarm_info.get('ControlAvailable'):
+        if swarm_info.get('ControlAvailable') or self.get_node_id(node_info) in self.get_cluster_managers():
             cluster_id = swarm_info.get('Cluster', {}).get('ID')
             managers = []
             workers = []
@@ -663,7 +663,7 @@ class DockerClient(COEClient):
             infra_service = self.infer_if_additional_coe_exists(fallback_address=fallback_address)
         except Exception as e:
             # this is a non-critical step, so we should never fail because of it
-            logger.warning(f'Exception while trying yo find additional COE: {e}')
+            logger.warning(f'Exception while trying to find additional COE: {e}')
             infra_service = {}
 
         if api_endpoint:

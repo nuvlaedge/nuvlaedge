@@ -19,6 +19,17 @@ from nuvlaedge.common import utils
 from nuvlaedge.agent.orchestrator import COEClient
 
 
+def get_vpn_ip():
+    """ Discovers the NuvlaEdge VPN IP  """
+
+    if FILE_NAMES.VPN_IP_FILE.exists() and FILE_NAMES.VPN_IP_FILE.stat().st_size != 0:
+        with FILE_NAMES.VPN_IP_FILE.open('r') as vpn_file:
+            return vpn_file.read().splitlines()[0]
+    else:
+        logging.debug("Cannot infer the NuvlaEdge VPN IP!")
+        return None
+
+
 class NuvlaEdgeCommon:
     """
     Common set of methods and variables for the NuvlaEdge agent

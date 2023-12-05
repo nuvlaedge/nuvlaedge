@@ -17,10 +17,12 @@ from os import path
 import docker
 import docker.errors as docker_err
 import requests
+
+from nuvlaedge.common import utils
 from nuvlaedge.common.constant_files import FILE_NAMES
 
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.telemetry import Telemetry
 
@@ -65,7 +67,7 @@ class Infrastructure:
         if is_json:
             content = json.dumps(content)
 
-        util.atomic_write(file, content)
+        utils.atomic_write(file, content)
 
     def swarm_token_diff(self, current_manager_token, current_worker_token):
         """ Checks if the Swarm tokens have changed
@@ -102,7 +104,7 @@ class Infrastructure:
 
         except (FileNotFoundError, IndexError):
             self.logger.debug("Container orchestration API TLS keys have not been set yet!")
-            return []
+            return ()
 
         return client_ca, client_cert, client_key
 
@@ -119,7 +121,7 @@ class Infrastructure:
 
         self.logger.info(f"Commissioning the NuvlaEdge... ({payload})")
         try:
-            self.api()._cimi_post(self.nuvlaedge_id+"/commission", json=payload)
+            self.api()._cimi_post(self.nuvlaedge_id + "/commission", json=payload)
         except Exception as e:
             self.logger.error(f"Could not commission with payload {payload}: {e}")
             return False
@@ -585,7 +587,7 @@ class Infrastructure:
             self.commission_vpn()
             FILE_NAMES.VPN_CREDENTIAL.unlink(True)
 
-        elif not util.file_exists_and_not_empty(FILE_NAMES.VPN_CLIENT_CONF_FILE):
+        elif not utils.file_exists_and_not_empty(FILE_NAMES.VPN_CLIENT_CONF_FILE):
             self.logger.warning("OpenVPN configuration not available. Recommissioning")
 
             # Recommission
@@ -658,7 +660,7 @@ class Infrastructure:
             self.logger.info("VPN server is set but cannot find VPN credential in Nuvla. "
                              "Commissioning VPN...")
 
-            if util.file_exists_and_not_empty(FILE_NAMES.VPN_CREDENTIAL):
+            if utils.file_exists_and_not_empty(FILE_NAMES.VPN_CREDENTIAL):
                 self.logger.warning("NOTE: VPN credential exists locally, so it was removed from Nuvla")
 
             self.commission_vpn()
@@ -667,7 +669,7 @@ class Infrastructure:
 
             # IF there is a VPN credential in Nuvla:
             #  - if we also have one locally, BUT is different, then recommission
-            if util.file_exists_and_not_empty(FILE_NAMES.VPN_CREDENTIAL):
+            if utils.file_exists_and_not_empty(FILE_NAMES.VPN_CREDENTIAL):
                 self.validate_local_vpn_credential(vpn_credential_nuvla)
             else:
                 # - IF we don't have it locally, but there's one in Nuvla, then:

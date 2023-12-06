@@ -1,12 +1,17 @@
 #!/bin/sh -xe
 
-WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}
-CSR_NAME=${CSR_NAME:-nuvlaedge-csr}
+WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}                                                                        
 
 SHARED="/srv/nuvlaedge/shared"
 SYNC_FILE=".tls"
 CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
+
+RND_EXT=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)                                                  
+NE_CSR=${USER}-csr-${RND_EXT}                                                                              
+CSR_NAME=${CSR_NAME:-${NE_CSR}}      
+
+CRB_NAME=${USER}-cluster-role-binding-${RND_EXT}
 
 is_cred_valid() {
   CRED_PATH=${1}
@@ -102,7 +107,7 @@ done'
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
- name: ${USER}-cluster-role-binding
+ name: ${CRB_NAME}
  labels:
     nuvlaedge.component: "True"
     nuvlaedge.deployment: "production"

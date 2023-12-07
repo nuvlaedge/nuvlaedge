@@ -1,5 +1,3 @@
-#!/bin/sh -xe
-
 WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}                                                                        
 
 SHARED="/srv/nuvlaedge/shared"
@@ -7,11 +5,28 @@ SYNC_FILE=".tls"
 CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
 
+# We gotta get the namespace...
+if [ ! -z $NUVLAEDGE_UUID ]
+then
+    NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
+    if [ -z $NAMESPACE ]
+    then
+        NAMESPACE=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
+    fi
+fi
+echo "namesspace string got set to: NAMESPACE
+
+SYNC_FILE=".${NAMESPACE}.tls"
+echo $SYNC_FILE
+
+exit 1
+
 RND_EXT=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)                                                  
-NE_CSR=${USER}-csr-${RND_EXT}                                                                              
+
+NE_CSR=${USER}-csr-${NAMESPACE}                                                                              
 CSR_NAME=${CSR_NAME:-${NE_CSR}}      
 
-CRB_NAME=${USER}-cluster-role-binding-${RND_EXT}
+CRB_NAME=${USER}-crb-${NAMESPACE}
 
 is_cred_valid() {
   CRED_PATH=${1}
@@ -94,7 +109,7 @@ done'
   if is_cred_valid .
   then
     cp ca.pem cert.pem key.pem ${SHARED}
-    echo date > ${SHARED}/${SYNC_FILE}
+    echo `date +%s` > ${SHARED}/${SYNC_FILE}
     echo "INFO: Success. Generated new valid credentials: \n$(ls -al ${SHARED}/*.pem ${SHARED}/${SYNC_FILE})"
   else
     echo "ERROR: Generated credentials are not valid."

@@ -26,6 +26,10 @@ class FileConstants(object):
     VPN_IP_FILE = 'vpn/ip'
     VPN_CREDENTIAL = 'vpn/vpn-credential'
     VPN_CLIENT_CONF_FILE = 'vpn/nuvlaedge.conf'
+    VPN_HANDLER_CONF = VPN_FOLDER + 'client_vpn_conf.json'
+    VPN_CSR_FILE = 'vpn/nuvlaedge-vpn.csr'
+    VPN_KEY_FILE = 'vpn/nuvlaedge-vpn.key'
+    VPN_SERVER_FILE = VPN_FOLDER + 'vpn-server'
 
     # Peripherals
     PERIPHERALS_FOLDER = '.peripherals/'

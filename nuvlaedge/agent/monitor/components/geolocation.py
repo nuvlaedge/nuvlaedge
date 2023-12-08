@@ -1,4 +1,6 @@
 """ Module for controlling the geolocation of the NuvlaEdge"""
+import json
+import logging
 import time
 
 import datetime
@@ -92,7 +94,7 @@ class GeoLocationMonitor(Monitor):
             inferred_location.extend([longitude, latitude])
             if service_info['altitude_key']:
                 inferred_location.append(response[service_info['altitude_key']])
-
+        inferred_location = [float(i) if isinstance(i, str) else i for i in inferred_location]
         return inferred_location
 
     def update_data(self):
@@ -121,4 +123,5 @@ class GeoLocationMonitor(Monitor):
 
     def populate_nb_report(self, nuvla_report: dict):
         if self.data.coordinates:
+            logging.info(f"Location data at the source: {self.data.coordinates}")
             nuvla_report['inferred-location'] = self.data.coordinates

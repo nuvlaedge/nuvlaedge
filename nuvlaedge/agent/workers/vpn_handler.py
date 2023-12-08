@@ -1,19 +1,17 @@
 import json
 import logging
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
-from pydantic import BaseModel
-
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
 from nuvlaedge.agent.nuvla.resources.credential import CredentialResource
-from nuvlaedge.agent.worker.worker import WorkerExitException
+from nuvlaedge.agent.worker import WorkerExitException
 from nuvlaedge.common import utils
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.worker.workers.commissioner import CommissioningAttributes
+from nuvlaedge.agent.workers.commissioner import CommissioningAttributes
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
@@ -35,14 +33,13 @@ class VPNConfig(NuvlaEdgeStaticModel):
 
 
 class VPNHandler:
-    VPN_FOLDER: Path = Path('/tmp/nuvlaedge/vpn/')
-    VPN_IP_FILE: Path = Path('/tmp/nuvlaedge/vpn/ip')
-    VPN_CSR_FILE: Path = Path('/tmp/nuvlaedge/vpn/nuvlaedge-vpn.csr')
-    VPN_KEY_FILE: Path = Path('/tmp/nuvlaedge/vpn/nuvlaedge-vpn.key')
-    VPN_CONF_FILE: Path = Path('/tmp/nuvlaedge/vpn/nuvlaedge.conf')
-    VPN_PLAIN_CONF_FILE: Path = Path('/tmp/nuvlaedge/vpn/client_vpn_conf.json')
-    VPN_CREDENTIAL_FILE: Path = Path('/tmp/nuvlaedge/vpn/vpn-credential')
-    VPN_SERVER_FILE: Path = Path('/tmp/nuvlaedge/vpn/vpn-server')
+    VPN_FOLDER: Path = FILE_NAMES.VPN_FOLDER
+    VPN_CSR_FILE: Path = FILE_NAMES.VPN_CSR_FILE
+    VPN_KEY_FILE: Path = FILE_NAMES.VPN_KEY_FILE
+    VPN_CONF_FILE: Path = FILE_NAMES.VPN_CLIENT_CONF_FILE
+    VPN_PLAIN_CONF_FILE: Path = FILE_NAMES.VPN_HANDLER_CONF
+    VPN_CREDENTIAL_FILE: Path = FILE_NAMES.VPN_CREDENTIAL
+    VPN_SERVER_FILE: Path = FILE_NAMES.VPN_SERVER_FILE
     VPN_INTERFACE_NAME: str = 'vpn'
 
     def __init__(self,
@@ -89,14 +86,15 @@ class VPNHandler:
         return (utils.file_exists_and_not_empty(self.VPN_KEY_FILE) and
                 utils.file_exists_and_not_empty(self.VPN_CSR_FILE))
 
-    def get_vpn_ip(self):
+    @staticmethod
+    def get_vpn_ip():
         """
 
         Returns:
 
         """
-        if utils.file_exists_and_not_empty(self.VPN_IP_FILE):
-            with self.VPN_IP_FILE.open('r') as f:
+        if utils.file_exists_and_not_empty(FILE_NAMES.VPN_IP_FILE):
+            with FILE_NAMES.VPN_IP_FILE.open('r') as f:
                 return f.read().splitlines()[0]
         else:
             logger.error(f"Cannot infer VPN IP.")

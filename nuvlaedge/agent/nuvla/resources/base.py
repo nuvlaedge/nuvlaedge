@@ -10,18 +10,18 @@ class NuvlaResourceBase(NuvlaEdgeBaseModel):
     """
     # These entries are mandatory when the message is received from Nuvla. Cannot/Should not be created or edited
     # by the NuvlaEdge.
-    id: NuvlaID | None
-    resource_type: str | None
-    created: datetime | None
-    updated: datetime | None
-    acl: dict | None
+    id: NuvlaID | None = None
+    resource_type: str | None = None
+    created: str | None = None
+    updated: str | None = None
+    acl: dict | None = None
 
     # Optional params in the common schema
-    name: str | None
-    description: str | None
-    tags: list[str] | None
-    parent: str | None  # Nuvla ID format
-    resource_metadata: str | None
-    operations: list | None
-    created_by: str | None
-    updated_by: str | None
+    name: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+    parent: str | None = None  # Nuvla ID format
+    resource_metadata: str | None = None
+    operations: list | None = None
+    created_by: str | None = None
+    updated_by: str | None = None

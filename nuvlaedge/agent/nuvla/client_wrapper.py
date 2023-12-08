@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from nuvla.api import Api as NuvlaApi
 from requests import Response
 
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.nuvla.resources.credential import CredentialResource
 from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
 from nuvlaedge.agent.settings import AgentSettings
@@ -37,21 +38,28 @@ class NuvlaApiKeyTemplate(BaseModel, frozen=True):
 
 
 class NuvlaEdgeSession(NuvlaEdgeBaseModel):
-    endpoint: str
-    verify: bool
+    endpoint:               str
+    verify:                 bool
 
-    credentials: NuvlaApiKeyTemplate | None
+    credentials:            NuvlaApiKeyTemplate | None = None
 
-    nuvlaedge_uuid: NuvlaID
-    nuvlaedge_status_uuid: NuvlaID | None
+    nuvlaedge_uuid:         NuvlaID
+    nuvlaedge_status_uuid:  NuvlaID | None = None
+
+
+def format_host(host: str) -> str:
+    if host.startswith('https://') or host.startswith('http://'):
+        return host
+
+    return f'https://{host}'
 
 
 class NuvlaClientWrapper:
-    MIN_SYNC_TIME: int = 3600  # Resource min update time
+    MIN_SYNC_TIME: int = 60  # Resource min update time
 
     def __init__(self, host: str, verify: bool, nuvlaedge_uuid: NuvlaID):
 
-        self._host: str = host
+        self._host: str = format_host(host)
         self._verify: bool = verify
 
         self.__nuvlaedge_resource: NuvlaEdgeResource | None = None  # NuvlaEdgeResource(id=nuvlaedge_uuid)
@@ -65,7 +73,9 @@ class NuvlaClientWrapper:
         self.__vpn_server_time: float = 0.0
 
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
-        self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=host, insecure=not verify, persist_cookie=False)
+        self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
+                                                   insecure=not verify,
+                                                   reauthenticate=True)
         # self.job_client: NuvlaApi = NuvlaApi(endpoint=host, insecure=not verify, persist_cookie=False)
         # self.deployment_client: NuvlaApi = NuvlaApi(endpoint=host, insecure=not verify, persist_cookie=False)
 
@@ -73,7 +83,7 @@ class NuvlaClientWrapper:
         self.nuvlaedge_credentials: NuvlaApiKeyTemplate | None = None
 
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
-        self.nuvlaedge_status_uuid: NuvlaID | None = None
+        self._nuvlaedge_status_uuid: NuvlaID | None = None
 
         self.paths: NuvlaEndPointPaths = NuvlaEndPointPaths()
 
@@ -89,6 +99,12 @@ class NuvlaClientWrapper:
     def remove_watch_field(self, resource: str, field: str):
         if field in self._watched_fields.get(resource, set()):
             self._watched_fields.get(resource).remove(field)
+
+    @property
+    def nuvlaedge_status_uuid(self) -> NuvlaID:
+        if not self._nuvlaedge_status_uuid:
+            self._nuvlaedge_status_uuid = self.nuvlaedge.nuvlabox_status
+        return self._nuvlaedge_status_uuid
 
     @property
     def nuvlaedge(self) -> NuvlaEdgeResource:
@@ -131,29 +147,35 @@ class NuvlaClientWrapper:
         """
 
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
-
-        self.nuvlaedge_credentials = NuvlaApiKeyTemplate.model_validate(credentials)
+        logger.info(f"Credentials received from activation: {credentials}")
+        self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
+                                                         secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
 
+        self.save()
         self.login_nuvlaedge()
 
     def commission(self, payload: dict):
         logger.info(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid}")
         try:
-            self.nuvlaedge_client._cimi_post(f"{self.nuvlaedge_uuid}/commission", json=payload)
-
+            response: dict = self.nuvlaedge_client._cimi_post(resource_id=f"{self.nuvlaedge_uuid}/commission",
+                                                              json=payload)
+            return response
         except Exception as e:
             logger.warning(f"Cannot commission NuvlaEdge with Payload {payload}: {e}")
 
     def heartbeat(self):
-        logger.debug("Sending heartbeat")
+        logger.info("Sending heartbeat")
         try:
-            response: CimiResponse = self.nuvlaedge_client._cimi_post(f"{self.nuvlaedge_uuid}/heartbeat")
-            return response
+            if not self.nuvlaedge_client.is_authenticated():
+                self.login_nuvlaedge()
+            res: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_uuid)
+            response: CimiResponse = self.nuvlaedge_client.operation(res, 'heartbeat')
+            return response.data
         except Exception as e:
             logger.warning(f"Heartbeat to {self.nuvlaedge_uuid} failed with error: {e}")
 
-    def telemetry(self, new_status: dict, attributes_to_delete: list[str]):
+    def telemetry(self, new_status: dict, attributes_to_delete: set[str]):
         response: CimiResponse = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)
@@ -183,7 +205,7 @@ class NuvlaClientWrapper:
         if creds.count >= 1:
             logger.info("VPN credential found in NuvlaEdge")
             self.__vpn_credential_resource = CredentialResource.model_validate(creds.resources[0])
-            self.__vpn_credential_time = time.perf_counter()
+            self.__vpn_credential_time = time.time()
         else:
             logger.info("No VPN credential found in NuvlaEdge, Yet?")
 
@@ -199,8 +221,8 @@ class NuvlaClientWrapper:
 
         response: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge.vpn_server_id)
         if response.data:
-            self.__vpn_server_resource = InfrastructureServiceResource.model_validate_json(response.data)
-            self.__vpn_server_time = time.perf_counter()
+            self.__vpn_server_resource = InfrastructureServiceResource.model_validate(response.data)
+            self.__vpn_server_time = time.time()
 
     def sync_peripherals(self):
         ...
@@ -213,31 +235,35 @@ class NuvlaClientWrapper:
         """
         resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_uuid)
         if resource.data:
-            self.__nuvlaedge_resource = NuvlaEdgeResource.model_validate_json(resource.data)
-            self.__nuvlaedge_sync_time = time.perf_counter()
+            self.__nuvlaedge_resource = NuvlaEdgeResource.model_validate(resource.data)
+            print_me = json.dumps(self.__nuvlaedge_resource.model_dump(exclude_none=True,
+                                                                       exclude={'operations', 'acl'}),
+                                  indent=4)
+
+            logger.info(f"Data retrieved for Nuvlaedge: {print_me}")
+            self.__nuvlaedge_sync_time = time.time()
         else:
             logger.error("Error retrieving NuvlaEdge resource")
 
     def sync_nuvlaedge_status(self):
         resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_status_uuid)
         if resource.data:
-            self.__nuvlaedge_status_resource = NuvlaEdgeStatusResource.model_validate_json(resource.data)
-            self.__status_sync_time = time.perf_counter()
+            self.__nuvlaedge_status_resource = NuvlaEdgeStatusResource.model_validate(resource.data)
+            self.__status_sync_time = time.time()
         else:
             logger.error("Error retrieving NuvlaEdge resource")
 
-    def save(self, file: Path | str):
+    def save(self):
 
-        if isinstance(file, str):
-            file = Path(file)
         serial_session = NuvlaEdgeSession(
             endpoint=self._host,
             verify=self._verify,
-            credentials=NuvlaApiKeyTemplate(key='keyme', secret='secretme'),
-            nuvlaedge_uuid=self.nuvlaedge_uuid
+            credentials=self.nuvlaedge_credentials,
+            nuvlaedge_uuid=self.nuvlaedge_uuid,
+            nuvlaedge_status_uuid=self._nuvlaedge_status_uuid
         )
 
-        with file.open('w') as f:
+        with FILE_NAMES.NUVLAEDGE_SESSION.open('w') as f:
             json.dump(serial_session.model_dump(exclude_none=True, by_alias=True), f, indent=4)
 
     @classmethod
@@ -245,9 +271,12 @@ class NuvlaClientWrapper:
         if isinstance(file, str):
             file = Path(file)
         with file.open('r') as f:
-            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate_json(json.load(f))
+            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate_json(f.read())
 
-        return cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        temp_client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        temp_client.nuvlaedge_credentials = session.credentials
+        temp_client.login_nuvlaedge()
+        return temp_client
 
     @classmethod
     def from_nuvlaedge_credentials(cls, host: str, verify: bool, credentials: NuvlaApiKeyTemplate):
@@ -255,6 +284,7 @@ class NuvlaClientWrapper:
         client.nuvlaedge_credentials = credentials
         client.login_nuvlaedge()
         client.nuvlaedge_uuid = client.nuvlaedge.id
+        client.login_nuvlaedge()
         return client
 
     @classmethod

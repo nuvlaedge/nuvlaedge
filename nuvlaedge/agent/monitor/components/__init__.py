@@ -25,7 +25,7 @@ class Monitors:
         """
         Returns a monitor class provided a name
         Args:
-            monitor_name: monitor to retreive
+            monitor_name: monitor to retrieve
 
         Returns:
 
@@ -74,7 +74,7 @@ register_monitor = Monitors.register_monitor
 active_monitors = Monitors.active_monitors
 
 for m in modules:
-    if isfile(m) and not m.endswith('__init__.py'):
+    if isfile(m) and not m.endswith('___init__.py'):
         __all__ = [basename(m)[:-3]]
         try:
             from . import *

@@ -8,6 +8,7 @@ from threading import Event, Thread
 from pydantic import ValidationError
 from nuvla.api import Api as NuvlaClient
 
+from nuvlaedge.broker.file_broker import FileBroker
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.models.messages import NuvlaEdgeMessage
 from nuvlaedge.peripherals.peripheral_manager_db import PeripheralsDBManager
@@ -26,13 +27,13 @@ class PeripheralManager:
 
     PERIPHERALS_LOCATION: Path = FILE_NAMES.PERIPHERALS_FOLDER
 
-    def __init__(self, broker: NuvlaEdgeBroker, nuvla_client: NuvlaClient, nuvlaedge_uuid: str):
+    def __init__(self, nuvla_client: NuvlaClient, nuvlaedge_uuid: str):
 
         # Required to check the Nuvla database and filter present peripherals
         self._uuid: str = nuvlaedge_uuid
 
         # Broker instance to consume messages from the peripherals
-        self.broker: NuvlaEdgeBroker = broker
+        self.broker: NuvlaEdgeBroker = FileBroker()
 
         # Particular class to control and wrap the handling of peripherals
         self.db: PeripheralsDBManager = PeripheralsDBManager(nuvla_client, nuvlaedge_uuid)
@@ -42,6 +43,10 @@ class PeripheralManager:
 
         self.running_peripherals: set = set()
         self.registered_peripherals: dict[str, PeripheralData] = {}
+
+        if not self.PERIPHERALS_LOCATION.exists():
+            logger.info(f"Peripheral DB location {self.PERIPHERALS_LOCATION} not found, create folder structure")
+            self.PERIPHERALS_LOCATION.mkdir(parents=True)
 
     def update_running_managers(self):
         """

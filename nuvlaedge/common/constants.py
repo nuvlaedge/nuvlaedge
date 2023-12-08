@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class Constants:
     # FORMATS
     DATETIME_FORMAT: str = "%m%d%Y%H%M%S"
+    NUVLA_TIMESTAMP_FORMAT: str = "%Y-%m-%dT%H:%M:%SZ"
 
     # Timeouts
     NETWORK_TIMEOUT: int = 10
@@ -20,6 +21,10 @@ class Constants:
 
     # Others
     PERIPHERAL_SCHEMA_VERSION: int = 2
+
+    # Host System Paths
+    HOST_FS: str = "/rootfs"
+    SWARM_NODE_CERTIFICATE: str = f"{HOST_FS}/var/lib/docker/swarm/certificates/swarm-node.crt"
 
 
 CTE: Constants = Constants()

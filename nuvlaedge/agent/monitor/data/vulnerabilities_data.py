@@ -7,12 +7,12 @@ from nuvlaedge.agent.monitor import BaseDataStructure
 
 class VulnerabilitiesSummary(BaseDataStructure):
     """ Vulnerabilities summary data structure """
-    total: int | None
-    affected_products: list | None
-    average_score: float | None
+    total: int | None = None
+    affected_products: list | None = None
+    average_score: float | None = None
 
 
 class VulnerabilitiesData(BaseDataStructure):
     """ GlobalData structure for vulnerabilities """
-    summary: VulnerabilitiesSummary | None
-    items: list | None
+    summary: VulnerabilitiesSummary | None = None
+    items: list | None = None

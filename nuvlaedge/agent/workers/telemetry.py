@@ -3,17 +3,17 @@
 """
 import json
 import logging
-import threading
+from queue import Queue, Full
 from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel
 
+from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.monitor.components import get_monitor, active_monitors
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import Status
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
@@ -25,18 +25,18 @@ logger: logging.Logger = logging.getLogger(__name__)
 class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
     status:                         Optional[Status] = None
     status_notes:                   Optional[list[str]] = None
-    current_time:                   Optional[datetime] = None
+    current_time:                   Optional[str] = None
 
     # NuvlaEdge System configuration
-    components:                     Optional[dict] = None
+    components:                     Optional[list[str]] = None
     nuvlabox_api_endpoint:          Optional[str] = None
     nuvlabox_engine_version:        Optional[str] = None
-    installation_parameters:        Optional[list] = None
+    installation_parameters:        Optional[dict] = None
     host_user_home:                 Optional[str] = None
 
     # Metrics
     resources:                      Optional[dict] = None
-    last_boot:                      Optional[datetime] = None
+    last_boot:                      Optional[str] = None
     gpio_pins:                      Optional[dict] = None
     vulnerabilities:                Optional[dict] = None
     inferred_location:              Optional[list[float]] = None
@@ -56,47 +56,60 @@ class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
     cluster_managers:               Optional[list[str]] = None
     cluster_nodes:                  Optional[list[str]] = None
     cluster_node_role:              Optional[str] = None
+    cluster_node_labels:            Optional[list[dict]] = None
     swarm_node_cert_expiry_date:    Optional[str] = None
     cluster_join_address:           Optional[str] = None
     orchestrator:                   Optional[str] = None
-    container_plugins:              Optional[str] = None
+    container_plugins:              Optional[list[str]] = None
     kubelet_version:                Optional[str] = None
 
-    _update_lock: threading.Lock = threading.Lock()
 
-    def update(self, data: dict[str, any] | BaseModel):
-        if isinstance(data, BaseModel):
-            data = data.model_dump(exclude_none=True)
+def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[str]]:
+    """
+    Compares two Pydantic base classes and returns a tuple of the fields present in the target and not equal to the f
+    fields present in the reference. And another set with the fields that are present in the reference but not in the
+    target
+    Args:
+        reference:
+        target:
 
-        for k, v in data.items():
-            if hasattr(self, k):
-                with self._update_lock:
-                    self.__setattr__(k, v)
+    Returns:
+
+    """
+    to_send: set = set()
+    for field, value in iter(target):
+        if value != getattr(reference, field):
+            to_send.add(field)
+    to_delete = reference.model_fields_set - target.model_fields_set
+    return to_send, to_delete
 
 
 class Telemetry:
 
     def __init__(self,
                  coe_client: COEClient,
-                 nuvla_client: NuvlaClientWrapper,
-                 telemetry_payload: TelemetryPayloadAttributes,
+                 report_channel: Queue[TelemetryPayloadAttributes],
+                 nuvlaedge_uuid: NuvlaID,
                  excluded_monitors):
         logger.debug("Initialising Telemetry")
 
         self.coe_client = coe_client
-        self.nuvla_client = nuvla_client
+        self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
 
-        """ Static variable from where the agent retrieves the information agent """
-        self.telemetry_payload: TelemetryPayloadAttributes = telemetry_payload
+        """ Local variable to track changes on the telemetry """
+        self._local_telemetry: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
+
+        """ Channel to communicate with the Agent"""
+        self.report_channel: Queue[TelemetryPayloadAttributes] = report_channel
 
         """ Data variable where the monitors dump their readings """
         self.edge_status: EdgeStatus = EdgeStatus()
 
         """ Monitors modular system initialisation """
-        self.excluded_monitors: list[str] = excluded_monitors.replace("'", "").split(',')
+        self.excluded_monitors: list[str] = excluded_monitors.replace("'", "").split(',') if excluded_monitors else []
         logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
         self.monitor_list: dict[str, Monitor] = {}
-        # self.initialize_monitors()
+        self.initialize_monitors()
 
     def initialize_monitors(self):
         """
@@ -109,18 +122,15 @@ class Telemetry:
                 continue
             self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
 
-    def collect_monitor_metrics(self, telemetry: TelemetryPayloadAttributes):
+    def collect_monitor_metrics(self):
         """
-
-        Args:
-            telemetry:
 
         Returns:
 
         """
         # Retrieve monitoring data
+        temp_dict = {}
         for it_monitor in self.monitor_list.values():
-            temp_dict = {}
             try:
                 if it_monitor.updated:
                     it_monitor.populate_nb_report(temp_dict)
@@ -130,7 +140,7 @@ class Telemetry:
                 logger.exception(f'Error retrieving data from monitor {it_monitor.name}.', ex)
                 continue
 
-            telemetry.update(temp_dict)
+        self._local_telemetry.update(temp_dict)
 
     def check_monitors_health(self):
         for monitor_name, it_monitor in self.monitor_list.items():
@@ -155,14 +165,44 @@ class Telemetry:
         monitor_process_duration = {k: v.last_process_duration for k, v in self.monitor_list.items()}
         logger.debug(f'Monitors processing duration: {json.dumps(monitor_process_duration, indent=4)}')
 
+    def sync_status_to_telemetry(self):
+        """
+        Synchronises EdgeStatus object with Telemetry Data.
+        TODO: This needs rework so the monitors automatically report their data into a TelemetryPayload
+
+        Returns: None
+
+        """
+
+        # Iterate EdgeStatus attributes
+        for attr, value in iter(self.edge_status):
+            if isinstance(value, BaseModel):
+                # Dump the model
+                data = value.model_dump(exclude_none=True, by_alias=True)
+
+                # Clean the empty objects such as dict = {}, list = [], str = '', etc (Not accepted by Nuvla)
+                data = {k: v for k, v in data.items() if v}
+                if data:
+                    self._local_telemetry.update(data)
+
+        # Clean the model from empty fields
+
     def run(self):
-        logger.info("Collection monitor metrics...")
+        logger.info("Collecting monitor metrics...")
+        """ Retrieve data from monitors (If not threaded) and check threaded monitors health"""
         self.check_monitors_health()
+        self.collect_monitor_metrics()
+        logger.info("Translating telemetry data")
+        """ Retrieve data from metrics and system information class (EdgeStatus)  and conform the telemetry payload """
+        self.sync_status_to_telemetry()
 
-        collected_telemetry = self.telemetry_payload.model_copy(deep=True)
-        self.collect_monitor_metrics(collected_telemetry)
+        """ We make sure at least one field changes so telemetry is always sent. Current Time for synchronization """
+        self._local_telemetry.current_time = datetime.utcnow().isoformat().split('.')[0] + 'Z'
 
-        if collected_telemetry != self.telemetry_payload:
-            self.telemetry_payload.update(collected_telemetry)
-        self.telemetry_payload.current_time = datetime.utcnow().isoformat().split('.')[0] + 'Z'
-        logger.info(f"Metrics collected at time {self.telemetry_payload.current_time}")
+        try:
+            logger.debug(f"Writing telemetry to Agent Queue"
+                         f" {self._local_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True)}")
+            self.report_channel.put(self._local_telemetry, block=False)
+
+        except Full:
+            logger.warning("Telemetry Queue is full, agent not consuming data...")

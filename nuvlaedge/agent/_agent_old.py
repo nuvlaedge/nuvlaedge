@@ -25,7 +25,7 @@ from nuvlaedge.agent._infrastructure import Infrastructure
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.orchestrator import COEClient
 from agent.orchestrator.factory import get_coe_client
-from nuvlaedge.agent.telemetry import Telemetry
+from nuvlaedge.agent._telemetry import Telemetry
 from nuvlaedge.agent.common.thread_handler import (is_thread_creation_needed,
                                                    create_start_thread)
 

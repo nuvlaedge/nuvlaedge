@@ -1,5 +1,6 @@
 import logging
 import pprint
+import random
 import threading
 import time
 from threading import Thread, Event
@@ -7,6 +8,7 @@ from typing import Callable, Type
 
 
 logger: logging.Logger = logging.getLogger(__name__)
+
 
 class WorkerExitException(Exception):
     """ Triggered by the workers when they cannot run due to system configuration changes and want to force and exit """
@@ -18,13 +20,16 @@ class AgentWorker:
                  period: int,
                  worker_type: Type,
                  init_params: tuple[tuple, dict],
-                 actions: list[str]):
-        super().__init__(daemon=True)
+                 actions: list[str],
+                 initial_delay: float | None = None):
         self.worker_name: str = worker_type.__name__
 
         # Thread control
         self.exit_event: Event = Event()
         self.period: int = period
+        self.initial_delay: float = initial_delay if initial_delay else random.randint(4, 8)
+        if self.initial_delay > self.period:
+            self.initial_delay = self.period
 
         # Class init Parameters
         self.class_init_parameters: tuple[tuple, dict] = init_params
@@ -38,6 +43,7 @@ class AgentWorker:
         self.run_thread: Thread = ...
         self.error_count: int = 0
         self.exceptions: list[Exception] = []
+        self.init_actions()
 
     def init_actions(self):
 
@@ -56,12 +62,10 @@ class AgentWorker:
         self.error_count += 1
         self.exceptions.append(ex)
         if ex and is_exit:
-            raise ExceptionGroup(f"Exit requested from worker {self.worker_name}, raising all",
-                                 __exceptions=self.exceptions)
+            raise ExceptionGroup(f"Exit requested from worker {self.worker_name}, raising all", self.exceptions)
 
         if self.error_count > 10:
-            raise ExceptionGroup(f"Too many errors in {self.worker_name} worker",
-                                 __exceptions=self.exceptions)
+            raise ExceptionGroup(f"Too many errors in {self.worker_name} worker", self.exceptions)
 
     def reset_worker(self, new_init_params: tuple[tuple, dict] = ()):
         if new_init_params:
@@ -70,24 +74,32 @@ class AgentWorker:
                                        **self.class_init_parameters[1])
 
     def run(self):
-        ex_time: float = float(self.period)
+        logger.info(f"Entering main loop of {self.worker_name}")
 
+        ex_time: float = float(self.period) - (float(self.period) - self.initial_delay)
         while not self.exit_event.wait(self.period - ex_time):
             start_time = time.perf_counter()
             for action in self.callable_actions:
                 try:
+                    logger.debug(f"Running {action.__name__} from {self.worker_name}")
                     action()
+                    logger.debug(f"Finished {action.__name__} from {self.worker_name}")
                 except WorkerExitException as ex:
                     logger.warning(f"Worker {self.worker_name} exiting: {ex}")
                     self.process_exception(ex, is_exit=True)
 
                 except Exception as ex:
-                    logger.error(f"Error {ex.__class__.__name__} running action {action.__name__} on class")
+                    logger.error(f"Error {ex.__class__.__name__} running action {action.__name__} on class "
+                                 f"{self.worker_name}", exc_info=True, )
                     self.process_exception(ex)
                     self.init_thread()
 
             ex_time = time.perf_counter() - start_time
-            logger.info(f"{self.worker_name} worker actions run  in {ex_time}s")
+            logger.info(f"{self.worker_name} worker actions run  in {ex_time}s, next iteration in "
+                        f"{self.period - ex_time}")
+            logger.info(f"Just checking...")
+
+        logger.info(f"{self.worker_name} exiting loop...")
 
     def start(self):
         self.init_thread()

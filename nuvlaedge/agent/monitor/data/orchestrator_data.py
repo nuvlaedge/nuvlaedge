@@ -7,15 +7,15 @@ from nuvlaedge.agent.monitor import BaseDataStructure
 
 class ContainerStatsData(BaseDataStructure):
     """ Data structure for docker information report """
-    id: str | None
-    name: str | None
-    container_status: str | None
-    cpu_percent: str | None
-    mem_usage_limit: str | None
-    mem_percent: str | None
-    net_in_out: str | None
-    blk_in_out: str | None
-    restart_count: int | None
+    id: str | None = None
+    name: str | None = None
+    container_status: str | None = None
+    cpu_percent: str | None = None
+    mem_usage_limit: str | None = None
+    mem_percent: str | None = None
+    net_in_out: str | None = None
+    blk_in_out: str | None = None
+    restart_count: int | None = None
 
 
 class ClusterStatusData(NuvlaEdgeBaseModel):
@@ -38,12 +38,12 @@ class ClusterStatusData(NuvlaEdgeBaseModel):
 class DeploymentData(BaseDataStructure):
     """ Data structure to gather the container stats together """
     # Container information
-    containers: dict[str, ContainerStatsData] | None
+    containers: dict[str, ContainerStatsData] | None = None
 
     # Cluster data
-    cluster_data: ClusterStatusData | None
+    cluster_data: ClusterStatusData | None = None
 
     # Orchestrator version
-    docker_server_version: str | None
-    kubelet_version: str | None
-    swarm_node_cert_expiry_date: str | None
+    docker_server_version: str | None = None
+    kubelet_version: str | None = None
+    swarm_node_cert_expiry_date: str | None = None

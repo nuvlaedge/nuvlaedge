@@ -58,7 +58,7 @@ class ActionHandler:
         return self._actions
 
     def add(self, action: TimedAction):
-        self.actions.append(action)
+        self._actions.append(action)
 
     @property
     def next(self) -> TimedAction:

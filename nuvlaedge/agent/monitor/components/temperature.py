@@ -5,6 +5,7 @@ import os
 
 import psutil
 
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.data.temperature_data import TemperatureData, TemperatureZone
 from ..components import monitor
@@ -18,7 +19,7 @@ class TemperatureMonitor(Monitor):
     def __init__(self, name: str, telemetry, enable_monitor: bool = True):
         super().__init__(name, TemperatureData, enable_monitor)
 
-        self.host_fs: str = telemetry.hostfs
+        self.host_fs: str = CTE.HOST_FS
         self.thermal_fs_path = f'{self.host_fs}/sys/devices/virtual/thermal'
 
         if not telemetry.edge_status.temperatures:

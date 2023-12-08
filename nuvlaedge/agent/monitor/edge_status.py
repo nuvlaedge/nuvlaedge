@@ -2,16 +2,18 @@
 
 Gathers all the requiremets for status reporting
 """
+from typing import Optional
+
 import pydantic
 
-from nuvlaedge.agent.monitor.data import (network_data,
-                                          nuvlaedge_data,
-                                          resources_data,
-                                          orchestrator_data,
-                                          temperature_data,
-                                          geolocation_data,
-                                          vulnerabilities_data,
-                                          power_data)
+from nuvlaedge.agent.monitor.data.geolocation_data import GeoLocationData
+from nuvlaedge.agent.monitor.data.network_data import NetworkingData
+from nuvlaedge.agent.monitor.data.nuvlaedge_data import NuvlaEdgeData
+from nuvlaedge.agent.monitor.data.orchestrator_data import DeploymentData
+from nuvlaedge.agent.monitor.data.power_data import PowerData
+from nuvlaedge.agent.monitor.data.resources_data import ResourcesData
+from nuvlaedge.agent.monitor.data.temperature_data import TemperatureData
+from nuvlaedge.agent.monitor.data.vulnerabilities_data import VulnerabilitiesData
 from nuvlaedge.agent.monitor.data.gpio_data import GpioData
 
 
@@ -20,31 +22,31 @@ class EdgeStatus(pydantic.BaseModel):
     Pydantic class to gather together all the information on the NuvlaEdge device
     """
     # General NuvlaEdge data information
-    nuvlaedge_info: nuvlaedge_data.NuvlaEdgeData | None
+    nuvlaedge_info:     Optional[NuvlaEdgeData] = None
 
     # Networking data report
-    iface_data: network_data.NetworkingData | None
+    iface_data:         Optional[NetworkingData] = None
 
     # Resource utilization report
-    resources: resources_data.ResourcesData | None
+    resources:          Optional[ResourcesData] = None
 
     # Temperature status report
-    temperatures: temperature_data.TemperatureData | None
+    temperatures:       Optional[TemperatureData] = None
 
     # Deployed container stats
-    container_stats: orchestrator_data.DeploymentData | None
+    container_stats:    Optional[DeploymentData] = None
 
     # Geolocation data
-    inferred_location: geolocation_data.GeoLocationData | None
+    inferred_location:  Optional[GeoLocationData] = None
 
     # Vulnerabilities data
-    vulnerabilities: vulnerabilities_data.VulnerabilitiesData | None
+    vulnerabilities:    Optional[VulnerabilitiesData] = None
 
     # Power data report. (Only for Jetson-Boards)
-    power: power_data.PowerData | None
+    power:              Optional[PowerData] = None
 
     # GPIO Pins
-    gpio_pins: GpioData | None
+    gpio_pins:          Optional[GpioData] = None
 
     # Modification time controlled by Telemetry
-    current_time: str | None
+    current_time:       Optional[str] = None

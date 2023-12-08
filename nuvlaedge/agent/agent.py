@@ -1,28 +1,31 @@
+import inspect
+import json
 import logging
 import sys
 import time
+from queue import Queue
 from threading import Event
-from typing import Callable
 
-from common.constants import CTE
-from nuvlaedge.agent.worker.workers.vpn_handler import VPNHandler
-from nuvlaedge.agent.worker.workers.peripheral_manager import PeripheralManager
-from nuvlaedge.agent.worker.workers.commissioner import CommissioningAttributes, Commissioner
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.worker.workers.telemetry import TelemetryPayloadAttributes, Telemetry
+from nuvla.api.models import CimiResponse
+
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
-from nuvlaedge.agent.worker.manager import WorkerManager
+from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.utils import file_exists_and_not_empty
+from nuvlaedge.agent.workers.vpn_handler import VPNHandler
+from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
+from nuvlaedge.agent.workers.commissioner import CommissioningAttributes, Commissioner
+from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes, Telemetry, model_diff
+from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.agent.nuvla.resources.nuvlaedge import State
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate
+from nuvlaedge.agent.manager import WorkerManager
 from nuvlaedge.agent.settings import (AgentSettings,
-                                      agent_settings,
                                       AgentSettingsMissMatch,
                                       InsufficientSettingsProvided)
-from nuvlaedge.agent.nuvla.resources.nuvlaedge import State
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate
-from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.common.utils import file_exists_and_not_empty
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -30,15 +33,14 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 class Agent:
     def __init__(self,
-                 exit_event: Event | None = None,
-                 on_nuvlaedge_update: Callable[[dict], None] | None = None):
+                 exit_event: Event,
+                 settings: AgentSettings):
 
         logging.debug(f"Initialising Agent Class")
 
-        self.settings: AgentSettings = agent_settings
+        self.settings: AgentSettings = settings
 
         self._exit: Event = exit_event
-        self.on_nuvlaedge_update: Callable[[dict], None] | None = on_nuvlaedge_update
 
         # Wrapper for Nuvla API library specialised in NuvlaEdge
         self._nuvla_client: NuvlaClientWrapper = ...
@@ -53,6 +55,8 @@ class Agent:
 
         # Static objects
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
+        self.telemetry_channel: Queue[TelemetryPayloadAttributes] = Queue(maxsize=10)
+
         self.commission_payload: CommissioningAttributes = CommissioningAttributes()
 
     def assert_current_state(self) -> State:
@@ -100,14 +104,17 @@ class Agent:
 
         # Stored session found -> Previous installation
         if file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION):
+            logger.info("Starting NuvlaEdge from previously stored session")
             self._nuvla_client = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
 
             if self.settings.nuvlaedge_uuid:
                 check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
-            return self._nuvla_client.nuvlaedge.state
+
+            return State.value_of(self._nuvla_client.nuvlaedge.state)
 
         # API keys log-in
         if self.settings.nuvlaedge_api_key is not None and self.settings.nuvlaedge_api_secret is not None:
+            logger.info("Logging in with keys parsed from Environmental variables")
             self._nuvla_client = NuvlaClientWrapper.from_nuvlaedge_credentials(
                 host=self.settings.nuvla_endpoint,
                 verify=not self.settings.nuvla_endpoint_insecure,
@@ -141,9 +148,11 @@ class Agent:
             period=60,
             worker_type=Commissioner,
             init_params=((), {'coe_client': self._coe_engine,
-                              'nuvlaedge_status_id': self._nuvla_client.nuvlaedge_status_uuid,
-                              'commission_payload': self.commission_payload}),
-            actions=['run']
+                              'nuvla_client': self._nuvla_client,
+                              'vpn_channel': Queue[dict]()
+                              }),
+            actions=['run'],
+            initial_delay=1
         )
 
         """ Initialise Telemetry """
@@ -152,35 +161,39 @@ class Agent:
             period=60,
             worker_type=Telemetry,
             init_params=((), {'coe_client': self._coe_engine,
-                              'nuvlaedge_status_id': self._nuvla_client.nuvlaedge_status_uuid,
-                              'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
-                              'telemetry_payload:': self.telemetry_payload}),
-            actions=['update_status']
+                              'report_channel': self.telemetry_channel,
+                              'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
+                              'excluded_monitors': self.settings.nuvlaedge_excluded_monitors
+                              }),
+            actions=['run']
         )
 
         """ Initialise VPN Handler """
-        logger.info("Registering VPN Handler")
-        self.worker_manager.add_worker(
-            period=60,
-            worker_type=VPNHandler,
-            init_params=((), {'coe_client': self._coe_engine,
-                              'nuvla_client': self._nuvla_client,
-                              'commission_payload': self.commission_payload}),
-            actions=['run']
-        )
+        # Initialise only if VPN server ID is present on the resource
+        # logger.info("Registering VPN Handler")
+        # if self._nuvla_client.nuvlaedge.vpn_server_id:
+        #     self.worker_manager.add_worker(
+        #         period=60,
+        #         worker_type=VPNHandler,
+        #         init_params=((), {'coe_client': self._coe_engine,
+        #                           'nuvla_client': self._nuvla_client,
+        #                           'commission_payload': self.commission_payload}),
+        #         actions=['run']
+        #     )
 
         """ Initialise Peripheral Manager """
-        logger.info("Registering Peripheral Manager")
-        self.worker_manager.add_worker(
-            period=30,
-            worker_type=PeripheralManager,
-            init_params=((), {'nuvla_client': self._nuvla_client.nuvlaedge_client,
-                              'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid}),
-            actions=['run']
-        )
+        # logger.info("Registering Peripheral Manager")
+        # self.worker_manager.add_worker(
+        #     period=120,
+        #     worker_type=PeripheralManager,
+        #     init_params=((), {'nuvla_client': self._nuvla_client.nuvlaedge_client,
+        #                       'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid}),
+        #     actions=['run']
+        # )
 
         """ Initialise Job Manager """
-        logger.info("Registering Job Manager")
+        # logger.info("Registering Job Manager")
+        pass
 
     def init_actions(self):
         """
@@ -222,7 +235,7 @@ class Agent:
         logger.info("Initialising Agent...")
 
         current_state: State = self.assert_current_state()
-        logger.debug(f"NuvlaEdge initial state {current_state.name}")
+        logger.info(f"NuvlaEdge initial state {current_state.name}")
 
         if current_state == State.NEW:
             logger.info("Activating NuvlaEdge...")
@@ -230,26 +243,55 @@ class Agent:
             logger.info("Success.")
 
         if current_state in [State.DECOMMISSIONED, State.DECOMMISSIONING]:
+            logger.error(f"Force exiting the agent due to wrong state {current_state}")
             sys.exit(1)
 
         self.init_workers()
         self.init_actions()
 
     """ Agent Actions """
-    def telemetry(self) -> list[NuvlaID]:
+    def telemetry(self) -> CimiResponse | None:
         """
         Gather the information from the workers and executes the telemetry operation against Nuvla
         Returns: List of jobs if Nuvla requests so
 
         """
-        ...
+        logger.info("Executing telemetry")
+        if self.telemetry_channel.empty():
+            logger.warning("Telemetry class not reporting fast enough to Agent")
+            return None
 
-    def heartbeat(self) -> list[NuvlaID]:
+        new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
+
+        to_send, to_delete = model_diff(self.telemetry_payload, new_telemetry)
+        data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
+
+        logger.debug(f"Sending telemetry data to Nuvla {json.dumps(data_to_send, indent=4)}")
+        response: CimiResponse = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
+
+        return response
+
+    def heartbeat(self) -> CimiResponse | None:
         """
         Executes the heartbeat operation against Nuvla
         Returns: List of jobs if Nuvla Requests so
         """
-        ...
+        logger.info("Executing heartbeat")
+        if (self._nuvla_client.nuvlaedge.state != State.COMMISSIONED and
+                self._nuvla_client.nuvlaedge.state != 'COMMISSIONED'):
+
+            logger.info(f"NuvlaEdge still not commissioned, cannot send heartbeat. "
+                        f"Current state {self._nuvla_client.nuvlaedge.state}")
+            return None
+
+        return self._nuvla_client.heartbeat()
+
+    def process_response(self, response: CimiResponse, operation: str):
+        jobs = response.data.get('jobs', [])
+        logger.info(f"{len(jobs)} received in from {operation}")
+        if jobs:
+            logger.info("{}")
+            self.process_jobs([NuvlaID(j) for j in jobs])
 
     def process_jobs(self, jobs: list[NuvlaID]):
         ...
@@ -258,13 +300,15 @@ class Agent:
         self._exit.set()
 
     def run(self):
-        start_cycle: float = time.process_time()
-        next_action = self.action_handler.next
-        next_cycle_in = 0.0
+        self.worker_manager.start()
+
+        next_cycle_in = self.action_handler.sleep_time()
+        logger.info(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
+        logger.debug(self.action_handler.actions_summary())
 
         while not self._exit.wait(next_cycle_in):
-            logger.info(f"Executing {next_action.name}")
-
+            start_cycle: float = time.perf_counter()
+            next_action = self.action_handler.next
             response = next_action()
 
             if response:
@@ -272,9 +316,11 @@ class Agent:
 
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle
-            next_cycle_in = self.action_handler.sleep_time()
-
             logger.info(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
 
+            # Cycle next action time and function
+            next_cycle_in = self.action_handler.sleep_time()
             next_action = self.action_handler.next
-            logger.info(f"Nexxt action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
+            logger.info(self.action_handler.actions_summary())
+            logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
+

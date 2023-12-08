@@ -1,29 +1,30 @@
 """ Module for geolocation data structure reporting """
-from pydantic import model_validator
+from pydantic import model_validator, ConfigDict
 
 from nuvlaedge.agent.monitor import BaseDataStructure
 
 
 class GeoLocationData(BaseDataStructure):
     """ Provides a standard structure for GeoLocation data """
-    longitude: float | None
-    latitude: float | None
-    coordinates: list[float] | None
-    timestamp: int | None
+    longitude:      float | None = None
+    latitude:       float | None = None
+    coordinates:    list[float] | None = None
+    timestamp:      int | None = None
+
+    model_config = ConfigDict(validate_assignment=False,
+                              populate_by_name=True)
 
     @model_validator(mode='after')
-    def fill_longitude(cls, values):
+    def fill_longitude(self):
         """
         Updates the values of the variable longitude and latitude variables based on
         the inserted coordinates
-        Args:
-            values: Values of the base model
 
         Returns:
             Updates values
         """
-        if values.get('coordinates') and len(values['coordinates']) == 2:
-            values['longitude'] = values['coordinates'][0]
-            values['latitude'] = values['coordinates'][1]
+        if self.coordinates and len(self.coordinates) == 2:
+            self.longitude = self.coordinates[0]
+            self.latitude = self.coordinates[1]
 
-        return values
+        return self

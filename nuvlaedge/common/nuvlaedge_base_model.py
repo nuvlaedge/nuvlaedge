@@ -22,10 +22,10 @@ class NuvlaEdgeBaseModel(BaseModel):
     Base data structure for providing a common configuration for all data structures.
     """
     """ Configuration class for base telemetry data """
-    model_config = ConfigDict(validate_assignment=True,
-                              populate_by_name=True,
+    model_config = ConfigDict(populate_by_name=True,
                               use_enum_values=True,
                               arbitrary_types_allowed=True,
+                              validate_assignment=True,
                               alias_generator=underscore_to_hyphen)
 
 
@@ -34,10 +34,12 @@ class NuvlaEdgeStaticModel(NuvlaEdgeBaseModel):
 
     def update(self, data: dict[str, any] | BaseModel):
         if isinstance(data, BaseModel):
-            data = data.model_dump(exclude_none=True, by_alias=True)
+            data = data.model_dump(exclude_none=True)
 
         for k, v in data.items():
-            k = k.replace('-', '_')
             if hasattr(self, k):
                 with self.update_lock:
                     self.__setattr__(k, v)
+            elif hasattr(self, k.replace('-', '_')):
+                with self.update_lock:
+                    self.__setattr__(k.replace('-', '_'), v)

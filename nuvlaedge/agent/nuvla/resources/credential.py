@@ -1,7 +1,7 @@
 from typing import Optional
 
-from base import NuvlaResourceBase
-from nuvla_id import NuvlaID
+from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase
 
 
 class CredentialResource(NuvlaResourceBase):

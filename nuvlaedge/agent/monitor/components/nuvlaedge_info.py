@@ -3,9 +3,12 @@ Gathers the base NuvlaEdge base information
 """
 
 import datetime
+import os
+
 import psutil
 from typing import Dict
 
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.data.nuvlaedge_data import NuvlaEdgeData as NuvlaInfo
@@ -25,12 +28,27 @@ class NuvlaEdgeInfoMonitor(Monitor):
         super().__init__(name, NuvlaInfo, enable_monitor)
 
         self.coe_client: COEClient = telemetry.coe_client
-        self.ne_id: str = telemetry.nb_status_id
+
         self.ne_engine_version: str = util.extract_nuvlaedge_version(self.coe_client.current_image)
-        self.installation_home: str = telemetry.installation_home
+        self.installation_home: str = self.set_installation_home(FILE_NAMES.HOST_USER_HOME)
 
         if not telemetry.edge_status.nuvlaedge_info:
             telemetry.edge_status.nuvlaedge_info = self.data
+
+    @staticmethod
+    def set_installation_home(host_user_home_file: str) -> str:
+        """
+        Finds the path for the HOME dir used during installation
+
+        :param host_user_home_file: location of the file where the previous installation
+        home value was saved
+        :return: installation home path
+        """
+        if os.path.exists(host_user_home_file):
+            with open(host_user_home_file) as user_home:
+                return user_home.read().strip()
+        else:
+            return os.environ.get('HOST_HOME')
 
     def update_data(self):
         """
@@ -38,7 +56,6 @@ class NuvlaEdgeInfoMonitor(Monitor):
         information. Also, the components of the NuvlaEdge deployment
         """
         # Update static information
-        self.data.id = self.ne_id
         self.data.nuvlaedge_engine_version = self.ne_engine_version
         self.data.installation_home = self.installation_home
 
@@ -56,7 +73,8 @@ class NuvlaEdgeInfoMonitor(Monitor):
             self.data.installation_parameters = InstallationParametersData()
 
         installation_parameters = self.coe_client.get_installation_parameters()
-        self.data.installation_parameters = InstallationParametersData.parse_obj(installation_parameters)
+        if installation_parameters:
+            self.data.installation_parameters = InstallationParametersData.model_validate(installation_parameters)
 
         # Components running in the current NuvlaEdge deployment
         self.data.components = self.coe_client.get_all_nuvlaedge_components() or None

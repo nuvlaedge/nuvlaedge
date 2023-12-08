@@ -16,55 +16,55 @@ class Status(UppercaseStrEnum):
 
 class StatusTelemetry(NuvlaEdgeBaseModel):
     # Telemetry metrics
-    resources: Optional[dict]
-    network: Optional[dict]
-    temperatures: Optional[dict]
-    ip: Optional[str]
-    gpio_pins: Optional[dict]
-    inferred_location: Optional[list[float]]
+    resources: Optional[dict] = None
+    network: Optional[dict] = None
+    temperatures: Optional[dict] = None
+    ip: Optional[str] = None
+    gpio_pins: Optional[dict] = None
+    inferred_location: Optional[list[float]] = None
 
 
 class StatusSystemConfiguration(NuvlaEdgeBaseModel):
     # System configuration
-    hostname: Optional[str]
-    operating_system: Optional[str]
-    architecture: Optional[str]
-    last_boot: Optional[str]
-    host_user_home: Optional[str]
+    hostname: Optional[str] = None
+    operating_system: Optional[str] = None
+    architecture: Optional[str] = None
+    last_boot: Optional[str] = None
+    host_user_home: Optional[str] = None
 
 
 class StatusNuvlaEdgeConfiguration(NuvlaEdgeBaseModel):
     # NuvlaEdge System configuration
-    components: Optional[dict]
-    nuvlabox_api_endpoint: Optional[str]
-    nuvlabox_engine_version: Optional[str]
-    installation_parameters: Optional[list]
+    components: Optional[dict] = None
+    nuvlabox_api_endpoint: Optional[str] = None
+    nuvlabox_engine_version: Optional[str] = None
+    installation_parameters: Optional[list] = None
 
 
 class StatusOrchestrationEngineConfiguration(NuvlaEdgeBaseModel):
     # Container orchestration engine
-    orchestrator: Optional[str]
-    docker_server_version: Optional[str]
-    kubelet_version: Optional[str]
-    container_plugins: Optional[list[str]]
+    orchestrator: Optional[str] = None
+    docker_server_version: Optional[str] = None
+    kubelet_version: Optional[str] = None
+    container_plugins: Optional[list[str]] = None
 
     # Swarm management
-    node_id: Optional[str]
-    cluster_id: Optional[str]
-    cluster_managers: Optional[str]
-    cluster_nodes: Optional[str]
-    cluster_node_role: Optional[str]
-    swarm_node_cert_expiry_date: Optional[str]
-    cluster_join_address: Optional[str]
+    node_id: Optional[str] = None
+    cluster_id: Optional[str] = None
+    cluster_managers: Optional[list[str]] = None
+    cluster_nodes: Optional[list[str]] = None
+    cluster_node_role: Optional[str] = None
+    swarm_node_cert_expiry_date: Optional[str] = None
+    cluster_join_address: Optional[str] = None
 
 
 class NuvlaEdgeStatusResource(NuvlaResourceBase,
                               StatusTelemetry,
                               StatusSystemConfiguration,
                               StatusOrchestrationEngineConfiguration):
-    status: Status
-    status_notes: Optional[list[str]]
+    status: Optional[Status] = None
+    status_notes: Optional[list[str]] = None
 
-    current_time: datetime
+    current_time: Optional[str] = None
 
-    vulnerabilities: Optional[dict]
+    vulnerabilities: Optional[dict] = None

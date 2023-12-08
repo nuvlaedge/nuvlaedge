@@ -2,11 +2,9 @@
 
 """
 import logging
-from dataclasses import dataclass
-from queue import Queue
 from typing import Type
 
-from nuvlaedge.agent.worker.worker import AgentWorker
+from nuvlaedge.agent.worker import AgentWorker
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -20,10 +18,12 @@ class WorkerManager:
                    period: int,
                    worker_type: Type,
                    init_params: tuple[tuple, dict],
-                   actions: list[str]):
+                   actions: list[str],
+                   initial_delay: float | None = None):
         """
 
         Args:
+            initial_delay:
             period:
             worker_type:
             init_params:
@@ -33,17 +33,16 @@ class WorkerManager:
 
         """
         if worker_type.__class__.__name__ not in self.registered_workers:
-            self.registered_workers[worker_type.__class__.__name__] = (
+            logger.info(f"Registering worker: {worker_type.__name__} in manager")
+            self.registered_workers[worker_type.__name__] = (
                 AgentWorker(period=period,
                             worker_type=worker_type,
                             init_params=init_params,
-                            actions=actions)
+                            actions=actions,
+                            initial_delay=initial_delay)
             )
         else:
-            logger.info(f"Worker {worker_type.__class__.__name__} already registered")
-
-    def edit_worker(self):
-        ...
+            logger.info(f"Worker {worker_type.__name__} already registered")
 
     def status_report(self) -> dict:
         for name, worker in self.registered_workers.items():

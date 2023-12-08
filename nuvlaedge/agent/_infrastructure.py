@@ -24,7 +24,7 @@ from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator import COEClient
-from nuvlaedge.agent.telemetry import Telemetry
+from nuvlaedge.agent._telemetry import Telemetry
 
 
 class Infrastructure:

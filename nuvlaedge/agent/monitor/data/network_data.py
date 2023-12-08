@@ -29,8 +29,8 @@ class NetworkInterface(BaseDataStructure):
         device or not
     """
 
-    iface_name: str | None = Field(alias='interface')
-    ips: list[IP] = Field([])
+    iface_name: str | None = Field(None, alias='interface')
+    ips: list[IP] = []
     default_gw: bool = Field(False, alias='default-gw')
 
     # Interface data traffic control
@@ -56,6 +56,6 @@ class NetworkingData(BaseDataStructure):
     Base model to gather all the IP addresses in the NuvlaEdge device
 
     """
-    default_gw: str | None
+    default_gw: str | None = None
     interfaces: dict[str, NetworkInterface] = {}
     ips: IPAddresses = IPAddresses()

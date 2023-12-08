@@ -3,17 +3,12 @@
 """
 import json
 import logging
-from pprint import pprint
-import time
 from pathlib import Path
+from queue import Queue
 from typing import Optional
 
-import mock
-
-from agent.common import util
-from common import utils
-from nuvlaedge.agent.orchestrator.docker import DockerClient
-from nuvlaedge.agent.common._nuvlaedge_common import get_vpn_ip
+from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.common import utils
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
@@ -25,7 +20,7 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 class CommissioningAttributes(NuvlaEdgeStaticModel):
     tags:                   Optional[list[str]] = None
-    capabilities:           Optional[list[str]] = None #
+    capabilities:           Optional[list[str]] = None
 
     # VPN
     vpn_csr:                Optional[dict] = None
@@ -51,7 +46,7 @@ class CommissioningAttributes(NuvlaEdgeStaticModel):
 
     # Clusters
     cluster_id:             Optional[str] = None
-    cluster_worker_id:      Optional[str] = None #
+    cluster_worker_id:      Optional[str] = None
     cluster_orchestrator:   Optional[str] = None
     cluster_managers:       Optional[list[str]] = None
     cluster_workers:        Optional[list[str]] = None
@@ -63,12 +58,12 @@ class Commissioner:
     """
     Compares the information in Nuvla with the system configuration and commissions any difference
     """
-    COMMISSIONING_FILE: Path = Path("/tmp/nuvlaedge/commissioned_data.json")
+    COMMISSIONING_FILE: Path = FILE_NAMES.COMMISSIONING_FILE
 
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
-                 commission_payload: CommissioningAttributes):
+                 vpn_channel: Queue[dict]):
         """
 
         Args:
@@ -80,21 +75,25 @@ class Commissioner:
 
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
+        self.vpn_channel: Queue[dict] = vpn_channel
 
-        self._last_payload: CommissioningAttributes = ...
+        self._last_payload: CommissioningAttributes = CommissioningAttributes()
         # Static payload. Address should only change or updated from the agent
-        self._current_payload: CommissioningAttributes = commission_payload
+        self._current_payload: CommissioningAttributes = CommissioningAttributes()
 
         # Find the commissioning file and load it as _last_payload if exists
         self.load_previous_commission()
 
     def commission(self):
-        # if self.nuvla_client.commission(payload=self._current_payload.model_dump(exclude_none=True)):
-        #     self._last_payload = self._current_payload.model_copy(deep=True)
-
         logger.info(f"Commissioning NuvlaEdge with data:"
                     f" {self._current_payload.model_dump(mode='json', exclude_none=True, by_alias=True)}")
-        self._last_payload.update(self._current_payload)
+        if self.nuvla_client.commission(payload=self._current_payload.model_dump(exclude_none=True, by_alias=True)):
+            self._last_payload = self._current_payload.model_copy(deep=True)
+            self.save_commissioned_data()
+
+    @property
+    def nuvlaedge_uuid(self) -> NuvlaID:
+        return self.nuvla_client.nuvlaedge_uuid
 
     def update_cluster_data(self):
         """
@@ -106,7 +105,7 @@ class Commissioner:
         Returns: None
         """
         cluster_info = self.coe_client.get_cluster_info(
-            default_cluster_name=f"cluster_{self.nuvla_client.nuvlaedge_uuid}"
+            default_cluster_name=f"cluster_{self.nuvlaedge_uuid}"
         )
         logger.debug(f"Newly gathered cluster information: {json.dumps(cluster_info, indent=4)}")
 
@@ -151,17 +150,35 @@ class Commissioner:
             self._current_payload.swarm_token_worker = worker_token
 
     def update_attributes(self):
-        self.update_cluster_data()
+        if self.nuvla_client.nuvlaedge_status.node_id:
+            logger.info("Updating Cluster data, node id present in NuvlaEdge-status")
+            self.update_cluster_data()
+        else:
+            logger.info(f"Nuvlabox-status still not ready. It should be updated in a bit...\n"
+                        f"Node ID: {self.nuvla_client.nuvlaedge_status.node_id}")
 
         self._current_payload.capabilities = self.get_nuvlaedge_capabilities()
         self.update_coe_data()
 
     def run(self):
+        logger.info("Running Commissioning checks")
         self.update_attributes()
+
+        if not self.vpn_channel.empty():
+            logger.info("Retrieving certificate sign requests from VPN")
+            vpn_csr = self.vpn_channel.get(block=False)
+
+            logger.info(f"Data received from VPN: {vpn_csr}")
+            self._current_payload.vpn_csr = vpn_csr
 
         # Compare what have been sent to Nuvla (_last_payload) and whatis locally updated (_current_payload)
         if self._last_payload != self._current_payload:
+            logger.info("Payloads are different, go commission")
+            logger.info(f"Last Payload: {self._last_payload.model_dump(exclude_none=True)}")
+            logger.info(f"Current Payload: {self._current_payload.model_dump(exclude_none=True)}")
             self.commission()
+        else:
+            logger.info("Nothing to commission, system configuration remains the same.")
 
     @staticmethod
     def get_nuvlaedge_capabilities() -> list[str]:
@@ -196,7 +213,7 @@ class Commissioner:
 
         """
         endpoint = "https://{ip}:{port}"
-        vpn_ip = get_vpn_ip()
+        vpn_ip = ""  # TODO: Find a way of retrieving VPN
         api_address, api_port = self.coe_client.get_api_ip_port()
 
         if vpn_ip and api_port:
@@ -217,30 +234,26 @@ class Commissioner:
         """
         if not utils.file_exists_and_not_empty(self.COMMISSIONING_FILE):
             logger.info(f"No commissioning file found in {self.COMMISSIONING_FILE}. "
-                        f"NuvlaEdge is probably never commissioned before")
+                        f"NuvlaEdge is probably never been commissioned before")
             return
 
         logger.info("Loading previous commissioning data")
         with self.COMMISSIONING_FILE.open('r') as f:
-            self._last_payload = CommissioningAttributes.model_validate_json(json.load(f))
+            try:
+                prev_payload = json.load(f)
+                prev_nuvlaedge_uuid = prev_payload['nuvlaedge_uuid']
+                if prev_nuvlaedge_uuid != self.nuvlaedge_uuid:
+                    logger.warning("Detected previous installation of NuvlaEdge WHAT TO DO????")  # FIXME: Decide what to do here
+                    # For the moment just override it
+                    self._last_payload = CommissioningAttributes()
+                    return
+                self._last_payload = CommissioningAttributes.model_validate(prev_payload)
+                self._current_payload = self._last_payload.model_copy(deep=True)
+            except json.JSONDecodeError:
+                logger.warning("Error decoding previous commission")
 
     def save_commissioned_data(self) -> None:
         with self.COMMISSIONING_FILE.open('w') as f:
-            json.dump(self._last_payload.model_dump(exclude_none=True, by_alias=True), f)
-
-
-if __name__ == '__main__':
-
-    payload = CommissioningAttributes()
-    comm = Commissioner(
-        coe_client=DockerClient(),
-        nuvla_client=mock.Mock(),
-        commission_payload=payload
-    )
-
-    comm.run()
-# i = 3
-# while i >= 0:
-#     comm.run()
-#     i -= 1
-#     time.sleep(5)
+            data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
+            data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
+            json.dump(data, f)

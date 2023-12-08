@@ -165,6 +165,7 @@ class ResourcesMonitor(Monitor):
     def populate_nb_report(self, nuvla_report: dict):
         if not nuvla_report.get('resources'):
             nuvla_report['resources'] = {}
+
         nuvla_report['resources']['cpu'] = self.data.cpu.dict(by_alias=True)
         nuvla_report['resources']['ram'] = self.data.ram.dict(by_alias=True)
         nuvla_report['resources']['disks'] = \

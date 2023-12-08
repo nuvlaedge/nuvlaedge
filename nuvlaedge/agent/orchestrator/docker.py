@@ -2,15 +2,15 @@ import base64
 import logging
 import os
 import socket
+import time
 from subprocess import run, PIPE, TimeoutExpired
 from typing import List, Optional
+import requests
+import yaml
 
 import docker
 import docker.errors
 from docker.models.containers import Container
-
-import requests
-import yaml
 
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
@@ -46,14 +46,25 @@ class DockerClient(COEClient):
         self._current_image = None
         self.job_engine_lite_image = os.getenv('NUVLAEDGE_JOB_ENGINE_LITE_IMAGE') or self.current_image
 
+        self.last_node_info: float = 0.0
+        self._node_info: dict = {}
+    
+    @property
+    def node_info(self):
+        # Do not call Docker API for successive uses of node information (1 second)
+        if time.time() - self.last_node_info > 1:
+            self._node_info = self.client.info()
+            self.last_node_info = time.time()
+        return self._node_info
+    
     def get_client_version(self) -> str:
         return self.client.version()['Version']
 
     def get_node_info(self):
-        return self.client.info()
+        return self.node_info
 
     def get_host_os(self):
-        node_info = self.get_node_info()
+        node_info = self.node_info
         return f"{node_info['OperatingSystem']} {node_info['KernelVersion']}"
 
     def get_join_tokens(self) -> tuple:
@@ -66,13 +77,13 @@ class DockerClient(COEClient):
                 # quorum is lost
                 logger.warning('Quorum is lost. This node will no longer support Service and Cluster management')
 
-        return ()
+        return None, None
 
     def list_nodes(self, optional_filter={}):
         return self.client.nodes.list(filters=optional_filter)
 
     def get_cluster_info(self, default_cluster_name=None):
-        node_info = self.get_node_info()
+        node_info = self.node_info
         swarm_info = node_info['Swarm']
 
         if swarm_info.get('ControlAvailable') or self.get_node_id(node_info) in self.get_cluster_managers():
@@ -110,7 +121,7 @@ class DockerClient(COEClient):
         return ''
 
     def get_api_ip_port(self):
-        node_info = self.get_node_info()
+        node_info = self.node_info
         compute_api_external_port = self.find_compute_api_external_port()
         ip = node_info.get("Swarm", {}).get("NodeAddr")
         if not ip:
@@ -146,7 +157,7 @@ class DockerClient(COEClient):
 
     def get_node_labels(self):
         try:
-            node_id = self.get_node_info()["Swarm"]["NodeID"]
+            node_id = self.node_info["Swarm"]["NodeID"]
             node_labels = self.client.api.inspect_node(node_id)["Spec"]["Labels"]
         except (KeyError, docker.errors.APIError, docker.errors.NullResource) as e:
             if "node is not a swarm manager" not in str(e).lower():
@@ -564,7 +575,8 @@ class DockerClient(COEClient):
         except RuntimeError:
             message = 'Failed to find the current container by id. Cannot proceed'
             logger.error(message)
-            raise
+            # raise
+            return None
 
         last_update = myself.attrs.get('Created', '')
         working_dir = self.get_working_dir_from_labels(myself.labels)
@@ -613,7 +625,7 @@ class DockerClient(COEClient):
         return node_info.get('Swarm', {}).get('Cluster', {}).get('ID')
 
     def get_cluster_managers(self):
-        remote_managers = self.get_node_info().get('Swarm', {}).get('RemoteManagers')
+        remote_managers = self.node_info.get('Swarm', {}).get('RemoteManagers')
         cluster_managers = []
         if remote_managers and isinstance(remote_managers, list):
             cluster_managers = [rm.get('NodeID') for rm in remote_managers]
@@ -627,7 +639,7 @@ class DockerClient(COEClient):
         return node_info["Name"]
 
     def get_cluster_join_address(self, node_id):
-        for manager in self.get_node_info().get('Swarm', {}).get('RemoteManagers'):
+        for manager in self.node_info.get('Swarm', {}).get('RemoteManagers'):
             if node_id == manager.get('NodeID', ''):
                 try:
                     return manager['Addr']

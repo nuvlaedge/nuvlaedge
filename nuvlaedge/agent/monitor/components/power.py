@@ -2,6 +2,7 @@
 import os
 import re
 
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.components import monitor
 from nuvlaedge.agent.monitor.data.power_data import PowerData, PowerEntry
@@ -48,7 +49,7 @@ class PowerMonitor(Monitor):
     def __init__(self, name: str, telemetry, enable_monitor: bool):
         super().__init__(name, PowerData, enable_monitor)
 
-        self.host_fs: str = telemetry.hostfs
+        self.host_fs: str = CTE.HOST_FS
 
         if not telemetry.edge_status.power:
             telemetry.edge_status.power = self.data

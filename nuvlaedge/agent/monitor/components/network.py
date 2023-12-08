@@ -13,6 +13,8 @@ import time
 
 import requests
 
+from nuvlaedge.common import utils
+from nuvlaedge.common.constants import CTE
 from ..components import monitor
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.monitor import Monitor
@@ -21,6 +23,7 @@ from nuvlaedge.agent.monitor.data.network_data import (NetworkingData,
                                                        IP)
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
+from ...workers.vpn_handler import VPNHandler
 
 
 @monitor('network_monitor')
@@ -38,16 +41,15 @@ class NetworkMonitor(Monitor):
 
         super().__init__(self.__class__.__name__, NetworkingData,
                          enable_monitor=enable_monitor)
-        self.telemetry = telemetry
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
                                self.set_swarm_data,
                                self.set_vpn_data]
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.host_fs: str = telemetry.hostfs
+        self.host_fs: str = CTE.HOST_FS
         self.first_net_stats: dict = {}
-        self.previous_net_stats_file: str = telemetry.previous_net_stats_file
+        self.previous_net_stats_file: str = FILE_NAMES.PREVIOUS_NET_STATS_FILE
 
         self.coe_client: COEClient = telemetry.coe_client
         self._ip_route_image: str = self.coe_client.current_image
@@ -245,8 +247,8 @@ class NetworkMonitor(Monitor):
                 "bytes-received": rx_bytes_report
             })
 
-        util.atomic_write(self.previous_net_stats_file,
-                          json.dumps(previous_net_stats), encoding='UTF-8')
+        utils.atomic_write(self.previous_net_stats_file,
+                           json.dumps(previous_net_stats), encoding='UTF-8')
 
         return net_stats
 
@@ -313,7 +315,7 @@ class NetworkMonitor(Monitor):
     def set_vpn_data(self) -> None:
         """ Discovers the NuvlaEdge VPN IP  """
 
-        vpn_ip = self.telemetry.get_vpn_ip()
+        vpn_ip = VPNHandler.get_vpn_ip()
         if vpn_ip and self.data.ips.vpn != vpn_ip:
             self.data.ips.vpn = vpn_ip
 

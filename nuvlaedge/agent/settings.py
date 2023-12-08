@@ -27,12 +27,13 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     vpn_interface_name:                 str = 'vpn'
     nuvla_endpoint:                     str = 'nuvla.io'
     nuvla_endpoint_insecure:            bool = False
+    shared_data_volume:                 str = "/srv/nuvlaedge/shared/"
     ne_image_tag:                       Optional[str] = None  # Default value provided by compose
 
     # Optional
     nuvlaedge_api_key:                  Optional[str] = None
     nuvlaedge_api_secret:               Optional[str] = None
-    nuvlaedge_excluded_monitors:        Optional[list[str]] = None
+    nuvlaedge_excluded_monitors:        Optional[str] = None
     nuvlaedge_immutable_ssh_pub_key:    Optional[str] = Field(None, alias='NUVLAEDGE_SSH_PUB_KEY')
     vpn_config_extra:                   Optional[str] = None
 
@@ -56,6 +57,13 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             return extract_nuvlaedge_version('')
         return v
 
+    @field_validator('*', mode='before')
+    def non_empty_srr(cls, v):
+        if isinstance(v, str):
+            if v == "":
+                return None
+        return v
+
     @model_validator(mode='after')
     def validate_fields(self):
 
@@ -66,6 +74,3 @@ class AgentSettings(NuvlaEdgeBaseSettings):
            none_or_empty_str(self.nuvlaedge_api_key) and \
            none_or_empty_str(self.nuvlaedge_api_secret):
             raise ValueError("Nor NuvlaEdge UUID or API keys were provided. One of them must be provided on NuvlaEdge")
-
-
-agent_settings: AgentSettings = AgentSettings(nuvlaedge_uuid="nuvlabox/uuid")

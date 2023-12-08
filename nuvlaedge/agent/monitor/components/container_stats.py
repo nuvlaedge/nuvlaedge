@@ -5,9 +5,9 @@ from subprocess import CompletedProcess
 
 from docker import errors as docker_err
 
-from nuvlaedge.agent.common import _nuvlaedge_common
-from nuvlaedge.agent.monitor.data.orchestrator_data import (DeploymentData, ContainerStatsData,
-                                                  ClusterStatusData)
+from nuvlaedge.common.constants import CTE
+
+from nuvlaedge.agent.monitor.data.orchestrator_data import (DeploymentData, ContainerStatsData, ClusterStatusData)
 from nuvlaedge.agent.monitor import Monitor
 from nuvlaedge.agent.monitor.components import monitor
 from nuvlaedge.agent.orchestrator import COEClient
@@ -25,9 +25,9 @@ class ContainerStatsMonitor(Monitor):
         self.is_thread = True
         self.coe_client: COEClient = telemetry.coe_client
 
-        self.nuvlaedge_id: str = telemetry.nuvlaedge_id
-        self.swarm_node_cert_path: str = telemetry.swarm_node_cert
-        self.nuvla_timestamp_format: str = telemetry.nuvla_timestamp_format
+        self.nuvlaedge_id: str = telemetry.nuvlaedge_uuid
+        self.swarm_node_cert_path: str = CTE.SWARM_NODE_CERTIFICATE
+        self.nuvla_timestamp_format: str = CTE.NUVLA_TIMESTAMP_FORMAT
 
         self.data.containers = {}
 

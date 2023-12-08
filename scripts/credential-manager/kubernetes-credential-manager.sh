@@ -14,7 +14,7 @@ then
         NAMESPACE=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
     fi
 fi
-echo "namesspace string got set to: NAMESPACE
+echo "namespace string got set to: NAMESPACE"
 
 SYNC_FILE=".${NAMESPACE}.tls"
 echo $SYNC_FILE

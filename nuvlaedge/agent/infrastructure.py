@@ -228,7 +228,7 @@ class Infrastructure(NuvlaEdgeCommon):
 
         self.logger.info(f'VPN configuration fields: {vpn_conf_fields}')
 
-        self.vpn_interface_name = f'vpn_{self.nuvlaedge_id[8:]}'
+        self.vpn_interface_name = f'vpn-{self.nuvlaedge_id.split("/",1)[1][:8]}'
 
         vpn_values = {
             'vpn_certificate': vpn_conf_fields['vpn-certificate'],

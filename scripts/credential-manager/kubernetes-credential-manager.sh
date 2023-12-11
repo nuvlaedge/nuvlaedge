@@ -1,3 +1,5 @@
+#!/bin/sh -xe
+
 WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}                                                                        
 
 SHARED="/srv/nuvlaedge/shared"

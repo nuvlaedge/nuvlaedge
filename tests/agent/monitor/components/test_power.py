@@ -3,10 +3,10 @@ import unittest
 
 from mock import Mock, patch, mock_open
 
-import nuvlaedge.agent.monitor.components.power
-from nuvlaedge.agent.monitor.components.power import PowerMonitor
-from nuvlaedge.agent.monitor.data.power_data import PowerData, PowerEntry
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+import nuvlaedge.agent.workers.monitor.components.power
+from nuvlaedge.agent.workers.monitor.components.power import PowerMonitor
+from nuvlaedge.agent.workers.monitor.data.power_data import PowerData, PowerEntry
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestPowerMonitor(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestPowerMonitor(unittest.TestCase):
     @patch('os.listdir')
     @patch('os.path.exists')
     def test_get_power(self, mock_exists, mock_listdir):
-        power_open: str = 'nuvlaedge.agent.monitor.components.power.open'
+        power_open: str = 'nuvlaedge.agent.workers.monitor.components.power.open'
         test_monitor: PowerMonitor = self.get_base_monitor()
         mock_exists.return_value = False
         self.assertIsNone(test_monitor.get_power('some_text'),
@@ -121,7 +121,7 @@ class TestPowerMonitor(unittest.TestCase):
                              expected_output[0],
                              'Unable to get power consumption')
 
-    @patch('nuvlaedge.agent.monitor.components.power.PowerMonitor.get_power')
+    @patch('nuvlaedge.agent.workers.monitor.components.power.PowerMonitor.get_power')
     def test_update_data(self, mock_get_power):
         test_monitor: PowerMonitor = self.get_base_monitor()
         self.assertIsNone(test_monitor.data.power_entries)

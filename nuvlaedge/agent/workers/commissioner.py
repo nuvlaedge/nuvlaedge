@@ -133,22 +133,20 @@ class Commissioner:
 
     def update_coe_data(self):
         """
+        Gather Infrastructure service information
 
-        Returns:
-
-        """
-        """ Gather Infrastructure service information 
         For docker swarm:
-            - swarm-endpoint
-            - swarm-client-ca
-            - swarm-client-cert
-            - swarm-client-key
-            (If K8s available, we alse parse K8s data)
-        For Kubernetes
-            - kubernetes-endpoint
-            - kubernetes-client-ca
-            - kubernetes-client-cert
-            - kubernetes-client-key
+        - swarm-endpoint
+        - swarm-client-ca
+        - swarm-client-cert
+        - swarm-client-key
+        (If K8s available, we also parse K8s data)
+
+        For Kubernetes:
+        - kubernetes-endpoint
+        - kubernetes-client-ca
+        - kubernetes-client-cert
+        - kubernetes-client-key
         """
         nuvlaedge_endpoint = self.build_nuvlaedge_endpoint()
         tls_keys = self.get_tls_keys()
@@ -165,6 +163,20 @@ class Commissioner:
             self._current_payload.swarm_token_worker = worker_token
 
     def update_attributes(self):
+        """
+
+        This method updates the attributes of the object based on the current status of the Nuvla Box
+        and the Nuvla Edge status.
+
+        - If the Nuvla Edge status contains a node_id, the cluster data is updated by calling `update_cluster_data()`.
+        - Otherwise, a log message is displayed indicating that the Nuvla Box status is not yet ready.
+
+        After updating the cluster data, the method retrieves the Nuvla Edge capabilities
+        using `get_nuvlaedge_capabilities()` and updates the COE data.
+
+        Returns:
+            None.
+        """
         if self.nuvla_client.nuvlaedge_status.node_id:
             logger.info("Updating Cluster data, node id present in NuvlaEdge-status")
             self.update_cluster_data()
@@ -175,6 +187,12 @@ class Commissioner:
         self.update_coe_data()
 
     def run(self):
+        """
+        Runs the commissioning checks and performs necessary actions based on the current and last payload.
+
+        Returns:
+            None
+        """
         logger.info("Running Commissioning checks")
         self.update_attributes()
 
@@ -203,10 +221,17 @@ class Commissioner:
         return ['NUVLA_HEARTBEAT', 'NUVLA_JOB_PULL']
 
     @staticmethod
-    def get_tls_keys():
-        """ Finds and returns the Container orchestration API client TLS keys. The keys are created by the
-        Compute API """
+    def get_tls_keys() -> tuple:
+        """
+        Retrieves the TLS keys required for container orchestration API.
 
+        Returns:
+            Tuple: A tuple containing the client CA, client certificate, and client key as strings.
+
+            If the TLS keys have not been set yet or if there is any error in reading the keys, an empty tuple will
+             be returned.
+
+        """
         try:
             with FILE_NAMES.CA.open('r') as file:
                 client_ca = file.read()
@@ -246,8 +271,7 @@ class Commissioner:
 
     def load_previous_commission(self) -> None:
         """
-
-        Returns:
+        Method to load previous commissioning data from a file.
 
         """
         if not utils.file_exists_and_not_empty(self.COMMISSIONING_FILE):

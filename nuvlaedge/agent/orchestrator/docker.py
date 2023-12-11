@@ -51,6 +51,18 @@ class DockerClient(COEClient):
     
     @property
     def node_info(self):
+        """
+            Retrieves information about the node from the Docker API.
+
+            This method caches the node information for subsequent calls within a 1-second interval,
+            in order to avoid making unnecessary requests to the Docker API.
+
+            Returns:
+                dict: A dictionary containing information about the node.
+
+            Example:
+                {'Architecture': 'x86_64', 'OperatingSystem': 'Linux', '...'}
+        """
         # Do not call Docker API for successive uses of node information (1 second)
         if time.time() - self.last_node_info > 1:
             self._node_info = self.client.info()
@@ -58,16 +70,44 @@ class DockerClient(COEClient):
         return self._node_info
     
     def get_client_version(self) -> str:
+        """
+        Returns the version of the client.
+
+        Returns:
+            str: The version of the client.
+
+        """
         return self.client.version()['Version']
 
     def get_node_info(self):
+        """
+        Retrieves the information of the node.
+
+        Returns:
+            The information of the node.
+
+        """
         return self.node_info
 
     def get_host_os(self):
+        """
+        Returns the operating system and kernel version of the host.
+
+        Returns:
+            str: The operating system and kernel version of the host.
+        """
         node_info = self.node_info
         return f"{node_info['OperatingSystem']} {node_info['KernelVersion']}"
 
     def get_join_tokens(self) -> tuple:
+        """
+        Method to get the join tokens for manager and worker nodes in a Swarm cluster.
+
+        Returns:
+            tuple: A tuple containing the join token for manager and worker nodes respectively.
+                   If the join tokens are not available or if there is an API error, returns None.
+
+        """
         try:
             if self.client.swarm.attrs:
                 return self.client.swarm.attrs['JoinTokens']['Manager'], \
@@ -80,9 +120,32 @@ class DockerClient(COEClient):
         return None, None
 
     def list_nodes(self, optional_filter={}):
+        """
+        Args:
+            optional_filter: A dictionary specifying optional filtering for the list of nodes. The keys in the dictionary represent the filtering criteria and the values represent the corresponding
+        * filter values.
+
+        Returns:
+            A list of nodes that match the given optional filtering criteria.
+        """
         return self.client.nodes.list(filters=optional_filter)
 
     def get_cluster_info(self, default_cluster_name=None):
+        """
+        Args:
+            default_cluster_name: Optional. The default name of the cluster. If not provided, it will use the default value None.
+
+        Returns:
+            A dictionary containing cluster information. The dictionary has the following keys:
+                - 'cluster-id': The ID of the cluster.
+                - 'cluster-orchestrator': The orchestrator used by the cluster.
+                - 'cluster-managers': A list of IDs of cluster managers.
+                - 'cluster-workers': A list of IDs of cluster workers.
+
+        Note:
+            This method retrieves information about the cluster. If the control is available or the current node is one
+             of the cluster managers, it will return the cluster information. Otherwise, an empty dictionary is returned
+        """
         node_info = self.node_info
         swarm_info = node_info['Swarm']
 
@@ -108,6 +171,13 @@ class DockerClient(COEClient):
             return {}
 
     def find_compute_api_external_port(self) -> str:
+        """
+        Find the external port of the compute API container.
+
+        Returns:
+            The external port of the compute API container as a string.
+            If the container is not found or the port cannot be inferred, an empty string is returned.
+        """
         try:
             container = self._get_component_container(util.compute_api_service_name)
         except (docker.errors.NotFound, docker.errors.APIError, TimeoutError) as ex:
@@ -121,6 +191,14 @@ class DockerClient(COEClient):
         return ''
 
     def get_api_ip_port(self):
+        """
+
+        Get the IP address and port of the NuvlaEdge API.
+
+        Returns:
+            Tuple: A tuple containing the IP address and the port of the NuvlaEdge API.
+
+        """
         node_info = self.node_info
         compute_api_external_port = self.find_compute_api_external_port()
         ip = node_info.get("Swarm", {}).get("NodeAddr")
@@ -156,6 +234,21 @@ class DockerClient(COEClient):
         return True
 
     def get_node_labels(self):
+        """
+        Obtains the labels assigned to the current Docker swarm node.
+
+        Returns:
+            A list of labels assigned to the node.
+
+        Raises:
+            KeyError: If the `node_info` dictionary does not contain the "Swarm" or "NodeID" keys.
+            docker.errors.APIError: If there is an error accessing the Docker API.
+            docker.errors.NullResource: If the `node_id` is not found or is NULL.
+
+        Note:
+            If the error message contains the phrase "node is not a swarm manager", then no labels are returned.
+
+        """
         try:
             node_id = self.node_info["Swarm"]["NodeID"]
             node_labels = self.client.api.inspect_node(node_id)["Spec"]["Labels"]
@@ -167,10 +260,25 @@ class DockerClient(COEClient):
         return self.cast_dict_to_list(node_labels)
 
     def is_vpn_client_running(self):
+        """
+        Checks if the VPN client is currently running.
+
+        Returns:
+            bool: True if the VPN client is running, False otherwise.
+        """
         it_vpn_container = self._get_component_container(util.vpn_client_service_name)
         return it_vpn_container.status == 'running'
 
     def install_ssh_key(self, ssh_pub_key, host_home):
+        """
+        Args:
+            ssh_pub_key: The SSH public key to be installed on the remote host.
+            host_home: The home directory of the user on the remote host.
+
+        Returns:
+            bool: Returns `True` if the SSH key installation was successful, otherwise returns `False`.
+
+        """
         ssh_folder = '/tmp/ssh'
         cmd = "-c 'echo -e \"${SSH_PUB}\" >> %s'" % f'{ssh_folder}/authorized_keys'
 
@@ -189,6 +297,31 @@ class DockerClient(COEClient):
         return True
 
     def is_nuvla_job_running(self, job_id, job_execution_id):
+        """
+        Checks if a specified Nuvla job is currently running.
+
+        This method retrieves the data of a container associated with the provided job_execution_id
+        and checks its status. If the container status is 'running' or 'restarting', the method logs
+        necessary details and returns True, indicating that the job is running. If the status is 'created',
+        the method removes the existing container and logs a warning. If the container is not found,
+        then it stopped by itself and is assumed to be running. The method logs any exceptions encountered
+        during the execution.
+
+        Args:
+            job_id (str): The ID of the job to be checked.
+            job_execution_id (str): The ID of the job execution to be checked.
+
+        Returns:
+            bool:
+            Returns True if the Nuvla job identified by job_id and job_execution_id is running.
+            Returns False otherwise, if the container is either stopped, removed or killed.
+
+        Raises:
+            docker.errors.NotFound:
+                Raised when the docker container of a job_execution_id is not found.
+            Exception:
+                Raised when an unexpected error occurs. Logs an error message with the job_id and the exception encountered.
+        """
         try:
             job_container = self.client.containers.get(job_execution_id)
         except docker.errors.NotFound:
@@ -221,6 +354,25 @@ class DockerClient(COEClient):
         return False
 
     def _get_component_container_by_service_name(self, service_name):
+        """
+        This function gets the component container associated with a specific service name.
+
+        It first retrieves the project name using the `get_nuvlaedge_project_name` method,
+        and creates a list of labels associated with the desired service and project. It then
+        uses this list of labels to filter the available containers and retrieves all that match.
+
+        If no matching containers are found, it raises a `docker.errors.NotFound` exception.
+        If more than one matching containers are found, it logs a warning and returns the first one.
+
+        Args:
+            service_name (str): The name of the service for which the component container should be retrieved.
+
+        Returns:
+            docker.models.containers.Container: The Docker Container instance that matches the service name.
+
+        Raises:
+            docker.errors.NotFound: If no container associated with the specified labels is found.
+        """
         project_name = self.get_nuvlaedge_project_name()
         labels = [util.base_label,
                   f'com.docker.compose.service={service_name}',
@@ -236,6 +388,25 @@ class DockerClient(COEClient):
         return containers[0]
 
     def _get_component_container(self, service_name, container_name=None):
+        """
+        This method is used to get the Docker container for a specific service.
+
+        If the specific container name is not provided, the container name is composed by appending the service name after the compose project name.
+        Subsequently, it attempts to retrieve the Docker container using the client's 'get' method and handles any 'NotFound' and 'APIError' exceptions.
+        It logs the error message if it fails to find the container by its name and tries to find the container using '_get_component_container_by_service_name' method.
+        If it still fails, it logs the error message again and lets the exception propagate further.
+
+        Args:
+            service_name (str): The name of the service. A container for this service will be fetched.
+            container_name (str, optional): The specific name of the container we are looking for. Defaults to None, which means the container name is generated by appending the service_name after the compose project name.
+
+        Returns:
+            docker.models.containers.Container: The container object if found.
+
+        Raises:
+            docker.errors.NotFound: If the specified Docker container is not found.
+            docker.errors.APIError: If an API error occurred while trying to access Docker.
+        """
         if not container_name:
             container_name = util.compose_project_name + '-' + service_name
 
@@ -252,6 +423,14 @@ class DockerClient(COEClient):
             raise
 
     def _create_container(self, **create_kwargs):
+        """
+        Args:
+            **create_kwargs: Any keyword arguments needed to create the container.
+
+        Returns:
+            The created container.
+
+        """
         try:
             return self.client.containers.create(**create_kwargs)
         except docker.errors.ImageNotFound:
@@ -261,7 +440,26 @@ class DockerClient(COEClient):
     def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
                    docker_image=None):
+        """
+        Launches a job on the local node using the specified Docker image. Takes into account
+        various parameters to configure the Docker container. It also handles errors during
+        the container creation and starting process.
 
+        Args:
+            job_id (str): Unique identifier of the job to be launched.
+            job_execution_id (str): Unique identifier of the job execution.
+            nuvla_endpoint (str): Endpoint for the Nuvla API.
+            nuvla_endpoint_insecure (bool, optional): If true, the Nuvla endpoint is insecure. Defaults to False.
+            api_key (str, optional): API Key for the Nuvla API. Defaults to None.
+            api_secret (str, optional): API Secret for the Nuvla API. Defaults to None.
+            docker_image (str, optional): Docker image to be used for the job. Defaults to None.
+
+        Raises:
+            Exception: If there's an error during the container creation or starting process.
+
+        Returns:
+            None
+        """
         image = docker_image if docker_image else self.job_engine_lite_image
         if not image:
             image = util.fallback_image
@@ -343,10 +541,12 @@ class DockerClient(COEClient):
     @staticmethod
     def collect_container_metrics_cpu(container_stats: dict) -> float:
         """
-        Calculates the CPU consumption for a give container
+        Args:
+            container_stats (dict): A dictionary containing container statistics.
 
-        :param container_stats: Docker container statistics
-        :return: CPU consumption in percentage
+        Returns:
+            float: The CPU usage percentage of the container.
+
         """
         cs = container_stats
         cpu_percent = float('nan')
@@ -375,8 +575,12 @@ class DockerClient(COEClient):
         """
         Calculates the Memory consumption for a give container
 
-        :param cstats: Docker container statistics
-        :return: Memory consumption tuple with percentage, usage and limit
+        Args:
+            cstats: A dictionary containing container metrics data.
+
+        Returns:
+            A tuple with the memory percentage, memory usage, and memory limit of the container.
+
         """
         try:
             # Get total mem usage and subtract cached memory
@@ -400,10 +604,14 @@ class DockerClient(COEClient):
     @staticmethod
     def collect_container_metrics_net(cstats: dict) -> tuple:
         """
-        Calculates the Network consumption for a give container
+        Collects network metrics for a container.
 
-        :param cstats: Docker container statistics
-        :return: tuple with network bytes IN and OUT
+        Args:
+            cstats (dict): A dictionary containing container statistics.
+
+        Returns:
+            tuple: A tuple containing the network input and network output in MB.
+
         """
         net_in = net_out = 0.0
         try:
@@ -423,8 +631,16 @@ class DockerClient(COEClient):
         """
         Calculates the block consumption for a give container
 
-        :param cstats: Docker container statistics
-        :return: tuple with block bytes IN and OUT
+        Args:
+            cstats (dict): Dictionary containing container statistics.
+
+        Returns:
+            tuple: Tuple containing the block usage (Out) and block usage (In) for the container.
+
+        Note:
+            The block usage is calculated by dividing the value of "io_service_bytes_recursive" in the "blkio_stats"
+            dictionary by 1000 and then by 1000 again to convert bytes to megabytes.
+
         """
         blk_out = blk_in = 0.0
 
@@ -447,8 +663,8 @@ class DockerClient(COEClient):
         """
         Bug: Sometime the Docker Python API fails to get the list of containers with the exception:
         'requests.exceptions.HTTPError: 404 Client Error: Not Found'
-        This is due to docker listing containers and then inpecting them one by one.
-        If in the mean time a container has been removed, it fails with the above exception.
+        This is due to docker listing containers and then inspecting them one by one.
+        If in the meantime a container has been removed, it fails with the above exception.
         As a workaround, the list operation is retried if an exception occurs.
         """
         tries = 0
@@ -467,6 +683,17 @@ class DockerClient(COEClient):
                     raise
 
     def get_containers_stats(self):
+        """
+        Retrieves the statistics of all containers.
+
+        Returns:
+            A list of tuples, where each tuple contains the container object
+            and its respective statistics.
+
+        Raises:
+            None.
+
+        """
         containers_stats = []
         for container in self.list_containers():
             try:
@@ -477,6 +704,24 @@ class DockerClient(COEClient):
         return containers_stats
 
     def collect_container_metrics(self):
+        """
+
+        Collects metrics for each container in the system.
+
+        Returns a list of dictionaries, where each dictionary represents the metrics for a specific container.
+        The dictionary will contain the following keys:
+
+        - 'id': The ID of the container.
+        - 'name': The name of the container.
+        - 'container-status': The current status of the container.
+        - 'cpu-percent': The CPU usage percentage for the container, rounded to two decimal places.
+        - 'mem-usage-limit': The memory usage and limit for the container in MiB, formatted as "{usage}MiB / {limit}MiB".
+        - 'mem-percent': The memory usage percentage for the container, rounded to two decimal places.
+        - 'net-in-out': The network usage for the container in MB, formatted as "{in}MB / {out}MB".
+        - 'blk-in-out': The block device usage for the container in MB, formatted as "{in}MB / {out}MB".
+        - 'restart-count': The number of times the container has been restarted. If not available, it will be set to 0.
+
+        """
         containers_metrics = []
 
         for container, stats in self.get_containers_stats():
@@ -511,6 +756,13 @@ class DockerClient(COEClient):
 
     @staticmethod
     def _get_container_id_from_cgroup():
+        """
+        Get the container ID from the cgroup.
+
+        Returns:
+            The container ID extracted from the cgroup.
+
+        """
         try:
             with open('/proc/self/cgroup', 'r') as f:
                 return f.read().split('/')[-1].strip()
@@ -519,6 +771,13 @@ class DockerClient(COEClient):
 
     @staticmethod
     def _get_container_id_from_cpuset():
+        """
+        Get the container ID from the cpuset file.
+
+        Returns:
+            str: The container ID.
+
+        """
         try:
             with open('/proc/1/cpuset', 'r') as f:
                 return f.read().split('/')[-1].strip()
@@ -527,12 +786,31 @@ class DockerClient(COEClient):
 
     @staticmethod
     def _get_container_id_from_hostname():
+        """
+        Get the container ID from the hostname.
+        This static method is used to extract the container ID from the hostname. It utilizes the `socket.gethostname()`
+         function to fetch the hostname and then strips any whitespace characters from it. In case of any errors or exceptions
+         encountered during the process, it logs a debug message using the `logger` object indicating the failure.
+        Returns:
+            str: The container ID extracted from the hostname.
+
+        """
         try:
             return socket.gethostname().strip()
         except Exception as e:
             logger.debug(f'Failed to get container id from hostname: {e}')
 
     def get_current_container(self):
+        """
+        Get the current container.
+
+        This method attempts to determine the ID of the current container by calling a list of ID retrieval functions. It then uses the ID to retrieve the corresponding container object from
+        * the client.
+
+        Returns:
+            A container object representing the current container.
+
+        """
         get_id_functions = [self._get_container_id_from_hostname,
                             self._get_container_id_from_cpuset,
                             self._get_container_id_from_cgroup]
@@ -570,13 +848,27 @@ class DockerClient(COEClient):
         return [env for env in env_vars if env.split('=')[0] not in exclude]
 
     def get_installation_parameters(self):
+        """
+        Return installation parameters based on the current container and its environment.
+
+        Returns:
+            dict: A dictionary containing the following installation parameters:
+                - 'project-name': The name of the project.
+                - 'working-dir': The working directory.
+                - 'config-files': A list of unique configuration files.
+                - 'environment': A list of unique environment variables.
+
+                If any of the required parameters (working directory, project name, config files) are missing, None is returned.
+        Raises:
+            RuntimeError: If the current container cannot be found by ID.
+        """
         try:
             myself = self.get_current_container()
         except RuntimeError:
             message = 'Failed to find the current container by id. Cannot proceed'
             logger.error(message)
-            # raise
-            return None
+            raise
+            # return None
 
         last_update = myself.attrs.get('Created', '')
         working_dir = self.get_working_dir_from_labels(myself.labels)

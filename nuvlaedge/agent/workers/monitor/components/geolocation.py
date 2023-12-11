@@ -104,7 +104,7 @@ class GeoLocationMonitor(Monitor):
 
         for service, info in self._LOCATION_SERVICES.items():
             it_response: dict = self.send_request(info['url'])
-
+            # print(f'\n\n\n\n {it_response} \n\n\n\n')
             if it_response:
                 try:
                     self.data.coordinates = \

@@ -9,10 +9,10 @@ from pathlib import Path
 import requests
 from mock import Mock, mock_open, patch, MagicMock
 
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.monitor.components import network as monitor
-from nuvlaedge.agent.monitor.data.network_data import NetworkInterface, NetworkingData, IP
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent.workers.monitor.components import network as monitor
+from nuvlaedge.agent.workers.monitor.data.network_data import NetworkInterface, NetworkingData, IP
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 def generate_random_ip_address():
@@ -21,7 +21,8 @@ def generate_random_ip_address():
     return ".".join(it_str)
 
 
-atomic_write: str = 'nuvlaedge.agent.common.util.atomic_write'
+atomic_write: str = 'nuvlaedge.common.utils.atomic_write'
+non_empty_exists: str = 'nuvlaedge.common.utils.file_exists_and_not_empty'
 
 
 class TestNetworkMonitor(unittest.TestCase):
@@ -117,14 +118,14 @@ class TestNetworkMonitor(unittest.TestCase):
         tel_mock.coe_client = runtime_mock
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", tel_mock, Mock())
-        with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
+        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
                    '_gather_host_ip_route') as test_gather:
             test_gather.return_value = None
             test_ip_monitor.set_local_data()
             self.assertFalse(test_ip_monitor.data.ips.local)
 
         # Test Skip routes
-        with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
+        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
                    'is_skip_route') as test_skip, \
                 patch(self._path_json) as json_dict:
             json_dict.return_value = [{'Test': None}]
@@ -167,7 +168,7 @@ class TestNetworkMonitor(unittest.TestCase):
             self.assertEqual(test_ip_monitor.data.ips.local, it_address)
 
         # Test traffic readings
-        with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
+        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
                    'read_traffic_data') as test_traffic, \
                 patch(self._path_json) as json_dict:
             json_dict.return_value = None
@@ -207,9 +208,8 @@ class TestNetworkMonitor(unittest.TestCase):
 
     # -------------------- VPN data tests -------------------- #
 
-    @patch.object(Path, 'exists')
-    @patch.object(Path, 'stat')
-    def test_set_vpn_data(self, mock_stat, mock_exists):
+    @patch(non_empty_exists)
+    def test_set_vpn_data(self, mock_non_empty_exists):
         vpn_file = Mock()
         status = Mock()
         mock_telemetry = Mock()
@@ -219,15 +219,13 @@ class TestNetworkMonitor(unittest.TestCase):
             monitor.NetworkMonitor(vpn_file, mock_telemetry, status)
 
         it_ip: str = generate_random_ip_address()
-        mock_stat.return_value.st_size = 1
-        mock_exists.return_value = True
+        mock_non_empty_exists.return_value = True
         with patch.object(Path, 'open', mock_open(read_data=it_ip)):
             test_ip_monitor.set_vpn_data()
             self.assertEqual(test_ip_monitor.data.ips.vpn, it_ip)
 
         test_ip_monitor.data.ips.vpn = ''
-        mock_stat.return_value.st_size = 0
-        mock_exists.return_value = True
+        mock_non_empty_exists.return_value = False
         with patch.object(Path, 'open', mock_open(read_data="")):
             test_ip_monitor.set_vpn_data()
             self.assertFalse(test_ip_monitor.data.ips.vpn)
@@ -252,10 +250,10 @@ class TestNetworkMonitor(unittest.TestCase):
         with self.assertRaises(TypeError):
             test_ip_monitor.set_swarm_data()
 
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_public_data')
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_local_data')
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_vpn_data')
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_swarm_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_public_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_local_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_vpn_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_swarm_data')
     def test_update_data(self, pub, local, vpn, swarm):
         runtime_mock = Mock()
         # r_ip: str = generate_random_ip_address()

@@ -5,8 +5,8 @@ from pathlib import Path
 from mock import Mock, patch, mock_open
 import unittest
 
-from nuvlaedge.agent.monitor.components.vulnerabilities import VulnerabilitiesMonitor
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components.vulnerabilities import VulnerabilitiesMonitor
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestVulnerabilitiesMonitor(unittest.TestCase):

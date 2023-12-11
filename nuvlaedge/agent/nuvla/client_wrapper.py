@@ -55,10 +55,108 @@ def format_host(host: str) -> str:
 
 
 class NuvlaClientWrapper:
+    """
+    NuvlaClientWrapper is a class that provides a wrapper around the Nuvla API client for interacting with NuvlaEdge resources.
+
+    Attributes:
+        MIN_SYNC_TIME (int): The minimum time interval for updating resources (default is 60 seconds)
+
+        _host (str): The hostname of the Nuvla API server
+        _verify (bool): Whether to verify the SSL certificate of the Nuvla API server
+        nuvlaedge_uuid (NuvlaID): The ID of the NuvlaEdge resource
+
+        __nuvlaedge_resource (NuvlaEdgeResource | None): The cached NuvlaEdge resource instance
+        __nuvlaedge_status_resource (NuvlaEdgeStatusResource | None): The cached NuvlaEdge status resource instance
+        __vpn_credential_resource (CredentialResource | None): The cached VPN credential resource instance
+        __vpn_server_resource (InfrastructureServiceResource | None): The cached VPN server resource instance
+
+        __nuvlaedge_sync_time (float): The last time the NuvlaEdge resource was synced
+        __status_sync_time (float): The last time the NuvlaEdge status resource was synced
+        __vpn_credential_time (float): The last time the VPN credential resource was synced
+        __vpn_server_time (float): The last time the VPN server resource was synced
+
+        nuvlaedge_client (NuvlaApi): The Nuvla API client for interacting with NuvlaEdge resources
+
+        _headers (dict): HTTP headers to be sent with requests
+
+        nuvlaedge_credentials (NuvlaApiKeyTemplate | None): The API keys for authenticating with NuvlaEdge
+
+        _nuvlaedge_status_uuid (NuvlaID | None): The ID of the NuvlaEdge status resource
+
+        paths (NuvlaEndPointPaths): The path helper for constructing Nuvla API endpoints
+
+        _watched_fields (dict[str, set[str]]): The dictionary of watched fields for each resource
+
+    Methods:
+        add_watched_field(self, resource: str, field: str) -> None:
+            Adds a field to the watch list for a specific resource
+
+        remove_watch_field(self, resource: str, field: str) -> None:
+            Removes a field from the watch list for a specific resource
+
+        nuvlaedge_status_uuid(self) -> NuvlaID:
+            Returns the ID of the NuvlaEdge status resource
+
+        nuvlaedge(self) -> NuvlaEdgeResource:
+            Returns the NuvlaEdge resource
+
+        nuvlaedge_status(self) -> NuvlaEdgeStatusResource:
+            Returns the NuvlaEdge status resource
+
+        vpn_credential(self) -> CredentialResource:
+            Returns the VPN credential resource
+
+        vpn_server(self) -> InfrastructureServiceResource:
+            Returns the VPN server resource
+
+        login_nuvlaedge(self) -> None:
+            Logs in to the NuvlaEdge API using the API keys
+
+        activate(self) -> None:
+            Activates the NuvlaEdge, saves the returned API keys, and logs in
+
+        commission(self, payload: dict) -> dict:
+            Sends a commission request to the NuvlaEdge API with the given payload
+
+        heartbeat(self) -> CimiResponse:
+            Sends a heartbeat request to the NuvlaEdge API
+
+        telemetry(self, new_status: dict, attributes_to_delete: set[str]) -> CimiResponse:
+            Sends a telemetry report to the NuvlaEdge API with the given new status and attributes to delete
+
+        add_peripherals(self, peripherals: list[str]) -> None:
+            Adds peripherals to the NuvlaEdge resource
+
+        remove_peripherals(self, peripherals: list[str]) -> None:
+            Removes peripherals from the NuvlaEdge resource
+
+        sync_vpn_credential(self) -> None:
+            Retrieves the VPN credential from the Nuvla API
+
+        sync_vpn_server(self) -> None:
+            Retrieves the VPN server from the Nuvla API
+
+        sync_peripherals(self) -> None:
+            Syncs the peripherals of the NuvlaEdge resource
+
+        sync_nuvlaedge(self) -> None:
+            Syncs the NuvlaEdge resource from the Nuvla API
+
+        sync_nuvlaedge_status(self) -> None:
+            Syncs the NuvlaEdge status resource from the Nuvla API
+    """
     MIN_SYNC_TIME: int = 60  # Resource min update time
 
     def __init__(self, host: str, verify: bool, nuvlaedge_uuid: NuvlaID):
+        """
+        Initialize the NuvlaEdgeClient object with the provided parameters.
 
+        Args:
+            host (str): The host URL of the NuvlaEdge instance.
+            verify (bool): Indicates whether to verify the SSL certificate of the host.
+            nuvlaedge_uuid (NuvlaID): The UUID of the NuvlaEdge instance.
+
+        """
         self._host: str = format_host(host)
         self._verify: bool = verify
 
@@ -102,12 +200,32 @@ class NuvlaClientWrapper:
 
     @property
     def nuvlaedge_status_uuid(self) -> NuvlaID:
+        """
+        Property for the UUID of the NuvlaEdge status.
+
+        This property retrieves the 'nuvlaedge_status_uuid' in a lazy-loading manner. If the
+        'nuvlaedge_status_uuid' is not yet initialized (i.e., None), it fills the value by accessing
+        the 'nuvlabox_status' from the 'nuvlaedge' object and assigns it to '_nuvlaedge_status_uuid'.
+
+        Returns:
+            NuvlaID: The UUID of the NuvlaEdge status.
+        """
         if not self._nuvlaedge_status_uuid:
             self._nuvlaedge_status_uuid = self.nuvlaedge.nuvlabox_status
         return self._nuvlaedge_status_uuid
 
     @property
     def nuvlaedge(self) -> NuvlaEdgeResource:
+        """
+        NuvlaEdge property that synchronizes with the NuvlaEdgeResource at a minimum specified interval.
+
+        This property returns the current NuvlaEdgeResource instance. If the time elapsed since
+        the last synchronization is longer than the minimum sync time, it triggers a new
+        synchronization before returning the instance.
+
+        Returns:
+            NuvlaEdgeResource: The current NuvlaEdgeResource instance.
+        """
         if time.time() - self.__nuvlaedge_sync_time > self.MIN_SYNC_TIME:
             self.sync_nuvlaedge()
         return self.__nuvlaedge_resource

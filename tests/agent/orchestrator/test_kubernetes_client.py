@@ -12,7 +12,6 @@ import kubernetes
 from kubernetes.client.exceptions import ApiException
 
 import tests.agent.utils.fake as fake
-from nuvlaedge.agent.common import nuvlaedge_common
 from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient, TimeoutException
 
 
@@ -25,8 +24,6 @@ class COEClientKubernetesTestCase(unittest.TestCase):
             if 'nuvlaedge.agent.common.NuvlaEdgeCommon' in sys.modules:
                 del sys.modules['nuvlaedge.agent.common.NuvlaEdgeCommon']
 
-        self.nuvlaedge_common = nuvlaedge_common
-        self.nuvlaedge_common.ORCHESTRATOR = 'kubernetes'
         self.hostfs = '/fake-rootfs'
         self.host_home = '/home/fakeUser'
         os.environ.setdefault('MY_HOST_NODE_NAME', 'fake-host-node-name')
@@ -47,7 +44,7 @@ class COEClientKubernetesTestCase(unittest.TestCase):
 
     def test_init(self):
         # the K8s coe should be set
-        self.assertEqual(self.nuvlaedge_common.ORCHESTRATOR, 'kubernetes',
+        self.assertEqual(self.obj.ORCHESTRATOR, 'kubernetes',
                          'Unable to set Kubernetes as the COE')
         # client should be set as well
         self.assertIsNotNone(self.obj.client,

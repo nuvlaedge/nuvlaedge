@@ -34,6 +34,25 @@ class VPNCredentialCreationTimeOut(Exception):
 
 
 class VPNConfig(NuvlaEdgeStaticModel):
+    """
+    Class that represents the configuration of a VPN.
+
+    Attributes:
+        vpn_certificate (str): The VPN certificate.
+        vpn_intermediate_ca (list[str]): List of intermediate CAs.
+        vpn_intermediate_ca_is (list[str]): List of intermediate CAs IS.
+        vpn_ca_certificate (str): The CA certificate.
+        vpn_shared_key (str): The shared key for the VPN.
+        vpn_common_name_prefix (str): The common name prefix for the VPN.
+        vpn_interface_name (str): The interface name for the VPN.
+        nuvlaedge_vpn_key (str): The key for the NuvlaEdge VPN.
+        vpn_extra_config (str): Additional configuration for the VPN.
+        vpn_endpoints_mapped (str): Mapped endpoints for the VPN.
+
+    Methods:
+        dump_to_template(): Dumps the VPN configuration to a dictionary format.
+
+    """
     vpn_certificate:        Optional[str] = None
     vpn_intermediate_ca:    Optional[list[str]] = None
     vpn_intermediate_ca_is: Optional[list[str]] = None
@@ -53,6 +72,65 @@ class VPNConfig(NuvlaEdgeStaticModel):
 
 
 class VPNHandler:
+    """
+    VPNHandler
+    ----------
+    Controls and configures the VPN client based on configuration parsed by the agent. It commissions itself via the commissioner class by editing the field `self.commission_payload.vpn
+    *_csr`. If this object is instantiated and then running, we assume VPN is enabled. It should be the agent (via configuration) who starts/stops/disables the VPN.
+
+    Attributes:
+        VPN_FOLDER (Path): Path to the VPN folder
+        VPN_CSR_FILE (Path): Path to the VPN CSR file
+        VPN_KEY_FILE (Path): Path to the VPN key file
+        VPN_CONF_FILE (Path): Path to the VPN client config file
+        VPN_PLAIN_CONF_FILE (Path): Path to the VPN handler config file
+        VPN_CREDENTIAL_FILE (Path): Path to the VPN credential file
+        VPN_SERVER_FILE (Path): Path to the VPN server file
+        VPN_INTERFACE_NAME (str): Name of the VPN interface
+
+    Args:
+        coe_client (COEClient): Instance of COEClient class
+        nuvla_client (NuvlaClientWrapper): Instance of NuvlaClientWrapper class
+        vpn_channel (Queue[str]): Channel where the VPN CSR is sent to the commissioner to be included in the commissioning
+        vpn_extra_conf (str): Extra VPN configuration
+
+    Methods:
+        __init__(coe_client: COEClient, nuvla_client: NuvlaClientWrapper, vpn_channel: Queue[str], vpn_extra_conf: str) -> None:
+            Initializes the VPNHandler object
+
+        certificates_exists() -> bool:
+            Checks if VPN key and CSR files exist
+
+        get_vpn_ip() -> str:
+            Returns the VPN IP
+
+        check_vpn_client_state() -> Tuple[bool, bool]:
+            Checks if the VPN client container exists and if it is running
+
+        wait_certificates_ready(timeout: int = 25) -> None:
+            Waits for the generated certificates to be ready
+
+        wait_credential_creation(timeout: int = 25) -> bool:
+            Waits for the VPN credential to be created
+
+        generate_certificates(wait: bool = True) -> None:
+            Generates the certificates for the VPN
+
+        trigger_commission() -> None:
+            Triggers the commissioning operation by changing the commission payload
+
+        vpn_needs_commission() -> bool:
+            Checks if the VPN needs commissioning
+
+        get_vpn_key() -> str:
+            Returns the VPN key
+
+        map_endpoints() -> str:
+            Maps the VPN endpoints
+
+        configure_vpn_client() -> None:
+            Configures the VPN client
+    """
     VPN_FOLDER: Path = FILE_NAMES.VPN_FOLDER
     VPN_CSR_FILE: Path = FILE_NAMES.VPN_CSR_FILE
     VPN_KEY_FILE: Path = FILE_NAMES.VPN_KEY_FILE
@@ -109,14 +187,23 @@ class VPNHandler:
             self.VPN_FOLDER.mkdir()
 
     def certificates_exists(self) -> bool:
+        """
+        Checks if the VPN key and certificate signing request files exist and are not empty.
+
+        Returns:
+            bool: True if both files exist and are not empty, False otherwise.
+        """
         return (utils.file_exists_and_not_empty(self.VPN_KEY_FILE) and
                 utils.file_exists_and_not_empty(self.VPN_CSR_FILE))
 
     @staticmethod
     def get_vpn_ip():
         """
+        Static method to retrieve the VPN IP from a file.
 
         Returns:
+            str or None: The VPN IP address read from the file, or None if the file is empty or doesn't exist.
+
 
         """
         if utils.file_exists_and_not_empty(FILE_NAMES.VPN_IP_FILE):
@@ -161,6 +248,16 @@ class VPNHandler:
                            f"CSR: {self.VPN_CSR_FILE}")
 
     def wait_credential_creation(self, timeout: int = 25):
+        """
+        Waits for the creation of VPN credentials in Nuvla for a given timeout period.
+
+        Args:
+            timeout (int): The maximum time in seconds to wait for the credentials to be created. Default is 25 seconds.
+
+        Returns:
+            bool: True if the credentials are created within the timeout period, False otherwise.
+
+        """
         start_time: float = time.perf_counter()
 
         while time.perf_counter() - start_time < timeout:
@@ -175,9 +272,18 @@ class VPNHandler:
 
     def generate_certificates(self, wait: bool = True):
         """
-        Generates the certificates for the VPN. If invoked, it will remove any previous certificate before starting
-        Returns: None
+        This method generates new VPN certificates using OpenSSL, and it also removes any existing certificates.
 
+        The generation of certificates involves creating a new elliptic curve private key and a certificate request
+         with the NuvlaEdge UUID as the Common Name. The generated files are stored locally.
+
+        Args:
+            wait (bool): A flag which indicates whether the function should wait for the certificates to be ready. Default is True.
+                         If it is set to True, the method will block and keep checking until the certificates are created.
+                         If it is False, the function will return immediately after attempting to generate the certificates.
+
+        Raises:
+            An error message will be logged when the certificate generation process fails.
         """
         if utils.file_exists_and_not_empty(self.VPN_KEY_FILE):
             self.VPN_KEY_FILE.unlink(True)
@@ -218,8 +324,25 @@ class VPNHandler:
 
     def vpn_needs_commission(self):
         """
-        Checks if it is either the first time we run the NuvlaEdge or Nuvla VPN server has changed
-        Returns: bool
+        Checks if a Virtual Private Network (VPN) needs commissioning. There are several conditions that cause
+        this method to return True, indicating that commissioning is needed:
+
+        1. If no VPN credential exists in the Nuvla client - This could be caused by a VPN server ID being
+           defined, but no VPN credential has been created.
+
+        2. If there's a mismatch between the locally stored VPN credential and the VPN credential stored in the
+           Nuvla client - This could suggest that the VPN has been updated, but the changes have not been
+           reflected in the local storage.
+
+        3. If the VPN server ID has changed - This points to a possible major change in the VPN configuration,
+           requiring re-commissioning.
+
+        Each of these conditions checks different aspects of the VPN configuration, and if any are met, the
+        function will return True. If none are met, the function will return False, indicating no need for
+        commissioning.
+
+        Returns:
+            bool: True if VPN needs commissioning, False otherwise.
 
         """
         if not self.nuvla_client.vpn_credential:
@@ -245,10 +368,26 @@ class VPNHandler:
         return False
 
     def get_vpn_key(self) -> str:
+        """
+        Retrieves the VPN key from the VPN key file.
+
+        Returns:
+            str: The VPN key read from the VPN key file.
+
+        Raises:
+            FileNotFoundError: If the VPN key file is not found.
+        """
         with self.VPN_KEY_FILE.open('r') as file:
             return file.read()
 
     def map_endpoints(self) -> str:
+        """
+        Maps VPN connection endpoints to a string representation of VPN configuration endpoints.
+
+        Returns:
+            str: The string representation of VPN configuration endpoints.
+
+        """
         vpn_conf_endpoints = ''
         for connection in self.vpn_server.vpn_endpoints:
             vpn_conf_endpoints += \
@@ -259,7 +398,42 @@ class VPNHandler:
         return vpn_conf_endpoints
 
     def configure_vpn_client(self):
+        """
+        Configures the VPN client by updating the VPN server data and credentials.
 
+        This method performs a series of operations to ensure the VPN client is
+        correctly configured:
+
+            - Updates the `vpn_config` with the VPN server data from the `nuvla_client`,
+              which includes various VPN server configurations
+
+            - Moves the intermediate CA credentials from the `vpn_server` to the `vpn_config`.
+
+            - Creates a deep copy of the VPN server data from the `nuvla_client` and assigns
+              it back to the `vpn_server`.
+
+            - The credentials for the VPN are then updated in the `vpn_configusing` the
+              `vpn_credential`.
+
+            - The VPN interface name is then updated in the `vpn_config` based on the
+              agent settings.
+
+            - The method then makes a local copy of intermediate CA from `vpn_server`
+              and assigns it back to `vpn_config`.
+
+            - The nuvlaedge VPN key is then assigned to the `vpn_config`.
+
+            - The corresponding endpoints are then mapped in the `vpn_config`.
+
+            - Finally, the method saves the configuration in `vpn_client_configuration` string.
+
+        Each data update operation is logged for debugging purposes.
+
+        Note: while configuring the VPN client the Infrastructure service CA comes with the
+        same key as the VPN credential CA. It needs to be moved to its corresponding field,
+        and the CA will be automatically replaced.
+
+        """
         # Update VPN server data
         self.vpn_config.update(self.nuvla_client.vpn_server)
         # Infrastructure service CA comes with the same key as the VPN credential CA

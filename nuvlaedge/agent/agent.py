@@ -1,3 +1,29 @@
+"""
+
+The Agent class is central to the operation of the NuvlaEdge software, responsible for configuration management,
+worker initialization, periodic operation execution, and response handling. Here is a detailed breakdown of the
+responsibilities:
+
+    Configuration Management: Upon initialization, Agent uses the provided settings and an exit event to configure the
+        connection with the Nuvla API and the Container Orchestration Engine (either Docker or Kubernetes).
+        It also sets up channels (queues) for telemetry and VPN data.
+    State Management: The assert_current_state method determines the current state of the NuvlaEdge application,
+        retrieves sessions or credentials if they are stored, and initiates new client sessions if needed.
+    Worker Initialization: The init_workers method begins key system workers, such as telemetry, VPN handling,
+        peripheral management, and others. Each of these workers is configured with specific parameters and added to the worker manager. The initialization of some workers is contingent on certain conditions being met.
+    Action Initialization: The init_actions method establishes a series of timed tasks to be executed by the agent in
+        operations like telemetry and heartbeat.
+    Periodic Operation Execution: In the start_agent method, the agent begins by validating the state of the
+        application, actives the application if needed, and then initiates the workers and actions. The run method
+        operates the agent by starting the worker manager and executing the necessary actions according to the schedule
+        set up by the action handler.
+    Response Handling: Agent handles responses from the Nuvla API, processes received jobs, updates the telemetry
+        information, and sends heartbeats using the process_response, process_jobs, telemetry, and heartbeat methods, respectively.
+
+The class attributes represent various components of the system including the Nuvla client, Container Orchestration
+Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
+The WorkerManagerclass supervises worker initialization and operation, whereasAction
+"""
 import inspect
 import json
 import logging
@@ -33,10 +59,42 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Agent:
+    """
+    Class that represents an Agent in the NuvlaEdge system.
+
+    Attributes:
+        settings (AgentSettings): The settings for the Agent.
+        _exit (Event): An event used to signal the Agent to exit.
+        _nuvla_client (NuvlaClientWrapper): The Nuvla API client.
+        _coe_engine (DockerClient | KubernetesClient): The container orchestration engine.
+        worker_manager (WorkerManager): The manager for the Agent's workers.
+        action_handler (ActionHandler): The handler for the Agent's timed actions.
+        telemetry_payload (TelemetryPayloadAttributes): The attributes for telemetry payload.
+        telemetry_channel (Queue[TelemetryPayloadAttributes]): The channel for sending telemetry payloads.
+        vpn_channel (Queue[str]): The channel for sending VPN messages.
+
+    Methods:
+        assert_current_state() -> State:
+            Asserts the state of NuvlaEdge and returns the State.
+        init_workers():
+            Initializes and registers various workers.
+        init_actions():
+            Initializes the periodic actions to be run by the Agent.
+        start_agent():
+            Starts the Agent.
+
+    """
     def __init__(self,
                  exit_event: Event,
                  settings: AgentSettings):
+        """
+        Initializes an instance of the Agent class.
 
+        Args:
+            exit_event (Event): The event object used to signal the agent to exit.
+            settings (AgentSettings): The settings object containing agent configuration.
+
+        """
         logging.debug(f"Initialising Agent Class")
 
         self.settings: AgentSettings = settings
@@ -138,11 +196,24 @@ class Agent:
 
     def init_workers(self):
         """
+        This method initializes and registers various workers including Commissioner, Telemetry, VPNHandler and others.
+        It sets the worker properties such as `period`, `worker_type`, `init_params` and `actions`. The workers are
+        added to the worker manager and are set to run at a specified interval.
+
+        The initialization and registration of some workers, like VPNHandler, depend on certain conditions (e.g.,
+        VPN server ID being present).
+
+        No parameters required.
 
         Returns:
+            None.
 
+        Raises:
+            Errors raised by worker manager if worker initialization or registration fails.
+
+        Example usage:
+            init_workers()
         """
-        """ Initialise Commissioner"""
         logger.info("Registering Commissioner")
         self.worker_manager.add_worker(
             period=60,
@@ -183,18 +254,14 @@ class Agent:
             )
 
         """ Initialise Peripheral Manager """
-        # logger.info("Registering Peripheral Manager")
-        # self.worker_manager.add_worker(
-        #     period=120,
-        #     worker_type=PeripheralManager,
-        #     init_params=((), {'nuvla_client': self._nuvla_client.nuvlaedge_client,
-        #                       'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid}),
-        #     actions=['run']
-        # )
-
-        """ Initialise Job Manager """
-        # logger.info("Registering Job Manager")
-        pass
+        logger.info("Registering Peripheral Manager")
+        self.worker_manager.add_worker(
+            period=120,
+            worker_type=PeripheralManager,
+            init_params=((), {'nuvla_client': self._nuvla_client.nuvlaedge_client,
+                              'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid}),
+            actions=['run']
+        )
 
     def init_actions(self):
         """
@@ -301,6 +368,14 @@ class Agent:
         return self._nuvla_client.heartbeat()
 
     def process_response(self, response: CimiResponse, operation: str):
+        """
+        Processes the response received from an operation.
+
+        Args:
+            response (CimiResponse): The response object received from the operation.
+            operation (str): The operation that was executed.
+
+        """
         start_time: float = time.perf_counter()
         jobs = response.data.get('jobs', [])
         logger.info(f"{len(jobs)} received in from {operation}")
@@ -311,12 +386,13 @@ class Agent:
 
     def process_jobs(self, jobs: list[NuvlaID]):
         """
+        Process a list of jobs.
 
         Args:
-            jobs: Non-empty list of jobs
+            jobs: A list of NuvlaID objects representing the jobs to be processed.
 
         Returns:
-
+            None
         """
         for i in jobs:
             logger.info(f"Creating job {i}")
@@ -335,6 +411,13 @@ class Agent:
         self._exit.set()
 
     def run(self):
+        """
+        Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
+
+        Returns:
+            None
+
+        """
         self.worker_manager.start()
 
         next_cycle_in = self.action_handler.sleep_time()

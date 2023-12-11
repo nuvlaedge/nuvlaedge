@@ -20,6 +20,26 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class PeripheralManager:
+    """
+    A class that manages peripherals, including checking for new peripherals, adding, editing, and deleting peripherals.
+
+    Attributes:
+        REFRESH_RATE (int): Peripheral refresh rate in seconds.
+        NUVLA_SYNCHRONIZATION_PERIOD (int): Synchronization period for checking Nuvla DB and local DB.
+        PERIPHERALS_LOCATION (Path): Location of the peripherals folder.
+
+    Methods:
+        __init__(nuvla_client, nuvlaedge_uuid): Initializes the PeripheralManager class.
+        update_running_managers(): Checks which peripheral scanners are currently running.
+        process_new_peripherals(new_peripherals): Assess what to do with the new received peripherals.
+        available_messages(): Generator that allows to iterate over the latest messages of the peripheral managers.
+        join_new_peripherals(new_peripherals): Takes a list of new received peripherals and rearranges them into a dictionary.
+        run(): Runs the peripheral manager.
+
+    Example:
+        manager = PeripheralManager(nuvla_client, nuvlaedge_uuid)
+        manager.run()
+    """
     REFRESH_RATE = 30  # Peripheral refresh rate in seconds
     # Normally, NuvlaDB and local DB shouldn't be desynchronized. For safety, we check Nuvla db and synchronize the
     # local one with it for safe keeping
@@ -28,7 +48,22 @@ class PeripheralManager:
     PERIPHERALS_LOCATION: Path = FILE_NAMES.PERIPHERALS_FOLDER
 
     def __init__(self, nuvla_client: NuvlaClient, nuvlaedge_uuid: str):
+        """
+        Initializes an instance of the class with the given parameters.
 
+        Args:
+            nuvla_client: An instance of NuvlaClient class for communication with the Nuvla database.
+            nuvlaedge_uuid: A string representing the UUID of the Nuvlaedge instance.
+
+        Attributes:
+            _uuid (str): The UUID of the Nuvlaedge instance.
+            broker (NuvlaEdgeBroker): An instance of the NuvlaEdgeBroker class for consuming messages from peripherals.
+            db (PeripheralsDBManager): An instance of the PeripheralsDBManager class for handling and managing peripherals.
+            exit_event (Event): An Event object for controlling the running thread.
+            running_peripherals (set): A set to store the currently running peripherals.
+            registered_peripherals (dict): A dictionary to store the registered peripherals with their respective data.
+
+        """
         # Required to check the Nuvla database and filter present peripherals
         self._uuid: str = nuvlaedge_uuid
 
@@ -50,8 +85,14 @@ class PeripheralManager:
 
     def update_running_managers(self):
         """
-        Checks which peripheral scanners are currently running
-        :return:
+        Updates the set of running managers by checking the status of peripherals.
+
+        This method iterates through the files in the `PERIPHERALS_FOLDER` directory and checks if each file represents
+         a running peripheral manager. If a file is a directory, it means that the peripheral manager is running.
+         The `running_peripherals` set is updated with the running managers.
+
+        Returns:
+            None
         """
         logger.debug(f'Getting peripheral status from: {FILE_NAMES.PERIPHERALS_FOLDER}')
 
@@ -62,9 +103,12 @@ class PeripheralManager:
 
     def process_new_peripherals(self, new_peripherals: dict[str, PeripheralData]):
         """
-        Assess what to do with the new received peripherals: add, edit delete.
-        :param new_peripherals:
-        :return:
+        Process new peripherals and update the database accordingly.
+
+        Args:
+            new_peripherals (dict[str, PeripheralData]): A dictionary containing information about the new peripherals. The keys are unique identifiers for each peripheral, and the values are
+        * PeripheralData objects.
+
         """
         # Process unique identifiers to compare new with stored
         new_identifiers = set(new_peripherals.keys())
@@ -135,7 +179,9 @@ class PeripheralManager:
         return peripheral_acc
 
     def run(self) -> None:
-
+        """
+        Method to run the scanning process for detected devices.
+        """
         logger.info('Scanning for detected devices')
         self.update_running_managers()
 

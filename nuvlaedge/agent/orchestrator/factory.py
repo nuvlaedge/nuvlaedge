@@ -10,8 +10,11 @@ from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
 
 def get_coe_client() -> KubernetesClient | DockerClient:
     """
-    Returns the concrete COE client based on the underlying target COE.
-    :return: instance of a COEClient
+    Returns either a KubernetesClient or a DockerClient based on the environment.
+
+    Returns:
+        KubernetesClient | DockerClient: The client object based on the environment.
+
     """
     if os.getenv('KUBERNETES_SERVICE_HOST'):
         return KubernetesClient()

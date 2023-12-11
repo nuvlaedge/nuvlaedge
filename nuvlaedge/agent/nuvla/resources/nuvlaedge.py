@@ -31,6 +31,26 @@ class State(UppercaseStrEnum):
 
 
 class NuvlaEdgeResource(NuvlaResourceBase):
+    """
+    Class representing a NuvlaEdge resource.
+
+    Attributes:
+        state (Optional[State]): The state of the NuvlaEdge resource.
+        refresh_interval (Optional[int]): The refresh interval for the resource.
+        heartbeat_interval (Optional[int]): The heartbeat interval for the resource.
+        version (Optional[int]): The version of the resource.
+        owner (Optional[NuvlaID]): The owner of the resource.
+        vpn_server_id (Optional[NuvlaID]): The VPN server ID associated with the resource.
+        capabilities (Optional[list[str]]): The capabilities of the resource.
+        infrastructure_service_group (Optional[NuvlaID]): The infrastructure service group ID associated with the resource.
+        nuvlabox_status (Optional[NuvlaID]): The NuvlaBox status ID associated with the resource.
+        credential_api_key (Optional[NuvlaID]): The credential API key associated with the resource.
+        host_level_management_api_key (Optional[NuvlaID]): The host level management API key associated with the resource.
+
+    Class Methods:
+        cast_str_to_state(cls, v): Helper method to cast a string value to a State value.
+
+    """
     state:                          Optional[State] = None
     refresh_interval:               Optional[int] = None
     heartbeat_interval:             Optional[int] = None

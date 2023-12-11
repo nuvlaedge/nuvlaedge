@@ -23,6 +23,48 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
+    """
+
+    The TelemetryPayloadAttributes class represents the attributes of a telemetry payload for NuvlaEdge.
+
+    Attributes:
+        status (Optional[Status]): The status of the NuvlaEdge system.
+        status_notes (Optional[list[str]]): Any additional notes about the status.
+        current_time (Optional[str]): The current time of the NuvlaEdge system.
+
+        components (Optional[list[str]]): The components of the NuvlaEdge system.
+        nuvlabox_api_endpoint (Optional[str]): The API endpoint of the NuvlaBox.
+        nuvlabox_engine_version (Optional[str]): The version of the NuvlaBox engine.
+        installation_parameters (Optional[dict]): The installation parameters of the NuvlaBox.
+        host_user_home (Optional[str]): The home directory of the NuvlaBox host user.
+
+        resources (Optional[dict]): The resources of the NuvlaEdge system.
+        last_boot (Optional[str]): The last boot time of the NuvlaEdge system.
+        gpio_pins (Optional[dict]): The GPIO pins of the NuvlaEdge system.
+        vulnerabilities (Optional[dict]): The vulnerabilities of the NuvlaEdge system.
+        inferred_location (Optional[list[float]]): The inferred location of the NuvlaEdge system.
+        network (Optional[dict]): The network configuration of the NuvlaEdge system.
+        temperatures (Optional[list]): The temperatures of the NuvlaEdge system.
+
+        operating_system (Optional[str]): The operating system of the NuvlaEdge system.
+        architecture (Optional[str]): The architecture of the NuvlaEdge system.
+        ip (Optional[str]): The IP address of the NuvlaEdge system.
+        hostname (Optional[str]): The hostname of the NuvlaEdge system.
+        docker_server_version (Optional[str]): The version of the Docker server.
+
+        node_id (Optional[str]): The ID of the cluster node.
+        cluster_id (Optional[str]): The ID of the cluster.
+        cluster_managers (Optional[list[str]]): The managers of the cluster.
+        cluster_nodes (Optional[list[str]]): The nodes of the cluster.
+        cluster_node_role (Optional[str]): The role of the cluster node.
+        cluster_node_labels (Optional[list[dict]]): The labels of the cluster node.
+        swarm_node_cert_expiry_date (Optional[str]): The expiry date of the swarm node certificate.
+        cluster_join_address (Optional[str]): The join address of the cluster.
+        orchestrator (Optional[str]): The orchestrator used by the cluster.
+        container_plugins (Optional[list[str]]): The container plugins used by the cluster.
+        kubelet_version (Optional[str]): The version of the kubelet.
+
+    """
     status:                         Optional[Status] = None
     status_notes:                   Optional[list[str]] = None
     current_time:                   Optional[str] = None
@@ -66,15 +108,15 @@ class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
 
 def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[str]]:
     """
-    Compares two Pydantic base classes and returns a tuple of the fields present in the target and not equal to the f
-    fields present in the reference. And another set with the fields that are present in the reference but not in the
-    target
+    Calculate the differences between two models.
+
     Args:
-        reference:
-        target:
+        reference (BaseModel): The reference model to compare against.
+        target (BaseModel): The target model to compare with.
 
     Returns:
-
+        tuple[set[str], set[str]]: A tuple containing two sets. The first set contains the fields that have different values between the reference and target models. The second set contains
+    * the fields that exist in the reference model but not in the target model.
     """
     to_send: set = set()
     for field, value in iter(target):
@@ -85,12 +127,55 @@ def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[s
 
 
 class Telemetry:
+    """
+    The Telemetry class is responsible for collecting and synchronizing telemetry data from various monitors and system
+     information. It provides methods to initialize monitors, collect monitor metrics, check monitor health, sync
+     status to telemetry, and run the telemetry collection process.
 
+    Attributes:
+        - coe_client: The COEClient object used to communicate with the COE API.
+        - report_channel: The Queue object used to send telemetry data to the agent.
+        - nuvlaedge_uuid: The NuvlaID object representing the UUID of the NuvlaEdge instance.
+        - excluded_monitors: A list of monitor names that should be excluded from telemetry collection.
+
+    Methods:
+        - __init__(self, coe_client: COEClient, report_channel: Queue[TelemetryPayloadAttributes], nuvlaedge_uuid: NuvlaID, excluded_monitors):
+        Initializes the Telemetry object with the given COEClient, report channel, NuvlaEdge UUID, and excluded monitors.
+
+        - initialize_monitors(self):
+        Auxiliary function to extract some control from the class initialization
+        It gathers the available monitors and initializes them saving the reference into
+        the monitor_list attribute of Telemetry.
+
+        - collect_monitor_metrics(self):
+        Collects monitoring data from the initialized monitors and populates the local telemetry attribute.
+
+        - check_monitors_health(self):
+        Checks the health of the initialized monitors. If a monitor is threaded and not alive, it recreates the thread.
+
+        - sync_status_to_telemetry(self):
+        Synchronizes the EdgeStatus object with Telemetry Data.
+
+        - run(self):
+        Executes the telemetry collection process. It collects monitor metrics, checks monitor health, syncs status to telemetry, and sends the telemetry data to the agent queue.
+
+    Note: Make sure to call the run() method to start the telemetry collection process.
+    """
     def __init__(self,
                  coe_client: COEClient,
                  report_channel: Queue[TelemetryPayloadAttributes],
                  nuvlaedge_uuid: NuvlaID,
                  excluded_monitors):
+        """
+        Initializes the Telemetry object with the given parameters.
+
+        Args:
+            coe_client (COEClient): The COEClient object for interacting with the COE API.
+            report_channel (Queue[TelemetryPayloadAttributes]): The report channel to communicate with the Agent.
+            nuvlaedge_uuid (NuvlaID): The NuvlaID object representing the NuvlaEdge UUID.
+            excluded_monitors: The list of excluded monitors as a comma-separated string.
+
+        """
         logger.debug("Initialising Telemetry")
 
         self.coe_client = coe_client
@@ -124,9 +209,10 @@ class Telemetry:
 
     def collect_monitor_metrics(self):
         """
+        Collects monitoring metrics from the monitor list and updates the local telemetry data.
 
         Returns:
-
+            None
         """
         # Retrieve monitoring data
         temp_dict = {}
@@ -143,6 +229,20 @@ class Telemetry:
         self._local_telemetry.update(temp_dict)
 
     def check_monitors_health(self):
+        """
+        Check the health of all monitors in the monitor list.
+
+        This method iterates through each monitor in the monitor list and performs the following tasks:
+        - Prints the monitor's name, whether it's threaded, and whether it's alive using the logger.debug() function.
+        - If the monitor is threaded and needs to be recreated, it calls the is_thread_creation_needed() method with appropriate parameters for logging. If the method returns True, a new instance
+        * of the monitor with the same name is created and started, replacing the old instance in the monitor list.
+        - If the monitor is not threaded, it calls the run_update_data() method of the monitor with the monitor_name parameter.
+        - After processing all monitors, it creates a dictionary monitor_process_duration that maps each monitor's name to its last process's duration.
+        - Finally, it logs the monitor_process_duration dictionary using logger.debug().
+
+        Returns:
+            None
+        """
         for monitor_name, it_monitor in self.monitor_list.items():
             logger.debug(f'Monitor: {it_monitor.name} - '
                          f'Threaded: {it_monitor.is_thread} - '
@@ -188,6 +288,14 @@ class Telemetry:
         # Clean the model from empty fields
 
     def run(self):
+        """
+        Collects monitor metrics, checks threaded monitors health,
+        retrieves data from metrics and system information class,
+        conforms the telemetry payload, and writes telemetry to the Agent Queue.
+
+        Returns:
+            None
+        """
         logger.info("Collecting monitor metrics...")
         """ Retrieve data from monitors (If not threaded) and check threaded monitors health"""
         self.check_monitors_health()
@@ -206,3 +314,5 @@ class Telemetry:
 
         except Full:
             logger.warning("Telemetry Queue is full, agent not consuming data...")
+            # TODO: Should we empty the channel here?
+

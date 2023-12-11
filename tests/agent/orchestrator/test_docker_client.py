@@ -6,6 +6,8 @@ import contextlib
 import datetime
 import logging
 import math
+from unittest.mock import PropertyMock
+
 import mock
 import subprocess
 import unittest
@@ -57,13 +59,13 @@ class COEClientDockerTestCase(unittest.TestCase):
                          'Base class of the COEClient was not properly initialized')
 
     def test_get_node_info(self):
-        self.assertIn('ID', self.obj.get_node_info(),
+        self.assertIn('ID', self.obj.node_info,
                       'Unable to retrieve Docker info')
 
-        self.assertIsInstance(self.obj.get_node_info(), dict,
+        self.assertIsInstance(self.obj.node_info, dict,
                               'Docker info should be returned as a dict')
 
-        self.assertEqual(self.obj.get_node_info().keys(), self.local_docker_client.info().keys(),
+        self.assertEqual(self.obj.node_info.keys(), self.local_docker_client.info().keys(),
                          'Get node info return a different value than the real Docker info')
 
     def test_get_host_os(self):
@@ -74,7 +76,7 @@ class COEClientDockerTestCase(unittest.TestCase):
     def test_get_join_tokens(self, mock_docker):
         # if there are no tokens (Swarm is off), we should get an empty tuple
         mock_docker.return_value = {}
-        self.assertEqual(self.obj.get_join_tokens(), (),
+        self.assertEqual(self.obj.get_join_tokens(), (None, None),
                          'Returned Swarm tokens even though Swarm is NOT enabled')
 
         # otherwise, the tokens should be received
@@ -86,7 +88,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # is there's a Docker error, we should get an empty tuple
         mock_docker.side_effect = docker.errors.APIError("fake", response=requests.Response())
-        self.assertEqual(self.obj.get_join_tokens(), (),
+        self.assertEqual(self.obj.get_join_tokens(), (None, None),
                          'Returned Swarm tokens even though Docker threw an exception')
 
     @mock.patch('docker.models.nodes.NodeCollection.list')
@@ -108,7 +110,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertRaises(docker.errors.APIError, self.obj.list_nodes)
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.list_nodes')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_cluster_info(self, mock_get_node_info, mock_list_nodes):
         # if Swarm is not enabled, we should get an empty dict
         mock_get_node_info.return_value = {'Swarm': {}}
@@ -150,7 +152,7 @@ class COEClientDockerTestCase(unittest.TestCase):
                          'Expecting 1 worker in cluster info, but got something else')
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.find_compute_api_external_port')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_api_ip_port(self, mock_get_nodes_info, mock_get_port):
         # if Swarm info has an address, we should just get that back with port 5000
         node_addr = '1.2.3.4'
@@ -161,11 +163,12 @@ class COEClientDockerTestCase(unittest.TestCase):
         }
         mocked_port = '12345'
         mock_get_port.return_value = mocked_port
-        self.assertEqual(self.obj.get_api_ip_port(), (node_addr, mocked_port),
+        self.assertEqual((node_addr, mocked_port), self.obj.get_api_ip_port(),
                          'Expected default Swarm NodeAddr with port 5000, but got something else instead')
 
         # otherwise, we try to read the machine IP from the disk
         mock_get_nodes_info.return_value = {'Swarm': {}}
+
         # if there's a valid IP in this file, we return it
         tcp_file = '''sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
             6: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 51149 1 ffffffc1c9be2e80 100 0 0 10 0
@@ -192,7 +195,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.cast_dict_to_list')
     @mock.patch('docker.api.swarm.SwarmApiMixin.inspect_node')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_node_labels(self, mock_get_node_info, mock_inspect_node, mock_cast_dict_to_list):
         # errors while inspecting node should cause it to return empty list
         mock_inspect_node.side_effect = KeyError
@@ -719,7 +722,7 @@ class COEClientDockerTestCase(unittest.TestCase):
                          node_info['Swarm']['Cluster']['ID'],
                          'Returned Cluster ID does not match the real one')
 
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_cluster_managers(self, mock_get_node):
         node_info = {
             'Swarm': {
@@ -753,7 +756,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_hostname(node_info), node_info['Name'],
                          'Hostname does not match the real one')
 
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_cluster_join_address(self, mock_get_node):
         node_id = 'fake-node-id'
         node_info = {

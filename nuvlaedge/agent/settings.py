@@ -8,14 +8,59 @@ from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 
 
 class InsufficientSettingsProvided(Exception):
+    """
+    Exception raised when insufficient settings are provided.
+
+    This exception is raised when the required settings are not provided or are incomplete.
+    """
     ...
 
 
 class AgentSettingsMissMatch(Exception):
+    """ An exception raised when there is a mismatch in the agent settings. """
     ...
 
 
 class AgentSettings(NuvlaEdgeBaseSettings):
+    """
+    AgentSettings class represents the settings for the NuvlaEdge agent.
+
+    Attributes:
+        nuvlaedge_uuid (Optional[NuvlaID]): The UUID of the NuvlaEdge instance.
+        host_home (str): The home directory of the host machine.
+
+        compose_project_name (str): The name of the compose project. Default value is "nuvlaedge".
+        nuvlaedge_log_level (str): The log level for NuvlaEdge. Default value is "INFO".
+        nuvlaedge_thread_monitors (bool): Flag to enable or disable thread monitors. Default value is False.
+        vpn_interface_name (str): The name of the VPN interface. Default value is 'vpn'.
+        nuvla_endpoint (str): The Nuvla API endpoint. Default value is 'nuvla.io'.
+        nuvla_endpoint_insecure (bool): Flag to enable or disable insecure connection to Nuvla endpoint. Default value is False.
+        shared_data_volume (str): The path to the shared data volume. Default value is "/srv/nuvlaedge/shared/".
+        ne_image_tag (Optional[str]): The tag for the NuvlaEdge image. Default value is None.
+
+        nuvlaedge_api_key (Optional[str]): The API key for NuvlaEdge.
+        nuvlaedge_api_secret (Optional[str]): The API secret for NuvlaEdge.
+        nuvlaedge_excluded_monitors (Optional[str]): The excluded monitors for NuvlaEdge.
+        nuvlaedge_immutable_ssh_pub_key (Optional[str]): The immutable SSH public key for NuvlaEdge.
+        vpn_config_extra (Optional[str]): Extra VPN configuration for NuvlaEdge.
+
+        nuvlaedge_job_engine_lite_image (Optional[str]): The image for the NuvlaEdge job engine lite.
+        ne_image_registry (Optional[str]): The registry for the NuvlaEdge image.
+        ne_image_organization (Optional[str]): The organization for the NuvlaEdge image.
+        ne_image_repository (Optional[str]): The repository for the NuvlaEdge image.
+        ne_image_installer (Optional[str]): The installer for the NuvlaEdge image.
+
+        nuvlaedge_compute_api_enable (Optional[int]): Flag to enable or disable NuvlaEdge compute API.
+        nuvlaedge_vpn_client_enable (Optional[int]): Flag to enable or disable NuvlaEdge VPN client.
+        nuvlaedge_job_enable (Optional[int]): Flag to enable or disable NuvlaEdge job engine.
+        compute_api_port (Optional[int]): The port for the compute API.
+
+    Methods:
+        validate_image_tag(cls, v): Validates the image tag for NuvlaEdge.
+        non_empty_srr(cls, v): Validates that a string field is not empty.
+        validate_fields(self): Validates the fields of the AgentSettings instance.
+
+    """
     # Required
     nuvlaedge_uuid:                     Optional[NuvlaID] = None
     host_home:                          str = Field(..., alias="HOME")
@@ -58,7 +103,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         return v
 
     @field_validator('*', mode='before')
-    def non_empty_srr(cls, v):
+    def non_empty_str(cls, v):
         if isinstance(v, str):
             if v == "":
                 return None

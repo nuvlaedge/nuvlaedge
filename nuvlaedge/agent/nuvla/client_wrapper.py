@@ -164,14 +164,14 @@ class NuvlaClientWrapper:
         except Exception as e:
             logger.warning(f"Cannot commission NuvlaEdge with Payload {payload}: {e}")
 
-    def heartbeat(self):
+    def heartbeat(self) -> CimiResponse:
         logger.info("Sending heartbeat")
         try:
             if not self.nuvlaedge_client.is_authenticated():
                 self.login_nuvlaedge()
             res: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_uuid)
             response: CimiResponse = self.nuvlaedge_client.operation(res, 'heartbeat')
-            return response.data
+            return response
         except Exception as e:
             logger.warning(f"Heartbeat to {self.nuvlaedge_uuid} failed with error: {e}")
 
@@ -204,10 +204,8 @@ class NuvlaClientWrapper:
 
         if creds.count >= 1:
             logger.info("VPN credential found in NuvlaEdge")
-            self.__vpn_credential_resource = CredentialResource.model_validate(creds.resources[0])
+            self.__vpn_credential_resource = CredentialResource.model_validate(creds.resources[0].data)
             self.__vpn_credential_time = time.time()
-        else:
-            logger.info("No VPN credential found in NuvlaEdge, Yet?")
 
     def sync_vpn_server(self):
         """

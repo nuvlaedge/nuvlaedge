@@ -50,16 +50,9 @@ class Job:
 
         :return:
         """
-        try:
-            with open(FILE_NAMES.ACTIVATION_FLAG) as a:
-                user_info = json.loads(a.read())
-        except FileNotFoundError:
-            logging.error(f'Cannot find NuvlaEdge API key for job {self.job_id}')
-            return
-
         self.coe_client.launch_job(
-            self.job_id, self.job_id_clean, self.nuvla_client._host,
+            self.job_id, self.job_id_clean, self.nuvla_client._host.removeprefix("https://"),
             self.nuvla_client._verify,
-            user_info["api-key"],
-            user_info["secret-key"],
+            self.nuvla_client.nuvlaedge_credentials.key,
+            self.nuvla_client.nuvlaedge_credentials.secret,
             self.job_engine_lite_image)

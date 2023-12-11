@@ -1,5 +1,4 @@
 import logging
-import pprint
 import random
 import threading
 import time
@@ -97,7 +96,6 @@ class AgentWorker:
             ex_time = time.perf_counter() - start_time
             logger.info(f"{self.worker_name} worker actions run  in {ex_time}s, next iteration in "
                         f"{self.period - ex_time}")
-            logger.info(f"Just checking...")
 
         logger.info(f"{self.worker_name} exiting loop...")
 
@@ -107,6 +105,5 @@ class AgentWorker:
 
     def stop(self):
         self.exit_event.set()
-        logging.info(f"Waiting {self.period} for running worker {self.worker_name} to finish")
         self.run_thread.join(timeout=self.period)
 

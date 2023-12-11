@@ -1,4 +1,9 @@
 """
+Commissioner controls the Commission operation in NuvlaEdge
+
+Commission operation controls infrastructure-services and credentails of the NuvlaEdge
+In this case, commission controls the credentials of the swarm/kubernetes cluster and the vpn.
+As well as creating the corresponding infrastructure service and cluster resources for either swarm or kubernetes
 
 """
 import json
@@ -7,6 +12,7 @@ from pathlib import Path
 from queue import Queue
 from typing import Optional
 
+from nuvlaedge.agent.workers.telemetry import model_diff
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.common import utils
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -23,7 +29,7 @@ class CommissioningAttributes(NuvlaEdgeStaticModel):
     capabilities:           Optional[list[str]] = None
 
     # VPN
-    vpn_csr:                Optional[dict] = None
+    vpn_csr:                Optional[str] = None
 
     # Docker
     swarm_endpoint:         Optional[str] = None
@@ -63,7 +69,7 @@ class Commissioner:
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
-                 vpn_channel: Queue[dict]):
+                 vpn_channel: Queue[str]):
         """
 
         Args:
@@ -75,7 +81,7 @@ class Commissioner:
 
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
-        self.vpn_channel: Queue[dict] = vpn_channel
+        self.vpn_channel: Queue[str] = vpn_channel
 
         self._last_payload: CommissioningAttributes = CommissioningAttributes()
         # Static payload. Address should only change or updated from the agent
@@ -87,7 +93,15 @@ class Commissioner:
     def commission(self):
         logger.info(f"Commissioning NuvlaEdge with data:"
                     f" {self._current_payload.model_dump(mode='json', exclude_none=True, by_alias=True)}")
-        if self.nuvla_client.commission(payload=self._current_payload.model_dump(exclude_none=True, by_alias=True)):
+
+        # Get new field
+        new_fields, removed_fields = model_diff(self._last_payload, self._current_payload)
+        logger.info("New fields: \n {}".format(new_fields))
+        logger.info("Removed fields:\n {}".format(removed_fields))
+
+        if self.nuvla_client.commission(payload=self._current_payload.model_dump(exclude_none=True,
+                                                                                 by_alias=True,
+                                                                                 include=new_fields)):
             self._last_payload = self._current_payload.model_copy(deep=True)
             self.save_commissioned_data()
 
@@ -139,10 +153,11 @@ class Commissioner:
         nuvlaedge_endpoint = self.build_nuvlaedge_endpoint()
         tls_keys = self.get_tls_keys()
         nuvla_infra_service = self.coe_client.define_nuvla_infra_service(nuvlaedge_endpoint, *tls_keys)
-        logger.debug(f"Updating COE data: {json.dumps(nuvla_infra_service, indent=4)}")
+        logger.info(f"Updating COE data: {json.dumps(nuvla_infra_service, indent=4)}")
         self._current_payload.update(nuvla_infra_service)
 
         # Only required for Docker
+
         if self.coe_client.ORCHESTRATOR_COE == 'swarm':
             logger.info("Updating Swarm Join Tokens")
             manager_token, worker_token = self.coe_client.get_join_tokens()
@@ -154,8 +169,7 @@ class Commissioner:
             logger.info("Updating Cluster data, node id present in NuvlaEdge-status")
             self.update_cluster_data()
         else:
-            logger.info(f"Nuvlabox-status still not ready. It should be updated in a bit...\n"
-                        f"Node ID: {self.nuvla_client.nuvlaedge_status.node_id}")
+            logger.info(f"Nuvlabox-status still not ready. It should be updated in a bit...")
 
         self._current_payload.capabilities = self.get_nuvlaedge_capabilities()
         self.update_coe_data()
@@ -174,9 +188,13 @@ class Commissioner:
         # Compare what have been sent to Nuvla (_last_payload) and whatis locally updated (_current_payload)
         if self._last_payload != self._current_payload:
             logger.info("Payloads are different, go commission")
-            logger.info(f"Last Payload: {self._last_payload.model_dump(exclude_none=True)}")
-            logger.info(f"Current Payload: {self._current_payload.model_dump(exclude_none=True)}")
+            logger.info(f"Last Payload: \n {json.dumps(sorted(self._last_payload.model_dump(exclude_none=True)),indent=4)}")
+            logger.info(f"Current Payload: \n {json.dumps(sorted(self._current_payload.model_dump(exclude_none=True)), indent=4)}")
             self.commission()
+
+            # VPN CSR needs to be removed after commissioning from last payload. TODO: Maybe not...
+            # self._last_payload.vpn_csr = None
+            # self._current_payload.vpn_csr = None
         else:
             logger.info("Nothing to commission, system configuration remains the same.")
 
@@ -203,7 +221,7 @@ class Commissioner:
 
         return client_ca, client_cert, client_key
 
-    def build_nuvlaedge_endpoint(self) -> str:
+    def build_nuvlaedge_endpoint(self) -> str | None:
         """
         Based on the available information, builds the NuvlaEdge endpoint. After the rework of the heartbeat and
         first removal of the ComputeAPI, this starts to not make sense.
@@ -224,7 +242,7 @@ class Commissioner:
             endpoint.format(ip=api_address, port=api_port)
             return endpoint
 
-        return 'local'
+        return None
 
     def load_previous_commission(self) -> None:
         """

@@ -123,5 +123,4 @@ class GeoLocationMonitor(Monitor):
 
     def populate_nb_report(self, nuvla_report: dict):
         if self.data.coordinates:
-            logging.info(f"Location data at the source: {self.data.coordinates}")
             nuvla_report['inferred-location'] = self.data.coordinates

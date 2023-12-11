@@ -41,7 +41,7 @@ class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
     vulnerabilities:                Optional[dict] = None
     inferred_location:              Optional[list[float]] = None
     network:                        Optional[dict] = None
-    temperatures:                   Optional[dict] = None
+    temperatures:                   Optional[list] = None
 
     # System Configuration
     operating_system:               Optional[str] = None

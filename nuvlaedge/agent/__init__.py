@@ -30,12 +30,6 @@ def sigterm_stop(signum, frame, agent_stop):
     agent_stop.set()
 
 
-def _dev_get_Uuid() -> str:
-    uuid_path = Path('/tmp/temp_uuid.json')
-    with uuid_path.open('r') as f:
-        return json.load(f)['uuid']
-
-
 def main():
     agent_event: Event = Event()
 

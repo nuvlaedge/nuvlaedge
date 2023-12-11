@@ -8,6 +8,7 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
+from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -56,8 +57,7 @@ class Agent:
         # Static objects
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
         self.telemetry_channel: Queue[TelemetryPayloadAttributes] = Queue(maxsize=10)
-
-        self.commission_payload: CommissioningAttributes = CommissioningAttributes()
+        self.vpn_channel: Queue[str] = Queue(maxsize=10)
 
     def assert_current_state(self) -> State:
         """
@@ -149,7 +149,7 @@ class Agent:
             worker_type=Commissioner,
             init_params=((), {'coe_client': self._coe_engine,
                               'nuvla_client': self._nuvla_client,
-                              'vpn_channel': Queue[dict]()
+                              'vpn_channel': self.vpn_channel
                               }),
             actions=['run'],
             initial_delay=1
@@ -170,16 +170,17 @@ class Agent:
 
         """ Initialise VPN Handler """
         # Initialise only if VPN server ID is present on the resource
-        # logger.info("Registering VPN Handler")
-        # if self._nuvla_client.nuvlaedge.vpn_server_id:
-        #     self.worker_manager.add_worker(
-        #         period=60,
-        #         worker_type=VPNHandler,
-        #         init_params=((), {'coe_client': self._coe_engine,
-        #                           'nuvla_client': self._nuvla_client,
-        #                           'commission_payload': self.commission_payload}),
-        #         actions=['run']
-        #     )
+        logger.info("Registering VPN Handler")
+        if self._nuvla_client.nuvlaedge.vpn_server_id:
+            self.worker_manager.add_worker(
+                period=60,
+                worker_type=VPNHandler,
+                init_params=((), {'coe_client': self._coe_engine,
+                                  'nuvla_client': self._nuvla_client,
+                                  'vpn_channel': self.vpn_channel,
+                                  'vpn_extra_conf': self.settings.vpn_config_extra}),
+                actions=['run']
+            )
 
         """ Initialise Peripheral Manager """
         # logger.info("Registering Peripheral Manager")
@@ -257,17 +258,27 @@ class Agent:
 
         """
         logger.info("Executing telemetry")
+
+        # If there is no telemetry available there is nothing to do
         if self.telemetry_channel.empty():
             logger.warning("Telemetry class not reporting fast enough to Agent")
             return None
 
+        # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest
         new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
 
+        # Calculate the difference from the latest telemetry sent and the new data to reduce package size
         to_send, to_delete = model_diff(self.telemetry_payload, new_telemetry)
         data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
 
+        # Send telemetry via NuvlaClientWrapper
         logger.debug(f"Sending telemetry data to Nuvla {json.dumps(data_to_send, indent=4)}")
         response: CimiResponse = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
+
+        # If telemetry is successful save telemetry
+        if response.data:
+            logger.info("Storing sent data on telemetry")
+            self.telemetry_payload = new_telemetry.model_copy(deep=True)
 
         return response
 
@@ -277,6 +288,9 @@ class Agent:
         Returns: List of jobs if Nuvla Requests so
         """
         logger.info("Executing heartbeat")
+
+        # Usually takes ~10/15 seconds for the commissioner to commission NuvlaEdge for the first time
+        # Until that happens, heartbeat operation is not available
         if (self._nuvla_client.nuvlaedge.state != State.COMMISSIONED and
                 self._nuvla_client.nuvlaedge.state != 'COMMISSIONED'):
 
@@ -287,14 +301,35 @@ class Agent:
         return self._nuvla_client.heartbeat()
 
     def process_response(self, response: CimiResponse, operation: str):
+        start_time: float = time.perf_counter()
         jobs = response.data.get('jobs', [])
         logger.info(f"{len(jobs)} received in from {operation}")
         if jobs:
-            logger.info("{}")
             self.process_jobs([NuvlaID(j) for j in jobs])
 
+        logger.info(f"Jobs Response process finished in {time.perf_counter() - start_time}")
+
     def process_jobs(self, jobs: list[NuvlaID]):
-        ...
+        """
+
+        Args:
+            jobs: Non-empty list of jobs
+
+        Returns:
+
+        """
+        for i in jobs:
+            logger.info(f"Creating job {i}")
+            job = Job(self._coe_engine,
+                      self._nuvla_client,
+                      i,
+                      self._coe_engine.job_engine_lite_image)
+
+            if not job.do_nothing:
+                logger.info(f"Starting job {i}")
+                job.launch()
+            else:
+                logger.info(f"Job {job} already running, do nothing")
 
     def stop(self):
         self._exit.set()
@@ -312,7 +347,7 @@ class Agent:
             response = next_action()
 
             if response:
-                self.process_jobs(response)
+                self.process_response(response, next_action.name)
 
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle
@@ -321,6 +356,6 @@ class Agent:
             # Cycle next action time and function
             next_cycle_in = self.action_handler.sleep_time()
             next_action = self.action_handler.next
-            logger.info(self.action_handler.actions_summary())
+            logger.debug(self.action_handler.actions_summary())
             logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
 

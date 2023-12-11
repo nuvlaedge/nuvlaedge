@@ -101,3 +101,52 @@ def timeout(time):
         # Unregister the signal so it won't be triggered
         # if the timeout is not reached.
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+
+VPN_CONFIG_TEMPLATE: str = """client
+
+dev ${vpn_interface_name}
+dev-type tun
+nobind
+
+# Certificate Configuration
+# CA certificate
+<ca>
+${vpn_ca_certificate}
+${vpn_intermediate_ca_is}
+${vpn_intermediate_ca}
+</ca>
+
+# Client Certificate
+<cert>
+${vpn_certificate}
+</cert>
+
+# Client Key
+<key>
+${nuvlaedge_vpn_key}
+</key>
+
+# Shared key
+<tls-crypt>
+${vpn_shared_key}
+</tls-crypt>
+
+remote-cert-tls server
+
+verify-x509-name "${vpn_common_name_prefix}" name-prefix
+
+script-security 2
+up /opt/nuvlaedge/scripts/vpn-client/get_ip.sh
+
+auth-nocache
+auth-retry nointeract
+
+ping 60
+ping-restart 120
+compress lz4
+
+${vpn_endpoints_mapped}
+
+${vpn_extra_config}
+"""

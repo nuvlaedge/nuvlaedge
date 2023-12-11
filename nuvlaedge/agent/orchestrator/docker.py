@@ -168,8 +168,7 @@ class DockerClient(COEClient):
 
     def is_vpn_client_running(self):
         it_vpn_container = self._get_component_container(util.vpn_client_service_name)
-        vpn_client_running = it_vpn_container.status == 'running'
-        return vpn_client_running
+        return it_vpn_container.status == 'running'
 
     def install_ssh_key(self, ssh_pub_key, host_home):
         ssh_folder = '/tmp/ssh'
@@ -336,7 +335,8 @@ class DockerClient(COEClient):
 
         try:
             container.start()
-        except Exception:
+        except Exception as ex:
+            logger.warning(f"Error when starting container for job {job_id}", exc_info=True)
             container.remove(force=True)
             raise
 

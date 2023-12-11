@@ -5,8 +5,12 @@ from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase
 
 
 class CredentialResource(NuvlaResourceBase):
+    """
+    This is a partial implementation of the Credential Resource Spec of Nuvla.
+    It is only used for NuvlaEdge VPN
+    """
     method:                 Optional[str] = None
     vpn_certificate:        Optional[str] = None
     vpn_certificate_owner:  Optional[str] = None
     vpn_common_name:        Optional[NuvlaID] = None
-    vpn_intermediate_ca:    Optional[str] = None
+    vpn_intermediate_ca:    Optional[list[str]] = None

@@ -7,9 +7,9 @@ from docker import errors as docker_err
 
 from nuvlaedge.common.constants import CTE
 
-from nuvlaedge.agent.monitor.data.orchestrator_data import (DeploymentData, ContainerStatsData, ClusterStatusData)
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.components import monitor
+from nuvlaedge.agent.workers.monitor.data.orchestrator_data import (DeploymentData, ContainerStatsData, ClusterStatusData)
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.util import execute_cmd
 

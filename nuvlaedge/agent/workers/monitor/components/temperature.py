@@ -6,8 +6,8 @@ import os
 import psutil
 
 from nuvlaedge.common.constants import CTE
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.data.temperature_data import TemperatureData, TemperatureZone
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.data.temperature_data import TemperatureData, TemperatureZone
 from ..components import monitor
 
 
@@ -22,6 +22,8 @@ class TemperatureMonitor(Monitor):
         self.host_fs: str = CTE.HOST_FS
         self.thermal_fs_path = f'{self.host_fs}/sys/devices/virtual/thermal'
 
+        self.local_temp_registry: dict[str, TemperatureZone] = {}
+
         if not telemetry.edge_status.temperatures:
             telemetry.edge_status.temperatures = self.data
 
@@ -32,11 +34,11 @@ class TemperatureMonitor(Monitor):
             zone_name: Name of the zone to be updated
             temp_value: Tempearture tu be updated
         """
-        if zone_name in self.data.temperatures:
-            self.data.temperatures[zone_name].value = temp_value
+        if zone_name in self.local_temp_registry:
+            self.local_temp_registry[zone_name].value = temp_value
         else:
-            self.data.temperatures[zone_name] = TemperatureZone(thermal_zone=zone_name,
-                                                                value=temp_value)
+            self.local_temp_registry[zone_name] = TemperatureZone(thermal_zone=zone_name,
+                                                                  value=temp_value)
 
     def update_temperatures_with_psutil(self):
         """
@@ -105,15 +107,18 @@ class TemperatureMonitor(Monitor):
                                     f'Reason: {str(ex)}')
 
     def update_data(self):
-        if not self.data.temperatures:
-            self.data.temperatures = {}
-
         if not os.path.exists(self.thermal_fs_path):
             if hasattr(psutil, 'sensors_temperatures'):
 
                 self.update_temperatures_with_psutil()
         else:
             self.update_temperatures_with_file()
+
+        if not self.local_temp_registry:
+            self.data.temperatures = None
+            return
+
+        self.data.temperatures = [v.model_dump(exclude_none=True, by_alias=True) for v in self.local_temp_registry.values()]
 
     def populate_nb_report(self, nuvla_report: dict):
         ...

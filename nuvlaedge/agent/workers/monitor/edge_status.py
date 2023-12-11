@@ -6,15 +6,15 @@ from typing import Optional
 
 import pydantic
 
-from nuvlaedge.agent.monitor.data.geolocation_data import GeoLocationData
-from nuvlaedge.agent.monitor.data.network_data import NetworkingData
-from nuvlaedge.agent.monitor.data.nuvlaedge_data import NuvlaEdgeData
-from nuvlaedge.agent.monitor.data.orchestrator_data import DeploymentData
-from nuvlaedge.agent.monitor.data.power_data import PowerData
-from nuvlaedge.agent.monitor.data.resources_data import ResourcesData
-from nuvlaedge.agent.monitor.data.temperature_data import TemperatureData
-from nuvlaedge.agent.monitor.data.vulnerabilities_data import VulnerabilitiesData
-from nuvlaedge.agent.monitor.data.gpio_data import GpioData
+from nuvlaedge.agent.workers.monitor.data.geolocation_data import GeoLocationData
+from nuvlaedge.agent.workers.monitor.data.network_data import NetworkingData
+from nuvlaedge.agent.workers.monitor.data.nuvlaedge_data import NuvlaEdgeData
+from nuvlaedge.agent.workers.monitor.data.orchestrator_data import DeploymentData
+from nuvlaedge.agent.workers.monitor.data.power_data import PowerData
+from nuvlaedge.agent.workers.monitor.data.resources_data import ResourcesData
+from nuvlaedge.agent.workers.monitor.data.temperature_data import TemperatureData
+from nuvlaedge.agent.workers.monitor.data.vulnerabilities_data import VulnerabilitiesData
+from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData
 
 
 class EdgeStatus(pydantic.BaseModel):

@@ -10,9 +10,9 @@ from typing import Dict
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.data.nuvlaedge_data import NuvlaEdgeData as NuvlaInfo
-from nuvlaedge.agent.monitor.data.nuvlaedge_data import InstallationParametersData
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.data.nuvlaedge_data import NuvlaEdgeData as NuvlaInfo
+from nuvlaedge.agent.workers.monitor.data.nuvlaedge_data import InstallationParametersData
 from nuvlaedge.agent.orchestrator import COEClient
 from ..components import monitor
 

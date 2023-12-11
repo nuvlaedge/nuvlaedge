@@ -6,7 +6,7 @@ Gathers all the requirements for status reporting
 """
 from pydantic import Field
 
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class IP(BaseDataStructure):

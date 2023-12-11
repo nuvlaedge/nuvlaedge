@@ -3,7 +3,7 @@
 """
 from pydantic import Field
 
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 # Base class to report CPU, Memory and Disks data status

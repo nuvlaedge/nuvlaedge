@@ -1,5 +1,5 @@
 """ Module for Power report structure definition """
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class PowerEntry(BaseDataStructure):

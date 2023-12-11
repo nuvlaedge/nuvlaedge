@@ -2,7 +2,7 @@
 
 Gathers all the requirements for status reporting
 """
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class VulnerabilitiesSummary(BaseDataStructure):

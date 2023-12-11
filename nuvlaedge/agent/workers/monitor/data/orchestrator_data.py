@@ -2,7 +2,7 @@
     NuvlaEdge data structure for container stats
 """
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class ContainerStatsData(BaseDataStructure):

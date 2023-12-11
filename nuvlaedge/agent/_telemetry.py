@@ -18,9 +18,9 @@ import time
 import psutil
 import paho.mqtt.client as mqtt
 
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
-from nuvlaedge.agent.monitor.components import get_monitor, active_monitors
-from nuvlaedge.agent.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components import get_monitor, active_monitors
+from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
 from nuvlaedge.common import utils

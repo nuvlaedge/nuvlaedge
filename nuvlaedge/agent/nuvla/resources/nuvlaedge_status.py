@@ -18,7 +18,7 @@ class StatusTelemetry(NuvlaEdgeBaseModel):
     # Telemetry metrics
     resources: Optional[dict] = None
     network: Optional[dict] = None
-    temperatures: Optional[dict] = None
+    temperatures: Optional[list] = None
     ip: Optional[str] = None
     gpio_pins: Optional[dict] = None
     inferred_location: Optional[list[float]] = None

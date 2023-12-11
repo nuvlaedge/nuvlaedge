@@ -17,13 +17,13 @@ from nuvlaedge.common import utils
 from nuvlaedge.common.constants import CTE
 from ..components import monitor
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.data.network_data import (NetworkingData,
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.data.network_data import (NetworkingData,
                                                        NetworkInterface,
                                                        IP)
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
-from ...workers.vpn_handler import VPNHandler
+from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 
 
 @monitor('network_monitor')

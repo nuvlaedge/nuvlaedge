@@ -4,9 +4,9 @@
 from subprocess import SubprocessError, CompletedProcess
 
 from nuvlaedge.agent.common.util import execute_cmd
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.data.gpio_data import GpioData, GpioPin
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
 
 
 class GpioMonitor(Monitor):

@@ -6,9 +6,9 @@ import json
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.components import monitor
-from nuvlaedge.agent.monitor.data.vulnerabilities_data import (VulnerabilitiesData,
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.components import monitor
+from nuvlaedge.agent.workers.monitor.data.vulnerabilities_data import (VulnerabilitiesData,
                                                      VulnerabilitiesSummary)
 
 

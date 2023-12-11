@@ -3,9 +3,9 @@ import os
 import re
 
 from nuvlaedge.common.constants import CTE
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.components import monitor
-from nuvlaedge.agent.monitor.data.power_data import PowerData, PowerEntry
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.components import monitor
+from nuvlaedge.agent.workers.monitor.data.power_data import PowerData, PowerEntry
 
 
 @monitor('power_monitor')

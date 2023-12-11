@@ -10,9 +10,9 @@ from typing import Optional
 from pydantic import BaseModel
 
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
-from nuvlaedge.agent.monitor.components import get_monitor, active_monitors
-from nuvlaedge.agent.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components import get_monitor, active_monitors
+from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import Status
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel

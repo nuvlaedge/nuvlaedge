@@ -1,5 +1,5 @@
 """ GPIO Pins module data structure """
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class GpioPin(BaseDataStructure):

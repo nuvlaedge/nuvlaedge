@@ -1,5 +1,5 @@
 """ Module for temperature data structures """
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class TemperatureZone(BaseDataStructure):
@@ -11,4 +11,4 @@ class TemperatureZone(BaseDataStructure):
 # Temperature data structure
 class TemperatureData(BaseDataStructure):
     """ Wrapper for temperature zones """
-    temperatures: dict[str, TemperatureZone] | None = None
+    temperatures: list[dict] | None = None

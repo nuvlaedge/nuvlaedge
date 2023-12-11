@@ -1,7 +1,7 @@
 """ Module for geolocation data structure reporting """
 from pydantic import model_validator, ConfigDict
 
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class GeoLocationData(BaseDataStructure):

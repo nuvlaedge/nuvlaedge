@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import Field
 
-from nuvlaedge.agent.monitor import BaseDataStructure
+from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
 class InstallationParametersData(BaseDataStructure):

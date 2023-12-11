@@ -5,11 +5,11 @@ from subprocess import CompletedProcess
 import psutil
 
 from nuvlaedge.agent.common.util import execute_cmd
-from nuvlaedge.agent.monitor.data.resources_data import (ResourcesData,
+from nuvlaedge.agent.workers.monitor.data.resources_data import (ResourcesData,
                                                          DiskDataStructure,
                                                          CPUDataStructure,
                                                          MemoryDataStructure)
-from nuvlaedge.agent.monitor import Monitor
+from nuvlaedge.agent.workers.monitor import Monitor
 from ..components import monitor
 
 

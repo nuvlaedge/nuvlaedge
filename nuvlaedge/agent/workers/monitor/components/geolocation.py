@@ -6,9 +6,9 @@ import time
 import datetime
 import requests
 
-from nuvlaedge.agent.monitor import Monitor
-from nuvlaedge.agent.monitor.components import monitor
-from nuvlaedge.agent.monitor.data.geolocation_data import GeoLocationData
+from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.components import monitor
+from nuvlaedge.agent.workers.monitor.data.geolocation_data import GeoLocationData
 
 
 @monitor('geolocation_monitor')

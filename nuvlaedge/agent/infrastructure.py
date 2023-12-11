@@ -228,7 +228,8 @@ class Infrastructure(NuvlaEdgeCommon):
 
         self.logger.info(f'VPN configuration fields: {vpn_conf_fields}')
 
-        self.vpn_interface_name = f'vpn-{self.nuvlaedge_id.split("/",1)[1][:8]}'
+        derived_vpn_int_name = f'{self.vpn_interface_name}-{self.nuvlaedge_id.split("/",1)[1][:8]}'
+        # self.vpn_interface_name = f'vpn-{self.nuvlaedge_id.split("/",1)[1][:8]}'
 
         vpn_values = {
             'vpn_certificate': vpn_conf_fields['vpn-certificate'],
@@ -238,7 +239,7 @@ class Infrastructure(NuvlaEdgeCommon):
             'vpn_shared_key': vpn_conf_fields['vpn-shared-key'],
             'vpn_common_name_prefix': vpn_conf_fields['vpn-common-name-prefix'],
             'vpn_endpoints_mapped': vpn_conf_fields['vpn-endpoints-mapped'],
-            'vpn_interface_name': self.vpn_interface_name,
+            'vpn_interface_name': derived_vpn_int_name,
             'nuvlaedge_vpn_key': vpn_key,
             'vpn_extra_config': self.vpn_config_extra
         }

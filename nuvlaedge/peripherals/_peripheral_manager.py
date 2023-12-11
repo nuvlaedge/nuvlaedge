@@ -122,7 +122,7 @@ class PeripheralManager(Thread):
         for manager_report in new_peripherals:
             for identifier, data in manager_report.items():
                 try:
-                    peripheral_acc[identifier] = PeripheralData.parse_obj(data)
+                    peripheral_acc[identifier] = PeripheralData.model_validate(data)
                 except ValidationError:
                     self.logger.exception(f'Error processing data from device {identifier}')
 

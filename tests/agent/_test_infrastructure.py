@@ -12,13 +12,12 @@ import tests.agent.utils.fake as fake
 from pathlib import Path
 from threading import Thread
 
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.infrastructure import Infrastructure
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent._infrastructure import Infrastructure
 
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
-
 
 
 class InfrastructureTestCase(unittest.TestCase):

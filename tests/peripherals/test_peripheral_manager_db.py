@@ -81,7 +81,7 @@ class TestPeripheralsDBManager(TestCase):
             with mock.patch("json.dump") as mock_dump:
                 self.test_db._local_db = {'id_1': test_model}
                 self.test_db.update_local_storage()
-                mock_dump.assert_called_once_with({'id_1': test_model.dict(by_alias=True, exclude_none=True)},
+                mock_dump.assert_called_once_with({'id_1': test_model.model_dump(by_alias=True, exclude_none=True)},
                                                   mock.ANY,
                                                   default=str,
                                                   indent=4

@@ -6,16 +6,19 @@ import mock
 
 from nuvlaedge.models.peripheral import PeripheralData
 from nuvlaedge.models.messages import NuvlaEdgeMessage
-from nuvlaedge.peripherals.peripheral_manager import PeripheralManager, PeripheralsDBManager
+from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager, PeripheralsDBManager
 
 
 class TestPeripheralManager(TestCase):
-    def setUp(self) -> None:
+    @mock.patch.object(Path, 'exists')
+    def setUp(self, mock_exists) -> None:
+        mock_exists.return_value = True
         self.mock_broker = mock.Mock()
         self.mock_broker.keys.return_value = {'p1'}
         self.mock_broker.keys = {'p1'}
         self.mock_nuvla = mock.Mock()
-        self.test_manager = PeripheralManager(self.mock_broker, self.mock_nuvla, 'uuid')
+        self.test_manager = PeripheralManager(self.mock_nuvla, 'uuid')
+        self.test_manager.broker = self.mock_broker
 
     @mock.patch.object(Path, 'is_dir')
     @mock.patch.object(Path, 'iterdir')
@@ -85,14 +88,12 @@ class TestPeripheralManager(TestCase):
         }
 
         self.assertEqual(
-            {'idx': PeripheralData.parse_obj(sample_peripheral)},
+            {'idx': PeripheralData.model_validate(sample_peripheral)},
             self.test_manager.join_new_peripherals([{'idx': sample_peripheral}])
         )
-        mock_ex = mock.Mock()
 
-        self.test_manager.logger = mock_ex
-        self.test_manager.logger.exception.return_value = True
-
-        sample_peripheral['classes'] = 'notalist'
-        self.test_manager.join_new_peripherals([sample_peripheral])
-        self.assertEqual(3, self.test_manager.logger.exception.call_count)
+        with mock.patch('logging.Logger.exception') as manager_logger:
+            manager_logger.return_value = False
+            sample_peripheral['classes'] = 'notalist'
+            self.test_manager.join_new_peripherals([sample_peripheral])
+            self.assertEqual(3, manager_logger.call_count)

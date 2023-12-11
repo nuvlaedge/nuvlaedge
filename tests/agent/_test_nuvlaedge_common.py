@@ -11,7 +11,7 @@ import unittest
 import nuvla.api
 
 import tests.agent.utils.fake as fake
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 

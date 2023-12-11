@@ -4,9 +4,9 @@ import threading
 
 from nuvla.api.models import CimiResource
 
-import nuvlaedge.agent.infrastructure
-from nuvlaedge.agent.agent import Agent
-from nuvlaedge.agent.activate import Activate
+import nuvlaedge.agent._infrastructure
+from nuvlaedge.agent._agent_old import Agent
+from nuvlaedge.agent._activate import Activate
 
 from nuvlaedge.common.timed_actions import TimedAction
 

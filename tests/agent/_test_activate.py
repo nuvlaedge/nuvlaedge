@@ -10,8 +10,8 @@ from tests.agent.utils.fake import Fake, FakeNuvlaApi
 
 from nuvla.api.models import CimiResource
 
-from nuvlaedge.agent.activate import Activate
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent._activate import Activate
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 from nuvlaedge.common.constant_files import FILE_NAMES

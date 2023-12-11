@@ -12,9 +12,9 @@ from pathlib import Path
 import paho.mqtt.client as mqtt
 
 import tests.agent.utils.fake as fake
-from nuvlaedge.agent.common import nuvlaedge_common
+from nuvlaedge.agent.common import _nuvlaedge_common
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
-from nuvlaedge.agent.telemetry import Telemetry
+from nuvlaedge.agent._telemetry import Telemetry
 
 
 class TelemetryTestCase(unittest.TestCase):
@@ -286,9 +286,9 @@ class TelemetryTestCase(unittest.TestCase):
         self.assertEqual('ID', self.obj.status_on_nuvla['id'])
 
     @mock.patch('time.sleep', return_value=None)
-    @mock.patch('nuvlaedge.agent.monitor.Monitor.start')
+    @mock.patch('nuvlaedge.agent.workers.monitor.Monitor.start')
     def test_update_monitors(self, mock_start, mock_sleep):
-        with mock.patch('nuvlaedge.agent.monitor.Monitor.run_update_data') as mock_run_update_data:
+        with mock.patch('nuvlaedge.agent.workers.monitor.Monitor.run_update_data') as mock_run_update_data:
             self.obj.initialize_monitors()
             status = {}
             self.obj.update_monitors(status)

@@ -55,14 +55,6 @@ class PeripheralManager:
             nuvla_client: An instance of NuvlaClient class for communication with the Nuvla database.
             nuvlaedge_uuid: A string representing the UUID of the Nuvlaedge instance.
 
-        Attributes:
-            _uuid (str): The UUID of the Nuvlaedge instance.
-            broker (NuvlaEdgeBroker): An instance of the NuvlaEdgeBroker class for consuming messages from peripherals.
-            db (PeripheralsDBManager): An instance of the PeripheralsDBManager class for handling and managing peripherals.
-            exit_event (Event): An Event object for controlling the running thread.
-            running_peripherals (set): A set to store the currently running peripherals.
-            registered_peripherals (dict): A dictionary to store the registered peripherals with their respective data.
-
         """
         # Required to check the Nuvla database and filter present peripherals
         self._uuid: str = nuvlaedge_uuid
@@ -172,7 +164,7 @@ class PeripheralManager:
         for manager_report in new_peripherals:
             for identifier, data in manager_report.items():
                 try:
-                    peripheral_acc[identifier] = PeripheralData.parse_obj(data)
+                    peripheral_acc[identifier] = PeripheralData.model_validate(data)
                 except ValidationError:
                     logger.exception(f'Error processing data from device {identifier}')
 

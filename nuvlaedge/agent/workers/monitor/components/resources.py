@@ -35,7 +35,7 @@ class ResourcesMonitor(Monitor):
         of the disk
 
         """
-        return [DiskDataStructure.parse_obj({
+        return [DiskDataStructure.model_validate({
             'device': 'overlay',
             'capacity': int(psutil.disk_usage('/')[0] / 1024 / 1024 / 1024),
             'used': int(psutil.disk_usage('/')[1] / 1024 / 1024 / 1024)
@@ -123,7 +123,7 @@ class ResourcesMonitor(Monitor):
         Returns: current status of the CPU encapsulated in a CPUDataStructure
 
         """
-        it_cpu_data: CPUDataStructure = CPUDataStructure.parse_obj(
+        it_cpu_data: CPUDataStructure = CPUDataStructure.model_validate(
             {
                 "capacity": int(psutil.cpu_count()),
                 "load": float(psutil.getloadavg()[2]),
@@ -147,7 +147,7 @@ class ResourcesMonitor(Monitor):
         Returns: current memory status encapsulated in a MemoryDataStructure
 
         """
-        it_memory_data: MemoryDataStructure = MemoryDataStructure.parse_obj(
+        it_memory_data: MemoryDataStructure = MemoryDataStructure.model_validate(
             {
                 "capacity": int(round(psutil.virtual_memory()[0] / 1024 / 1024)),
                 "used": int(round(psutil.virtual_memory()[3] / 1024 / 1024))

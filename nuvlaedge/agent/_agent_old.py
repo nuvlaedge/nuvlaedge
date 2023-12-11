@@ -17,7 +17,7 @@ from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.broker.file_broker import FileBroker
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import TimedAction
-from nuvlaedge.peripherals.peripheral_manager import PeripheralManager
+from nuvlaedge.peripherals._peripheral_manager import PeripheralManager
 
 from nuvlaedge.agent._activate import Activate
 from nuvlaedge.agent.common import util

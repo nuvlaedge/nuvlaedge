@@ -6,7 +6,7 @@ import mock
 import unittest
 from tests.agent.utils.fake import Fake
 
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
+from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
@@ -14,17 +14,20 @@ from nuvlaedge.agent.orchestrator.factory import get_coe_client
 class JobTestCase(unittest.TestCase):
 
     def setUp(self):
-        Job.__bases__ = (Fake.imitate(NuvlaEdgeCommon),)
         self.shared_volume = "mock/path"
         self.job_id = "job/fake-id"
         self.job_engine_lite_image = 'job-lite'
+        # monkeypatches
+        self.mock_coe_client = mock.Mock()
+
+        self.mock_nuvla_client = mock.Mock()
+        self.mock_nuvla_client._host = 'fake.nuvla.io'
+        self.mock_nuvla_client._verify = False
+
         with mock.patch('nuvlaedge.agent.job.Job.check_job_is_running') as mock_job_is_running:
             mock_job_is_running.return_value = False
-            self.obj = Job(get_coe_client(), self.shared_volume, self.job_id, self.job_engine_lite_image)
-        # monkeypatches
-        self.obj.coe_client = mock.MagicMock()
-        self.obj.nuvla_endpoint_insecure = False
-        self.obj.nuvla_endpoint = 'fake.nuvla.io'
+            self.obj = Job(self.mock_coe_client, self.mock_nuvla_client, self.job_id, self.job_engine_lite_image)
+
         ###
         logging.disable(logging.CRITICAL)
 
@@ -38,10 +41,6 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.obj.job_id_clean, self.job_id.replace('/', '-'),
                          'Failed to convert job ID into container-friendly name')
 
-        # also make sure NuvlaEdgeCommon has been inherited
-        self.assertIsNotNone(self.obj.api(),
-                             'NuvlaEdgeCommon was not inherited properly')
-
     def test_check_job_is_running(self):
         self.obj.coe_client.is_nuvla_job_running.return_value = False
         # simply return the output from the coe_client function
@@ -54,19 +53,15 @@ class JobTestCase(unittest.TestCase):
 
     def test_launch(self):
         self.obj.coe_client.launch_job.return_value = None
-        # without API keys, we can't launch and return none
-        with mock.patch('nuvlaedge.agent.job.open') as mock_open:
-            mock_open.side_effect = FileNotFoundError
-            self.assertIsNone(self.obj.launch(),
-                              'Tried to launch job even though API keys could not be found')
 
-        self.obj.coe_client.launch_job.assert_not_called()
         # otherwise, launch the job
-        with mock.patch('nuvlaedge.agent.job.open', mock.mock_open(read_data='{"api-key": "", "secret-key": ""}')):
-            self.assertIsNone(self.obj.launch(),
-                              'Failed to launch job')
-
-        self.obj.coe_client.launch_job.assert_called_once_with(self.obj.job_id, self.obj.job_id_clean,
-                                                               self.obj.nuvla_endpoint,
-                                                               self.obj.nuvla_endpoint_insecure,
-                                                               "", "", self.obj.job_engine_lite_image)
+        self.mock_nuvla_client.nuvlaedge_credentials.key = 'fake-key'
+        self.mock_nuvla_client.nuvlaedge_credentials.secret = 'fake-secret'
+        self.assertIsNone(self.obj.launch(), 'Failed to launch job')
+        self.obj.coe_client.launch_job.assert_called_once_with(self.obj.job_id,
+                                                               self.obj.job_id_clean,
+                                                               self.obj.nuvla_client._host.removeprefix("https://"),
+                                                               self.obj.nuvla_client._verify,
+                                                               'fake-key',
+                                                               'fake-secret',
+                                                               self.obj.job_engine_lite_image)

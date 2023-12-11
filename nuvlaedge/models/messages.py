@@ -8,7 +8,7 @@ from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 class NuvlaEdgeMessage(NuvlaEdgeBaseModel):
     sender: str
     data: dict
-    time: datetime | None
+    time: datetime | None = None
 
 
 def parse_message(file_location: Path | str) -> NuvlaEdgeMessage:
@@ -27,4 +27,4 @@ def parse_message(file_location: Path | str) -> NuvlaEdgeMessage:
     with file_location.open('r') as file:
         js = json.load(file)
 
-        return NuvlaEdgeMessage.parse_obj(js)
+        return NuvlaEdgeMessage.model_validate(js)

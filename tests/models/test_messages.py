@@ -36,4 +36,4 @@ class TestUtils(TestCase):
                     'data': {},
                 }
             with mock.patch("json.load", mock.MagicMock(side_effect=[message_data])):
-                self.assertEqual(NuvlaEdgeMessage.parse_obj(message_data), parse_message('exists_location'))
+                self.assertEqual(NuvlaEdgeMessage.model_validate(message_data), parse_message('exists_location'))

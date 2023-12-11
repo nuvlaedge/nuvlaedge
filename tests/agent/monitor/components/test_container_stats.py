@@ -129,7 +129,7 @@ class TestContainerStatsMonitor(unittest.TestCase):
         all_fields = ["node-id", "orchestrator", "cluster-node-role", "cluster-id",
                       "cluster-join-address", "cluster-managers", "cluster-nodes", "cluster-node-labels"]
         self.assertEqual(sorted(all_fields),
-                         sorted(test_monitor.data.cluster_data.dict(by_alias=True, exclude_none=True).keys()),
+                         sorted(test_monitor.data.cluster_data.model_dump(by_alias=True, exclude_none=True).keys()),
                          'Unable to set cluster status')
 
     @patch('nuvlaedge.agent.workers.monitor.components.container_stats.execute_cmd')

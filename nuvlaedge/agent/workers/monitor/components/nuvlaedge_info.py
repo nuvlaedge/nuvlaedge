@@ -56,7 +56,7 @@ class NuvlaEdgeInfoMonitor(Monitor):
         information. Also, the components of the NuvlaEdge deployment
         """
         # Update static information
-        self.data.nuvlaedge_engine_version = self.ne_engine_version
+        self.data.nuvlabox_engine_version = self.ne_engine_version
         self.data.installation_home = self.installation_home
 
         node_info = self.coe_client.get_node_info()

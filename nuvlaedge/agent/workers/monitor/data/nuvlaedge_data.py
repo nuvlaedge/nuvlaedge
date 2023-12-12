@@ -11,25 +11,25 @@ from nuvlaedge.agent.workers.monitor import BaseDataStructure
 class InstallationParametersData(BaseDataStructure):
     """ Provides a standard structure for installation parameters data """
 
-    project_name: Optional[str] = Field(None, alias='project-name')
+    project_name: Optional[str] = None
     environment: Optional[list[str]] = None
-    working_dir: Optional[str] = Field(None, alias='working-dir')
-    config_files: Optional[list[str]] = Field(None, alias='config-files')
+    working_dir: Optional[str] = None
+    config_files: Optional[list[str]] = None
 
 
 class NuvlaEdgeData(BaseDataStructure):
     """ Provides a standard structure for generic NuvlaEdge data """
 
-    nuvlaedge_engine_version:   str | None = Field(None, alias='nuvlabox-engine-version')
-    installation_home:          str | None = Field(None, alias='host-user-home')
+    nuvlabox_engine_version:   str | None = None
+    installation_home:          str | None = Field(None, alias='host-user-home')  # KEEP
 
     # Host node information
-    operating_system:           str | None = Field(None, alias='operating-system')
+    operating_system:           str | None = None
     architecture:               str | None = None
     hostname:                   str | None = None
-    last_boot:                  str | None = Field(None, alias='last-boot')
-    container_plugins:          list[str] | None = Field(None, alias='container-plugins')
+    last_boot:                  str | None = None
+    container_plugins:          list[str] | None = None
 
-    installation_parameters:    InstallationParametersData | None = Field(None, alias='installation-parameters')
+    installation_parameters:    InstallationParametersData | None = None
 
     components:                 list[str] | None = None

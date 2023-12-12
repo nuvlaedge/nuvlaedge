@@ -8,6 +8,9 @@ CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
 
 # We gotta get the namespace...
+
+echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
+
 if [ ! -z $NUVLAEDGE_UUID ]
 then
     NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')

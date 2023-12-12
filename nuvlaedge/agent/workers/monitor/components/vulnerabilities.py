@@ -44,8 +44,9 @@ class VulnerabilitiesMonitor(Monitor):
         if vulnerabilities:
             it_summary: VulnerabilitiesSummary = VulnerabilitiesSummary()
 
-            scores = list(filter((-1).__ne__, map(
-                lambda v: v.get('vulnerability-score', -1), vulnerabilities)))
+            scores = \
+                [v.get('vulnerability-score', -1) for v in vulnerabilities if v.get('vulnerability-score', -1) != -1]
+
             it_summary.total = len(vulnerabilities)
 
             it_summary.affected_products = list(set(map(

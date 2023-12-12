@@ -9,7 +9,6 @@ from pathlib import Path
 import requests
 from mock import Mock, mock_open, patch, MagicMock
 
-from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.workers.monitor.components import network as monitor
 from nuvlaedge.agent.workers.monitor.data.network_data import NetworkInterface, NetworkingData, IP
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
@@ -213,7 +212,7 @@ class TestNetworkMonitor(unittest.TestCase):
         vpn_file = Mock()
         status = Mock()
         mock_telemetry = Mock()
-        mock_telemetry.get_vpn_ip = NuvlaEdgeCommon.get_vpn_ip
+        mock_telemetry.get_vpn_ip = "ASDFASF"
         status.iface_data = None
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor(vpn_file, mock_telemetry, status)

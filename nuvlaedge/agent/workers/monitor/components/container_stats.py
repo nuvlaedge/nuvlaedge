@@ -42,7 +42,7 @@ class ContainerStatsMonitor(Monitor):
         it_containers: list = self.coe_client.collect_container_metrics()
         self.data.containers = {}
         for i in it_containers:
-            it_cont: ContainerStatsData = ContainerStatsData.parse_obj(i)
+            it_cont: ContainerStatsData = ContainerStatsData.model_validate(i)
             self.data.containers[it_cont.id] = it_cont
 
     def get_cluster_manager_attrs(self, managers: list, node_id: str) -> tuple:

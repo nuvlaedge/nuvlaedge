@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from mock import Mock, patch, mock_open, MagicMock
+from mock import Mock, patch, mock_open
 
-import nuvlaedge.agent.workers.monitor.components.temperature
 from nuvlaedge.agent.workers.monitor.components.temperature import TemperatureMonitor
 from nuvlaedge.agent.workers.monitor.data.temperature_data import TemperatureData, TemperatureZone
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus

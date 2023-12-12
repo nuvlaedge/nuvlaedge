@@ -24,7 +24,6 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
-import inspect
 import json
 import logging
 import sys
@@ -41,7 +40,7 @@ from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.utils import file_exists_and_not_empty
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
-from nuvlaedge.agent.workers.commissioner import CommissioningAttributes, Commissioner
+from nuvlaedge.agent.workers.commissioner import Commissioner
 from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes, Telemetry, model_diff
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.nuvla.resources.nuvlaedge import State

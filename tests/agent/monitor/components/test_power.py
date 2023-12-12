@@ -3,7 +3,7 @@ import unittest
 
 from mock import Mock, patch, mock_open
 
-import nuvlaedge.agent.workers.monitor.components.power
+
 from nuvlaedge.agent.workers.monitor.components.power import PowerMonitor
 from nuvlaedge.agent.workers.monitor.data.power_data import PowerData, PowerEntry
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus

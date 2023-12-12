@@ -109,13 +109,13 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                 return None
         return v
 
-    @model_validator(mode='after')
-    def validate_fields(self):
-
-        def none_or_empty_str(val: str) -> bool:
-            return val is None or val == ""
-
-        if none_or_empty_str(self.nuvlaedge_uuid) and \
-           none_or_empty_str(self.nuvlaedge_api_key) and \
-           none_or_empty_str(self.nuvlaedge_api_secret):
-            raise ValueError("Nor NuvlaEdge UUID or API keys were provided. One of them must be provided on NuvlaEdge")
+    # @model_validator(mode='after')
+    # def validate_fields(self):
+    #
+    #     def none_or_empty_str(val: str) -> bool:
+    #         return val is None or val == ""
+    #
+    #     if none_or_empty_str(self.nuvlaedge_uuid) and \
+    #        none_or_empty_str(self.nuvlaedge_api_key) and \
+    #        none_or_empty_str(self.nuvlaedge_api_secret):
+    #         raise ValueError("Nor NuvlaEdge UUID or API keys were provided. One of them must be provided on NuvlaEdge")

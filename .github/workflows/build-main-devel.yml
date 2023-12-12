@@ -135,10 +135,6 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Print requirement
-        run: |
-          cat requirements.txt
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:

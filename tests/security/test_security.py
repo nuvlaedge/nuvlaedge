@@ -23,6 +23,7 @@ from nuvlaedge.security.constants import (
     DATE_FORMAT)
 
 
+# FIXME: understand why tests are failing when this is enabled and fix it
 # class TestSecurityUtils(TestCase):
 #     def test_timeout(self):
 #         with patch.object(signal, 'signal') as mock_signal:

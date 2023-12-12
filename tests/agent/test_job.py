@@ -4,11 +4,8 @@
 import logging
 import mock
 import unittest
-from tests.agent.utils.fake import Fake
 
-from nuvlaedge.agent.common._nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.job import Job
-from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
 class JobTestCase(unittest.TestCase):

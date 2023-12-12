@@ -1,9 +1,5 @@
-import json
 import logging
-import signal
 import socket
-from functools import partial
-from pathlib import Path
 from threading import Event
 
 from nuvlaedge.common.constants import CTE
@@ -12,22 +8,6 @@ from nuvlaedge.agent.settings import AgentSettings
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 
 logger: logging.Logger = logging.getLogger()
-
-
-def sigterm_stop(signum, frame, agent_stop):
-    """
-    Callback for SIGTERM capture. SIGTERM is the signal sent by docker when stopped.
-    This will try to graciously stop all the agent dependencies
-    Args:
-        signum:
-        frame:
-        agent_stop:
-
-    Returns: None
-
-    """
-    logger.error("CAPTURED SIGNAL SIGTERM, STOPPING AGENT")
-    agent_stop.set()
 
 
 def main():
@@ -57,4 +37,3 @@ def entry():
 
 if __name__ == '__main__':
     entry()
-    logger.error("Am I really exiting?")

@@ -12,9 +12,10 @@ from pathlib import Path
 from queue import Queue
 from typing import Optional
 
+from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.telemetry import model_diff
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.common import utils
+from nuvlaedge.common.utils import file_exists_and_not_empty
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
@@ -256,16 +257,14 @@ class Commissioner:
 
         """
         endpoint = "https://{ip}:{port}"
-        vpn_ip = ""  # TODO: Find a way of retrieving VPN
+        vpn_ip = VPNHandler.get_vpn_ip()  # TODO: Find a way of retrieving VPN
         api_address, api_port = self.coe_client.get_api_ip_port()
 
         if vpn_ip and api_port:
-            endpoint.format(ip=vpn_ip, port=api_port)
-            return endpoint
+            return endpoint.format(ip=vpn_ip, port=api_port)
 
         if api_address and api_port:
-            endpoint.format(ip=api_address, port=api_port)
-            return endpoint
+            return endpoint.format(ip=api_address, port=api_port)
 
         return None
 
@@ -274,7 +273,7 @@ class Commissioner:
         Method to load previous commissioning data from a file.
 
         """
-        if not utils.file_exists_and_not_empty(self.COMMISSIONING_FILE):
+        if not file_exists_and_not_empty(self.COMMISSIONING_FILE):
             logger.info(f"No commissioning file found in {self.COMMISSIONING_FILE}. "
                         f"NuvlaEdge is probably never been commissioned before")
             return

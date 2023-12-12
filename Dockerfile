@@ -56,6 +56,7 @@ RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev rust
 
 COPY --link requirements.txt /tmp/requirements.txt
+RUN pip install --upgrade pip
 RUN pip install -r /tmp/requirements.txt
 
 

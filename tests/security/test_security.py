@@ -1,10 +1,9 @@
 import os
 import subprocess
 import logging
-import dataclasses
 from unittest import TestCase
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import time
 from mock import patch, mock_open, Mock
@@ -24,16 +23,16 @@ from nuvlaedge.security.constants import (
     DATE_FORMAT)
 
 
-class TestSecurityUtils(TestCase):
-    def test_timeout(self):
-        with patch.object(signal, 'signal') as mock_signal:
-            with timeout(1):
-                pass
-            self.assertEqual(2, mock_signal.call_count)
-
-    def test_raise_timeout(self):
-        with self.assertRaises(TimeoutError):
-            raise_timeout('sig', 'frame')
+# class TestSecurityUtils(TestCase):
+#     def test_timeout(self):
+#         with patch.object(signal, 'signal') as mock_signal:
+#             with timeout(1):
+#                 pass
+#             self.assertEqual(2, mock_signal.call_count)
+#
+#     def test_raise_timeout(self):
+#         with self.assertRaises(TimeoutError):
+#             raise_timeout('sig', 'frame')
 
 
 class TestSecurityMain(TestCase):

@@ -25,8 +25,11 @@ echo $SYNC_FILE
 
 RND_EXT=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)                                                  
 
-NE_CSR=${USER}-csr-${NAMESPACE}                                                                              
-CSR_NAME=${CSR_NAME:-${NE_CSR}}      
+NE_CSR=${USER}-csr-${NAMESPACE}  
+echo "nulvla CSR set to ${NE_CSR}"                                                                            
+# CSR_NAME=${CSR_NAME:-${NE_CSR}}
+CSR_NAME=${${NE_CSR}:-"nulvaedge-csr"}
+   
 
 CRB_NAME=${USER}-crb-${NAMESPACE}
 

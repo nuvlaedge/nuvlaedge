@@ -16,7 +16,7 @@ then
         NAMESPACE=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
     fi
 fi
-echo "namespace string got set to: NAMESPACE"
+echo "namespace string got set to: ${NAMESPACE}"
 
 SYNC_FILE=".${NAMESPACE}.tls"
 echo $SYNC_FILE
@@ -25,11 +25,10 @@ echo $SYNC_FILE
 
 RND_EXT=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)                                                  
 
-NE_CSR=${USER}-csr-${NAMESPACE}  
-echo "nulvla CSR set to ${NE_CSR}"                                                                            
+NE_CSR=${USER}-csr-${NAMESPACE}                                                                            
 # CSR_NAME=${CSR_NAME:-${NE_CSR}}
-CSR_NAME=${${NE_CSR}:-"nulvaedge-csr"}
-   
+CSR_NAME=${NE_CSR:-"nulvaedge-csr"}
+echo "nuvla CSR set to ${CSR_NAME}"      
 
 CRB_NAME=${USER}-crb-${NAMESPACE}
 

@@ -54,7 +54,7 @@ FROM ${BASE_IMAGE} AS base-builder
 
 RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev curl gcc
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -y
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 

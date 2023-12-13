@@ -15,6 +15,11 @@ echo "The MY_NAMESPACE is set to: ${MY_NAMESPACE}"
 
 env
 
+if [ ! -z $SET_MULTIPLE]
+then
+    echo "We are in the multiple NE mode..."
+fi
+
 if [ ! -z $NUVLAEDGE_UUID ]
 then
     NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
@@ -25,6 +30,7 @@ then
 fi
 echo "namespace string got set to: ${NAMESPACE}"
 
+# probably not a good idea to be random?
 SYNC_FILE=".${NAMESPACE}.tls"
 echo $SYNC_FILE
 
@@ -34,6 +40,8 @@ RND_EXT=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
 
 NE_CSR=${USER}-csr-${NAMESPACE}                                                                            
 # CSR_NAME=${CSR_NAME:-${NE_CSR}}
+# maybe the CSR name should come from an ENV variable?
+# this could be 
 CSR_NAME=${NE_CSR:-"nulvaedge-csr"}
 echo "nuvla CSR set to ${CSR_NAME}"      
 

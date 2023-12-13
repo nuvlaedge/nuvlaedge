@@ -15,7 +15,7 @@ echo "The MY_NAMESPACE is set to: ${MY_NAMESPACE}"
 
 env
 
-if [ ! -z $SET_MULTIPLE]
+if [ ! -z $SET_MULTIPLE ]
 then
     echo "We are in the multiple NE mode..."
 fi

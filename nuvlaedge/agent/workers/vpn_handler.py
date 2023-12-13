@@ -8,6 +8,7 @@ from typing import Optional
 
 import docker.errors
 
+from nuvlaedge.agent.common import StatusReport, NuvlaEdgeStatusHandler
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
 from nuvlaedge.agent.nuvla.resources.credential import CredentialResource
@@ -144,6 +145,7 @@ class VPNHandler:
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
                  vpn_channel: Queue[str],
+                 status_channel: Queue[StatusReport],
                  vpn_extra_conf: str):
         """
         Controls and configures the VPN client based on configuration parsed by the agent. It  commissions itself
@@ -164,6 +166,7 @@ class VPNHandler:
 
         # Shared static commission payload. Only vpn-csr field shall be edited by this class
         self.vpn_channel: Queue[str] = vpn_channel
+        self.status_channel: Queue[StatusReport] = status_channel
 
         # VPN Server ID variables
         self._local_server_id: NuvlaID | None = None
@@ -185,6 +188,8 @@ class VPNHandler:
         if not self.VPN_FOLDER.exists():
             logger.info("Create VPN directory tree")
             self.VPN_FOLDER.mkdir()
+
+        NuvlaEdgeStatusHandler.starting(self.status_channel, self.__class__.__name__)
 
     def certificates_exists(self) -> bool:
         """
@@ -475,6 +480,7 @@ class VPNHandler:
         Returns:
 
         """
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'VPNHandler')
 
         if not self.nuvla_client.nuvlaedge.vpn_server_id:
             logger.error("VPN is disabled, we should have not reached this point, exiting VPN handler")

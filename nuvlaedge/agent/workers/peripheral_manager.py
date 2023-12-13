@@ -3,11 +3,13 @@
 """
 import logging
 from pathlib import Path
+from queue import Queue
 from threading import Event, Thread
 
 from pydantic import ValidationError
 from nuvla.api import Api as NuvlaClient
 
+from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.broker.file_broker import FileBroker
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.models.messages import NuvlaEdgeMessage
@@ -47,7 +49,10 @@ class PeripheralManager:
 
     PERIPHERALS_LOCATION: Path = FILE_NAMES.PERIPHERALS_FOLDER
 
-    def __init__(self, nuvla_client: NuvlaClient, nuvlaedge_uuid: str):
+    def __init__(self, nuvla_client: NuvlaClient,
+                 nuvlaedge_uuid: str,
+                 status_channel: Queue[StatusReport]
+                 ):
         """
         Initializes an instance of the class with the given parameters.
 
@@ -71,9 +76,13 @@ class PeripheralManager:
         self.running_peripherals: set = set()
         self.registered_peripherals: dict[str, PeripheralData] = {}
 
+        self.status_channel: Queue[StatusReport] = status_channel
+
         if not self.PERIPHERALS_LOCATION.exists():
             logger.info(f"Peripheral DB location {self.PERIPHERALS_LOCATION} not found, create folder structure")
             self.PERIPHERALS_LOCATION.mkdir(parents=True)
+
+        NuvlaEdgeStatusHandler.starting(self.status_channel, 'peripheral_manager')
 
     def update_running_managers(self):
         """
@@ -175,6 +184,8 @@ class PeripheralManager:
         Method to run the scanning process for detected devices.
         """
         logger.info('Scanning for detected devices')
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'peripheral_manager')
+
         self.update_running_managers()
 
         # New peripherals accumulator for different peripheral managers

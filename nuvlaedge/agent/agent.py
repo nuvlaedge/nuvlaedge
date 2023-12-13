@@ -33,6 +33,7 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
+from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
@@ -59,29 +60,36 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 class Agent:
     """
-    Class that represents an Agent in the NuvlaEdge system.
+    An Agent class handles the operations of the NuvlaEdge agent, including initialization, assert
+    current state, registering various workers, initializing periodic actions and running the agent.
+    The Agent class interacts with the Nuvla API and the Container Orchestration Engine (COE) to
+    collect data and perform tasks.
 
     Attributes:
-        settings (AgentSettings): The settings for the Agent.
-        _exit (Event): An event used to signal the Agent to exit.
-        _nuvla_client (NuvlaClientWrapper): The Nuvla API client.
-        _coe_engine (DockerClient | KubernetesClient): The container orchestration engine.
-        worker_manager (WorkerManager): The manager for the Agent's workers.
-        action_handler (ActionHandler): The handler for the Agent's timed actions.
-        telemetry_payload (TelemetryPayloadAttributes): The attributes for telemetry payload.
-        telemetry_channel (Queue[TelemetryPayloadAttributes]): The channel for sending telemetry payloads.
-        vpn_channel (Queue[str]): The channel for sending VPN messages.
+        settings: `AgentSettings` - The settings object containing agent configuration.
+        _exit: `Event` - The event object used to signal the agent to exit.
+        _nuvla_client: `NuvlaClientWrapper` - A wrapper for the Nuvla API library specialized in NuvlaEdge.
+        _coe_engine: `DockerClient` or `KubernetesClient` - The container orchestration engine.
+        worker_manager: `WorkerManager` - The manager responsible for managing agent workers.
+        action_handler: `ActionHandler` - Handles timed actions for heartbeat and telemetry.
+        status_handler: `NuvlaEdgeStatusHandler` - Handles NuvlaEdge status.
+        telemetry_payload: `TelemetryPayloadAttributes` - Static objects that collect telemetry data.
+        telemetry_channel: `Queue` - A channel to handle telemetry payloads.
+        vpn_channel: `Queue` - A channel to manage VPN data.
+        status_channel: `Queue` - A channel to handle status reports.
 
     Methods:
-        assert_current_state() -> State:
-            Asserts the state of NuvlaEdge and returns the State.
-        init_workers():
-            Initializes and registers various workers.
-        init_actions():
-            Initializes the periodic actions to be run by the Agent.
-        start_agent():
-            Starts the Agent.
-
+        __init__(exit_event: `Event`, settings: `AgentSettings`): Initializes an instance of the Agent class.
+        assert_current_state() -> `State`: Asserts the state of NuvlaEdge and initializes NuvlaClientWrapper based on current state.
+        init_workers(): Initializes and registers various workers for the agent.
+        init_actions(): Initializes periodic actions run by the agent.
+        start_agent(): Controls the initialization process of the agent starting from scratch.
+        telemetry() -> `CimiResponse` | None: Gathers the information from the workers and executes the telemetry operation against Nuvla.
+        heartbeat() -> `CimiResponse` | None: Executes the heartbeat operation against Nuvla.
+        process_response(response: `CimiResponse`, operation: str): Processes the response received from an operation.
+        process_jobs(jobs: list[NuvlaID]): Processes a list of jobs.
+        stop(): Signals the agent to exit.
+        run(): Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
     """
     def __init__(self,
                  exit_event: Event,
@@ -111,10 +119,20 @@ class Agent:
         # Timed actions for heartbeat and telemetry
         self.action_handler: ActionHandler = ActionHandler([])
 
+        # Agent Status handler
+        self.status_handler: NuvlaEdgeStatusHandler = NuvlaEdgeStatusHandler()
+
         # Static objects
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
+        # Telemetry channel connecting the telemetry handler and the agent
         self.telemetry_channel: Queue[TelemetryPayloadAttributes] = Queue(maxsize=10)
+        # VPN channel connecting the VPN handler and the commissioner
         self.vpn_channel: Queue[str] = Queue(maxsize=10)
+        # Status channel connecting any module and the status handler
+        self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
+
+        # Report
+        NuvlaEdgeStatusHandler.starting(self.status_channel, 'agent')
 
     def assert_current_state(self) -> State:
         """
@@ -219,6 +237,7 @@ class Agent:
             worker_type=Commissioner,
             init_params=((), {'coe_client': self._coe_engine,
                               'nuvla_client': self._nuvla_client,
+                              'status_channel': self.status_channel,
                               'vpn_channel': self.vpn_channel
                               }),
             actions=['run'],
@@ -231,6 +250,7 @@ class Agent:
             period=60,
             worker_type=Telemetry,
             init_params=((), {'coe_client': self._coe_engine,
+                              'status_channel': self.status_channel,
                               'report_channel': self.telemetry_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors
@@ -246,6 +266,7 @@ class Agent:
                 period=60,
                 worker_type=VPNHandler,
                 init_params=((), {'coe_client': self._coe_engine,
+                                  'status_channel': self.status_channel,
                                   'nuvla_client': self._nuvla_client,
                                   'vpn_channel': self.vpn_channel,
                                   'vpn_extra_conf': self.settings.vpn_config_extra}),
@@ -258,6 +279,7 @@ class Agent:
             period=120,
             worker_type=PeripheralManager,
             init_params=((), {'nuvla_client': self._nuvla_client.nuvlaedge_client,
+                              'status_channel': self.status_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid}),
             actions=['run']
         )
@@ -316,6 +338,14 @@ class Agent:
         self.init_workers()
         self.init_actions()
 
+    def gather_status(self, telemetry: TelemetryPayloadAttributes):
+        """ Gathers the status from the workers and stores it in the telemetry payload """
+        # Gather the status report
+        status, notes = self.status_handler.get_status()
+        logger.info(f"Status gathered: {status} - {notes}")
+        telemetry.status = status
+        telemetry.status_notes = notes
+
     """ Agent Actions """
     def telemetry(self) -> CimiResponse | None:
         """
@@ -332,6 +362,8 @@ class Agent:
 
         # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest
         new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
+        # Gather the status report
+        self.gather_status(new_telemetry)
 
         # Calculate the difference from the latest telemetry sent and the new data to reduce package size
         to_send, to_delete = model_diff(self.telemetry_payload, new_telemetry)
@@ -423,6 +455,8 @@ class Agent:
         logger.info(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
         logger.debug(self.action_handler.actions_summary())
 
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+
         while not self._exit.wait(next_cycle_in):
             start_cycle: float = time.perf_counter()
             next_action = self.action_handler.next
@@ -440,4 +474,3 @@ class Agent:
             next_action = self.action_handler.next
             logger.debug(self.action_handler.actions_summary())
             logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
-

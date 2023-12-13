@@ -9,6 +9,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.workers.monitor.components import get_monitor, active_monitors
@@ -164,6 +165,7 @@ class Telemetry:
     def __init__(self,
                  coe_client: COEClient,
                  report_channel: Queue[TelemetryPayloadAttributes],
+                 status_channel: Queue[StatusReport],
                  nuvlaedge_uuid: NuvlaID,
                  excluded_monitors):
         """
@@ -187,6 +189,9 @@ class Telemetry:
         """ Channel to communicate with the Agent"""
         self.report_channel: Queue[TelemetryPayloadAttributes] = report_channel
 
+        """ Channel to report status """
+        self.status_channel: Queue[StatusReport] = status_channel
+
         """ Data variable where the monitors dump their readings """
         self.edge_status: EdgeStatus = EdgeStatus()
 
@@ -195,6 +200,8 @@ class Telemetry:
         logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
         self.monitor_list: dict[str, Monitor] = {}
         self.initialize_monitors()
+
+        NuvlaEdgeStatusHandler.starting(self.status_channel, 'telemetry')
 
     def initialize_monitors(self):
         """
@@ -296,6 +303,8 @@ class Telemetry:
         Returns:
             None
         """
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'telemetry')
+
         logger.info("Collecting monitor metrics...")
         """ Retrieve data from monitors (If not threaded) and check threaded monitors health"""
         self.check_monitors_health()

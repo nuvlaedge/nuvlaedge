@@ -12,6 +12,7 @@ from pathlib import Path
 from queue import Queue
 from typing import Optional
 
+from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.telemetry import model_diff
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
@@ -70,6 +71,7 @@ class Commissioner:
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
+                 status_channel: Queue[StatusReport],
                  vpn_channel: Queue[str]):
         """
 
@@ -83,6 +85,7 @@ class Commissioner:
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
         self.vpn_channel: Queue[str] = vpn_channel
+        self.status_channel: Queue[StatusReport] = status_channel
 
         self._last_payload: CommissioningAttributes = CommissioningAttributes()
         # Static payload. Address should only change or updated from the agent
@@ -90,6 +93,8 @@ class Commissioner:
 
         # Find the commissioning file and load it as _last_payload if exists
         self.load_previous_commission()
+
+        NuvlaEdgeStatusHandler.starting(self.status_channel, 'commissioner')
 
     def commission(self):
         logger.info(f"Commissioning NuvlaEdge with data:"
@@ -195,8 +200,9 @@ class Commissioner:
             None
         """
         logger.info("Running Commissioning checks")
-        self.update_attributes()
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'commissioner')
 
+        self.update_attributes()
         if not self.vpn_channel.empty():
             logger.info("Retrieving certificate sign requests from VPN")
             vpn_csr = self.vpn_channel.get(block=False)

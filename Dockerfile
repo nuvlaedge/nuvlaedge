@@ -6,7 +6,7 @@ ARG GOLANG_VERSION="1.20.4"
 ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
-ARG JOB_LITE_VERSION="3.9.0"
+ARG JOB_LITE_VERSION="3.9.1"
 ARG JOB_LITE_IMG_ORG="nuvla"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -53,7 +53,7 @@ LABEL org.opencontainers.image.authors="support@sixsq.com" \
 FROM ${BASE_IMAGE} AS base-builder
 
 RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev
+RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -97,6 +97,9 @@ RUN pip install -r /tmp/requirements.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS modbus-builder
 
+WORKDIR /tmp
+RUN apk update; apk add nmap-scripts
+
 COPY --link requirements.modbus.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
@@ -117,12 +120,14 @@ FROM ${GO_BASE_IMAGE} AS golang-builder
 
 # Build Golang usb peripehral
 RUN apk update
-RUN apk add libusb-dev udev pkgconfig gcc musl-dev
+RUN apk add libusb-dev udev pkgconfig gcc musl-dev upx
 
 COPY --link nuvlaedge/peripherals/usb/ /opt/usb/
 WORKDIR /opt/usb/
 
-RUN go mod tidy && go build
+RUN go mod tidy && \
+    go build && \
+    upx --lzma /opt/usb/nuvlaedge
 
 
 # ------------------------------------------------------------------------
@@ -147,7 +152,39 @@ RUN pip install -r /tmp/requirements.txt
 # ------------------------------------------------------------------------
 # Agent builder
 # ------------------------------------------------------------------------
+FROM docker AS docker
 FROM base-builder AS agent-builder
+
+ARG PYTHON_LOCAL_SITE_PACKAGES
+
+# Docker and docker compose CLIs
+COPY --from=docker /usr/local/bin/docker /usr/bin/docker
+COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
+                   /usr/local/libexec/docker/cli-plugins/docker-compose
+
+# Kubectl CLI
+RUN set -eux; \
+    apkArch="$(apk --print-arch)"; \
+    case "$apkArch" in \
+        x86_64)  kubectlArch='amd64' ;; \
+        armv7)   kubectlArch='arm' ;; \
+        aarch64) kubectlArch='arm64' ;; \
+        *) echo >&2 "error: unsupported architecture ($apkArch) for kubectl"; exit 1 ;;\
+    esac; \
+    kubectlVersion=$(curl -Ls https://dl.k8s.io/release/stable.txt); \
+    curl -LO https://dl.k8s.io/release/${kubectlVersion}/bin/linux/${kubectlArch}/kubectl && \
+    chmod +x ./kubectl && \
+    mv ./kubectl /usr/local/bin/kubectl
+
+# Helm CLI
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | VERIFY_CHECKSUM=false sh
+
+# Compress binaires
+RUN upx --lzma \
+        /usr/bin/docker \
+        /usr/local/libexec/docker/cli-plugins/docker-compose \
+        /usr/local/bin/kubectl \
+        /usr/local/bin/helm
 
 COPY --link requirements.agent.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -181,6 +218,7 @@ RUN pip install -r /tmp/requirements.lite.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS nuvlaedge-builder
 
+ARG PYTHON_MAJ_MIN_VERSION
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Extract and separate requirements from package install to accelerate building process.
@@ -197,14 +235,29 @@ COPY --link --from=job-lite               ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla ${
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
 
+# Remove setuptools and pip
+RUN pip uninstall -y setuptools
+RUN pip uninstall -y pip
+
+# Remove psutil tests
+RUN rm -rf ${PYTHON_LOCAL_SITE_PACKAGES}/psutil/tests
+
 # Cleanup python bytecode files
 RUN find ${PYTHON_LOCAL_SITE_PACKAGES} -name '*.py?' -delete
+RUN find /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION} -name '*.py?' -delete
 
 
 # ------------------------------------------------------------------------
 # Final NuvlaEdge image
 # ------------------------------------------------------------------------
 FROM nuvlaedge-base
+
+ARG PYTHON_MAJ_MIN_VERSION
+
+#RUN rm -f /lib/libcrypto.so.3 && \
+#RUN rm -Rf /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/ensurepip && \
+#    pip uninstall -y setuptools && \
+#    pip uninstall -y pip
 
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
@@ -214,25 +267,45 @@ RUN chmod +x /opt/nuvlaedge/license.sh
 ONBUILD RUN ./license.sh
 
 # Required packages
-RUN apk add --no-cache \
+RUN apk add --no-cache upx \
         # Agent
-        procps curl mosquitto-clients lsblk openssl iproute2 \
-        # Modbus
-        nmap nmap-scripts \
+        procps curl mosquitto-clients lsblk openssl iproute2-minimal \
+        # Modbus and Security
+        nmap nmap-nselibs \
         # USB
-        libusb-dev udev \ 
+        libusb-dev udev \
         # Bluetooth
         bluez-dev \
         # Security
         coreutils \
-        # Compute-API
+        # Compute API
         socat \
-        # OpenVPN
+        # VPN client
         openvpn \
-		# Job-Engine
-		gettext docker-cli docker-cli-compose helm
-# Job-Engine and Kubernetes Credential Manager
-RUN apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/community kubectl
+		# Job-Engine (envsubst for k8s substitution)
+		gettext-envsubst && \
+    rm /usr/share/nmap/nmap-os-db \
+       /usr/share/nmap/nselib/data/wp-plugins.lst \
+       /usr/share/nmap/nselib/data/wp-themes.lst \
+       /usr/share/nmap/nselib/data/drupal-modules.lst && \
+    upx --lzma \
+        /sbin/ip \
+        /usr/bin/nmap  \
+        /usr/bin/coreutils  \
+        /usr/bin/openssl  \
+        /usr/bin/socat  \
+        /usr/bin/top  \
+        /usr/bin/curl \
+        /usr/bin/envsubst \
+        /usr/sbin/openvpn && \
+    apk del --no-cache upx
+
+COPY --link --from=agent-builder /usr/bin/docker /usr/bin/docker
+COPY --link --from=agent-builder /usr/local/libexec/docker/cli-plugins/docker-compose \
+                                 /usr/local/libexec/docker/cli-plugins/docker-compose
+RUN ln -s /usr/local/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
+COPY --link --from=agent-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
+COPY --link --from=agent-builder /usr/local/bin/helm /usr/local/bin/helm
 
 # Required python packages
 COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
@@ -241,38 +314,57 @@ COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 # By copying it from base builder we save up ~100MB of the gcc library
 COPY --link --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
+
 # Peripheral discovery: USB
 COPY --link --from=golang-builder /opt/usb/nuvlaedge /usr/sbin/usb
+
 
 # Peripheral discovery: GPU
 RUN mkdir /opt/scripts/
 COPY --link nuvlaedge/peripherals/gpu/cuda_scan.py /opt/nuvlaedge/scripts/gpu/
 COPY --link nuvlaedge/peripherals/gpu/Dockerfile.gpu /etc/nuvlaedge/scripts/gpu/
 
+
+# Peripheral discovery: ModBus
+RUN mkdir -p /usr/share/nmap/scripts/
+COPY --link --from=modbus-builder /usr/share/nmap/scripts/modbus-discover.nse /usr/share/nmap/scripts/modbus-discover.nse
+
+
 # Security module
 # nmap nmap-scripts coreutils curl
 COPY --link nuvlaedge/security/patch/vulscan.nse /usr/share/nmap/scripts/vulscan/
 COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoint
-RUN chmod +x /usr/bin/security-entrypoint
+
 
 # Compute API
 COPY scripts/compute-api/api.sh /usr/bin/api
-RUN chmod +x /usr/bin/api
+
 
 # VPN Client
 COPY --link scripts/vpn-client/* /opt/nuvlaedge/scripts/vpn-client/
 RUN mv /opt/nuvlaedge/scripts/vpn-client/openvpn-client.sh /usr/bin/openvpn-client && \
-    chmod +x /usr/bin/openvpn-client && \
-    chmod +x /opt/nuvlaedge/scripts/vpn-client/get_ip.sh && \
-    chmod +x /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh
-# For backward compatibility with existing vpn/nuvlaedge.conf file
-RUN ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh && \
+    # For backward compatibility with existing vpn/nuvlaedge.conf file
+    ln -s /opt/nuvlaedge/scripts/vpn-client/get_ip.sh /opt/nuvlaedge/scripts/get_ip.sh && \
     ln -s /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh /opt/nuvlaedge/scripts/wait-for-vpn-update.sh
+
 
 # Kubernetes credential manager
 COPY --link scripts/credential-manager/* /opt/nuvlaedge/scripts/credential-manager/
-RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh /usr/bin/kubernetes-credential-manager && \
-    chmod +x /usr/bin/kubernetes-credential-manager
+RUN cp /opt/nuvlaedge/scripts/credential-manager/kubernetes-credential-manager.sh /usr/bin/kubernetes-credential-manager
+
+
+# Give execution permission
+RUN chmod +x \
+    # Security
+    /usr/bin/security-entrypoint \
+    # Compute API
+    /usr/bin/api \
+    # VPN client
+    /usr/bin/openvpn-client \
+    /opt/nuvlaedge/scripts/vpn-client/get_ip.sh \
+    /opt/nuvlaedge/scripts/vpn-client/wait-for-vpn-update.sh \
+    # Kubernetes credential manager
+    /usr/bin/kubernetes-credential-manager
 
 # Configuration files
 COPY --link nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf

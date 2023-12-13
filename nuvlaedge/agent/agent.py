@@ -134,6 +134,26 @@ class Agent:
         # Report
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'agent')
 
+    @staticmethod
+    def check_uuid_missmatch(env_uuid, other_uuid):
+        """
+
+        Args:
+            env_uuid: UUID parsed as an environmental variable
+            other_uuid: UUID stored locally or retrieved from API keys
+
+        Returns: None
+        Raises: AgentSettingsMissMatch if the UUID's are not equal
+
+        """
+        # Check UUID missmatch
+        if env_uuid != other_uuid:
+            logger.error(f"Parsed UUID {env_uuid} is different from the locally stored "
+                         f"{other_uuid} session. You are probably trying to install a "
+                         f"new NuvlaEdge, please remove previous volumes and installation files")
+            raise AgentSettingsMissMatch(f"Provided NuvlaEdge UUID {env_uuid} must"
+                                         f"match the locally stored. Remove previous installation of NuvlaEdge")
+
     def assert_current_state(self) -> State:
         """
         This method has two main functions: assert the state of NuvlaEdge and in the process instantiate a
@@ -158,24 +178,6 @@ class Agent:
         Returns: The State of NuvlaEdge
         Raises: AgentSettingsMissMatch if the UUID's are not equal
         """
-        def check_uuid_missmatch(env_uuid, other_uuid):
-            """
-
-            Args:
-                env_uuid: UUID parsed as an environmental variable
-                other_uuid: UUID stored locally or retrieved from API keys
-
-            Returns: None
-            Raises: AgentSettingsMissMatch if the UUID's are not equal
-
-            """
-            # Check UUID missmatch
-            if env_uuid != other_uuid:
-                logger.error(f"Parsed UUID {env_uuid} is different from the locally stored "
-                             f"{other_uuid} session. You are probably trying to install a "
-                             f"new NuvlaEdge, please remove previous volumes and installation files")
-                raise AgentSettingsMissMatch(f"Provided NuvlaEdge UUID {env_uuid} must"
-                                             f"match the locally stored. Remove previous installation of NuvlaEdge")
 
         # Stored session found -> Previous installation
         if file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION):
@@ -183,7 +185,7 @@ class Agent:
             self._nuvla_client = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
 
             if self.settings.nuvlaedge_uuid:
-                check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+                self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
 
             return State.value_of(self._nuvla_client.nuvlaedge.state)
 
@@ -199,7 +201,7 @@ class Agent:
             )
 
             if self.settings.nuvlaedge_uuid:
-                check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+                self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
             return self._nuvla_client.nuvlaedge.state
 
         # If we reached this point we should have a NEW Nuvlaedge, and we need the uuid to start
@@ -358,10 +360,10 @@ class Agent:
         # If there is no telemetry available there is nothing to do
         if self.telemetry_channel.empty():
             logger.warning("Telemetry class not reporting fast enough to Agent")
-            return None
-
-        # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest
-        new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
+            new_telemetry: TelemetryPayloadAttributes = self.telemetry_payload.model_copy(deep=True)
+        else:
+            # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest
+            new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
         # Gather the status report
         self.gather_status(new_telemetry)
 
@@ -370,11 +372,13 @@ class Agent:
         data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
 
         # Send telemetry via NuvlaClientWrapper
-        logger.debug(f"Sending telemetry data to Nuvla {json.dumps(data_to_send, indent=4)}")
+        logger.debug(f"Sending telemetry data to Nuvla \n "
+                     f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
+
         response: CimiResponse = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
 
         # If telemetry is successful save telemetry
-        if response.data:
+        if response and response.data:
             logger.info("Storing sent data on telemetry")
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
 
@@ -431,12 +435,11 @@ class Agent:
                       self._nuvla_client,
                       i,
                       self._coe_engine.job_engine_lite_image)
-
             if not job.do_nothing:
                 logger.info(f"Starting job {i}")
                 job.launch()
             else:
-                logger.info(f"Job {job} already running, do nothing")
+                logger.info(f"Job {job.job_id} already running, do nothing")
 
     def stop(self):
         self._exit.set()
@@ -459,6 +462,9 @@ class Agent:
 
         while not self._exit.wait(next_cycle_in):
             start_cycle: float = time.perf_counter()
+
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+
             next_action = self.action_handler.next
             response = next_action()
 

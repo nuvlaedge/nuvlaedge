@@ -36,8 +36,6 @@ class NuvlaEdgeStatusHandler:
         self.module_reports.pop(module_name)
 
     def process_status(self):
-        logger.info("Processing NuvlaEdge status")
-
         temp_status = 'UNKNOWN'
         temp_notes = []
 
@@ -46,14 +44,14 @@ class NuvlaEdgeStatusHandler:
             return diff.seconds
 
         for module_name, module_report in self.module_reports.items():
-            logger.info(f"Processing module {module_report}")
+            logger.debug(f"Processing module {module_report}")
 
             if module_report.module_status in ['STOPPED', 'FAILING', 'FAILED']:
-                logger.info("Module is in STOPPED, FAILING or FAILED")
+                logger.debug(f"Module {module_name} is in STOPPED, FAILING or FAILED")
                 temp_status = 'DEGRADED'
 
             if module_report.module_status in ['STARTING', 'RUNNING'] and temp_status != 'DEGRADED':
-                logger.info("Module is in STARTING or RUNNING")
+                logger.info(f"Module {module_name} is in STARTING or RUNNING")
                 temp_status = 'OPERATIONAL'
 
             temp_notes.append('{name: <16} - {time_d: <6}s: {status: <9}{message}'.format(
@@ -73,7 +71,6 @@ class NuvlaEdgeStatusHandler:
 
         logger.info(f"Processing {len(self.module_reports)} status reports")
         self.process_status()
-
 
     def get_status(self) -> tuple[str, list[str]]:
         self.update_status()

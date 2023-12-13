@@ -417,7 +417,7 @@ class VPNHandler:
             - Creates a deep copy of the VPN server data from the `nuvla_client` and assigns
               it back to the `vpn_server`.
 
-            - The credentials for the VPN are then updated in the `vpn_configusing` the
+            - The credentials for the VPN are then updated in the `vpn_configuring` the
               `vpn_credential`.
 
             - The VPN interface name is then updated in the `vpn_config` based on the

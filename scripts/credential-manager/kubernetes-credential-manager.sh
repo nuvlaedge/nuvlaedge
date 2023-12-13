@@ -11,6 +11,10 @@ USER="nuvla"
 
 echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
 
+echo "The MY_NAMESPACE is set to: ${MY_NAMESPACE}"
+
+env
+
 if [ ! -z $NUVLAEDGE_UUID ]
 then
     NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')

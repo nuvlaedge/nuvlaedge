@@ -182,10 +182,13 @@ class Agent:
             logger.info("Starting NuvlaEdge from previously stored session")
             self._nuvla_client = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
 
-            if self.settings.nuvlaedge_uuid:
-                check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+            if self._nuvla_client is not None:
+                if self.settings.nuvlaedge_uuid:
+                    check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
 
-            return State.value_of(self._nuvla_client.nuvlaedge.state)
+                return State.value_of(self._nuvla_client.nuvlaedge.state)
+            else:
+                FILE_NAMES.NUVLAEDGE_SESSION.unlink()
 
         # API keys log-in
         if self.settings.nuvlaedge_api_key is not None and self.settings.nuvlaedge_api_secret is not None:

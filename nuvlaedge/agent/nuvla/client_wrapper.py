@@ -360,15 +360,23 @@ class NuvlaClientWrapper:
             nuvlaedge_status_uuid=self._nuvlaedge_status_uuid
         )
 
-        with FILE_NAMES.NUVLAEDGE_SESSION.open('w') as f:
-            json.dump(serial_session.model_dump(exclude_none=True, by_alias=True), f, indent=4)
+        try:
+            with FILE_NAMES.NUVLAEDGE_SESSION.open('w') as f:
+                json.dump(serial_session.model_dump(exclude_none=True, by_alias=True), f, indent=4)
+        except Exception as ex:
+            logger.error(f'Unable to write nuvlaedge session : {ex}')
+            FILE_NAMES.NUVLAEDGE_SESSION.unlink()
 
     @classmethod
     def from_session_store(cls, file: Path | str):
         if isinstance(file, str):
             file = Path(file)
-        with file.open('r') as f:
-            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate_json(f.read())
+        try:
+            with file.open('r') as f:
+                session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate_json(f.read())
+        except Exception as ex:
+            logger.error(f'Unable to get session details : {ex}')
+            return None
 
         temp_client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
         temp_client.nuvlaedge_credentials = session.credentials

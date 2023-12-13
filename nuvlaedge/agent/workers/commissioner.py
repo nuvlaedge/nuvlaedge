@@ -301,7 +301,11 @@ class Commissioner:
                 logger.warning("Error decoding previous commission")
 
     def save_commissioned_data(self) -> None:
-        with self.COMMISSIONING_FILE.open('w') as f:
-            data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
-            data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
-            json.dump(data, f)
+        try:
+            with self.COMMISSIONING_FILE.open('w') as f:
+                data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
+                data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
+                json.dump(data, f)
+        except Exception as ex:
+            logger.error(f'Unable save commissioning data : {ex}')
+            self.COMMISSIONING_FILE.unlink()

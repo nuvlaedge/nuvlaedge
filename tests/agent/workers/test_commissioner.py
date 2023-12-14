@@ -61,13 +61,11 @@ class TestCommissioner(TestCase):
                 mock_json.side_effect = json.JSONDecodeError('msg', 'doc', 1)
                 self.test_commissioner.load_previous_commission()
 
-    # @patch('nuvlaedge.agent.workers.commissioner.model_diff')
     @patch.object(NuvlaClientWrapper, 'commission')
     @patch.object(Path, 'open')
     @patch.object(json, 'dump')
     def test_commission(self, mock_json, mock_path, test_wrapper):
         self.test_commissioner._current_payload.tags = ['tag']
-        # test_model_diff.return_value = ({'field1', 'field2'}, {'field3', 'field4'})
         test_wrapper.return_value = True
         with patch.object(CommissioningAttributes, 'model_dump') as mock_model_dump:
             mock_model_dump.return_value = {'nuvlaedge_uuid': ''}

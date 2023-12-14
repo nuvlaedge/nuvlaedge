@@ -121,7 +121,7 @@ def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[s
     """
     to_send: set = set()
     for field, value in iter(target):
-        if value != getattr(reference, field):
+        if value != getattr(reference, field) and value is not None:
             to_send.add(field)
     to_delete = reference.model_fields_set - target.model_fields_set
     return to_send, to_delete

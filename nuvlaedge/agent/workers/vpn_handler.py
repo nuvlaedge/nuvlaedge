@@ -244,6 +244,7 @@ class VPNHandler:
         start_time: float = time.perf_counter()
 
         while time.perf_counter() - start_time < timeout:
+
             if self.certificates_exists():
                 return
             time.sleep(0.3)
@@ -266,11 +267,13 @@ class VPNHandler:
         start_time: float = time.perf_counter()
 
         while time.perf_counter() - start_time < timeout:
+
             if self.nuvla_client.vpn_credential is not None:
                 self.vpn_credential = self.nuvla_client.vpn_credential.model_copy(deep=True)
                 logger.info("VPN credential created in Nuvla")
                 self.save_credential()
                 return True
+            time.sleep(0.1)
 
         logger.info(f"VPN credential not created in time with timeout {timeout}")
         return False

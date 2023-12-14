@@ -1,7 +1,7 @@
 import logging
 from typing import Type
 
-from nuvlaedge.agent.worker import AgentWorker
+from nuvlaedge.agent.worker import Worker
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ class WorkerManager:
     Class WorkerManager manages a collection of worker instances.
 
     Attributes:
-        registered_workers (dict[str, AgentWorker]): A dictionary containing registered worker instances.
+        registered_workers (dict[str, Worker]): A dictionary containing registered worker instances.
 
     Methods:
         add_worker(period: int, worker_type: Type, init_params: tuple[tuple, dict], actions: list[str],
@@ -39,14 +39,14 @@ class WorkerManager:
             Stops all the registered workers.
     """
     def __init__(self):
-        self.registered_workers: dict[str, AgentWorker] = {}
+        self.registered_workers: dict[str, Worker] = {}
 
     def add_worker(self,
                    period: int,
                    worker_type: Type,
                    init_params: tuple[tuple, dict],
                    actions: list[str],
-                   initial_delay: float | None = None):
+                   initial_delay: float | None = None) -> bool:
         """
         Adds a worker to the manager.
 
@@ -60,14 +60,16 @@ class WorkerManager:
         if worker_type.__class__.__name__ not in self.registered_workers:
             logger.info(f"Registering worker: {worker_type.__name__} in manager")
             self.registered_workers[worker_type.__name__] = (
-                AgentWorker(period=period,
-                            worker_type=worker_type,
-                            init_params=init_params,
-                            actions=actions,
-                            initial_delay=initial_delay)
+                Worker(period=period,
+                       worker_type=worker_type,
+                       init_params=init_params,
+                       actions=actions,
+                       initial_delay=initial_delay)
             )
+            return True
         else:
             logger.info(f"Worker {worker_type.__name__} already registered")
+            return False
 
     def status_report(self):
         """

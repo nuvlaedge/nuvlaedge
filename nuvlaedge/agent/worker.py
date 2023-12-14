@@ -2,18 +2,20 @@ import logging
 import random
 import threading
 import time
+from datetime import datetime
 from threading import Thread, Event
 from typing import Callable, Type
 
 
 logger: logging.Logger = logging.getLogger(__name__)
+random.seed(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 
 class WorkerExitException(Exception):
     """ Triggered by the workers when they cannot run due to system configuration changes and want to force and exit """
 
 
-class AgentWorker:
+class Worker:
     """
     Worker class. The constructor receives the following parameters:
         - period: int, the period of execution of the worker
@@ -61,7 +63,7 @@ class AgentWorker:
         self.worker_type: Type = worker_type
         self.worker: worker_type = self.worker_type(*init_params[0], **init_params[1])
 
-        self.run_thread: Thread = ...
+        self.run_thread: Thread | None = None
         self.error_count: int = 0
         self.exceptions: list[Exception] = []
         self.init_actions()

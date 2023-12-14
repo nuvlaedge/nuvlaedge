@@ -12,8 +12,11 @@ class TestCommissioner(TestCase):
         self.mock_coe = Mock(spec=COEClient)
         self.mock_nuvla_client = Mock(spec=NuvlaClientWrapper)
         self.mock_queue = Mock(spec=Queue)
-
-        self.test_commissioner = Commissioner(self.mock_coe, self.mock_nuvla_client, self.mock_queue)
+        self.mock_status_channel = Mock(spec=Queue)
+        self.test_commissioner = Commissioner(self.mock_coe,
+                                              self.mock_nuvla_client,
+                                              self.mock_status_channel,
+                                              self.mock_queue)
 
     def test_build_nuvlaedge_endpoint(self):
         self.test_commissioner.coe_client.get_api_ip_port.return_value = 'address', 'port'

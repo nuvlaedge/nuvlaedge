@@ -17,7 +17,8 @@ class TestPeripheralManager(TestCase):
         self.mock_broker.keys.return_value = {'p1'}
         self.mock_broker.keys = {'p1'}
         self.mock_nuvla = mock.Mock()
-        self.test_manager = PeripheralManager(self.mock_nuvla, 'uuid')
+        self.mock_channel = mock.Mock()
+        self.test_manager = PeripheralManager(self.mock_nuvla, 'uuid', self.mock_channel)
         self.test_manager.broker = self.mock_broker
 
     @mock.patch.object(Path, 'is_dir')

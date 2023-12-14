@@ -7,45 +7,33 @@ SYNC_FILE=".tls"
 CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
 
-# We gotta get the namespace...
-
 echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
-
 echo "The MY_NAMESPACE is set to: ${MY_NAMESPACE}"
-
 env
 
 if [ ! -z $SET_MULTIPLE ]
 then
     echo "We are in the multiple NE mode..."
-fi
-
-if [ ! -z $NUVLAEDGE_UUID ]
-then
+    # therefore need to add namespace to the CSR?
+    # and CRB naming
     NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
     if [ -z $NAMESPACE ]
     then
         NAMESPACE=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
+        NAMESPACE="default"
     fi
+    echo "The namespace string got set to: ${NAMESPACE}"
+    CSR_NAME=${CSR_NAME}-${NAMESPACE}
+    SYNC_FILE=".${NAMESPACE}.tls"
+    CRB_NAME=${USER}-crb-${NAMESPACE}
+else
+    CRB_NAME=${USER}-crb
+    SYNC_FILE=".tls"
 fi
-echo "namespace string got set to: ${NAMESPACE}"
 
-# probably not a good idea to be random?
-SYNC_FILE=".${NAMESPACE}.tls"
-echo $SYNC_FILE
-
-## exit 1
-
-RND_EXT=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)                                                  
-
-NE_CSR=${USER}-csr-${NAMESPACE}                                                                            
-# CSR_NAME=${CSR_NAME:-${NE_CSR}}
-# maybe the CSR name should come from an ENV variable?
-# this could be 
-CSR_NAME=${NE_CSR:-"nulvaedge-csr"}
-echo "nuvla CSR set to ${CSR_NAME}"      
-
-CRB_NAME=${USER}-crb-${NAMESPACE}
+echo "The sync file is set to: $SYNC_FILE"                                         
+echo "The certificate siging request (CSR) is set to ${CSR_NAME}"  
+echo "The cluster role binding name (CRB) is set to ${CRB_NAME}"  
 
 is_cred_valid() {
   CRED_PATH=${1}

@@ -3,8 +3,12 @@ from unittest import TestCase
 from unittest.mock import Mock, patch
 
 from nuvlaedge.agent.workers.commissioner import Commissioner
+from nuvlaedge.agent.workers.commissioner import CommissioningAttributes
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.agent.workers.vpn_handler import VPNHandler
+from pathlib import Path
+import json
 
 
 class TestCommissioner(TestCase):
@@ -20,8 +24,54 @@ class TestCommissioner(TestCase):
 
     def test_build_nuvlaedge_endpoint(self):
         self.test_commissioner.coe_client.get_api_ip_port.return_value = 'address', 'port'
+        VPNHandler.get_vpn_ip = Mock()
+        VPNHandler.get_vpn_ip.return_value = 'vpn_address'
+        self.assertEqual("https://vpn_address:port", self.test_commissioner.build_nuvlaedge_endpoint())
+        VPNHandler.get_vpn_ip.return_value = None
+        self.assertEqual("https://address:port", self.test_commissioner.build_nuvlaedge_endpoint())
 
+    @patch.object(Path, 'open')
+    def test_get_tls_keys(self, mock_path):
+        mock_file1 = Mock()
+        mock_file2 = Mock()
+        mock_file3 = Mock()
+        mock_path.return_value.__enter__.side_effect = [mock_file1, mock_file2, mock_file3]
+        mock_file1.read.return_value = "ca"
+        mock_file2.read.return_value = "cert"
+        mock_file3.read.return_value = "key"
+        self.assertEqual(("ca", "cert", "key"), self.test_commissioner.get_tls_keys())
 
+    @patch('nuvlaedge.agent.workers.commissioner.file_exists_and_not_empty')
+    def test_load_previous_commission(self, mock_exists):
+        mock_exists.return_value = False
+        self.test_commissioner.load_previous_commission()
+        mock_exists.reset_mock()
+        mock_exists.return_value = True
+        mock_file = Mock()
+        with patch.object(Path, 'open') as mock_open:
+            with patch.object(json, 'load') as mock_json:
+                mock_open.return_value.__enter__.return_value = mock_file
+                load_dict = {'nuvlaedge_uuid': 'nuvlaedge-id'}
+                mock_json.return_value = load_dict
+                self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'random'
+                self.test_commissioner.load_previous_commission()
+                self.assertEqual(self.test_commissioner._last_payload.tags, None)
+                self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'nuvlaedge-id'
+                self.test_commissioner.load_previous_commission()
+                mock_json.side_effect = json.JSONDecodeError('msg', 'doc', 1)
+                self.test_commissioner.load_previous_commission()
 
-
+    # @patch('nuvlaedge.agent.workers.commissioner.model_diff')
+    @patch.object(NuvlaClientWrapper, 'commission')
+    @patch.object(Path, 'open')
+    @patch.object(json, 'dump')
+    def test_commission(self, mock_json, mock_path, test_wrapper):
+        self.test_commissioner._current_payload.tags = ['tag']
+        # test_model_diff.return_value = ({'field1', 'field2'}, {'field3', 'field4'})
+        test_wrapper.return_value = True
+        with patch.object(CommissioningAttributes, 'model_dump') as mock_model_dump:
+            mock_model_dump.return_value = {'nuvlaedge_uuid': ''}
+            self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'nuvlaedge-id'
+            self.test_commissioner.commission()
+            self.assertEqual(self.test_commissioner._last_payload.tags, self.test_commissioner._current_payload.tags)
 

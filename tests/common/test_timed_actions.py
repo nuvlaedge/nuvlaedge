@@ -20,6 +20,28 @@ class TestTimedAction(TestCase):
             action=dummy_function
         )
 
+    def test_execute_action(self):
+        def raise_function():
+            raise ValueError("Dummy value Error")
+        # Test infinite retries
+        self.action.action = raise_function
+        self.action.max_tries = -1
+        self.assertIsNone(self.action._execute_action())
+        self.assertEqual(len(self.action.exceptions), 0)
+
+        # Test No retries
+        with self.assertRaises(ValueError):
+            self.action.tries = 0
+            self.action.max_tries = 0
+            self.action._execute_action()
+
+        # Test Default tries
+        self.action.tries = 0
+        self.action.max_tries = 3
+        with self.assertRaises(ExceptionGroup):
+            _ = [self.action._execute_action() for i in range(3)]
+            self.assertEqual(len(self.action.exceptions), 3)
+
     def test_update_action(self):
         self.action.remaining_time = 3
         self.action.update_action(2)

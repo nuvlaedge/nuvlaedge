@@ -21,5 +21,8 @@ class Constants:
     # Others
     PERIPHERAL_SCHEMA_VERSION: int = 2
 
+    # Timed actions retries
+    TIMED_ACTIONS_TRIES: int = 3
+
 
 CTE: Constants = Constants()

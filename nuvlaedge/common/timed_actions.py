@@ -1,7 +1,10 @@
 import logging
+import pprint
 import time
 import uuid
 from dataclasses import dataclass, field
+
+from nuvlaedge.common.constants import CTE
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -12,9 +15,46 @@ class TimedAction:
     action: callable
     period: int
     remaining_time: float = 0  # Allow configurability for delayed starts
-    args: tuple[any] | None = None
+    args: tuple[any] = field(default_factory=tuple)
     kwargs: dict[str, any] = field(default_factory=dict)
     uuid: str = uuid.uuid4()
+
+    tries: int = 0
+    max_tries: int = CTE.TIMED_ACTIONS_TRIES
+    exceptions: list[Exception] = field(default_factory=list)
+
+    def _execute_action(self) -> any:
+        """
+
+        Returns: whatever the action returns, None otherwise
+        Raises: The exceptions raised during the execution, including retries
+
+        """
+        try:
+            self.tries += 1
+            ret = self.action(*self.args, **self.kwargs)
+
+            # Reset retry system if one run is successful
+            self.tries = 0
+            self.exceptions = []
+            return ret
+
+        except Exception as ex:
+            logger.warning(f"Error {ex.__class__.__name__} running {self.name}")
+
+            # If max retries is negative, means this action should always keep running
+            if self.max_tries <= -1:
+                return None
+
+            # If max retries reached, gather all the exceptions and raise a Group
+            if self.max_tries - self.tries <= 0:
+                logger.warning(f"Max retries reached in {self.name} raising exceptions")
+                raise ExceptionGroup(f"error running {self.name}", self.exceptions)
+
+            # If not, save exception and increase retries
+            self.exceptions.append(ex)
+            logger.info(f"Remaining retries for {self.name}: {self.max_tries - self.tries}")
+            return None
 
     def __call__(self):
         if self.remaining_time > 0:
@@ -28,7 +68,7 @@ class TimedAction:
         if not self.kwargs:
             self.kwargs = {}
 
-        ret = self.action(*self.args, **self.kwargs)
+        ret = self._execute_action()
 
         self.remaining_time = self.period
         return ret

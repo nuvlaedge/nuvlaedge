@@ -26,5 +26,8 @@ class Constants:
     HOST_FS: str = "/rootfs"
     SWARM_NODE_CERTIFICATE: str = f"{HOST_FS}/var/lib/docker/swarm/certificates/swarm-node.crt"
 
+    # Timed actions retries
+    TIMED_ACTIONS_TRIES: int = 3
+
 
 CTE: Constants = Constants()

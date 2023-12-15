@@ -24,7 +24,6 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
-import json
 import logging
 import sys
 import time
@@ -39,6 +38,7 @@ from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.utils import file_exists_and_not_empty
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
 from nuvlaedge.agent.workers.commissioner import Commissioner
@@ -55,7 +55,7 @@ from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class Agent:
@@ -102,7 +102,7 @@ class Agent:
             settings (AgentSettings): The settings object containing agent configuration.
 
         """
-        logging.debug(f"Initialising Agent Class")
+        logging.info(f"Initialising Agent Class with logger name: {__name__}")
 
         self.settings: AgentSettings = settings
 

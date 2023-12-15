@@ -6,8 +6,10 @@ from datetime import datetime
 from threading import Thread, Event
 from typing import Callable, Type
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
-logger: logging.Logger = logging.getLogger(__name__)
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 random.seed(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 

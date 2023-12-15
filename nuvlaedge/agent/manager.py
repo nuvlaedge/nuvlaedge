@@ -1,10 +1,11 @@
 import logging
 from typing import Type
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.worker import Worker
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class WorkerManager:

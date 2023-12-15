@@ -1,3 +1,6 @@
+from argparse import ArgumentParser, Namespace
+import logging
+from pathlib import Path
 from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
@@ -5,6 +8,9 @@ from pydantic import Field, field_validator, model_validator
 from nuvlaedge.agent.common.util import extract_nuvlaedge_version
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
+
+
+DEFAULT_AGENT_SETTINGS_FILE = 'nuvlaedge'
 
 
 class InsufficientSettingsProvided(Exception):
@@ -96,6 +102,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_job_enable:               Optional[int] = None
     compute_api_port:                   Optional[int] = None
 
+    # New
+    agent_logging_directory:                Optional[str] = None
+    agent_debug:                        bool = False
+
     @field_validator('ne_image_tag', mode='before')
     def validate_image_tag(cls, v):
         if v is None or v == "":
@@ -109,13 +119,53 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                 return None
         return v
 
-    # @model_validator(mode='after')
-    # def validate_fields(self):
-    #
-    #     def none_or_empty_str(val: str) -> bool:
-    #         return val is None or val == ""
-    #
-    #     if none_or_empty_str(self.nuvlaedge_uuid) and \
-    #        none_or_empty_str(self.nuvlaedge_api_key) and \
-    #        none_or_empty_str(self.nuvlaedge_api_secret):
-    #         raise ValueError("Nor NuvlaEdge UUID or API keys were provided. One of them must be provided on NuvlaEdge")
+
+__agent_settings: AgentSettings | None = None
+
+
+def parse_cmd_line_args() -> Namespace | None:
+
+    parser: ArgumentParser = ArgumentParser(description=f"NuvlaEdge agent",
+                                            exit_on_error=False)
+    parser.add_argument('-l', '--log-level', dest='log_level',
+                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        default='INFO', help='Log level')
+    parser.add_argument('-d', '--debug', dest='log_level',
+                        action='store_const', const='DEBUG',
+                        help='Set log level to debug')
+    try:
+        return parser.parse_args()
+    except Exception as ex:
+        logging.error(f"Errors parsing command line: {ex}")
+        return None
+
+
+def get_cmd_line_settings(env_settings: AgentSettings) -> AgentSettings:
+    cmd_settings: Namespace | None = parse_cmd_line_args()
+    if cmd_settings is None:
+        return env_settings
+
+    if cmd_settings.debug:
+        env_settings.debug = (cmd_settings.debug == 'true' or
+                              cmd_settings.debug is True or
+                              cmd_settings.debug == "True")
+
+    if cmd_settings.log_level:
+        env_settings.nuvlaedge_log_level = cmd_settings.log_level
+    return env_settings
+
+
+def get_agent_settings() -> AgentSettings:
+    global __agent_settings
+    if __agent_settings is not None:
+        return __agent_settings
+
+    env_settings = AgentSettings()
+    __agent_settings = get_cmd_line_settings(env_settings)
+
+    return __agent_settings
+
+
+
+
+

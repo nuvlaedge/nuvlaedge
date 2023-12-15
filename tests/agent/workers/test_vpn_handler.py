@@ -1,7 +1,7 @@
 from pathlib import Path
 from queue import Queue
 from unittest import TestCase
-from unittest.mock import Mock, patch, mock_open, PropertyMock, MagicMock
+from unittest.mock import Mock, patch, mock_open, MagicMock
 
 import docker.errors
 

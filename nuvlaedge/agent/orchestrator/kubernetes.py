@@ -9,9 +9,10 @@ from kubernetes.client.exceptions import ApiException
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
-log: logging.Logger = logging.getLogger(__name__)
+log: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 JOB_TTL_SECONDS_AFTER_FINISHED = 60 * 2

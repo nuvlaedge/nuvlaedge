@@ -14,9 +14,10 @@ from docker.models.containers import Container
 
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 docker_socket_file_default = '/var/run/docker.sock'
 

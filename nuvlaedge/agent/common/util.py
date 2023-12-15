@@ -14,6 +14,8 @@ from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
 
 base_label = 'nuvlaedge.component=True'
 default_project_name = 'nuvlaedge'
@@ -26,7 +28,7 @@ fallback_image = 'sixsq/nuvlaedge:latest'
 
 COMPUTE_API_INTERNAL_PORT = 5000
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 def extract_nuvlaedge_version(image_name: str) -> str:

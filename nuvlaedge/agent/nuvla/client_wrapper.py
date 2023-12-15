@@ -18,8 +18,10 @@ from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.nuvla.resources.nuvlaedge import NuvlaEdgeResource
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import NuvlaEdgeStatusResource
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
-logger: logging.Logger = logging.getLogger(__name__)
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -83,17 +85,9 @@ class NuvlaClientWrapper:
 
         _nuvlaedge_status_uuid (NuvlaID | None): The ID of the NuvlaEdge status resource
 
-        paths (NuvlaEndPointPaths): The path helper for constructing Nuvla API endpoints
-
         _watched_fields (dict[str, set[str]]): The dictionary of watched fields for each resource
 
     Methods:
-        add_watched_field(self, resource: str, field: str) -> None:
-            Adds a field to the watch list for a specific resource
-
-        remove_watch_field(self, resource: str, field: str) -> None:
-            Removes a field from the watch list for a specific resource
-
         nuvlaedge_status_uuid(self) -> NuvlaID:
             Returns the ID of the NuvlaEdge status resource
 
@@ -183,20 +177,7 @@ class NuvlaClientWrapper:
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
         self._nuvlaedge_status_uuid: NuvlaID | None = None
 
-        self.paths: NuvlaEndPointPaths = NuvlaEndPointPaths()
-
         self._watched_fields: dict[str, set[str]] = {}
-
-    def add_watched_field(self, resource: str, field: str):
-        # Check resource exists
-        if resource in self._watched_fields:
-            self._watched_fields[resource].add(field)
-        else:
-            self._watched_fields[resource] = set(field)
-
-    def remove_watch_field(self, resource: str, field: str):
-        if field in self._watched_fields.get(resource, set()):
-            self._watched_fields.get(resource).remove(field)
 
     @property
     def nuvlaedge_status_uuid(self) -> NuvlaID:

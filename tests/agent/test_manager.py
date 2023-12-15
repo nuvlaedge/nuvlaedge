@@ -36,7 +36,7 @@ class TestManager(TestCase):
                     init_params=((), {}),
                     actions=['mock_action']))
                 self.assertEqual(1, len(self.test_manager.registered_workers))
-                self.assertTrue('mock_type_name_2' in self.test_manager.registered_workers)
+                self.assertIn('mock_type_name_2', self.test_manager.registered_workers)
                 mock_worker.assert_called_once()
                 mock_info.assert_called_once_with("Registering worker: mock_type_name_2 in manager")
 

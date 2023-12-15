@@ -9,6 +9,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
@@ -20,7 +21,7 @@ from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
@@ -178,7 +179,7 @@ class Telemetry:
             excluded_monitors: The list of excluded monitors as a comma-separated string.
 
         """
-        logger.debug("Initialising Telemetry")
+        logger.info(f"Initialising Telemetry with logger name {__name__}")
 
         self.coe_client = coe_client
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid

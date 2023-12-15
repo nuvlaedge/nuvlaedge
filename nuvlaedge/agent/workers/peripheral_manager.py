@@ -12,13 +12,14 @@ from nuvla.api import Api as NuvlaClient
 from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.broker.file_broker import FileBroker
 from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.models.messages import NuvlaEdgeMessage
 from nuvlaedge.peripherals.peripheral_manager_db import PeripheralsDBManager
 from nuvlaedge.broker import NuvlaEdgeBroker
 from nuvlaedge.models.peripheral import PeripheralData
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class PeripheralManager:

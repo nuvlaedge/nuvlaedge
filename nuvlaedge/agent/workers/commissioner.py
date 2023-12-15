@@ -19,11 +19,12 @@ from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.common.utils import file_exists_and_not_empty
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class CommissioningAttributes(NuvlaEdgeStaticModel):

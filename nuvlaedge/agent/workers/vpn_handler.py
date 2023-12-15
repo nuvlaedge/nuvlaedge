@@ -8,6 +8,7 @@ from typing import Optional
 
 import docker.errors
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.common import StatusReport, NuvlaEdgeStatusHandler
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
@@ -22,7 +23,7 @@ from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class VPNConfigurationMissmatch(Exception):

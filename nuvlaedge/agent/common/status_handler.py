@@ -5,8 +5,10 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
-logger: logging.Logger = logging.getLogger(__name__)
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 class StatusReport(BaseModel):

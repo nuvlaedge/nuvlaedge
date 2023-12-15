@@ -3,13 +3,14 @@
     by Telemetry classs
 """
 import glob
-import logging
 from os.path import dirname, basename, isfile
 from typing import Dict
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
+
 modules = glob.glob(dirname(__file__) + "/*.py")
-file_logger = logging.getLogger('monitors')
-file_logger.setLevel(logging.INFO)
+file_logger = get_nuvlaedge_logger("monitors")
 
 
 class Monitors:

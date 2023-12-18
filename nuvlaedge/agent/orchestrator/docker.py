@@ -662,7 +662,7 @@ class DockerClient(COEClient):
             infra_service = self.infer_if_additional_coe_exists(fallback_address=fallback_address)
         except Exception as e:
             # this is a non-critical step, so we should never fail because of it
-            logger.warning(f'Exception while trying yo find additional COE: {e}')
+            logger.warning(f'Exception while trying to find additional COE: {e}')
             infra_service = {}
 
         if api_endpoint:

@@ -1,6 +1,7 @@
 #!/bin/sh -xe
 
-WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}                                                                        
+WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}
+CSR_NAME=${CSR_NAME:-nuvlaedge-csr}                                                                     
 
 SHARED="/srv/nuvlaedge/shared"
 SYNC_FILE=".tls"
@@ -28,7 +29,6 @@ then
     CRB_NAME=${USER}-crb-${NAMESPACE}
 else
     CRB_NAME=${USER}-crb
-    SYNC_FILE=".tls"
 fi
 
 echo "The sync file is set to: $SYNC_FILE"                                         

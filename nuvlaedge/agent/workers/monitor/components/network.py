@@ -24,6 +24,7 @@ from nuvlaedge.agent.workers.monitor.data.network_data import (NetworkingData,
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
+from nuvlaedge.common.file_operations import read_file, write_file
 
 
 @monitor('network_monitor')
@@ -159,24 +160,19 @@ class NetworkMonitor(Monitor):
             self.logger.warning("Cannot find network information for this device")
             return []
 
-        previous_net_stats = {}
-        try:
-            with open(self.previous_net_stats_file, encoding='UTF-8') as pns:
-                previous_net_stats = json.loads(pns.read())
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            pass
+        previous_net_stats = read_file(self.previous_net_stats_file, True, False)
+        if not previous_net_stats:
+            previous_net_stats = {}
 
         net_stats = []
         for interface in ifaces:
             stats = f"{sysfs_net}/{interface}/statistics"
-            try:
-                with open(f"{stats}/rx_bytes", encoding='UTF-8') as rx_file:
-                    rx_bytes = int(rx_file.read())
-                with open(f"{stats}/tx_bytes", encoding='UTF-8') as tx_file:
-                    tx_bytes = int(tx_file.read())
-            except (FileNotFoundError, NotADirectoryError):
-                self.logger.warning(f"Cannot calculate net usage for interface {interface}")
+            rx_bytes_str = read_file(f"{stats}/rx_bytes")
+            tx_bytes_str = read_file(f"{stats}/tx_bytes")
+            if rx_bytes_str is None or tx_bytes_str is None:
                 continue
+            rx_bytes = int(rx_bytes_str)
+            tx_bytes = int(tx_bytes_str)
 
             # we compute the net stats since the beginning of the NB lifetime
             # and our counters reset on every NB restart
@@ -247,8 +243,7 @@ class NetworkMonitor(Monitor):
                 "bytes-received": rx_bytes_report
             })
 
-        utils.atomic_write(self.previous_net_stats_file,
-                           json.dumps(previous_net_stats), encoding='UTF-8')
+        write_file(json.dumps(previous_net_stats), self.previous_net_stats_file, encoding='UTF-8')
 
         return net_stats
 

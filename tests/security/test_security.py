@@ -93,9 +93,11 @@ class TestSecurity(TestCase):
     @patch.object(Path, 'exists')
     @patch.object(Path, 'mkdir')
     @patch.object(Security, 'wait_for_nuvlaedge_ready')
-    def test_constructor(self, mock_wait, mock_mkdir, mock_exists, mock_listdir):
+    @patch.object(Security, 'get_previous_external_db_update')
+    def test_constructor(self, mock_get_previous, mock_wait, mock_mkdir, mock_exists, mock_listdir):
         mock_exists.return_value = True
         mock_wait.return_value = True
+        mock_get_previous.return_value = datetime(1970, 1, 1)
         self.config = SecurityConfig(vulscan_db_dir='')
         self.security = Security(self.config)
         self.assertEqual([], self.security.offline_vulscan_db)
@@ -112,23 +114,17 @@ class TestSecurity(TestCase):
             [ONLINE_VULSCAN_DB_PREFIX + 'DATA'],
             self.security.offline_vulscan_db)
 
-    @patch.object(os.path, 'exists')
-    @patch('nuvlaedge.security.security.Api')
-    def test_authenticate(self, mock_api, mock_exists):
+    @patch('nuvlaedge.security.security.read_file')
+    @patch('nuvlaedge.security.security.Api.login_apikey')
+    def test_authenticate(self, mock_api_login, mock_read):
 
-        mock_exists.return_value = False
-        with patch("builtins.open", mock_open(read_data="data")) as mock_file, \
-                patch('json.loads') as mock_loads:
-            # mock_open.reads.return_value = None
-            self.assertIsNone(self.security.authenticate())
+        mock_read.side_effect = [None]
+        self.assertIsNone(self.security.authenticate())
 
-        mock_exists.return_value = True
-        with patch("builtins.open", mock_open(read_data="data")) as mock_file, \
-                patch('json.loads') as mock_loads:
-            mock_loads.return_value = {'api-key': 'key',
-                                       'secret-key': 'secret'}
-            self.security.authenticate()
-            mock_loads.assert_called_once()
+        mock_read.side_effect = [{'api-key': 'key',
+                                  'secret-key': 'secret'}]
+        self.security.authenticate()
+        mock_api_login.assert_called_once()
 
     @patch.object(time, 'sleep')
     @patch.object(nuvlaedge.security.security, 'timeout')
@@ -138,15 +134,16 @@ class TestSecurity(TestCase):
         mock_time.sleep.return_value = None
         mock_exists.side_effect = [False, True, False, True]
 
-        with patch("builtins.open", mock_open(read_data="random data")) as mock_file:
+        with patch('nuvlaedge.security.security.read_file') as mock_read:
+            mock_read.side_effect = ['random data']
             self.security.wait_for_nuvlaedge_ready()
             self.assertEqual(2, mock_time.call_count)
             self.assertFalse(self.security.nuvla_endpoint_insecure)
 
         mock_exists.reset_mock()
         mock_exists.side_effect = [False, True, False, True]
-        with patch("builtins.open",
-                   mock_open(read_data="NUVLA_ENDPOINT=nuvla.io\nNUVLA_ENDPOINT_INSECURE=True")) as mock_file:
+        with patch('nuvlaedge.security.security.read_file') as mock_read:
+            mock_read.side_effect = ["NUVLA_ENDPOINT=nuvla.io\nNUVLA_ENDPOINT_INSECURE=True"]
             self.security.wait_for_nuvlaedge_ready()
             self.assertTrue(self.security.nuvla_endpoint_insecure)
             self.assertEqual('nuvla.io', self.security.nuvla_endpoint)
@@ -193,13 +190,13 @@ class TestSecurity(TestCase):
         mock_datetime.utcnow.return_value = mock_date
         mock_exists.return_value = True
         mock_mkdir.return_value = None
-        with patch("builtins.open", mock_open()) as mock_file:
+        with patch('nuvlaedge.security.security.write_file') as mock_write:
             self.security.set_previous_external_db_update()
             mock_mkdir.assert_not_called()
 
         mock_exists.return_value = False
         mock_mkdir.return_value = None
-        with patch("builtins.open", mock_open()) as mock_file:
+        with patch('nuvlaedge.security.security.write_file') as mock_write:
             self.security.set_previous_external_db_update()
             mock_mkdir.assert_called_once()
 
@@ -249,11 +246,13 @@ class TestSecurity(TestCase):
         self.assertEqual(datetime(1970, 1, 1), self.security.get_previous_external_db_update())
 
         mock_exists.return_value = True
-        with patch("builtins.open", mock_open(read_data="random_datatime")) as mock_file:
+        with patch('nuvlaedge.security.security.read_file') as mock_read:
+            mock_read.side_effect = ['random_datatime']
             self.assertEqual(datetime(1970, 1, 1), self.security.get_previous_external_db_update())
 
         sample_date = "23-Aug-2023 (14:08:11.571703)"
-        with patch("builtins.open", mock_open(read_data=sample_date)) as mock_file:
+        with patch('nuvlaedge.security.security.read_file') as mock_read:
+            mock_read.side_effect = [sample_date]
             self.security.vulscan_dbs = True
             self.assertEqual(datetime.strptime(sample_date, DATE_FORMAT),
                              self.security.get_previous_external_db_update())
@@ -452,9 +451,8 @@ class TestSecurity(TestCase):
         mock_parser.assert_not_called()
 
         mock_run_cve.return_value = 'Scan'
-        with patch("builtins.open", mock_open()) as mock_file, \
-                patch.object(json, 'dump') as mock_dump:
+        with patch('nuvlaedge.security.security.write_file') as mock_write_file:
             self.security.run_scan()
             mock_parser.assert_called_once()
-            mock_dump.assert_called_once()
+            mock_write_file.assert_called_once()
 

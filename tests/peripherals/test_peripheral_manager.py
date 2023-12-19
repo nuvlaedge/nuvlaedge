@@ -11,7 +11,8 @@ from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager, Periph
 
 class TestPeripheralManager(TestCase):
     @mock.patch.object(Path, 'exists')
-    def setUp(self, mock_exists) -> None:
+    @mock.patch.object(Path, 'mkdir')
+    def setUp(self, mock_mkdir, mock_exists) -> None:
         mock_exists.return_value = True
         self.mock_broker = mock.Mock()
         self.mock_broker.keys.return_value = {'p1'}

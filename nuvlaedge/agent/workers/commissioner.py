@@ -16,7 +16,7 @@ from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.telemetry import model_diff
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.common.utils import file_exists_and_not_empty
+from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger

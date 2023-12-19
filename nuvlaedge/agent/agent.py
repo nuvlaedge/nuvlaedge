@@ -37,8 +37,8 @@ from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.common.utils import file_exists_and_not_empty
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
 from nuvlaedge.agent.workers.commissioner import Commissioner

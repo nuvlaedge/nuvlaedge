@@ -101,7 +101,7 @@ class SuperviseTestCase(unittest.TestCase):
         cert_obj.get_notAfter.return_value = b'20200309161546Z'
         mock_load_cert.return_value = cert_obj
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.supervise.open'):
+        with mock.patch('nuvlaedge.system_manager.supervise.read_file'):
             self.assertTrue(self.obj.is_cert_rotation_needed(),
                             'Failed to recognize certificates in need of renewal')
 

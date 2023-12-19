@@ -53,7 +53,7 @@ class TestVPNHandler(TestCase):
         mock_mkdir.assert_called_once()
         mock_status_handler.starting.assert_called_once()
 
-    @patch('nuvlaedge.agent.workers.vpn_handler.utils')
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations')
     def test_certificates_exists(self, mock_utils):
         mock_utils.file_exists_and_not_empty.side_effect = [True, True]
         self.assertTrue(self.test_vpn_handler.certificates_exists())
@@ -65,14 +65,13 @@ class TestVPNHandler(TestCase):
         mock_utils.file_exists_and_not_empty.side_effect = [False, False]
         self.assertFalse(self.test_vpn_handler.certificates_exists())
 
-    @patch('nuvlaedge.agent.workers.vpn_handler.utils')
-    def test_get_vpn_ip(self, mock_utils):
-        mock_utils.file_exists_and_not_empty.return_value = False
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations')
+    def test_get_vpn_ip(self, mock_fileOps):
+        mock_fileOps.read_file.return_value = None
         self.assertIsNone(self.test_vpn_handler.get_vpn_ip())
 
-        mock_utils.file_exists_and_not_empty.return_value = True
-        with patch.object(Path, 'open', mock_open(read_data='1.1.1.1')):
-            self.assertEqual(self.test_vpn_handler.get_vpn_ip(), '1.1.1.1',
+        mock_fileOps.read_file.return_value = '1.1.1.1'
+        self.assertEqual(self.test_vpn_handler.get_vpn_ip(), '1.1.1.1',
                              'Failed to get VPN IP')
 
     def test_check_vpn_client_state(self):
@@ -119,7 +118,7 @@ class TestVPNHandler(TestCase):
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler.wait_certificates_ready')
     @patch('nuvlaedge.agent.workers.vpn_handler.util')
     @patch('nuvlaedge.agent.workers.vpn_handler.Path.unlink')
-    @patch('nuvlaedge.agent.workers.vpn_handler.utils')
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations')
     def test_generate_certificates(self, mock_utils, mock_unlink, mock_agent_util, mock_wait_certs):
         mock_utils.file_exists_and_not_empty.side_effect = [False, False]
         mock_agent_util.execute_cmd.return_value = {'stdout': 'mock_stdout',
@@ -148,10 +147,11 @@ class TestVPNHandler(TestCase):
             self.test_vpn_handler.generate_certificates(wait=False)
             mock_wait_certs.assert_not_called()
 
-    def test_trigger_commission(self):
-        with patch.object(Path, 'open', mock_open(read_data='read_data')):
-            self.test_vpn_handler.trigger_commission()
-            self.mock_vpn_channel.put.assert_called_with('read_data')
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations')
+    def test_trigger_commission(self, mock_fileOps):
+        mock_fileOps.read_file.return_value = 'read_data'
+        self.test_vpn_handler.trigger_commission()
+        self.mock_vpn_channel.put.assert_called_with('read_data')
 
     def test_vpn_needs_commission(self):
         self.mock_nuvla_client.vpn_credential = False
@@ -173,9 +173,10 @@ class TestVPNHandler(TestCase):
         self.mock_nuvla_client.nuvlaedge.vpn_server_id = 'id'
         self.assertFalse(self.test_vpn_handler.vpn_needs_commission())
 
-    def test_get_vpn_key(self):
-        with patch.object(Path, 'open', mock_open(read_data='read_data')):
-            self.assertEqual(self.test_vpn_handler.get_vpn_key(), 'read_data')
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations')
+    def test_get_vpn_key(self, mock_fileOps):
+        mock_fileOps.read_file.return_value = 'read_data'
+        self.assertEqual(self.test_vpn_handler.get_vpn_key(), 'read_data')
 
     def test_map_endpoints(self):
         mock_vpn_server = Mock()

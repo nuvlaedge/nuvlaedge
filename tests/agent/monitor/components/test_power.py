@@ -66,9 +66,7 @@ class TestPowerMonitor(unittest.TestCase):
         # if rail files exist, open them, unless there is an error, which means = []
         with patch(power_open, mock_open(read_data=None)):
             # 2 boards matching + 3 channels
-            mock_exists.side_effect = [True] + \
-                                      [False, True] + [True, True,
-                                                       True]
+            mock_exists.side_effect = [True, False, True, True, True, True] + [False]*100
             self.assertIsNone(test_monitor.get_power('ina3221x'),
                               'Got power consumption when rail files cannot be read')
 

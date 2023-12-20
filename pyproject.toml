@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.12.2"
+version = "2.13.0"
 description = "NuvlaEdge source code"
 authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"
@@ -10,7 +10,7 @@ packages = [{include = "nuvlaedge"}]
 # Main components
 system-manager = "nuvlaedge.system_manager.__main__:entry"
 on-stop = "nuvlaedge.on_stop:main"
-agent = "nuvlaedge.agent:entry"
+agent = "nuvlaedge.agent:main"
 # Peripherals
 network = "nuvlaedge.peripherals.network.__init__:entry"
 bluetooth = "nuvlaedge.peripherals.bluetooth.__init__:entry"

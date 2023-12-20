@@ -21,7 +21,8 @@ logger: logging.Logger | None = None
 _LOG_PATH: Path = Path('/var/log/nuvlaedge/')
 COMMON_LOG_FILE: Path = _LOG_PATH / 'nuvlaedge.log'
 
-COMMON_LOG_FORMATTER: logging.Formatter = logging.Formatter('[%(asctime)s - %(levelname)s - %(name)s/%(funcName)s]: %(message)s')
+COMMON_LOG_FORMATTER: logging.Formatter = \
+    logging.Formatter('[%(asctime)s - %(levelname)s - %(name)s/%(funcName)s]: %(message)s')
 COMMON_HANDLER: logging.StreamHandler | None = None
 
 
@@ -39,7 +40,6 @@ def set_logging_configuration(debug: bool,
     else:
         _LOG_PATH = log_path
 
-    logging.error(f"Does it exist? {_LOG_PATH}")
     if not _LOG_PATH.exists():
         logging.error(f"Configured logging path {log_path} doesn't exist, creating it.")
         # TODO: Should we create the folder structure for the logging or disable it if it doesn't exist?
@@ -72,7 +72,7 @@ def __get_file_handler(filename: str) -> logging.FileHandler:
         OSError: an error occurred while creating or opening the log file.
     """
     if not _LOG_PATH.exists():
-        _LOG_PATH.mkdir(parents=True)
+        _LOG_PATH.mkdir(parents=True, exist_ok=True)
     file_handler = RotatingFileHandler(_LOG_PATH/f"{filename}.log", maxBytes=5*1024*1024)
     file_handler.setFormatter(COMMON_LOG_FORMATTER)
     file_handler.setLevel(logging.WARNING)

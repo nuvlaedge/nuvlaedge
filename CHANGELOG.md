@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.13.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.0) (2023-12-16)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.12.2...2.13.0)
+
+**Implemented enhancements:**
+
+- Set pull-always for images in Kubernetes via environment variables. [\#132](https://github.com/nuvlaedge/nuvlaedge/issues/132)
+- Set the image pull policy [\#142](https://github.com/nuvlaedge/nuvlaedge/pull/142) ([giovannibianco](https://github.com/giovannibianco))
+
+**Merged pull requests:**
+
+- Handle Dbus Error for ble [\#148](https://github.com/nuvlaedge/nuvlaedge/pull/148) ([amitbhanja](https://github.com/amitbhanja))
+- Added retry system for TimedActions [\#144](https://github.com/nuvlaedge/nuvlaedge/pull/144) ([ignacio-penas](https://github.com/ignacio-penas))
+- Dockerfile refactor: reduce Docker image size and number of layers [\#143](https://github.com/nuvlaedge/nuvlaedge/pull/143) ([schaubl](https://github.com/schaubl))
+
 ## [2.12.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.12.2) (2023-11-16)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.12.1...2.12.2)

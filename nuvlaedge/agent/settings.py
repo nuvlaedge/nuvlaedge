@@ -105,6 +105,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     # New
     agent_logging_directory:            Optional[str] = None
     agent_debug:                        bool = False
+    disable_agent_file_logging:         bool = False
 
     @field_validator('ne_image_tag', mode='before')
     def validate_image_tag(cls, v):

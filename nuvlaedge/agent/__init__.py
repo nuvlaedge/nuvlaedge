@@ -11,7 +11,8 @@ if __name__ == '__main__':
     """
     set_logging_configuration(debug=get_agent_settings().agent_debug,
                               log_level=logging.getLevelName(get_agent_settings().nuvlaedge_log_level),
-                              log_path=get_agent_settings().agent_logging_directory)
+                              log_path=get_agent_settings().agent_logging_directory,
+                              disable_file_logging=get_agent_settings().disable_agent_file_logging)
 
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.agent import Agent

@@ -22,6 +22,7 @@ import requests
 
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
+from nuvlaedge.agent.orchestrator.docker import logger
 
 
 class COEClientDockerTestCase(unittest.TestCase):
@@ -331,7 +332,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         # no docker image found, using fallback
         self.obj.job_engine_lite_image = None
         mock_containers_create.return_value = docker.models.containers.Container()
-        with self.assertLogs(level='ERROR'):
+        with self.assertLogs(logger=logger, level='ERROR'):
             self.obj.launch_job(job_id, job_exec_id, nuvla)
         self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), fallback_image)
 
@@ -400,7 +401,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # fail to connect container to bridge network
         mock_net_connect.side_effect = RuntimeError
-        with self.assertLogs(level=logging.WARNING):
+        with self.assertLogs(logger=logger, level=logging.WARNING):
             self.obj.launch_job(job_id, job_exec_id, nuvla)
         mock_container_start.assert_not_called()
 
@@ -480,7 +481,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         # if a mandatory attribute does not exist, then we get 'nan' again, but with an error
         cpu_stat.pop('cpu_stats')
         cpu_stat['online_cpus'] = 2
-        with self.assertLogs(level='WARNING') as log:
+        with self.assertLogs(logger=logger, level='WARNING') as log:
             self.assertTrue(math.isnan(self.obj.collect_container_metrics_cpu(cpu_stat)),
                             "Expecting 'nan' CPU usage due to missing mandatory keys, but got something else")
             self.assertIn('Failed to get CPU', '\n'.join(log.output),
@@ -553,7 +554,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         # if the blk_stats are misformatted or there is any other exception during
         # collection, then we get 0MBs for the corresponding metric, and an error
         blk_stat['blkio_stats']['io_service_bytes_recursive'][0]['value'] = "saasd" # not a number
-        with self.assertLogs(level='WARNING') as log:
+        with self.assertLogs(logger=logger, level='WARNING') as log:
             self.assertEqual(self.obj.collect_container_metrics_block(blk_stat), (2, 0),
                              'Expected 0MBs for blk_in (due to misformatted value, but got something else instead')
             self.assertIn('Failed to get block usage (In)', '\n'.join(log.output),
@@ -854,7 +855,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # exception in infer_if_additional_coe_exists
         mock_other_coe_infra_service.side_effect = Exception
-        with self.assertLogs(level='WARNING'):
+        with self.assertLogs(logger=logger, level='WARNING'):
             self.obj.define_nuvla_infra_service(None)
 
     def test_get_partial_decommission_attributes(self):
@@ -976,7 +977,7 @@ class COEClientDockerTestCase(unittest.TestCase):
     def test_find_compute_api_external_port(self, mock_container_get: MagicMock):
         # Container not found
         mock_container_get.side_effect = docker.errors.NotFound('')
-        with self.assertLogs(level='DEBUG'):
+        with self.assertLogs(logger=logger, level='DEBUG'):
             port = self.obj.find_compute_api_external_port()
             self.assertEqual(port, '')
 
@@ -984,7 +985,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # Container found but port not found
         mock_container_get.return_value = docker.models.containers.Container()
-        with self.assertLogs(level='WARNING'):
+        with self.assertLogs(logger=logger, level='WARNING'):
             port = self.obj.find_compute_api_external_port()
             self.assertEqual(port, '')
 
@@ -1010,7 +1011,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         c1 = docker.models.containers.Container(attrs={'Id': '1234567890abcdef'})
         c2 = docker.models.containers.Container(attrs={'Id': 'abcdefghijklmnop'})
         mock_container_list.return_value = [c1, c2]
-        with self.assertLogs(level='WARNING'):
+        with self.assertLogs(logger=logger, level='WARNING'):
             container = self.obj._get_component_container_by_service_name('test')
             self.assertIs(container, c1)
 

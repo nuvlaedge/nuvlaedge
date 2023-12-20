@@ -103,7 +103,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     compute_api_port:                   Optional[int] = None
 
     # New
-    agent_logging_directory:                Optional[str] = None
+    agent_logging_directory:            Optional[str] = None
     agent_debug:                        bool = False
 
     @field_validator('ne_image_tag', mode='before')

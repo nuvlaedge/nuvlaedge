@@ -79,6 +79,7 @@ class TestTemperatureMonitor(unittest.TestCase):
         mock_listdir.assert_called_once()
 
         # same if thermal files do not exist
+        mock_exists.side_effect = [False]*100
         mock_listdir.return_value = ['thermal-dir1', 'thermal-dir2']
         test_monitor.update_temperatures_with_file()
         self.assertFalse(test_monitor.data.temperatures,

@@ -130,7 +130,7 @@ def parse_cmd_line_args() -> Namespace | None:
     parser.add_argument('-l', '--log-level', dest='log_level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default='INFO', help='Log level')
-    parser.add_argument('-d', '--debug', dest='log_level',
+    parser.add_argument('-d', '--debug', dest='debug',
                         action='store_const', const='DEBUG',
                         help='Set log level to debug')
     try:

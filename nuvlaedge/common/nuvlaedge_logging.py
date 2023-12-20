@@ -21,7 +21,8 @@ logger: logging.Logger | None = None
 _LOG_PATH: Path = Path('/tmp/nuvlaedge/')
 COMMON_LOG_FILE: Path = _LOG_PATH / 'nuvlaedge.log'
 
-COMMON_LOG_FORMATTER: logging.Formatter = logging.Formatter('[%(asctime)s - %(levelname)s - %(name)s/%(funcName)s]: %(message)s')
+COMMON_LOG_FORMATTER: logging.Formatter = \
+    logging.Formatter('[%(asctime)s - %(levelname)s - %(name)s/%(funcName)s]: %(message)s')
 COMMON_HANDLER: logging.StreamHandler | None = None
 
 

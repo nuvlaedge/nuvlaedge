@@ -74,11 +74,8 @@ def read_file(file: str | Path, decode_json=False, remove_file_on_error=True, **
     if isinstance(file, str):
         file = Path(file)
 
-    if not file.is_file() or not file.exists():
-        logger.warning(f"File {file} does not exists")
-        return None
-    if file.stat().st_size == 0:
-        logger.debug(f"File {file} is empty")
+    if not file_exists_and_not_empty(file):
+        logger.warning(f"File {file} does not exists or is empty")
         return None
 
     with file.open(mode='r', **kwargs) as f:
@@ -120,6 +117,7 @@ __default_json_kwargs: dict = {'indent': 4}
 
 def __get_kwargs(new_kwargs: dict, default_kwargs: dict) -> tuple[dict, dict]:
     temp_kwargs = default_kwargs.copy()
+
     for k, v in new_kwargs.items():
         if k in temp_kwargs:
             temp_kwargs.update({k: v})
@@ -146,9 +144,9 @@ def _write_content_to_file(content: str, file: Path, fail_if_error: bool, **kwar
         __atomic_write(file, content, **kwargs)
     except Exception as ex:
         logger.warning(f'Could not write {content} into {file} : {ex}')
+        file.unlink(missing_ok=True)
         if fail_if_error:
             raise
-        file.unlink(missing_ok=True)
 
 
 def _write_json_to_file(content: dict,
@@ -168,7 +166,7 @@ def _write_model_to_file(content: BaseModel,
     _write_content_to_file(str_content, file, fail_if_error, **write_kwargs)
 
 
-def write_file(content: str | dict | list | BaseModel,
+def write_file(content: str | dict | list[dict] | BaseModel,
                file: str | Path,
                fail_if_error: bool = False,
                **kwargs):
@@ -191,6 +189,5 @@ def write_file(content: str | dict | list | BaseModel,
             _write_model_to_file(content, file, fail_if_error=fail_if_error, **kwargs)
         case _:
             logger.warning(f"Write File function can only write types: str, dict, BaseModel. Cannot write file {file}")
-            print(f"\n\n\n NOT FOUNND \n\n\n")
             if fail_if_error:
                 raise ValueError("Cannot write empty content")

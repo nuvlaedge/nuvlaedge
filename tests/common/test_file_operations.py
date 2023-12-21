@@ -20,8 +20,8 @@ class Testing(NuvlaEdgeStaticModel):
 class TestFileOperations(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.cwd = os.path.dirname(os.path.abspath(__file__))
-        self.temp_file = self.cwd + '/' + 'temp'
+        self.cwd = '/tmp/'
+        self.temp_file = self.cwd + 'temp'
 
     def test_read_write_files(self):
         # write json data and read them correctly
@@ -29,7 +29,7 @@ class TestFileOperations(unittest.TestCase):
         _test.param1 = 'Testing Param 1'
         _test.param2 = [_test.param1]
 
-        write_file(_test.model_dump(exclude_none=True), self.temp_file, write_json=True)
+        write_file(_test, self.temp_file)
         content = read_file(self.temp_file, decode_json=True)
         self.assertEqual(content['param1'], 'Testing Param 1')
         self.assertEqual(content['param2'], ['Testing Param 1'])

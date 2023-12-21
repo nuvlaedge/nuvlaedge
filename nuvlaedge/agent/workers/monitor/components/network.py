@@ -243,7 +243,7 @@ class NetworkMonitor(Monitor):
                 "bytes-received": rx_bytes_report
             })
 
-        write_file(json.dumps(previous_net_stats), self.previous_net_stats_file, encoding='UTF-8')
+        write_file(previous_net_stats, self.previous_net_stats_file, encoding='UTF-8')
 
         return net_stats
 

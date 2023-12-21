@@ -456,4 +456,4 @@ class Security:
         if temp_vulnerabilities:
             vulnerabilities = [t.model_dump(by_alias=True, exclude_none=True)
                                for t in temp_vulnerabilities]
-            write_file(vulnerabilities, FILE_NAMES.VULNERABILITIES_FILE, write_json=True)
+            write_file(vulnerabilities, FILE_NAMES.VULNERABILITIES_FILE)

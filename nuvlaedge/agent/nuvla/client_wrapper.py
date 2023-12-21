@@ -361,7 +361,7 @@ class NuvlaClientWrapper:
             nuvlaedge_status_uuid=self._nuvlaedge_status_uuid
         )
 
-        write_file(serial_session.model_dump(exclude_none=True, by_alias=True), FILE_NAMES.NUVLAEDGE_SESSION, indent=4)
+        write_file(serial_session, FILE_NAMES.NUVLAEDGE_SESSION)
 
     @classmethod
     def from_session_store(cls, file: Path | str):
@@ -371,7 +371,7 @@ class NuvlaClientWrapper:
         try:
             session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(session_store)
         except Exception as ex:
-            logger.warning(f'Could not validate session : {ex}')
+            logger.warning(f'Could not validate session \n{session_store} \nwith error : {ex}')
             return None
 
         temp_client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)

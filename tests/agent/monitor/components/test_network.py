@@ -20,7 +20,7 @@ def generate_random_ip_address():
     return ".".join(it_str)
 
 
-atomic_write: str = 'nuvlaedge.common.file_operations.atomic_write'
+atomic_write: str = 'nuvlaedge.common.file_operations.write_file'
 
 
 class TestNetworkMonitor(unittest.TestCase):

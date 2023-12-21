@@ -518,7 +518,7 @@ class VPNHandler:
             self.vpn_credential = CredentialResource()
 
     def save_credential(self):
-        file_operations.write_file(self.nuvla_client.vpn_credential.model_dump(exclude_none=True, by_alias=True), self.VPN_CREDENTIAL_FILE, True)
+        file_operations.write_file(self.nuvla_client.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)
 
     def load_vpn_config(self):
         config = file_operations.read_file(self.VPN_CONF_FILE, decode_json=True)
@@ -528,8 +528,8 @@ class VPNHandler:
             self.vpn_config = VPNConfig()
 
     def save_vpn_config(self, vpn_client_conf: str):
-        file_operations.write_file(self.vpn_config.model_dump(exclude_none=True, by_alias=True), self.VPN_PLAIN_CONF_FILE, write_json=True)
-        file_operations.write_file(self.VPN_CONF_FILE, vpn_client_conf)
+        file_operations.write_file(self.vpn_config, self.VPN_PLAIN_CONF_FILE, exclude_none=True, by_alias=True)
+        file_operations.write_file(vpn_client_conf, self.VPN_CONF_FILE)
 
     def load_vpn_server(self):
         _server = file_operations.read_file(self.VPN_SERVER_FILE, decode_json=True)
@@ -539,4 +539,4 @@ class VPNHandler:
             self.vpn_server = InfrastructureServiceResource()
 
     def save_vpn_server(self):
-        file_operations.write_file(self.vpn_server.model_dump(exclude_none=True, by_alias=True), self.VPN_SERVER_FILE, write_json=True)
+        file_operations.write_file(self.vpn_server, self.VPN_SERVER_FILE, exclude_none=True, by_alias=True)

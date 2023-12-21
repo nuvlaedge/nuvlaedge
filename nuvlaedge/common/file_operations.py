@@ -5,11 +5,13 @@ from contextlib import contextmanager
 from pathlib import Path
 import logging
 
+from pydantic import BaseModel
+
 logger: logging.Logger = logging.getLogger(__name__)
 
 
 @contextmanager
-def atomic_writer(file, **kwargs):
+def atomic_writer(file: Path, **kwargs):
     """
     Context manager to write to a file atomically
     Args:
@@ -19,7 +21,8 @@ def atomic_writer(file, **kwargs):
     Returns: None
 
     """
-    path, prefix = os.path.split(file)
+    path = file.parent
+    prefix = file.name
     kwargs_ = dict(mode='w+', dir=path, prefix=f'tmp_{prefix}_')
     kwargs_.update(kwargs)
 
@@ -28,7 +31,7 @@ def atomic_writer(file, **kwargs):
     os.replace(tmpfile.name, file)
 
 
-def atomic_write(file, data, **kwargs):
+def __atomic_write(file, data, **kwargs):
     """
     Write data to a file atomically
     Args:
@@ -71,7 +74,7 @@ def read_file(file: str | Path, decode_json=False, remove_file_on_error=True, **
     if isinstance(file, str):
         file = Path(file)
 
-    if not file.exists() or not file.is_file():
+    if not file.is_file() or not file.exists():
         logger.warning(f"File {file} does not exists")
         return None
     if file.stat().st_size == 0:
@@ -104,23 +107,90 @@ def create_directory(_dir: str | Path):
     _dir.mkdir(parents=True, exist_ok=True)
 
 
-def write_file(content, file: str | Path, write_json=False, **kwargs):
-    """
+__default_model_kwargs: dict = {
+    'indent': 4,
+    'exclude_none': True,
+    'by_alias': True,
+    'include': {},
+    'exclude': {}
+}
 
-    :param content: content to be written
-    :param file: The file in which content has to be written
-    :param write_json: write as json
-    :return:
-    """
-    if isinstance(file, str):
-        file = Path(file)
+__default_json_kwargs: dict = {'indent': 4}
 
+
+def __get_kwargs(new_kwargs: dict, default_kwargs: dict) -> tuple[dict, dict]:
+    temp_kwargs = default_kwargs.copy()
+    for k, v in new_kwargs.items():
+        if k in temp_kwargs:
+            temp_kwargs.update({k: v})
+    temp_kwargs = {k: v for k, v in temp_kwargs.items() if v}
+    remaining_kwargs = {k: v for k, v in new_kwargs.items() if k not in temp_kwargs}
+    return temp_kwargs, remaining_kwargs
+
+
+def __get_model_kwargs(target_kwargs: dict) -> tuple[dict, dict]:
+    return __get_kwargs(target_kwargs, __default_model_kwargs)
+
+
+def __get_json_kwargs(target_kwargs: dict) -> tuple[dict, dict]:
+    return __get_kwargs(target_kwargs, __default_json_kwargs)
+
+
+def _write_content_to_file(content: str, file: Path, fail_if_error: bool, **kwargs):
+    if content == "" or content is None:
+        logger.info("Content empty, won't write an empty file. Such a waste...")
+        return
+
+    # Write and raise issue if so indicated in the parameter fail_if_error
     try:
-        if write_json:
-            with file.open('w') as f:
-                json.dump(content, f, **kwargs)
-        else:
-            atomic_write(file, content, **kwargs)
+        __atomic_write(file, content, **kwargs)
     except Exception as ex:
         logger.warning(f'Could not write {content} into {file} : {ex}')
-        file.unlink()
+        if fail_if_error:
+            raise
+        file.unlink(missing_ok=True)
+
+
+def _write_json_to_file(content: dict,
+                        file: Path,
+                        fail_if_error: bool,
+                        **kwargs):
+    json_kwargs, write_kwargs = __get_json_kwargs(kwargs)
+    _write_content_to_file(json.dumps(content, **json_kwargs), file, fail_if_error, **write_kwargs)
+
+
+def _write_model_to_file(content: BaseModel,
+                         file: Path,
+                         fail_if_error: bool,
+                         **kwargs):
+    model_kwargs, write_kwargs = __get_model_kwargs(kwargs)
+    str_content: str = content.model_dump_json(**model_kwargs)
+    _write_content_to_file(str_content, file, fail_if_error, **write_kwargs)
+
+
+def write_file(content: str | dict | list | BaseModel,
+               file: str | Path,
+               fail_if_error: bool = False,
+               **kwargs):
+
+    # From this line on, file handling only works with pathlib for consistency
+    if isinstance(file, str):
+        file = Path(file)
+    logger.debug(f"Writing content type {type(content)} to file {file}")
+
+    # Assert content type attribute and convert it to string
+    match content:
+        case str():
+            logger.debug("Processing string")
+            _write_content_to_file(content, file, fail_if_error=fail_if_error, **kwargs)
+        case dict() | list():
+            logger.debug("Processing dictionary")
+            _write_json_to_file(content, file, fail_if_error=fail_if_error, **kwargs)
+        case BaseModel():
+            logger.debug("Processing pydantic model")
+            _write_model_to_file(content, file, fail_if_error=fail_if_error, **kwargs)
+        case _:
+            logger.warning(f"Write File function can only write types: str, dict, BaseModel. Cannot write file {file}")
+            print(f"\n\n\n NOT FOUNND \n\n\n")
+            if fail_if_error:
+                raise ValueError("Cannot write empty content")

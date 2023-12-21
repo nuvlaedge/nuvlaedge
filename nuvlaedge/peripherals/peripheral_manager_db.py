@@ -85,7 +85,7 @@ class PeripheralsDBManager:
         :return:
         """
         to_save = {k: v.model_dump(by_alias=True, exclude_none=True) for k, v in self._local_db.items()}
-        write_file(to_save, FILE_NAMES.LOCAL_PERIPHERAL_DB, True, default=str, indent=4)
+        write_file(to_save, FILE_NAMES.LOCAL_PERIPHERAL_DB, indent=4)
 
     @staticmethod
     def decode_new_peripherals(new_peripherals: List) -> Dict[str, PeripheralResource]:

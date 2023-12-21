@@ -73,7 +73,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     # Required with default values
     compose_project_name:               str = "nuvlaedge"
-    nuvlaedge_log_level:                str = "INFO"
+    nuvlaedge_log_level:                str = "DEBUG"
     nuvlaedge_thread_monitors:          bool = False
     vpn_interface_name:                 str = 'vpn'
     nuvla_endpoint:                     str = 'nuvla.io'

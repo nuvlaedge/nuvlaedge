@@ -19,6 +19,7 @@ from nuvlaedge.agent.nuvla.resources.nuvlaedge import NuvlaEdgeResource
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import NuvlaEdgeStatusResource
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.file_operations import read_file, write_file
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
@@ -360,15 +361,18 @@ class NuvlaClientWrapper:
             nuvlaedge_status_uuid=self._nuvlaedge_status_uuid
         )
 
-        with FILE_NAMES.NUVLAEDGE_SESSION.open('w') as f:
-            json.dump(serial_session.model_dump(exclude_none=True, by_alias=True), f, indent=4)
+        write_file(serial_session, FILE_NAMES.NUVLAEDGE_SESSION)
 
     @classmethod
     def from_session_store(cls, file: Path | str):
-        if isinstance(file, str):
-            file = Path(file)
-        with file.open('r') as f:
-            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate_json(f.read())
+        session_store = read_file(file, decode_json=True)
+        if session_store is None:
+            return None
+        try:
+            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(session_store)
+        except Exception as ex:
+            logger.warning(f'Could not validate session \n{session_store} \nwith error : {ex}')
+            return None
 
         temp_client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
         temp_client.nuvlaedge_credentials = session.credentials

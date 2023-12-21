@@ -16,7 +16,7 @@ from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.telemetry import model_diff
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.common.utils import file_exists_and_not_empty
+from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -301,7 +301,11 @@ class Commissioner:
                 logger.warning("Error decoding previous commission")
 
     def save_commissioned_data(self) -> None:
-        with self.COMMISSIONING_FILE.open('w') as f:
-            data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
-            data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
-            json.dump(data, f)
+        try:
+            with self.COMMISSIONING_FILE.open('w') as f:
+                data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
+                data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
+                json.dump(data, f)
+        except Exception as ex:
+            logger.error(f'Unable save commissioning data : {ex}')
+            self.COMMISSIONING_FILE.unlink()

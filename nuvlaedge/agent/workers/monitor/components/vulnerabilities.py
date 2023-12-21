@@ -10,6 +10,7 @@ from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.workers.monitor.data.vulnerabilities_data import (VulnerabilitiesData,
                                                      VulnerabilitiesSummary)
+from nuvlaedge.common.file_operations import read_file
 
 
 @monitor('vulnerabilities_monitor')
@@ -21,22 +22,13 @@ class VulnerabilitiesMonitor(Monitor):
         if not telemetry.edge_status.vulnerabilities:
             telemetry.edge_status.vulnerabilities = self.data
 
-    def retrieve_security_vulnerabilities(self) -> dict | None:
+    @staticmethod
+    def retrieve_security_vulnerabilities() -> dict | None:
         """ Reads vulnerabilities from the security scans, from a file in the shared volume
 
             :return: contents of the file
         """
-        if FILE_NAMES.VULNERABILITIES_FILE.exists():
-            with FILE_NAMES.VULNERABILITIES_FILE.open('r') as issues_file:
-                file_content: str = issues_file.read()
-                if file_content:
-                    try:
-                        return json.loads(file_content)
-                    except json.decoder.JSONDecodeError as ex:
-                        self.logger.error(f'Vulnerabilities content: [ {file_content} ] not properly formatted - {ex}')
-                        return None
-
-        return None
+        return read_file(FILE_NAMES.VULNERABILITIES_FILE, True)
 
     def update_data(self):
         vulnerabilities = self.retrieve_security_vulnerabilities()

@@ -17,6 +17,7 @@ from nuvlaedge.models.messages import NuvlaEdgeMessage
 from nuvlaedge.peripherals.peripheral_manager_db import PeripheralsDBManager
 from nuvlaedge.broker import NuvlaEdgeBroker
 from nuvlaedge.models.peripheral import PeripheralData
+from nuvlaedge.common.file_operations import create_directory
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
@@ -79,9 +80,7 @@ class PeripheralManager:
 
         self.status_channel: Queue[StatusReport] = status_channel
 
-        if not self.PERIPHERALS_LOCATION.exists():
-            logger.info(f"Peripheral DB location {self.PERIPHERALS_LOCATION} not found, create folder structure")
-            self.PERIPHERALS_LOCATION.mkdir(parents=True)
+        create_directory(FILE_NAMES.PERIPHERALS_FOLDER)
 
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'peripheral_manager')
 

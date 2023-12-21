@@ -1,4 +1,3 @@
-import json
 import logging
 import string
 import time
@@ -14,7 +13,7 @@ from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
 from nuvlaedge.agent.nuvla.resources.credential import CredentialResource
 from nuvlaedge.agent.worker import WorkerExitException
-from nuvlaedge.common import utils
+from nuvlaedge.common import file_operations
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
@@ -199,8 +198,8 @@ class VPNHandler:
         Returns:
             bool: True if both files exist and are not empty, False otherwise.
         """
-        return (utils.file_exists_and_not_empty(self.VPN_KEY_FILE) and
-                utils.file_exists_and_not_empty(self.VPN_CSR_FILE))
+        return (file_operations.file_exists_and_not_empty(self.VPN_KEY_FILE) and
+                file_operations.file_exists_and_not_empty(self.VPN_CSR_FILE))
 
     @staticmethod
     def get_vpn_ip():
@@ -212,12 +211,7 @@ class VPNHandler:
 
 
         """
-        if utils.file_exists_and_not_empty(FILE_NAMES.VPN_IP_FILE):
-            with FILE_NAMES.VPN_IP_FILE.open('r') as f:
-                return f.read().splitlines()[0]
-        else:
-            logger.error(f"Cannot infer VPN IP.")
-            return None
+        return file_operations.read_file(FILE_NAMES.VPN_IP_FILE)
 
     def check_vpn_client_state(self) -> tuple[bool, bool]:
         """
@@ -294,9 +288,9 @@ class VPNHandler:
         Raises:
             An error message will be logged when the certificate generation process fails.
         """
-        if utils.file_exists_and_not_empty(self.VPN_KEY_FILE):
+        if file_operations.file_exists_and_not_empty(self.VPN_KEY_FILE):
             self.VPN_KEY_FILE.unlink(True)
-        if utils.file_exists_and_not_empty(self.VPN_CSR_FILE):
+        if file_operations.file_exists_and_not_empty(self.VPN_CSR_FILE):
             self.VPN_CSR_FILE.unlink(True)
 
         cmd = ['openssl', 'req', '-batch', '-nodes', '-newkey', 'ec', '-pkeyopt',
@@ -326,10 +320,9 @@ class VPNHandler:
         Returns: None
 
         """
-        with self.VPN_CSR_FILE.open('r') as f:
-            vpn_data = f.read()
-            logger.info(f"Triggering commission with VPN Data: {vpn_data}")
-            self.vpn_channel.put(vpn_data)
+        vpn_data = file_operations.read_file(self.VPN_CSR_FILE)
+        logger.info(f"Triggering commission with VPN Data: {vpn_data}")
+        self.vpn_channel.put(vpn_data)
 
     def vpn_needs_commission(self):
         """
@@ -376,18 +369,15 @@ class VPNHandler:
 
         return False
 
-    def get_vpn_key(self) -> str:
+    def get_vpn_key(self) -> str | None:
         """
         Retrieves the VPN key from the VPN key file.
 
         Returns:
             str: The VPN key read from the VPN key file.
-
-        Raises:
-            FileNotFoundError: If the VPN key file is not found.
+            None: when no key is being read from the VPN key file
         """
-        with self.VPN_KEY_FILE.open('r') as file:
-            return file.read()
+        return file_operations.read_file(self.VPN_KEY_FILE)
 
     def map_endpoints(self) -> str:
         """
@@ -521,36 +511,32 @@ class VPNHandler:
         self.configure_vpn_client()
 
     def load_credential(self):
-        if utils.file_exists_and_not_empty(self.VPN_CREDENTIAL_FILE):
-            with self.VPN_CREDENTIAL_FILE.open('r') as f:
-                self.vpn_credential = CredentialResource.model_validate(json.load(f))
+        credential = file_operations.read_file(file=self.VPN_CREDENTIAL_FILE, decode_json=True)
+        if credential:
+            self.vpn_credential = CredentialResource.model_validate(credential)
         else:
             self.vpn_credential = CredentialResource()
 
     def save_credential(self):
-        with self.VPN_CREDENTIAL_FILE.open('w') as f:
-            json.dump(self.nuvla_client.vpn_credential.model_dump(exclude_none=True, by_alias=True), f)
+        file_operations.write_file(self.nuvla_client.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)
 
     def load_vpn_config(self):
-        if utils.file_exists_and_not_empty(self.VPN_CONF_FILE):
-            with self.VPN_CONF_FILE.open('r') as f:
-                self.vpn_config = VPNConfig.model_validate(json.load(f))
+        config = file_operations.read_file(self.VPN_CONF_FILE, decode_json=True)
+        if config:
+            self.vpn_config = VPNConfig.model_validate(config)
         else:
             self.vpn_config = VPNConfig()
 
     def save_vpn_config(self, vpn_client_conf: str):
-        with self.VPN_PLAIN_CONF_FILE.open('w') as f:
-            json.dump(self.vpn_config.model_dump(exclude_none=True, by_alias=True), f)
-
-        utils.atomic_write(self.VPN_CONF_FILE, vpn_client_conf)
+        file_operations.write_file(self.vpn_config, self.VPN_PLAIN_CONF_FILE, exclude_none=True, by_alias=True)
+        file_operations.write_file(vpn_client_conf, self.VPN_CONF_FILE)
 
     def load_vpn_server(self):
-        if utils.file_exists_and_not_empty(self.VPN_SERVER_FILE):
-            with self.VPN_SERVER_FILE.open('r') as f:
-                self.vpn_server = InfrastructureServiceResource.model_validate(json.load(f))
+        _server = file_operations.read_file(self.VPN_SERVER_FILE, decode_json=True)
+        if _server:
+            self.vpn_server = InfrastructureServiceResource.model_validate(_server)
         else:
             self.vpn_server = InfrastructureServiceResource()
 
     def save_vpn_server(self):
-        with self.VPN_SERVER_FILE.open('w') as f:
-            json.dump(self.vpn_server.model_dump(exclude_none=True, by_alias=True), f)
+        file_operations.write_file(self.vpn_server, self.VPN_SERVER_FILE, exclude_none=True, by_alias=True)

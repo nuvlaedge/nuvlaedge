@@ -5,20 +5,26 @@ NuvlaEdge logging is configured so by default logs to console with the level con
 errors and warnings
 """
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 # Global logging settings. They should only be modified from set_logging_configuration.
 # This settings won't affect to already existing loggers
-_DEBUG: bool = False
+_DEBUG: bool = True
 _LOG_LEVEL: int = logging.INFO
 _DISABLE_FILE_LOGGING: bool = False
 
 
 logger: logging.Logger | None = None
 
-_LOG_PATH: Path = Path('/var/log/nuvlaedge/')
+if os.getenv('TOX_TESTENV'):
+    # With this there is no need to trick every test module, it should work using /tmp/
+    _LOG_PATH: Path = Path('/tmp/nuvlaedge/')
+else:
+    _LOG_PATH: Path = Path('/var/log/nuvlaedge')
+
 COMMON_LOG_FILE: Path = _LOG_PATH / 'nuvlaedge.log'
 
 COMMON_LOG_FORMATTER: logging.Formatter = \

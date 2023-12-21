@@ -14,6 +14,7 @@ from nuvlaedge.models.peripheral import PeripheralData
 from nuvlaedge.models.nuvla_resources import NuvlaBoxPeripheralResource as PeripheralResource
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.file_operations import write_file
 
 
 class PeripheralsDBManager:
@@ -83,10 +84,8 @@ class PeripheralsDBManager:
         Backs up the local storage into a file. Completely erases the previous content
         :return:
         """
-        with FILE_NAMES.LOCAL_PERIPHERAL_DB.open('w') as file:
-            # Assign the default encoder Pydantic Models
-            to_save = {k: v.model_dump(by_alias=True, exclude_none=True) for k, v in self._local_db.items()}
-            json.dump(to_save, file, default=str, indent=4)
+        to_save = {k: v.model_dump(by_alias=True, exclude_none=True) for k, v in self._local_db.items()}
+        write_file(to_save, FILE_NAMES.LOCAL_PERIPHERAL_DB, indent=4)
 
     @staticmethod
     def decode_new_peripherals(new_peripherals: List) -> Dict[str, PeripheralResource]:

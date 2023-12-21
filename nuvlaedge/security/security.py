@@ -27,6 +27,7 @@ from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.security.settings import SecurityConfig
 import nuvlaedge.security.constants as cte
+from nuvlaedge.common.file_operations import read_file, write_file
 
 
 @contextmanager
@@ -95,10 +96,8 @@ class Security:
                            insecure=self.nuvla_endpoint_insecure,
                            reauthenticate=True)
 
-        if os.path.exists(cte.APIKEY_FILE):
-            with open(cte.APIKEY_FILE, encoding='UTF-8') as api_file:
-                apikey = json.loads(api_file.read())
-        else:
+        apikey = read_file(cte.APIKEY_FILE, decode_json=True)
+        if apikey is None:
             return None
 
         api_instance.login_apikey(apikey['api-key'], apikey['secret-key'])
@@ -123,12 +122,13 @@ class Security:
 
         # If we get here, it means both files have been written, and we can finally
         # get Nuvla's conf parameters
-        with open(FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION, encoding='UTF-8') as nuvla_conf:
-            for line in nuvla_conf.read().split():
-                if line and 'NUVLA_ENDPOINT=' in line:
-                    self.nuvla_endpoint = line.split('=')[-1]
-                if line and 'NUVLA_ENDPOINT_INSECURE=' in line:
-                    self.nuvla_endpoint_insecure = bool(line.split('=')[-1])
+        nuvla_conf = read_file(file=FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION, decode_json=False, remove_file_on_error=True,
+                               encoding='UTF-8')
+        for line in nuvla_conf.split():
+            if line and 'NUVLA_ENDPOINT=' in line:
+                self.nuvla_endpoint = line.split('=')[-1]
+            if line and 'NUVLA_ENDPOINT_INSECURE=' in line:
+                self.nuvla_endpoint_insecure = bool(line.split('=')[-1])
 
     @staticmethod
     def execute_cmd(command: list[str]) -> dict | CompletedProcess | None:
@@ -206,10 +206,8 @@ class Security:
         self.previous_external_db_update = datetime.utcnow()
         if not os.path.exists(cte.SECURITY_FOLDER):
             os.mkdir(cte.SECURITY_FOLDER)
-        with open(cte.EXTERNAL_DB_UPDATE_FILE, 'w', encoding="utf-8") \
-                as date_file:
-            date_file.write(
-                self.previous_external_db_update.strftime(cte.DATE_FORMAT))
+        write_file(content=self.previous_external_db_update.strftime(cte.DATE_FORMAT),
+                   file=cte.EXTERNAL_DB_UPDATE_FILE, encoding='utf-8')
 
     def gather_external_db_file_names(self):
         """
@@ -231,20 +229,17 @@ class Security:
 
         """
         logger.info('Retrieving previously updated db date')
-        if os.path.exists(cte.EXTERNAL_DB_UPDATE_FILE):
-            with open(cte.EXTERNAL_DB_UPDATE_FILE, 'r', encoding="utf-8") \
-                    as date_file:
-                try:
-                    it_date = datetime.strptime(date_file.read(),
-                                                cte.DATE_FORMAT)
-                    self.gather_external_db_file_names()
-                    if not self.vulscan_dbs:
-                        return datetime(1970, 1, 1)
-                    return it_date
-                except ValueError:
-                    return datetime(1970, 1, 1)
-        else:
-            return datetime(1970, 1, 1)
+        self.gather_external_db_file_names()
+        it_date = datetime(1970, 1, 1)
+        if not self.vulscan_dbs:
+            return it_date
+        date_read = read_file(cte.EXTERNAL_DB_UPDATE_FILE, decode_json=False,
+                              remove_file_on_error=True, encoding='utf-8')
+        if date_read is None:
+            return it_date
+        it_date = datetime.strptime(date_read,
+                                        cte.DATE_FORMAT)
+        return it_date
 
     def update_vulscan_db(self):
         """ Updates the local registry of the vulnerabilities data """
@@ -459,8 +454,6 @@ class Security:
 
         logger.info(f'Found {len(temp_vulnerabilities)} vulnerabilities')
         if temp_vulnerabilities:
-            with open(FILE_NAMES.VULNERABILITIES_FILE, 'w', encoding='UTF-8') as file:
-                json.dump(
-                    [t.dict(by_alias=True, exclude_none=True)
-                     for t in temp_vulnerabilities],
-                    file)
+            vulnerabilities = [t.model_dump(by_alias=True, exclude_none=True)
+                               for t in temp_vulnerabilities]
+            write_file(vulnerabilities, FILE_NAMES.VULNERABILITIES_FILE)

@@ -15,6 +15,7 @@ import OpenSSL
 
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.system_manager.common.coe_client import Containers
+from nuvlaedge.common.file_operations import read_file
 
 
 class ClusterNodeCannotManageDG(Exception):
@@ -94,24 +95,23 @@ class Supervise(Containers):
 
         for file in check_expiry_date_on:
             file_path = f"{utils.data_volume}/{file}"
+            content = read_file(file_path)
+            if content is None:
+                continue
 
-            if os.path.isfile(file_path):
-                with open(file_path) as fp:
-                    content = fp.read()
+            cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content.encode())
 
-                cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content.encode())
+            end_date = cert_obj.get_notAfter().decode()
+            formatted_end_date = datetime(int(end_date[0:4]),
+                                          int(end_date[4:6]),
+                                          int(end_date[6:8]))
 
-                end_date = cert_obj.get_notAfter().decode()
-                formatted_end_date = datetime(int(end_date[0:4]),
-                                              int(end_date[4:6]),
-                                              int(end_date[6:8]))
-
-                days_left = formatted_end_date - datetime.now()
-                # if expiring in less than d days, rotate all
-                d = 5
-                if days_left.days < d:
-                    self.log.warning(f"{file_path} is expiring in less than {d} days. Requesting rotation of all certs")
-                    return True
+            days_left = formatted_end_date - datetime.now()
+            # if expiring in less than d days, rotate all
+            d = 5
+            if days_left.days < d:
+                self.log.warning(f"{file_path} is expiring in less than {d} days. Requesting rotation of all certs")
+                return True
 
         return False
 

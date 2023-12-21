@@ -37,8 +37,8 @@ from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.common.utils import file_exists_and_not_empty
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
 from nuvlaedge.agent.workers.commissioner import Commissioner
@@ -184,10 +184,13 @@ class Agent:
             logger.info("Starting NuvlaEdge from previously stored session")
             self._nuvla_client = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
 
-            if self.settings.nuvlaedge_uuid:
-                self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+            if self._nuvla_client is not None:
+                if self.settings.nuvlaedge_uuid:
+                    self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
 
-            return State.value_of(self._nuvla_client.nuvlaedge.state)
+                return State.value_of(self._nuvla_client.nuvlaedge.state)
+            else:
+                FILE_NAMES.NUVLAEDGE_SESSION.unlink()
 
         # API keys log-in
         if self.settings.nuvlaedge_api_key is not None and self.settings.nuvlaedge_api_secret is not None:

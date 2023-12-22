@@ -3,14 +3,14 @@ import os
 import time
 from typing import Dict, List
 
-from kubernetes import client, config
-from kubernetes.client.exceptions import ApiException
-
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
+if os.getenv('KUBERNETES_SERVICE_HOST'):
+    from kubernetes import client, config
+    from kubernetes.client.exceptions import ApiException
 
 log: logging.Logger = get_nuvlaedge_logger(__name__)
 

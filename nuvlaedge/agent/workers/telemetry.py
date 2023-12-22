@@ -10,7 +10,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
+from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.workers.monitor.components import get_monitor, active_monitors

@@ -9,7 +9,7 @@ from threading import Event, Thread
 from pydantic import ValidationError
 from nuvla.api import Api as NuvlaClient
 
-from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
+from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.broker.file_broker import FileBroker
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger

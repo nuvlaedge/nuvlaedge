@@ -32,7 +32,7 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
-from nuvlaedge.agent.common import NuvlaEdgeStatusHandler, StatusReport
+from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
@@ -50,9 +50,8 @@ from nuvlaedge.agent.manager import WorkerManager
 from nuvlaedge.agent.settings import (AgentSettings,
                                       AgentSettingsMissMatch,
                                       InsufficientSettingsProvided)
-from nuvlaedge.agent.orchestrator.docker import DockerClient
-from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
+from nuvlaedge.agent.orchestrator import COEClient
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
@@ -115,7 +114,7 @@ class Agent:
         # Wrapper for Nuvla API library specialised in NuvlaEdge
         self._nuvla_client: NuvlaClientWrapper = ...
         # Container orchestration engine: either docker or k8s implementation
-        self._coe_engine: DockerClient | KubernetesClient = get_coe_client()
+        self._coe_engine: COEClient = get_coe_client()
 
         # Agent worker manager
         self.worker_manager: WorkerManager = WorkerManager()

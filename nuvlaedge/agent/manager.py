@@ -103,3 +103,18 @@ class WorkerManager:
         for name, worker in self.registered_workers.items():
             logger.info(f"Stopping {name} worker...")
             worker.stop()
+
+    def edit_period(self, worker_name: str | type, new_period: int):
+        if isinstance(worker_name, type):
+            worker_name = worker_name.__name__
+        if worker_name not in self.registered_workers:
+            logger.error(f"Worker {worker_name} is not registered on manager, cannot update its period")
+            return
+
+        if new_period < 15:
+            logger.warning(f"Workers should not have less than 15 seconds of periodic execution, "
+                           f"cannot update with {new_period}")
+            return
+
+        self.registered_workers[worker_name].period = new_period
+        logger.info(f"Worker {worker_name} period updated to {new_period}")

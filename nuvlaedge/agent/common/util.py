@@ -14,6 +14,7 @@ from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
@@ -24,7 +25,7 @@ compute_api_service_name = 'compute-api'
 compute_api = compose_project_name + '-' + compute_api_service_name
 job_engine_service_name = 'job-engine-lite'
 vpn_client_service_name = 'vpn-client'
-fallback_image = 'sixsq/nuvlaedge:latest'
+fallback_image = CTE.FALLBACK_IMAGE
 
 COMPUTE_API_INTERNAL_PORT = 5000
 

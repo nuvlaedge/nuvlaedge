@@ -12,6 +12,7 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -19,7 +20,7 @@ from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
-docker_socket_file_default = '/var/run/docker.sock'
+docker_socket_file_default = CTE.DOCKER_SOCKET_FILE_DEFAULT
 
 
 class InferIPError(Exception):

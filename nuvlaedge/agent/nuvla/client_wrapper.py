@@ -345,7 +345,7 @@ class NuvlaClientWrapper:
 
     def sync_nuvlaedge_status(self):
         resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_status_uuid)
-        if resource.data:
+        if resource and resource.data:
             self.__nuvlaedge_status_resource = NuvlaEdgeStatusResource.model_validate(resource.data)
             self.__status_sync_time = time.time()
         else:

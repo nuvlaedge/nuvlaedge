@@ -7,9 +7,9 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator.docker import DockerClient, docker_socket_file_default
+
 
 KUBERNETES_SERVICE_HOST = os.getenv('KUBERNETES_SERVICE_HOST')
 if KUBERNETES_SERVICE_HOST:
@@ -21,7 +21,7 @@ else:
     ORCHESTRATOR = 'docker'
 
 
-DOCKER_SOCKET_FILE = docker_socket_file_default
+DOCKER_SOCKET_FILE = CTE.DOCKER_SOCKET_FILE_DEFAULT
 
 
 class COEClient(ABC):
@@ -37,7 +37,7 @@ class COEClient(ABC):
         self.client = None
         self.logging = logging
 
-        self.current_image = util.fallback_image
+        self.current_image = CTE.FALLBACK_IMAGE
 
     @abstractmethod
     def list_internal_components(self, base_label=utils.base_label):
@@ -459,6 +459,16 @@ class Docker(COEClient):
 
         return self.current_image
 
+    @staticmethod
+    def get_current_image_from_env():
+        # TODO: Centrilise COE clients to nuvlaedge level module to prevent cross import from agent to sm and viceversa
+        registry = os.getenv('NE_IMAGE_REGISTRY', '')
+        organization = os.getenv('NE_IMAGE_ORGANIZATION', 'sixsq')
+        repository = os.getenv('NE_IMAGE_REPOSITORY', 'nuvlaedge')
+        tag = os.getenv('NE_IMAGE_TAG', 'latest')
+        name = os.getenv('NE_IMAGE_NAME', f'{organization}/{repository}')
+        return f'{registry}{name}:{tag}'
+
     def _get_current_image(self):
         try:
             return self.get_current_container().attrs['Config']['Image']
@@ -467,7 +477,7 @@ class Docker(COEClient):
         except Exception as e:
             self.logging.error(f"Failed to get current container. Reason: {str(e)}")
 
-        image = DockerClient.get_current_image_from_env()
+        image = self.get_current_image_from_env()
         self.logging.error(f'Failed to get current container. Using fallback (built from environment): {image}')
         return image
 

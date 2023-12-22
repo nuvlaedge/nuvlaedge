@@ -12,7 +12,7 @@ class Constants:
 
     # Intervals
     REFRESH_INTERVAL: int = 60  # Default update interval of nuvlabox-status res
-    HEARTBEAT_INTERVAL: int = 15  # Default heartbeat interval
+    HEARTBEAT_INTERVAL: int = 20  # Default heartbeat interval
 
     # Resources names
     PERIPHERAL_RES_NAME: str = 'nuvlabox-peripheral'
@@ -28,6 +28,12 @@ class Constants:
 
     # Timed actions retries
     TIMED_ACTIONS_TRIES: int = 3
+
+    # NuvlaEdge Constants
+    FALLBACK_IMAGE = 'sixsq/nuvlaedge:latest'
+
+    # COE Constants
+    DOCKER_SOCKET_FILE_DEFAULT = '/var/run/docker.sock'
 
 
 CTE: Constants = Constants()

@@ -6,11 +6,6 @@ import os
 
 from nuvlaedge.agent.orchestrator import COEClient
 
-if os.getenv('KUBERNETES_SERVICE_HOST'):
-    from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
-else:
-    from nuvlaedge.agent.orchestrator.docker import DockerClient
-
 
 def get_coe_client() -> COEClient:
     """
@@ -21,6 +16,8 @@ def get_coe_client() -> COEClient:
 
     """
     if os.getenv('KUBERNETES_SERVICE_HOST'):
+        from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
         return KubernetesClient()
     else:
+        from nuvlaedge.agent.orchestrator.docker import DockerClient
         return DockerClient()

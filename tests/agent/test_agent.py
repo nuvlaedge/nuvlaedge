@@ -3,13 +3,12 @@ from threading import Event
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-import nuvlaedge.agent.common.status_handler
+import nuvlaedge.agent.agent
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.settings import AgentSettingsMissMatch, InsufficientSettingsProvided
-from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.nuvla.resources.nuvlaedge import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent import AgentSettings, Agent
@@ -25,7 +24,9 @@ class TestAgent(TestCase):
         self.mock_coe_client = Mock(spec=COEClient)
 
         # Create the agent
-        self.agent = Agent(self.exit_event, self.settings)
+        with patch('nuvlaedge.agent.agent.get_coe_client') as mock_coe:
+            mock_coe.return_value = self.mock_coe_client
+            self.agent = Agent(self.exit_event, self.settings)
 
         # Mock the agent's nuvla client and COE client
         self.agent._coe_client = self.mock_coe_client
@@ -132,7 +133,7 @@ class TestAgent(TestCase):
         with self.assertRaises(SystemExit):
             self.agent.start_agent()
 
-    @patch('nuvlaedge.agent.common.NuvlaEdgeStatusHandler.get_status')
+    @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.get_status')
     def test_gather_status(self, mock_get_status):
         mock_telemetry = Mock(spec=TelemetryPayloadAttributes)
         mock_get_status.return_value = ("OPERATIONAL", ['RUNNING FINE'])

@@ -12,13 +12,14 @@ import kubernetes
 from kubernetes.client.exceptions import ApiException
 
 import tests.agent.utils.fake as fake
+os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
 from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient, TimeoutException
+# os.unsetenv('KUBERNETES_SERVICE_HOST')
 
 
 class COEClientKubernetesTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        os.environ.setdefault('KUBERNETES_SERVICE_HOST', 'force-k8s-coe')
 
         with mock.patch.dict(sys.modules):
             if 'nuvlaedge.agent.common.NuvlaEdgeCommon' in sys.modules:

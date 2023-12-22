@@ -25,6 +25,7 @@ Engine (COE) client, worker manager, action handler, and the queues for telemetr
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
 import logging
+import os
 import sys
 import time
 from queue import Queue

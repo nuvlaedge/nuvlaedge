@@ -10,14 +10,12 @@ import unittest
 
 import nuvlaedge.system_manager.supervise as Supervise
 
-from nuvlaedge.system_manager.common.coe_client import Containers
 import tests.system_manager.utils.fake as fake
 
 
 class SuperviseTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        Supervise.__bases__ = (fake.Fake.imitate(Containers),)
         self.obj = Supervise.Supervise()
         self.obj.coe_client = mock.MagicMock()
         logging.disable(logging.CRITICAL)

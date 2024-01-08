@@ -9,13 +9,13 @@ from datetime import datetime
 from threading import Timer
 
 import docker
-import docker.models
+import docker.models.networks
 import docker.errors
 import OpenSSL
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.coe_client import Containers
 from nuvlaedge.common.file_operations import read_file
+from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
 
 
 class ClusterNodeCannotManageDG(Exception):
@@ -34,7 +34,7 @@ def cluster_workers_cannot_manage(func):
     return wrapper
 
 
-class Supervise(Containers):
+class Supervise:
     """ The Supervise class contains all the methods and
     definitions for making sure the NuvlaEdge Engine is running smoothly,
     including all methods for dealing with system disruptions and
@@ -45,8 +45,8 @@ class Supervise(Containers):
         """ Constructs the Supervise object """
 
         self.log = logging.getLogger(__name__)
-        super().__init__(self.log)
-
+        super().__init__()
+        self.coe_client = get_coe_client()
         self.on_stop_docker_image = self.coe_client.infer_on_stop_docker_image()
         self.data_gateway_enabled = os.getenv('NUVLAEDGE_DATA_GATEWAY_ENABLED', 'true').lower() == 'true'
         self.data_gateway_image = os.getenv('NUVLAEDGE_DATA_GATEWAY_IMAGE',
@@ -126,7 +126,7 @@ class Supervise(Containers):
         if os.path.isfile(utils.tls_sync_file):
             os.remove(utils.tls_sync_file)
             self.log.info(f"Removed {utils.tls_sync_file}. "
-                          f"Restarting {self.coe_client.credentials_manager_component}")
+                          f"Restarting credentials_manager_component")
             self.coe_client.restart_credentials_manager()
 
     @cluster_workers_cannot_manage
@@ -420,7 +420,7 @@ class Supervise(Containers):
         """
         Finds networks by name
 
-        :param network_name: names of the networks to list
+        :param network_names: names of the networks to list
         :return: Docker network object or None
         """
 

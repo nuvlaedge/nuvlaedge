@@ -3,7 +3,6 @@ from threading import Event
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-import nuvlaedge.agent.agent
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
 from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes

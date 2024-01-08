@@ -9,7 +9,6 @@ CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
 
 echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
-echo "The MY_NAMESPACE is set to: ${MY_NAMESPACE}"
 env
 
 if [ ! -z $SET_MULTIPLE ]
@@ -17,11 +16,13 @@ then
     echo "We are in the multiple NE mode..."
     # therefore need to add namespace to the CSR?
     # and CRB naming
+    # below should pick off the namespace string...
     NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
+    # if not successful, generate a random string
     if [ -z $NAMESPACE ]
     then
         NAMESPACE=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
-        NAMESPACE="default"
+        # NAMESPACE="default"
     fi
     echo "The namespace string got set to: ${NAMESPACE}"
     CSR_NAME=${CSR_NAME}-${NAMESPACE}

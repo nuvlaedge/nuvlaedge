@@ -3,6 +3,7 @@ Contains the definitions and spec of Nuvla Resources
 """
 
 from pydantic import field_validator
+from pydantic_changedetect import ChangeDetectionMixin
 
 from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
@@ -20,7 +21,6 @@ class NuvlaBoxAttributes(NuvlaEdgeBaseModel):
 
 
 class NuvlaBoxResource(NuvlaEdgeBaseModel):
-
     state: str
     refresh_interval: int
     
@@ -56,5 +56,10 @@ class NuvlaBoxResource(NuvlaEdgeBaseModel):
         return v
 
 
-class NuvlaBoxPeripheralResource(NuvlaResourceBase, PeripheralData):
-    ...
+class NuvlaBoxPeripheralResource(ChangeDetectionMixin, NuvlaResourceBase, PeripheralData):
+
+    def update(self, data: dict):
+        _update = self.dict()
+        _update.update(data)
+        for k, v in NuvlaBoxPeripheralResource.model_validate(_update).dict(exclude_defaults=True).items():
+            setattr(self, k, v)

@@ -20,8 +20,8 @@ class PeripheralsDBManager:
     """
     Controls the different databases of the peripheral manager
     """
-    LOCAL_DB_SYNC_PERIOD = 3*60  # Every 3 minutes the local DB is synchronized with the Nuvla stored peripherals
-    EXPIRATION_TIME = 5*60  # Rent
+    LOCAL_DB_SYNC_PERIOD = 30 * 60  # Every 30 minutes the local DB is synchronized with the Nuvla stored peripherals
+    EXPIRATION_TIME = 5 * 60  # Rent
 
     def __init__(self, nuvla_client: Api, nuvlaedge_uuid: str):
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
@@ -42,7 +42,6 @@ class PeripheralsDBManager:
         """
         if time.time() - self._last_synch > self.LOCAL_DB_SYNC_PERIOD:
             self.synchronize()
-            self._last_synch = time.time()
 
         return self._local_db
 
@@ -77,6 +76,7 @@ class PeripheralsDBManager:
             self._latest_update[i] = self._local_db.get(i).updated
 
         self.update_local_storage()
+        self._last_synch = time.time()
 
     def update_local_storage(self):
         """
@@ -155,8 +155,8 @@ class PeripheralsDBManager:
         # else return None, Error code
         response: CimiResponse = self.nuvla_client.add(
             CTE.PERIPHERAL_RES_NAME,
-            peripheral.dict(by_alias=True,
-                            exclude_none=True))
+            peripheral.model_dump(by_alias=True,
+                                  exclude_none=True))
         p_id = response.data.get('resource-id')
         p_status = response.data.get('status')
         self.logger.debug(f'Peripheral {peripheral.identifier} registered with status {p_status}')
@@ -244,7 +244,8 @@ class PeripheralsDBManager:
 
             # Updated field should always be filled, either when updating from Nuvla or when creating the Peripheral
             if self.peripheral_expired(p):
-                self.logger.info(f'Peripheral "{p}" last report more than {self.EXPIRATION_TIME/60} min ago, removing')
+                self.logger.info(
+                    f'Peripheral "{p}" last report more than {self.EXPIRATION_TIME / 60} min ago, removing')
                 update_flag = True
                 self.remove_peripheral(p)
 
@@ -260,6 +261,9 @@ class PeripheralsDBManager:
         """
         self.logger.info('Checking if information has changed in peripherals')
         for identifier, data in new_peripherals.items():
+            self._local_db[identifier].update(data.dict())
+            if self._local_db[identifier].model_has_changed:
+                self.nuvla_client.edit(self.content.get(identifier).id, data.dict())
             self._latest_update[identifier] = datetime.now()
 
         self.logger.debug('After editing the local DB, backup to file')

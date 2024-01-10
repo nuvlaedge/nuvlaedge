@@ -130,6 +130,7 @@ class PeripheralManager(Thread):
 
     def run(self) -> None:
         self.logger.info('Starting peripheral manager thread')
+        self.db.synchronize()
 
         while not self.exit_event.is_set():
             self.logger.info('Scanning for detected devices')

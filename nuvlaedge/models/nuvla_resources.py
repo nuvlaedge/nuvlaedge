@@ -4,6 +4,7 @@ Contains the definitions and spec of Nuvla Resources
 from datetime import datetime
 
 from pydantic import validator
+from pydantic_changedetect import ChangeDetectionMixin
 
 from nuvlaedge.models import NuvlaEdgeBaseModel
 from nuvlaedge.models.peripheral import PeripheralData
@@ -43,10 +44,9 @@ class NuvlaBoxAttributes(NuvlaEdgeBaseModel):
 
 
 class NuvlaBoxResource(NuvlaEdgeBaseModel):
-
     state: str
     refresh_interval: int
-    
+
     location: list | None
     supplier: str | None
     organization: str | None
@@ -79,5 +79,10 @@ class NuvlaBoxResource(NuvlaEdgeBaseModel):
         return v
 
 
-class NuvlaBoxPeripheralResource(NuvlaResourceBase, PeripheralData):
-    ...
+class NuvlaBoxPeripheralResource(ChangeDetectionMixin, NuvlaResourceBase, PeripheralData):
+
+    def update(self, data: dict):
+        _update = self.dict()
+        _update.update(data)
+        for k, v in self.model_validate(_update).dict(exclude_defaults=True).items():
+            setattr(self, k, v)

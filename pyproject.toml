@@ -21,6 +21,7 @@ security = "nuvlaedge.security:main"
 [tool.poetry.dependencies]
 python = "^3.11"
 pydantic = "1.10.7"
+pydantic-changedetect = "0.6.0"
 requests = "2.27.1"
 nuvla-api = "3.0.9"
 docker = "6.1.1"

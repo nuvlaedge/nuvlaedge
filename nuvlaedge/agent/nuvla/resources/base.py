@@ -32,7 +32,6 @@ class NuvlaEdgeTrackedResource(NuvlaResourceBase):
     accessed_fields: ClassVar[dict[str, float]] = {}
 
     _last_update_time: float = 0.0
-    update_period: ClassVar[float] = 0.0
     delete_period: ClassVar[float] = 180.0
 
     def __getattribute__(self, item):

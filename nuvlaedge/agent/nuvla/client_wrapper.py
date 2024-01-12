@@ -26,7 +26,7 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 @dataclass(frozen=True)
-class NuvlaEndPointPaths:
+class NuvlaEndPoints:
     base_path: str = '/api/'
     session: str = base_path + 'session/'
 
@@ -85,8 +85,6 @@ class NuvlaClientWrapper:
         nuvlaedge_credentials (NuvlaApiKeyTemplate | None): The API keys for authenticating with NuvlaEdge
 
         _nuvlaedge_status_uuid (NuvlaID | None): The ID of the NuvlaEdge status resource
-
-        _watched_fields (dict[str, set[str]]): The dictionary of watched fields for each resource
 
     Methods:
         nuvlaedge_status_uuid(self) -> NuvlaID:
@@ -178,8 +176,6 @@ class NuvlaClientWrapper:
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
         self._nuvlaedge_status_uuid: NuvlaID | None = None
 
-        self._watched_fields: dict[str, set[str]] = {}
-
     @property
     def nuvlaedge_status_uuid(self) -> NuvlaID:
         """
@@ -215,7 +211,15 @@ class NuvlaClientWrapper:
     @property
     def nuvlaedge_status(self) -> NuvlaEdgeStatusResource:
         if time.time() - self.__status_sync_time > self.MIN_SYNC_TIME:
-            self.sync_nuvlaedge_status()
+
+            # We only need to retrieve the whole NuvlaBox-status resource once on agent start-up. Then, the only
+            # field needed to be updated is node-id. Required by Commissioner to trigger the creation of the
+            # nuvlaedge infrastructure service. The creation requires the node-id field. TODO: Improve commissioning op
+            if not self.__nuvlaedge_status_resource:
+                self.sync_nuvlaedge_status()
+            else:
+                self.sync_nuvlaedge_status(select={'node-id'})
+
         return self.__nuvlaedge_status_resource
 
     @property
@@ -343,8 +347,8 @@ class NuvlaClientWrapper:
         else:
             logger.error("Error retrieving NuvlaEdge resource")
 
-    def sync_nuvlaedge_status(self):
-        resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_status_uuid)
+    def sync_nuvlaedge_status(self, select: set = None):
+        resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_status_uuid, select=select)
         if resource and resource.data:
             self.__nuvlaedge_status_resource = NuvlaEdgeStatusResource.model_validate(resource.data)
             self.__status_sync_time = time.time()

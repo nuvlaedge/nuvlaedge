@@ -1,9 +1,9 @@
 from typing import Optional
 
-from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase
+from nuvlaedge.agent.nuvla.resources.base import NuvlaEdgeTrackedResource
 
 
-class InfrastructureServiceResource(NuvlaResourceBase):
+class InfrastructureServiceResource(NuvlaEdgeTrackedResource):
     """ Mainly for VPN Server """
     vpn_ca_certificate:    Optional[str] = None
     vpn_intermediate_ca:    Optional[list[str]] = None

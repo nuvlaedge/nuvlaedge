@@ -5,7 +5,7 @@ from enum import auto
 from strenum import UppercaseStrEnum
 
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
-from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase
+from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase, NuvlaEdgeTrackedResource
 
 
 class Status(UppercaseStrEnum):
@@ -112,7 +112,7 @@ class StatusOrchestrationEngineConfiguration(NuvlaEdgeBaseModel):
     cluster_join_address: Optional[str] = None
 
 
-class NuvlaEdgeStatusResource(NuvlaResourceBase,
+class NuvlaEdgeStatusResource(NuvlaEdgeTrackedResource,
                               StatusTelemetry,
                               StatusSystemConfiguration,
                               StatusOrchestrationEngineConfiguration):

@@ -52,6 +52,8 @@ class Worker:
         # Thread control
         self.exit_event: Event = Event()
         self.period: int = period
+
+        # If no initial delay, add a random delay to distribute the workers in time
         self.initial_delay: float = initial_delay if initial_delay else random.randint(4, 8)
         if self.initial_delay > self.period:
             self.initial_delay = self.period

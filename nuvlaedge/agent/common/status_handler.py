@@ -19,6 +19,8 @@ class StatusReport(BaseModel):
 
 
 class NuvlaEdgeStatusHandler:
+    STATUS_TIMEOUT: int = 5*60
+
     def __init__(self):
         self._status: Literal['OPERATIONAL', 'UNKNOWN', 'DEGRADED'] = 'UNKNOWN'
         self._notes: list[str] = []

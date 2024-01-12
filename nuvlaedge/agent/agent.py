@@ -405,7 +405,9 @@ class Agent:
         # If there is no telemetry available there is nothing to do
         if self.telemetry_channel.empty():
             logger.warning("Telemetry class not reporting fast enough to Agent")
-            NuvlaEdgeStatusHandler.failing(self.status_channel, "Telemetry not reported fast enough")
+            NuvlaEdgeStatusHandler.failing(self.status_channel,
+                                           'agent',
+                                           "Telemetry not reported fast enough")
             new_telemetry: TelemetryPayloadAttributes = self.telemetry_payload.model_copy(deep=True)
         else:
             # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest

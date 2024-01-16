@@ -140,27 +140,6 @@ class Telemetry:
         - nuvlaedge_uuid: The NuvlaID object representing the UUID of the NuvlaEdge instance.
         - excluded_monitors: A list of monitor names that should be excluded from telemetry collection.
 
-    Methods:
-        - __init__(self, coe_client: COEClient, report_channel: Queue[TelemetryPayloadAttributes], nuvlaedge_uuid: NuvlaID, excluded_monitors):
-        Initializes the Telemetry object with the given COEClient, report channel, NuvlaEdge UUID, and excluded monitors.
-
-        - initialize_monitors(self):
-        Auxiliary function to extract some control from the class initialization
-        It gathers the available monitors and initializes them saving the reference into
-        the monitor_list attribute of Telemetry.
-
-        - collect_monitor_metrics(self):
-        Collects monitoring data from the initialized monitors and populates the local telemetry attribute.
-
-        - check_monitors_health(self):
-        Checks the health of the initialized monitors. If a monitor is threaded and not alive, it recreates the thread.
-
-        - sync_status_to_telemetry(self):
-        Synchronizes the EdgeStatus object with Telemetry Data.
-
-        - run(self):
-        Executes the telemetry collection process. It collects monitor metrics, checks monitor health, syncs status to telemetry, and sends the telemetry data to the agent queue.
-
     Note: Make sure to call the run() method to start the telemetry collection process.
     """
     def __init__(self,
@@ -200,11 +179,11 @@ class Telemetry:
         self.excluded_monitors: list[str] = excluded_monitors.replace("'", "").split(',') if excluded_monitors else []
         logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
         self.monitor_list: dict[str, Monitor] = {}
-        self.initialize_monitors()
+        self._initialize_monitors()
 
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'telemetry')
 
-    def initialize_monitors(self):
+    def _initialize_monitors(self):
         """
         Auxiliary function to extract some control from the class initialization
         It gathers the available monitors and initializes them saving the reference into
@@ -215,7 +194,7 @@ class Telemetry:
                 continue
             self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
 
-    def collect_monitor_metrics(self):
+    def _collect_monitor_metrics(self):
         """
         Collects monitoring metrics from the monitor list and updates the local telemetry data.
 
@@ -236,7 +215,7 @@ class Telemetry:
 
         self._local_telemetry.update(temp_dict)
 
-    def check_monitors_health(self):
+    def _check_monitors_health(self):
         """
         Check the health of all monitors in the monitor list.
 
@@ -273,7 +252,7 @@ class Telemetry:
         monitor_process_duration = {k: v.last_process_duration for k, v in self.monitor_list.items()}
         logger.debug(f'Monitors processing duration: {json.dumps(monitor_process_duration, indent=4)}')
 
-    def sync_status_to_telemetry(self):
+    def _sync_status_to_telemetry(self):
         """
         Synchronises EdgeStatus object with Telemetry Data.
         TODO: This needs rework so the monitors automatically report their data into a TelemetryPayload
@@ -308,11 +287,11 @@ class Telemetry:
 
         logger.info("Collecting monitor metrics...")
         """ Retrieve data from monitors (If not threaded) and check threaded monitors health"""
-        self.check_monitors_health()
-        self.collect_monitor_metrics()
+        self._check_monitors_health()
+        self._collect_monitor_metrics()
         logger.info("Translating telemetry data")
         """ Retrieve data from metrics and system information class (EdgeStatus)  and conform the telemetry payload """
-        self.sync_status_to_telemetry()
+        self._sync_status_to_telemetry()
 
         """ We make sure at least one field changes so telemetry is always sent. Current Time for synchronization """
         self._local_telemetry.current_time = datetime.utcnow().isoformat().split('.')[0] + 'Z'

@@ -94,43 +94,6 @@ class VPNHandler:
         nuvla_client (NuvlaClientWrapper): Instance of NuvlaClientWrapper class
         vpn_channel (Queue[str]): Channel where the VPN CSR is sent to the commissioner to be included in the commissioning
         vpn_extra_conf (str): Extra VPN configuration
-
-    Methods:
-        __init__(coe_client: COEClient, nuvla_client: NuvlaClientWrapper, vpn_channel: Queue[str], vpn_extra_conf: str) -> None:
-            Initializes the VPNHandler object
-
-        certificates_exists() -> bool:
-            Checks if VPN key and CSR files exist
-
-        get_vpn_ip() -> str:
-            Returns the VPN IP
-
-        check_vpn_client_state() -> Tuple[bool, bool]:
-            Checks if the VPN client container exists and if it is running
-
-        wait_certificates_ready(timeout: int = 25) -> None:
-            Waits for the generated certificates to be ready
-
-        wait_credential_creation(timeout: int = 25) -> bool:
-            Waits for the VPN credential to be created
-
-        generate_certificates(wait: bool = True) -> None:
-            Generates the certificates for the VPN
-
-        trigger_commission() -> None:
-            Triggers the commissioning operation by changing the commission payload
-
-        vpn_needs_commission() -> bool:
-            Checks if the VPN needs commissioning
-
-        get_vpn_key() -> str:
-            Returns the VPN key
-
-        map_endpoints() -> str:
-            Maps the VPN endpoints
-
-        configure_vpn_client() -> None:
-            Configures the VPN client
     """
     VPN_FOLDER: Path = FILE_NAMES.VPN_FOLDER
     VPN_CSR_FILE: Path = FILE_NAMES.VPN_CSR_FILE
@@ -174,16 +137,16 @@ class VPNHandler:
 
         # Client configuration data structure
         self.vpn_config: VPNConfig | None = None
-        self.load_vpn_config()
+        self._load_vpn_config()
         self.vpn_extra_conf: str = vpn_extra_conf
 
         # Last VPN credentials used to create the VPN configuration
         self.vpn_credential: CredentialResource = ...
-        self.load_credential()
+        self._load_credential()
 
         # Last VPN server configuration used to create the client VPN configuration
         self.vpn_server: InfrastructureServiceResource = ...
-        self.load_vpn_server()
+        self._load_vpn_server()
 
         if not self.VPN_FOLDER.exists():
             logger.info("Create VPN directory tree")
@@ -191,7 +154,7 @@ class VPNHandler:
 
         NuvlaEdgeStatusHandler.starting(self.status_channel, self.__class__.__name__)
 
-    def certificates_exists(self) -> bool:
+    def _certificates_exists(self) -> bool:
         """
         Checks if the VPN key and certificate signing request files exist and are not empty.
 
@@ -213,7 +176,7 @@ class VPNHandler:
         """
         return file_operations.read_file(FILE_NAMES.VPN_IP_FILE)
 
-    def check_vpn_client_state(self) -> tuple[bool, bool]:
+    def _check_vpn_client_state(self) -> tuple[bool, bool]:
         """
         Looks for the VPN Client container
         Returns: a tuple where the first boolean indicates the client existence and the second whether it is running
@@ -227,7 +190,7 @@ class VPNHandler:
             exists = False
         return exists, running
 
-    def wait_certificates_ready(self, timeout: int = 25):
+    def _wait_certificates_ready(self, timeout: int = 25):
         """
         Waits for generated certificates to be ready.
         Args:
@@ -240,7 +203,7 @@ class VPNHandler:
 
         while time.perf_counter() - start_time < timeout:
 
-            if self.certificates_exists():
+            if self._certificates_exists():
                 return
             time.sleep(0.3)
 
@@ -248,7 +211,7 @@ class VPNHandler:
                            f"KEY: {self.VPN_KEY_FILE} \n"
                            f"CSR: {self.VPN_CSR_FILE}")
 
-    def wait_credential_creation(self, timeout: int = 25):
+    def _wait_credential_creation(self, timeout: int = 25):
         """
         Waits for the creation of VPN credentials in Nuvla for a given timeout period.
 
@@ -266,14 +229,14 @@ class VPNHandler:
             if self.nuvla_client.vpn_credential is not None:
                 self.vpn_credential = self.nuvla_client.vpn_credential.model_copy(deep=True)
                 logger.info("VPN credential created in Nuvla")
-                self.save_credential()
+                self._save_credential()
                 return True
             time.sleep(0.1)
 
         logger.info(f"VPN credential not created in time with timeout {timeout}")
         return False
 
-    def generate_certificates(self, wait: bool = True):
+    def _generate_certificates(self, wait: bool = True):
         """
         This method generates new VPN certificates using OpenSSL, and it also removes any existing certificates.
 
@@ -310,9 +273,9 @@ class VPNHandler:
 
         if wait:
             logger.info("Waiting for the certificates to appear")
-            self.wait_certificates_ready()
+            self._wait_certificates_ready()
 
-    def trigger_commission(self):
+    def _trigger_commission(self):
         """
         Commissioning operation is always executed by the Commissioner class.
         Calling this method, we change the commission payload, thus we trigger the commission in the next process.
@@ -324,7 +287,7 @@ class VPNHandler:
         logger.info(f"Triggering commission with VPN Data: {vpn_data}")
         self.vpn_channel.put(vpn_data)
 
-    def vpn_needs_commission(self):
+    def _vpn_needs_commission(self):
         """
         Checks if a Virtual Private Network (VPN) needs commissioning. There are several conditions that cause
         this method to return True, indicating that commissioning is needed:
@@ -369,7 +332,7 @@ class VPNHandler:
 
         return False
 
-    def get_vpn_key(self) -> str | None:
+    def _get_vpn_key(self) -> str | None:
         """
         Retrieves the VPN key from the VPN key file.
 
@@ -379,7 +342,7 @@ class VPNHandler:
         """
         return file_operations.read_file(self.VPN_KEY_FILE)
 
-    def map_endpoints(self) -> str:
+    def _map_endpoints(self) -> str:
         """
         Maps VPN connection endpoints to a string representation of VPN configuration endpoints.
 
@@ -396,7 +359,7 @@ class VPNHandler:
                     connection["protocol"])
         return vpn_conf_endpoints
 
-    def configure_vpn_client(self):
+    def _configure_vpn_client(self):
         """
         Configures the VPN client by updating the VPN server data and credentials.
 
@@ -453,14 +416,14 @@ class VPNHandler:
 
         temp_ca = self.vpn_server.vpn_intermediate_ca
         self.vpn_config.vpn_intermediate_ca_is = temp_ca
-        self.vpn_config.nuvlaedge_vpn_key = self.get_vpn_key()
-        self.vpn_config.vpn_endpoints_mapped = self.map_endpoints()
+        self.vpn_config.nuvlaedge_vpn_key = self._get_vpn_key()
+        self.vpn_config.vpn_endpoints_mapped = self._map_endpoints()
 
         # Then save the configuration
         vpn_client_configuration: str = (
             string.Template(util.VPN_CONFIG_TEMPLATE).substitute(self.vpn_config.dump_to_template()))
 
-        self.save_vpn_config(vpn_client_configuration)
+        self._save_vpn_config(vpn_client_configuration)
 
     def run(self):
         """
@@ -480,14 +443,14 @@ class VPNHandler:
             logger.error("VPN is disabled, we should have not reached this point, exiting VPN handler")
             raise WorkerExitException("VPN handler needs a NuvlaEdge with VPN Enabled ")
 
-        vpn_client_exists, _ = self.check_vpn_client_state()
+        vpn_client_exists, _ = self._check_vpn_client_state()
         if not vpn_client_exists:
             logger.error("VPN Client container doesn't exist, this means that it has been disabled in the installation"
                          "process. However, it was activated during NuvlaEdge creation.")
             raise VPNConfigurationMissmatch("VPN client is not running although the VPN was enabled when creating the "
                                             "NuvlaEdge, cannot run...")
 
-        if not self.vpn_needs_commission():
+        if not self._vpn_needs_commission():
             logger.info("VPN credentials aligned. No need for commissioning")
             return
 
@@ -495,48 +458,48 @@ class VPNHandler:
 
         # Generate SSL certificates
         logger.info("Request SSL certificate generation")
-        self.generate_certificates()
+        self._generate_certificates()
 
         logger.info("Conform the certificate sign request and send it to Nuvla via commissioning")
-        self.trigger_commission()
+        self._trigger_commission()
 
         # Wait for VPN credential to show up in Nuvla (Timeout needs to be commissioner_period + sometime
-        if not self.wait_credential_creation(timeout=60+15):
+        if not self._wait_credential_creation(timeout=60 + 15):
             logger.info("VPN credential wasn't created in time. Cannot start the VPN client. Will try in the next"
                         "iteration")
             # VPN credential wasn't created in time. Do not continue
             raise VPNCredentialCreationTimeOut("VPN credential wasn't created in time. Cannot start the VPN client")
 
         # Then we need to (re)configure the VPN client
-        self.configure_vpn_client()
+        self._configure_vpn_client()
 
-    def load_credential(self):
+    def _load_credential(self):
         credential = file_operations.read_file(file=self.VPN_CREDENTIAL_FILE, decode_json=True)
         if credential:
             self.vpn_credential = CredentialResource.model_validate(credential)
         else:
             self.vpn_credential = CredentialResource()
 
-    def save_credential(self):
+    def _save_credential(self):
         file_operations.write_file(self.nuvla_client.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)
 
-    def load_vpn_config(self):
+    def _load_vpn_config(self):
         config = file_operations.read_file(self.VPN_CONF_FILE, decode_json=True)
         if config:
             self.vpn_config = VPNConfig.model_validate(config)
         else:
             self.vpn_config = VPNConfig()
 
-    def save_vpn_config(self, vpn_client_conf: str):
+    def _save_vpn_config(self, vpn_client_conf: str):
         file_operations.write_file(self.vpn_config, self.VPN_PLAIN_CONF_FILE, exclude_none=True, by_alias=True)
         file_operations.write_file(vpn_client_conf, self.VPN_CONF_FILE)
 
-    def load_vpn_server(self):
+    def _load_vpn_server(self):
         _server = file_operations.read_file(self.VPN_SERVER_FILE, decode_json=True)
         if _server:
             self.vpn_server = InfrastructureServiceResource.model_validate(_server)
         else:
             self.vpn_server = InfrastructureServiceResource()
 
-    def save_vpn_server(self):
+    def _save_vpn_server(self):
         file_operations.write_file(self.vpn_server, self.VPN_SERVER_FILE, exclude_none=True, by_alias=True)

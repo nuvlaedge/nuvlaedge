@@ -44,13 +44,13 @@ class TestWorker(TestCase):
             return "mock_callable"
         self.test_worker.callable_actions = []
         self.mock_type.return_value.mock_action = mock_callable
-        self.test_worker.init_actions()
+        self.test_worker._init_actions()
         self.assertEqual(self.test_worker.callable_actions, [mock_callable])
 
         self.test_worker.callable_actions = []
         self.mock_type.return_value.mock_action = "notacallable"
         with patch('nuvlaedge.agent.worker.logging.Logger.warning') as mock_warning:
-            self.test_worker.init_actions()
+            self.test_worker._init_actions()
             mock_warning.assert_called_once()
             self.assertEqual(self.test_worker.callable_actions, [])
 
@@ -58,25 +58,25 @@ class TestWorker(TestCase):
     def test_init_thread(self, mock_thread):
         mock_start = Mock()
         mock_thread.return_value = mock_start
-        self.test_worker.init_thread()
+        self.test_worker._init_thread()
         mock_thread.assert_called_once_with(target=self.test_worker.run, daemon=True)
         mock_start.start.assert_called_once()
 
     def test_process_exception(self):
         mock_ex = Mock(spec=Exception)
-        self.test_worker.process_exception(mock_ex)
+        self.test_worker._process_exception(mock_ex)
         self.assertEqual(self.test_worker.error_count, 1)
         self.assertEqual(self.test_worker.exceptions, [mock_ex])
 
         self.test_worker.error_count = 10
         self.test_worker.exceptions = []
         with self.assertRaises(ExceptionGroup):
-            self.test_worker.process_exception(Exception())
+            self.test_worker._process_exception(Exception())
 
         self.test_worker.error_count = 0
         self.test_worker.exceptions = []
         with self.assertRaises(ExceptionGroup):
-            self.test_worker.process_exception(WorkerExitException(), is_exit=True)
+            self.test_worker._process_exception(WorkerExitException(), is_exit=True)
 
     @patch.object(threading.Event, 'set')
     def test_stop(self, mock_set):
@@ -85,7 +85,7 @@ class TestWorker(TestCase):
         self.mock_thread.join.assert_called_once()
 
     @patch('nuvlaedge.agent.worker.logging.Logger.info')
-    @patch('nuvlaedge.agent.worker.Worker.init_thread')
+    @patch('nuvlaedge.agent.worker.Worker._init_thread')
     def test_start(self, mock_init_th, mock_info):
         self.test_worker.start()
         mock_init_th.assert_called_once()
@@ -93,17 +93,17 @@ class TestWorker(TestCase):
 
     def test_reset_worker(self):
         self.mock_type.reset_mock()
-        self.test_worker.reset_worker()
+        self.test_worker._reset_worker()
         self.mock_type.assert_called_once()
         self.mock_type.reset_mock()
 
         test_params = ((), {'mock_key': 'mock_value'})
-        self.test_worker.reset_worker(test_params)
+        self.test_worker._reset_worker(test_params)
         self.assertEqual(self.test_worker.class_init_parameters, test_params)
         self.mock_type.assert_called_once_with(*test_params[0], **test_params[1])
 
-    @patch('nuvlaedge.agent.worker.Worker.init_thread')
-    @patch('nuvlaedge.agent.worker.Worker.process_exception')
+    @patch('nuvlaedge.agent.worker.Worker._init_thread')
+    @patch('nuvlaedge.agent.worker.Worker._process_exception')
     def test_run(self, mock_process, mock_init_th):
         mock_callable = Mock()
         mock_callable.__name__ = 'mock_callable'

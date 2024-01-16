@@ -93,11 +93,11 @@ class Commissioner:
         self._current_payload: CommissioningAttributes = CommissioningAttributes()
 
         # Find the commissioning file and load it as _last_payload if exists
-        self.load_previous_commission()
+        self._load_previous_commission()
 
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'commissioner')
 
-    def commission(self):
+    def _commission(self):
         logger.info(f"Commissioning NuvlaEdge with data:"
                     f" {self._current_payload.model_dump(mode='json', exclude_none=True, by_alias=True)}")
 
@@ -110,13 +110,13 @@ class Commissioner:
                                                                                  by_alias=True,
                                                                                  include=new_fields)):
             self._last_payload = self._current_payload.model_copy(deep=True)
-            self.save_commissioned_data()
+            self._save_commissioned_data()
 
     @property
     def nuvlaedge_uuid(self) -> NuvlaID:
         return self.nuvla_client.nuvlaedge_uuid
 
-    def update_cluster_data(self):
+    def _update_cluster_data(self):
         """
         Updates fields if available:
             'cluster-id'
@@ -138,7 +138,7 @@ class Commissioner:
         # Current implementation requires not to commission cluster data until nuvlaedge-status has been updated with
         # node-id. Why not node-id here? Mysteries of life...
 
-    def update_coe_data(self):
+    def _update_coe_data(self):
         """
         Gather Infrastructure service information
 
@@ -155,7 +155,7 @@ class Commissioner:
         - kubernetes-client-cert
         - kubernetes-client-key
         """
-        nuvlaedge_endpoint = self.build_nuvlaedge_endpoint()
+        nuvlaedge_endpoint = self._build_nuvlaedge_endpoint()
         tls_keys = self.get_tls_keys()
         nuvla_infra_service = self.coe_client.define_nuvla_infra_service(nuvlaedge_endpoint, *tls_keys)
         logger.info(f"Updating COE data: {json.dumps(nuvla_infra_service, indent=4)}")
@@ -169,7 +169,7 @@ class Commissioner:
             self._current_payload.swarm_token_manager = manager_token
             self._current_payload.swarm_token_worker = worker_token
 
-    def update_attributes(self):
+    def _update_attributes(self):
         """
 
         This method updates the attributes of the object based on the current status of the Nuvla Box
@@ -186,12 +186,12 @@ class Commissioner:
         """
         if self.nuvla_client.nuvlaedge_status.node_id:
             logger.info("Updating Cluster data, node id present in NuvlaEdge-status")
-            self.update_cluster_data()
+            self._update_cluster_data()
         else:
             logger.info(f"Nuvlabox-status still not ready. It should be updated in a bit...")
 
         self._current_payload.capabilities = self.get_nuvlaedge_capabilities()
-        self.update_coe_data()
+        self._update_coe_data()
 
     def run(self):
         """
@@ -203,7 +203,7 @@ class Commissioner:
         logger.info("Running Commissioning checks")
         NuvlaEdgeStatusHandler.running(self.status_channel, 'commissioner')
 
-        self.update_attributes()
+        self._update_attributes()
         if not self.vpn_channel.empty():
             logger.info("Retrieving certificate sign requests from VPN")
             vpn_csr = self.vpn_channel.get(block=False)
@@ -216,7 +216,7 @@ class Commissioner:
             logger.info("Payloads are different, go commission")
             logger.info(f"Last Payload: \n {json.dumps(sorted(self._last_payload.model_dump(exclude_none=True)),indent=4)}")
             logger.info(f"Current Payload: \n {json.dumps(sorted(self._current_payload.model_dump(exclude_none=True)), indent=4)}")
-            self.commission()
+            self._commission()
 
             # VPN CSR needs to be removed after commissioning from last payload. TODO: Maybe not...
             # self._last_payload.vpn_csr = None
@@ -254,7 +254,7 @@ class Commissioner:
 
         return client_ca, client_cert, client_key
 
-    def build_nuvlaedge_endpoint(self) -> str | None:
+    def _build_nuvlaedge_endpoint(self) -> str | None:
         """
         Based on the available information, builds the NuvlaEdge endpoint. After the rework of the heartbeat and
         first removal of the ComputeAPI, this starts to not make sense.
@@ -275,9 +275,9 @@ class Commissioner:
 
         return None
 
-    def load_previous_commission(self) -> None:
+    def _load_previous_commission(self) -> None:
         """
-        Method to load previous commissioning data from a file.
+        Load previous commissioning data from a file.
 
         """
         if not file_exists_and_not_empty(self.COMMISSIONING_FILE):
@@ -300,7 +300,7 @@ class Commissioner:
             except json.JSONDecodeError:
                 logger.warning("Error decoding previous commission")
 
-    def save_commissioned_data(self) -> None:
+    def _save_commissioned_data(self) -> None:
         try:
             with self.COMMISSIONING_FILE.open('w') as f:
                 data = self._last_payload.model_dump(exclude_none=True, by_alias=True)

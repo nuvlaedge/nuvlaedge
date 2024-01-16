@@ -70,9 +70,9 @@ class Worker:
         self.run_thread: Thread | None = None
         self.error_count: int = 0
         self.exceptions: list[Exception] = []
-        self.init_actions()
+        self._init_actions()
 
-    def init_actions(self):
+    def _init_actions(self):
         """
         Initializes the actions for the worker.
 
@@ -90,7 +90,7 @@ class Worker:
                 continue
             self.callable_actions.append(c)
 
-    def init_thread(self):
+    def _init_thread(self):
         """
             Initializes and starts a new thread to execute the `run` method.
 
@@ -106,7 +106,7 @@ class Worker:
         self.run_thread = threading.Thread(target=self.run, daemon=True)
         self.run_thread.start()
 
-    def process_exception(self, ex: Exception, is_exit: bool = False):
+    def _process_exception(self, ex: Exception, is_exit: bool = False):
         """
         Process an exception that occurred during the worker's execution.
 
@@ -126,7 +126,7 @@ class Worker:
         if self.error_count > 10:
             raise ExceptionGroup(f"Too many errors in {self.worker_name} worker", self.exceptions)
 
-    def reset_worker(self, new_init_params: tuple[tuple, dict] = ()):
+    def _reset_worker(self, new_init_params: tuple[tuple, dict] = ()):
         """
         Resets the worker instance with new initialization parameters.
 
@@ -166,13 +166,13 @@ class Worker:
                     logger.debug(f"Finished {action.__name__} from {self.worker_name}")
                 except WorkerExitException as ex:
                     logger.warning(f"Worker {self.worker_name} exiting: {ex}")
-                    self.process_exception(ex, is_exit=True)
+                    self._process_exception(ex, is_exit=True)
 
                 except Exception as ex:
                     logger.error(f"Error {ex.__class__.__name__} running action {action.__name__} on class "
                                  f"{self.worker_name}", exc_info=True, )
-                    self.process_exception(ex)
-                    self.init_thread()
+                    self._process_exception(ex)
+                    self._init_thread()
 
             ex_time = time.perf_counter() - start_time
             logger.info(f"{self.worker_name} worker actions run  in {ex_time}s, next iteration in "
@@ -197,7 +197,7 @@ class Worker:
         Raises:
             None
         """
-        self.init_thread()
+        self._init_thread()
         logger.info(f"{self.worker_name} worker started")
 
     def stop(self):

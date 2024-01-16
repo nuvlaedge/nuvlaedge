@@ -37,12 +37,12 @@ class TestTelemetry(TestCase):
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
     def test_initialize_monitors(self, mock_get_monitors):
         mock_get_monitors.return_value = Mock()
-        self.test_telemetry.initialize_monitors()
+        self.test_telemetry._initialize_monitors()
         monitor_count = len(self.test_telemetry.monitor_list)
 
         self.test_telemetry.monitor_list = {}
         self.test_telemetry.excluded_monitors = ['power', 'container_stats']
-        self.test_telemetry.initialize_monitors()
+        self.test_telemetry._initialize_monitors()
         self.assertEqual(monitor_count - 2, len(self.test_telemetry.monitor_list))
 
     @patch('nuvlaedge.agent.workers.telemetry.TelemetryPayloadAttributes.update')
@@ -54,7 +54,7 @@ class TestTelemetry(TestCase):
         with patch('nuvlaedge.agent.workers.telemetry.logging.Logger.info') as mock_info:
             self.test_telemetry.monitor_list = {'mock_monitor': mock_monitor}
             mock_monitor.updated = False
-            self.test_telemetry.collect_monitor_metrics()
+            self.test_telemetry._collect_monitor_metrics()
             mock_monitor.populate_nb_report.assert_not_called()
             mock_update.assert_called_once_with({})
             mock_info.assert_called_once_with(f'Data not updated yet in monitor {mock_monitor.name}')
@@ -67,7 +67,7 @@ class TestTelemetry(TestCase):
 
         self.test_telemetry.monitor_list = {'mock_monitor': mock_monitor}
 
-        self.test_telemetry.collect_monitor_metrics()
+        self.test_telemetry._collect_monitor_metrics()
         mock_monitor.populate_nb_report.assert_called_once_with({})
         mock_update.assert_called_once_with({})
 
@@ -77,7 +77,7 @@ class TestTelemetry(TestCase):
         mock_monitor.updated = True
         mock_monitor.populate_nb_report.side_effect = Exception('mock_exception')
         with patch('nuvlaedge.agent.workers.telemetry.logging.Logger.exception') as mock_exception:
-            self.test_telemetry.collect_monitor_metrics()
+            self.test_telemetry._collect_monitor_metrics()
             mock_monitor.populate_nb_report.assert_called_once_with({})
             mock_update.assert_called_once_with({})
             mock_exception.assert_called_once()
@@ -92,19 +92,19 @@ class TestTelemetry(TestCase):
 
         # Test not threaded
         self.test_telemetry.monitor_list = {'mock_monitor': mock_monitor}
-        self.test_telemetry.check_monitors_health()
+        self.test_telemetry._check_monitors_health()
         mock_monitor.run_update_data.assert_called_once()
 
         # Test no creation needed
         mock_monitor.is_thread = True
         mock_is_thread_creation_needed.return_value = False
-        self.test_telemetry.check_monitors_health()
+        self.test_telemetry._check_monitors_health()
         mock_get_monitor.assert_not_called()
 
         # Test threaded and creation needed
         mock_is_thread_creation_needed.return_value = True
         mock_get_monitor.return_value = mock_monitor
-        self.test_telemetry.check_monitors_health()
+        self.test_telemetry._check_monitors_health()
         mock_get_monitor.assert_called_once_with('mock_monitor')
         mock_monitor.assert_called_once_with('mock_monitor', self.test_telemetry, True)
 
@@ -113,13 +113,13 @@ class TestTelemetry(TestCase):
         test_data.operating_system = "Test_OS"
 
         self.test_telemetry.edge_status.nuvlaedge_info = test_data
-        self.test_telemetry.sync_status_to_telemetry()
+        self.test_telemetry._sync_status_to_telemetry()
         self.assertEqual(self.test_telemetry._local_telemetry.operating_system, test_data.operating_system)
 
     @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.running')
-    @patch('nuvlaedge.agent.workers.telemetry.Telemetry.sync_status_to_telemetry')
-    @patch('nuvlaedge.agent.workers.telemetry.Telemetry.check_monitors_health')
-    @patch('nuvlaedge.agent.workers.telemetry.Telemetry.collect_monitor_metrics')
+    @patch('nuvlaedge.agent.workers.telemetry.Telemetry._sync_status_to_telemetry')
+    @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')
+    @patch('nuvlaedge.agent.workers.telemetry.Telemetry._collect_monitor_metrics')
     def test_run(self, mock_metrics, mock_health, mock_sync_status, mock_status_handler):
 
         self.mock_report_channel.put.return_value = None

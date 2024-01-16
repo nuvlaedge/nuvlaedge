@@ -24,6 +24,7 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
+import json
 import logging
 import os
 import sys
@@ -78,18 +79,6 @@ class Agent:
         vpn_channel: `Queue` - A channel to manage VPN data.
         status_channel: `Queue` - A channel to handle status reports.
 
-    Methods:
-        __init__(exit_event: `Event`, settings: `AgentSettings`): Initializes an instance of the Agent class.
-        assert_current_state() -> `State`: Asserts the state of NuvlaEdge and initializes NuvlaClientWrapper based on current state.
-        init_workers(): Initializes and registers various workers for the agent.
-        init_actions(): Initializes periodic actions run by the agent.
-        start_agent(): Controls the initialization process of the agent starting from scratch.
-        telemetry() -> `CimiResponse` | None: Gathers the information from the workers and executes the telemetry operation against Nuvla.
-        heartbeat() -> `CimiResponse` | None: Executes the heartbeat operation against Nuvla.
-        process_response(response: `CimiResponse`, operation: str): Processes the response received from an operation.
-        process_jobs(jobs: list[NuvlaID]): Processes a list of jobs.
-        stop(): Signals the agent to exit.
-        run(): Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
     """
     # Periodic actions defaults
     telemetry_period: int = CTE.REFRESH_INTERVAL
@@ -158,7 +147,7 @@ class Agent:
             raise AgentSettingsMissMatch(f"Provided NuvlaEdge UUID {env_uuid} must"
                                          f"match the locally stored. Remove previous installation of NuvlaEdge")
 
-    def assert_current_state(self) -> State:
+    def _assert_current_state(self) -> State:
         """
         This method has two main functions: assert the state of NuvlaEdge and in the process instantiate a
         new object of NuvlaClientWrapper depending on the inputs provided. Scenarios:
@@ -218,7 +207,7 @@ class Agent:
         self._nuvla_client = NuvlaClientWrapper.from_agent_settings(self.settings)
         return State.NEW
 
-    def init_workers(self):
+    def _init_workers(self):
         """
         This method initializes and registers various workers including Commissioner, Telemetry, VPNHandler and others.
         It sets the worker properties such as `period`, `worker_type`, `init_params` and `actions`. The workers are
@@ -232,11 +221,6 @@ class Agent:
         Returns:
             None.
 
-        Raises:
-            Errors raised by worker manager if worker initialization or registration fails.
-
-        Example usage:
-            init_workers()
         """
         logger.info("Registering Commissioner")
         self.worker_manager.add_worker(
@@ -291,43 +275,43 @@ class Agent:
             actions=['run']
         )
 
-    def init_actions(self):
+    def _init_actions(self):
         """
         Initialises the periodic actions to be run by the agent
         Returns:
 
         """
-        """ Add Heartbeat (If server is compatible) """
+        # Add Heartbeat (If server is compatible)
         self.action_handler.add(
             TimedAction(
                 name='heartbeat',
                 period=self.heartbeat_period,
-                action=self.heartbeat,
+                action=self._heartbeat,
                 remaining_time=CTE.HEARTBEAT_INTERVAL
             )
         )
 
-        """ Add telemetry """
+        # Add telemetry
         self.action_handler.add(
             TimedAction(
                 name='telemetry',
                 period=self.telemetry_period,
-                action=self.telemetry,
+                action=self._telemetry,
                 remaining_time=CTE.REFRESH_INTERVAL
             )
         )
 
-        """ Period refreshing action """
+        # Period refreshing action
         self.action_handler.add(
             TimedAction(
                 name='update_period',
                 period=60,
-                action=self.update_periodic_actions,
+                action=self._update_periodic_actions,
                 remaining_time=60
             )
         )
-        """ Status report for Worker Manager """
-        """ Status report for Job Manager """
+        # FUTURE: Status report for Worker Manager
+        # FUTURE: Status report for Job Manager
 
     def start_agent(self):
         """
@@ -339,7 +323,7 @@ class Agent:
         # Run start up process if needed
         logger.info("Initialising Agent...")
 
-        current_state: State = self.assert_current_state()
+        current_state: State = self._assert_current_state()
         logger.info(f"NuvlaEdge initial state {current_state.name}")
 
         match current_state:
@@ -362,11 +346,11 @@ class Agent:
 
         # Before starting up the system and creating actions and workers we can retrieve once from Nuvla the
         # desired period of the actions and adapt the workers in consequence
-        self.update_periodic_actions()
-        self.init_workers()
-        self.init_actions()
+        self._update_periodic_actions()
+        self._init_workers()
+        self._init_actions()
 
-    def gather_status(self, telemetry: TelemetryPayloadAttributes):
+    def _gather_status(self, telemetry: TelemetryPayloadAttributes):
         """ Gathers the status from the workers and stores it in the telemetry payload """
         # Gather the status report
         status, notes = self.status_handler.get_status()
@@ -374,8 +358,8 @@ class Agent:
         telemetry.status = status
         telemetry.status_notes = notes
 
-    """ Agent Actions """
-    def update_periodic_actions(self):
+    # Agent Actions
+    def _update_periodic_actions(self):
         logger.info("Executing update_periodic_actions")
 
         # Check telemetry period
@@ -394,7 +378,7 @@ class Agent:
             self.heartbeat_period = self._nuvla_client.nuvlaedge.heartbeat_interval
             self.action_handler.edit_period('heartbeat', self.heartbeat_period)
 
-    def telemetry(self) -> CimiResponse | None:
+    def _telemetry(self) -> CimiResponse | None:
         """
         Gather the information from the workers and executes the telemetry operation against Nuvla
         Returns: List of jobs if Nuvla requests so
@@ -414,7 +398,7 @@ class Agent:
             new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
             logger.info(f"Telemetry retrieved from channel: {new_telemetry.model_dump_json(indent=4)}")
         # Gather the status report
-        self.gather_status(new_telemetry)
+        self._gather_status(new_telemetry)
 
         # Calculate the difference from the latest telemetry sent and the new data to reduce package size
         to_send, to_delete = model_diff(self.telemetry_payload, new_telemetry)
@@ -429,12 +413,13 @@ class Agent:
         # If telemetry is successful save telemetry
         if response and response.data:
             logger.info("Storing sent data on telemetry")
+            logger.info(f"Data on telemetry operation response: {json.dumps(response.data, indent=4)}")
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
             write_file(self.telemetry_payload, FILE_NAMES.NUVLAEDGE_STATUS_FILE)
 
         return response
 
-    def heartbeat(self) -> CimiResponse | None:
+    def _heartbeat(self) -> CimiResponse | None:
         """
         Executes the heartbeat operation against Nuvla
         Returns: List of jobs if Nuvla Requests so
@@ -452,7 +437,7 @@ class Agent:
 
         return self._nuvla_client.heartbeat()
 
-    def process_response(self, response: CimiResponse, operation: str):
+    def _process_response(self, response: CimiResponse, operation: str):
         """
         Processes the response received from an operation.
 
@@ -465,11 +450,11 @@ class Agent:
         jobs = response.data.get('jobs', [])
         logger.info(f"{len(jobs)} jobs received from operation: {operation}")
         if jobs:
-            self.process_jobs([NuvlaID(j) for j in jobs])
+            self._process_jobs([NuvlaID(j) for j in jobs])
 
         logger.info(f"Jobs Response process finished in {time.perf_counter() - start_time}")
 
-    def process_jobs(self, jobs: list[NuvlaID]):
+    def _process_jobs(self, jobs: list[NuvlaID]):
         """
         Process a list of jobs.
 
@@ -519,7 +504,7 @@ class Agent:
             response = next_action()
 
             if response:
-                self.process_response(response, next_action.name)
+                self._process_response(response, next_action.name)
 
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle

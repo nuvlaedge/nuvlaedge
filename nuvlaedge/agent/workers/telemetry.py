@@ -149,7 +149,8 @@ class Telemetry:
                  nuvlaedge_uuid: NuvlaID,
                  excluded_monitors):
         """
-        Initializes the Telemetry object with the given parameters.
+        Initializes the Telemetry object with the given parameters. It is also in charge of initialising the child
+         sub-monitors
 
         Args:
             coe_client (COEClient): The COEClient object for interacting with the COE API.
@@ -163,19 +164,19 @@ class Telemetry:
         self.coe_client = coe_client
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
 
-        """ Local variable to track changes on the telemetry """
+        # Local variable to track changes on the telemetry
         self._local_telemetry: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
 
-        """ Channel to communicate with the Agent"""
+        # Channel to communicate with the Agent
         self.report_channel: Queue[TelemetryPayloadAttributes] = report_channel
 
-        """ Channel to report status """
+        # Channel to report status
         self.status_channel: Queue[StatusReport] = status_channel
 
-        """ Data variable where the monitors dump their readings """
+        # Data variable where the monitors dump their readings
         self.edge_status: EdgeStatus = EdgeStatus()
 
-        """ Monitors modular system initialisation """
+        # Monitors modular system initialisation
         self.excluded_monitors: list[str] = excluded_monitors.replace("'", "").split(',') if excluded_monitors else []
         logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
         self.monitor_list: dict[str, Monitor] = {}

@@ -14,12 +14,7 @@ env
 if [ ! -z $SET_MULTIPLE ]
 then
     echo "We are in the multiple NE mode..."
-    # therefore need to add namespace to the CSR?
-    # and CRB naming
-    # below should pick off the namespace string...
     UUID=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
-    # if not successful, generate a random string
-
     echo "The UUID string got set to: ${UUID}"
     CSR_NAME=${CSR_NAME}-${UUID}
     SYNC_FILE=".${UUID}.tls"

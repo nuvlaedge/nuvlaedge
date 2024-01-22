@@ -9,7 +9,6 @@ CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
 
 echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
-env
 
 if [ ! -z $SET_MULTIPLE ]
 then

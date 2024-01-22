@@ -17,17 +17,13 @@ then
     # therefore need to add namespace to the CSR?
     # and CRB naming
     # below should pick off the namespace string...
-    NAMESPACE=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
+    UUID=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
     # if not successful, generate a random string
-    if [ -z $NAMESPACE ]
-    then
-        NAMESPACE=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 6; echo)
-        # NAMESPACE="default"
-    fi
-    echo "The namespace string got set to: ${NAMESPACE}"
-    CSR_NAME=${CSR_NAME}-${NAMESPACE}
-    SYNC_FILE=".${NAMESPACE}.tls"
-    CRB_NAME=${USER}-crb-${NAMESPACE}
+
+    echo "The UUID string got set to: ${UUID}"
+    CSR_NAME=${CSR_NAME}-${UUID}
+    SYNC_FILE=".${UUID}.tls"
+    CRB_NAME=${USER}-crb-${UUID}
 else
     CRB_NAME=${USER}-crb
 fi

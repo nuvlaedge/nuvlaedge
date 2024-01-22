@@ -8,6 +8,24 @@ SYNC_FILE=".tls"
 CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"
 
+echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
+
+if [ ! -z $SET_MULTIPLE ]
+then
+    echo "We are in the multiple NE mode..."
+    UUID=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
+    echo "The UUID string got set to: ${UUID}"
+    CSR_NAME=${CSR_NAME}-${UUID}
+    SYNC_FILE=".${UUID}.tls"
+    CRB_NAME=${USER}-crb-${UUID}
+else
+    CRB_NAME=${USER}-crb
+fi
+
+echo "The sync file is set to: $SYNC_FILE"                                         
+echo "The certificate siging request (CSR) is set to ${CSR_NAME}"  
+echo "The cluster role binding name (CRB) is set to ${CRB_NAME}"  
+
 is_cred_valid() {
   CRED_PATH=${1}
 
@@ -89,7 +107,7 @@ done'
   if is_cred_valid .
   then
     cp ca.pem cert.pem key.pem ${SHARED}
-    echo date > ${SHARED}/${SYNC_FILE}
+    echo `date +%s` > ${SHARED}/${SYNC_FILE}
     echo "INFO: Success. Generated new valid credentials: \n$(ls -al ${SHARED}/*.pem ${SHARED}/${SYNC_FILE})"
   else
     echo "ERROR: Generated credentials are not valid."
@@ -102,7 +120,7 @@ done'
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
- name: ${USER}-cluster-role-binding
+ name: ${CRB_NAME}
  labels:
     nuvlaedge.component: "True"
     nuvlaedge.deployment: "production"

@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import Field, field_validator, model_validator
 
 from nuvlaedge.agent.common.util import extract_nuvlaedge_version
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 
 

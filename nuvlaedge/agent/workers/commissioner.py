@@ -14,8 +14,8 @@ from typing import Optional
 
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
-from nuvlaedge.agent.workers.telemetry import model_diff
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.models import model_diff
+from nuvlaedge.agent.nuvla.resources import NuvlaID, State
 from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
@@ -72,20 +72,16 @@ class Commissioner:
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
-                 status_channel: Queue[StatusReport],
-                 vpn_channel: Queue[str]):
-        """
-
+                 status_channel: Queue[StatusReport]):
+        """ Constructor
         Args:
-            coe_client: Common container orchestration engine (Shared amongst all Agent components)
-            nuvla_client: NuvlaEdgeClientWrapper shared in the agent (Only for retrival and commission)
-            commission_payload: This is a shared variable between commissioner and VPN handler. VPN handler should only
-                edit vpn_csr. The rest is handled by this class
+            coe_client (COEClient): Client to interact with the container orchestration engine
+            nuvla_client (NuvlaClientWrapper): Client to interact with Nuvla
+            status_channel (Queue[StatusReport]): Channel to send status updates
         """
 
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
-        self.vpn_channel: Queue[str] = vpn_channel
         self.status_channel: Queue[StatusReport] = status_channel
 
         self._last_payload: CommissioningAttributes = CommissioningAttributes()
@@ -98,6 +94,7 @@ class Commissioner:
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'commissioner')
 
     def _commission(self):
+        """ Executes the commissioning operation """
         logger.info(f"Commissioning NuvlaEdge with data:"
                     f" {self._current_payload.model_dump(mode='json', exclude_none=True, by_alias=True)}")
 
@@ -107,6 +104,7 @@ class Commissioner:
         logger.info("Removed fields:\n {}".format(removed_fields))
 
         if self.nuvla_client.commission(payload=self._current_payload.model_dump(exclude_none=True,
+                                                                                 exclude={'vpn_csr'},
                                                                                  by_alias=True,
                                                                                  include=new_fields)):
             self._last_payload = self._current_payload.model_copy(deep=True)
@@ -126,8 +124,8 @@ class Commissioner:
         Returns: None
         """
         cluster_info = self.coe_client.get_cluster_info(
-            default_cluster_name=f"cluster_{self.nuvlaedge_uuid}"
-        )
+            default_cluster_name=f"cluster_{self.nuvlaedge_uuid}")
+
         logger.debug(f"Newly gathered cluster information: {json.dumps(cluster_info, indent=4)}")
 
         if cluster_info:
@@ -203,13 +201,8 @@ class Commissioner:
         logger.info("Running Commissioning checks")
         NuvlaEdgeStatusHandler.running(self.status_channel, 'commissioner')
 
+        # Read the current status of the device and update the attributes
         self._update_attributes()
-        if not self.vpn_channel.empty():
-            logger.info("Retrieving certificate sign requests from VPN")
-            vpn_csr = self.vpn_channel.get(block=False)
-
-            logger.info(f"Data received from VPN: {vpn_csr}")
-            self._current_payload.vpn_csr = vpn_csr
 
         # Compare what have been sent to Nuvla (_last_payload) and whatis locally updated (_current_payload)
         if self._last_payload != self._current_payload:
@@ -218,9 +211,6 @@ class Commissioner:
             logger.info(f"Current Payload: \n {json.dumps(sorted(self._current_payload.model_dump(exclude_none=True)), indent=4)}")
             self._commission()
 
-            # VPN CSR needs to be removed after commissioning from last payload. TODO: Maybe not...
-            # self._last_payload.vpn_csr = None
-            # self._current_payload.vpn_csr = None
         else:
             logger.info("Nothing to commission, system configuration remains the same.")
 

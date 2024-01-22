@@ -1,5 +1,4 @@
 """
-
 The Agent class is central to the operation of the NuvlaEdge software, responsible for configuration management,
 worker initialization, periodic operation execution, and response handling. Here is a detailed breakdown of the
 responsibilities:
@@ -26,7 +25,6 @@ The WorkerManagerclass supervises worker initialization and operation, whereasAc
 """
 import json
 import logging
-import os
 import sys
 import time
 from queue import Queue
@@ -44,9 +42,9 @@ from nuvlaedge.common.file_operations import file_exists_and_not_empty, write_fi
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
 from nuvlaedge.agent.workers.commissioner import Commissioner
-from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes, Telemetry, model_diff
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.nuvla.resources.nuvlaedge import State
+from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes, Telemetry
+from nuvlaedge.agent.nuvla.resources import NuvlaID
+from nuvlaedge.agent.nuvla.resources import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate
 from nuvlaedge.agent.manager import WorkerManager
 from nuvlaedge.agent.settings import (AgentSettings,
@@ -54,6 +52,7 @@ from nuvlaedge.agent.settings import (AgentSettings,
                                       InsufficientSettingsProvided)
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.models import model_diff
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
@@ -76,7 +75,6 @@ class Agent:
         status_handler: `NuvlaEdgeStatusHandler` - Handles NuvlaEdge status.
         telemetry_payload: `TelemetryPayloadAttributes` - Static objects that collect telemetry data.
         telemetry_channel: `Queue` - A channel to handle telemetry payloads.
-        vpn_channel: `Queue` - A channel to manage VPN data.
         status_channel: `Queue` - A channel to handle status reports.
 
     """
@@ -119,8 +117,6 @@ class Agent:
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
         # Telemetry channel connecting the telemetry handler and the agent
         self.telemetry_channel: Queue[TelemetryPayloadAttributes] = Queue(maxsize=10)
-        # VPN channel connecting the VPN handler and the commissioner
-        self.vpn_channel: Queue[str] = Queue(maxsize=10)
         # Status channel connecting any module and the status handler
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
@@ -229,10 +225,9 @@ class Agent:
             init_params=((), {'coe_client': self._coe_engine,
                               'nuvla_client': self._nuvla_client,
                               'status_channel': self.status_channel,
-                              'vpn_channel': self.vpn_channel
                               }),
             actions=['run'],
-            initial_delay=1
+            initial_delay=3
         )
 
         """ Initialise Telemetry """
@@ -246,7 +241,8 @@ class Agent:
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors
                               }),
-            actions=['run']
+            actions=['run'],
+            initial_delay=8
         )
 
         """ Initialise VPN Handler """
@@ -259,9 +255,9 @@ class Agent:
                 init_params=((), {'coe_client': self._coe_engine,
                                   'status_channel': self.status_channel,
                                   'nuvla_client': self._nuvla_client,
-                                  'vpn_channel': self.vpn_channel,
                                   'vpn_extra_conf': self.settings.vpn_config_extra}),
-                actions=['run']
+                actions=['run'],
+                initial_delay=10
             )
 
         """ Initialise Peripheral Manager """
@@ -272,7 +268,8 @@ class Agent:
             init_params=((), {'nuvla_client': self._nuvla_client.nuvlaedge_client,
                               'status_channel': self.status_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid}),
-            actions=['run']
+            actions=['run'],
+            initial_delay=30
         )
 
     def _init_actions(self):
@@ -378,7 +375,7 @@ class Agent:
             self.heartbeat_period = self._nuvla_client.nuvlaedge.heartbeat_interval
             self.action_handler.edit_period('heartbeat', self.heartbeat_period)
 
-    def _telemetry(self) -> CimiResponse | None:
+    def _telemetry(self) -> dict | None:
         """
         Gather the information from the workers and executes the telemetry operation against Nuvla
         Returns: List of jobs if Nuvla requests so
@@ -408,18 +405,18 @@ class Agent:
         logger.debug(f"Sending telemetry data to Nuvla \n "
                      f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
 
-        response: CimiResponse = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
+        response: dict = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
 
         # If telemetry is successful save telemetry
-        if response and response.data:
+        if response:
             logger.info("Storing sent data on telemetry")
-            logger.info(f"Data on telemetry operation response: {json.dumps(response.data, indent=4)}")
+            logger.info(f"Data on telemetry operation response: {json.dumps(response, indent=4)}")
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
             write_file(self.telemetry_payload, FILE_NAMES.NUVLAEDGE_STATUS_FILE)
 
         return response
 
-    def _heartbeat(self) -> CimiResponse | None:
+    def _heartbeat(self) -> dict | None:
         """
         Executes the heartbeat operation against Nuvla
         Returns: List of jobs if Nuvla Requests so
@@ -437,7 +434,7 @@ class Agent:
 
         return self._nuvla_client.heartbeat()
 
-    def _process_response(self, response: CimiResponse, operation: str):
+    def _process_response(self, response: dict, operation: str):
         """
         Processes the response received from an operation.
 
@@ -447,7 +444,7 @@ class Agent:
 
         """
         start_time: float = time.perf_counter()
-        jobs = response.data.get('jobs', [])
+        jobs = response.get('jobs', [])
         logger.info(f"{len(jobs)} jobs received from operation: {operation}")
         if jobs:
             self._process_jobs([NuvlaID(j) for j in jobs])

@@ -1,26 +1,26 @@
+import json
 import logging
 import string
 import time
 from pathlib import Path
 from queue import Queue
-from typing import Optional
+from threading import Lock
+from typing import Optional, ClassVar
 
 import docker.errors
+from pydantic import BaseModel
 
-from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
-from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
-from nuvlaedge.agent.nuvla.resources.credential import CredentialResource
 from nuvlaedge.agent.worker import WorkerExitException
-from nuvlaedge.common import file_operations
-from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
+from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource, CredentialResource, NuvlaID, State)
 from nuvlaedge.agent.common import util
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common import file_operations
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
-
+from nuvlaedge.models import are_models_equal
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -34,7 +34,7 @@ class VPNCredentialCreationTimeOut(Exception):
     """ Raised when the VPN credential is not created in time. This makes impossible for the VPN the work"""
 
 
-class VPNConfig(NuvlaEdgeStaticModel):
+class VPNConfig(BaseModel):
     """
     Class that represents the configuration of a VPN.
 
@@ -65,19 +65,30 @@ class VPNConfig(NuvlaEdgeStaticModel):
     vpn_extra_config:       Optional[str] = ''
     vpn_endpoints_mapped:   Optional[str] = None
 
+    update_lock: ClassVar[Lock] = Lock()
+
     def dump_to_template(self) -> dict:
-        temp_model = self.model_dump(exclude_none=True)
+        temp_model = self.model_dump(exclude_none=True, by_alias=False)
         temp_model["vpn_intermediate_ca"] = ' '.join(self.vpn_intermediate_ca)
         temp_model["vpn_intermediate_ca_is"] = ' '.join(self.vpn_intermediate_ca_is)
         return temp_model
+
+    def update(self, data: BaseModel):
+        dict_data = data.model_dump(exclude_none=True, by_alias=False)
+        for k, v in dict_data.items():
+            if hasattr(self, k):
+                with self.update_lock:
+                    self.__setattr__(k, v)
 
 
 class VPNHandler:
     """
     VPNHandler
     ----------
-    Controls and configures the VPN client based on configuration parsed by the agent. It commissions itself via the commissioner class by editing the field `self.commission_payload.vpn
-    *_csr`. If this object is instantiated and then running, we assume VPN is enabled. It should be the agent (via configuration) who starts/stops/disables the VPN.
+    Controls and configures the VPN client based on configuration parsed by the agent. It commissions itself via the
+     commissioner class by editing the field `self.commission_payload.vpn
+    *_csr`. If this object is instantiated and then running, we assume VPN is enabled. It should be the agent
+     (via configuration) who starts/stops/disables the VPN.
 
     Attributes:
         VPN_FOLDER (Path): Path to the VPN folder
@@ -89,11 +100,6 @@ class VPNHandler:
         VPN_SERVER_FILE (Path): Path to the VPN server file
         VPN_INTERFACE_NAME (str): Name of the VPN interface
 
-    Args:
-        coe_client (COEClient): Instance of COEClient class
-        nuvla_client (NuvlaClientWrapper): Instance of NuvlaClientWrapper class
-        vpn_channel (Queue[str]): Channel where the VPN CSR is sent to the commissioner to be included in the commissioning
-        vpn_extra_conf (str): Extra VPN configuration
     """
     VPN_FOLDER: Path = FILE_NAMES.VPN_FOLDER
     VPN_CSR_FILE: Path = FILE_NAMES.VPN_CSR_FILE
@@ -107,7 +113,6 @@ class VPNHandler:
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
-                 vpn_channel: Queue[str],
                  status_channel: Queue[StatusReport],
                  vpn_extra_conf: str):
         """
@@ -118,17 +123,18 @@ class VPNHandler:
         configuration) who starts/stops/disables the VPN.
 
         Args:
-            coe_client:
-            nuvla_client:
-            vpn_channel: channel where the VPN CSR is sent to the commissioner to be included in the commissioning
+            coe_client (COEClient): The COE client.
+            nuvla_client (NuvlaClientWrapper): The Nuvla client.
+            status_channel (Queue[StatusReport]): The status channel.
+            vpn_extra_conf (str): Additional configuration for the VPN.
         """
+
         logger.info("Creating VPN handler object")
 
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
 
         # Shared static commission payload. Only vpn-csr field shall be edited by this class
-        self.vpn_channel: Queue[str] = vpn_channel
         self.status_channel: Queue[StatusReport] = status_channel
 
         # VPN Server ID variables
@@ -141,8 +147,7 @@ class VPNHandler:
         self.vpn_extra_conf: str = vpn_extra_conf
 
         # Last VPN credentials used to create the VPN configuration
-        self.vpn_credential: CredentialResource = ...
-        self._load_credential()
+        self.vpn_credential: CredentialResource | None = None
 
         # Last VPN server configuration used to create the client VPN configuration
         self.vpn_server: InfrastructureServiceResource = ...
@@ -171,7 +176,6 @@ class VPNHandler:
 
         Returns:
             str or None: The VPN IP address read from the file, or None if the file is empty or doesn't exist.
-
 
         """
         return file_operations.read_file(FILE_NAMES.VPN_IP_FILE)
@@ -204,6 +208,7 @@ class VPNHandler:
         while time.perf_counter() - start_time < timeout:
 
             if self._certificates_exists():
+                logger.info("Certificates ready")
                 return
             time.sleep(0.3)
 
@@ -225,13 +230,12 @@ class VPNHandler:
         start_time: float = time.perf_counter()
 
         while time.perf_counter() - start_time < timeout:
-
-            if self.nuvla_client.vpn_credential is not None:
-                self.vpn_credential = self.nuvla_client.vpn_credential.model_copy(deep=True)
+            if self.nuvla_client.vpn_credential.vpn_certificate is not None:
+                self.vpn_credential = self.nuvla_client.vpn_credential.model_copy()
                 logger.info("VPN credential created in Nuvla")
                 self._save_credential()
                 return True
-            time.sleep(0.1)
+            time.sleep(1)
 
         logger.info(f"VPN credential not created in time with timeout {timeout}")
         return False
@@ -284,14 +288,39 @@ class VPNHandler:
 
         """
         vpn_data = file_operations.read_file(self.VPN_CSR_FILE)
-        logger.info(f"Triggering commission with VPN Data: {vpn_data}")
-        self.vpn_channel.put(vpn_data)
+        logger.debug(f"Triggering commission with VPN Data: {vpn_data}")
+
+        vpn_payload: dict = {'vpn-csr': vpn_data}
+        logger.debug(f"Commissioning VPN with payload: {json.dumps(vpn_payload, indent=4)}")
+
+        commission_response: dict = self.nuvla_client.commission(vpn_payload)
+        if not commission_response:
+            logger.error("Error commissioning VPN.")
+            NuvlaEdgeStatusHandler.failing(self.status_channel,
+                                           'VPNHandler',
+                                           "Error commissioning VPN. Will retry in 60s")
+        else:
+            logger.info("Successfully commissioned VPN.")
+            NuvlaEdgeStatusHandler.starting(self.status_channel, 'VPNHandler')
+
+        logger.debug(f"Commission response: {json.dumps(commission_response, indent=4)}")
+
+    def _is_nuvlaedge_commissioned(self) -> bool:
+        """
+        Checks if the NuvlaEdge is commissioned.
+
+        Returns:
+            bool: True if the NuvlaEdge is commissioned, False otherwise.
+
+        """
+        return self.nuvla_client.nuvlaedge.state == State.COMMISSIONED
 
     def _vpn_needs_commission(self):
         """
         Checks if a Virtual Private Network (VPN) needs commissioning. There are several conditions that cause
         this method to return True, indicating that commissioning is needed:
 
+        0. If NuvlaEdge is not on COMMISSION
         1. If no VPN credential exists in the Nuvla client - This could be caused by a VPN server ID being
            defined, but no VPN credential has been created.
 
@@ -310,24 +339,28 @@ class VPNHandler:
             bool: True if VPN needs commissioning, False otherwise.
 
         """
-        if not self.nuvla_client.vpn_credential:
+        if not self._is_nuvlaedge_commissioned():
+            logger.info(f"Cannot commission VPN with NuvlaEdge in state {self.nuvla_client.nuvlaedge.state}")
+            return False
+
+        if not self.nuvla_client.vpn_credential.vpn_certificate:
             # There is a VPN server ID defined but there is no VPN credential created
             logger.info("VPN need commission due to missing VPN credential in Nuvla")
             return True
 
-        if self.vpn_credential != self.nuvla_client.vpn_credential:
+        if not are_models_equal(self.vpn_credential, self.nuvla_client.vpn_credential):
             # There is missmatch between local credential and Nuvla credential
             logger.info("VPN needs commission due to missmatch local VPN credential and Nuvla credential")
-            logger.info(f"Local credential: \n {self.vpn_credential.model_dump_json(indent=True, exclude_none=True)}")
-            logger.info(f"Nuvla credential: \n "
-                        f"{self.nuvla_client.vpn_credential.model_dump_json(indent=4, exclude_none=True)}")
+            logger.debug(f"Local credential: \n {self.vpn_credential.model_dump_json(indent=4, exclude_none=True)}")
+            logger.debug(f"Nuvla credential: \n "
+                         f"{self.nuvla_client.vpn_credential.model_dump_json(indent=4, exclude_none=True)}")
             return True
 
         if self.vpn_server.id != self.nuvla_client.nuvlaedge.vpn_server_id:
             # VPN server ID has changed
             logger.info("VPN needs commission due to change in VPN server ID")
-            logger.info(f"Server ID: \n {self.vpn_server.id}")
-            logger.info(f"Nuvla Server ID: \n {self.nuvla_client.nuvlaedge.vpn_server_id}")
+            logger.debug(f"Server ID: \n {self.vpn_server.id}")
+            logger.debug(f"Nuvla Server ID: \n {self.nuvla_client.nuvlaedge.vpn_server_id}")
             return True
 
         return False
@@ -396,15 +429,16 @@ class VPNHandler:
         and the CA will be automatically replaced.
 
         """
-        # Update VPN server data
+        # Sync local VPN server data with Nuvla VPN server configuration.
         self.vpn_config.update(self.nuvla_client.vpn_server)
+
         # Infrastructure service CA comes with the same key as the VPN credential CA
         # So we need to move it to its corresponding field, then the CA will be automatically
         # replaced
         self.vpn_config.vpn_intermediate_ca_is = self.vpn_server.vpn_intermediate_ca
         logger.debug(f"VPN Configured with VPN Server data \n"
                      f" {self.vpn_config.model_dump_json(indent=4, exclude_none=True)}")
-        self.vpn_server = self.nuvla_client.vpn_server.model_copy(deep=True)
+        self.vpn_server = self.nuvla_client.vpn_server.model_copy()
 
         # Update Credentials data
         self.vpn_config.update(self.vpn_credential)
@@ -433,8 +467,6 @@ class VPNHandler:
             generates new certificates
         - Generates the certificates of the VPN
         - Configures the OpenVPN client running in a different container using VPN_CONF_FILE
-
-        Returns:
 
         """
         NuvlaEdgeStatusHandler.running(self.status_channel, 'VPNHandler')
@@ -473,17 +505,12 @@ class VPNHandler:
         # Then we need to (re)configure the VPN client
         self._configure_vpn_client()
 
-    def _load_credential(self):
-        credential = file_operations.read_file(file=self.VPN_CREDENTIAL_FILE, decode_json=True)
-        if credential:
-            self.vpn_credential = CredentialResource.model_validate(credential)
-        else:
-            self.vpn_credential = CredentialResource()
-
     def _save_credential(self):
+        """ Saves the VPN credential to the file system."""
         file_operations.write_file(self.nuvla_client.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)
 
     def _load_vpn_config(self):
+        """ Loads the VPN configuration from the file system."""
         config = file_operations.read_file(self.VPN_CONF_FILE, decode_json=True)
         if config:
             self.vpn_config = VPNConfig.model_validate(config)
@@ -491,10 +518,16 @@ class VPNHandler:
             self.vpn_config = VPNConfig()
 
     def _save_vpn_config(self, vpn_client_conf: str):
+        """ Saves the VPN configuration to the file system.
+
+        Args:
+            vpn_client_conf (str): The VPN client configuration.
+        """
         file_operations.write_file(self.vpn_config, self.VPN_PLAIN_CONF_FILE, exclude_none=True, by_alias=True)
         file_operations.write_file(vpn_client_conf, self.VPN_CONF_FILE)
 
     def _load_vpn_server(self):
+        """ Loads the VPN server from the file system."""
         _server = file_operations.read_file(self.VPN_SERVER_FILE, decode_json=True)
         if _server:
             self.vpn_server = InfrastructureServiceResource.model_validate(_server)
@@ -502,4 +535,5 @@ class VPNHandler:
             self.vpn_server = InfrastructureServiceResource()
 
     def _save_vpn_server(self):
+        """ Saves the VPN server to the file system."""
         file_operations.write_file(self.vpn_server, self.VPN_SERVER_FILE, exclude_none=True, by_alias=True)

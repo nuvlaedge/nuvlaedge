@@ -35,7 +35,6 @@ class TestVPNHandler(TestCase):
             self.test_vpn_handler = VPNHandler(
                 coe_client=self.mock_coe_client,
                 nuvla_client=self.mock_nuvla_client,
-                vpn_channel=self.mock_vpn_channel,
                 status_channel=self.mock_status_channel,
                 vpn_extra_conf=self.mock_vpn_extra_conf)
 
@@ -47,7 +46,6 @@ class TestVPNHandler(TestCase):
         self.test_vpn_handler = VPNHandler(
             coe_client=self.mock_coe_client,
             nuvla_client=self.mock_nuvla_client,
-            vpn_channel=self.mock_vpn_channel,
             status_channel=self.mock_status_channel,
             vpn_extra_conf=self.mock_vpn_extra_conf)
         mock_mkdir.assert_called_once()
@@ -148,13 +146,25 @@ class TestVPNHandler(TestCase):
             mock_wait_certs.assert_not_called()
 
     @patch('nuvlaedge.agent.workers.vpn_handler.file_operations')
-    def test_trigger_commission(self, mock_fileOps):
+    @patch('nuvlaedge.agent.workers.vpn_handler.NuvlaEdgeStatusHandler')
+    def test_trigger_commission(self, mock_status_handler, mock_fileOps):
         mock_fileOps.read_file.return_value = 'read_data'
-        self.test_vpn_handler._trigger_commission()
-        self.mock_vpn_channel.put.assert_called_with('read_data')
+        self.mock_nuvla_client.commission.return_value = {'vpn_csr': 'read_data'}
+        with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.debug') as mock_debug:
+            self.test_vpn_handler._trigger_commission()
+            self.assertEqual(3, mock_debug.call_count)
 
-    def test_vpn_needs_commission(self):
-        self.mock_nuvla_client.vpn_credential = False
+        self.mock_nuvla_client.commission.return_value = None
+        with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.error') as mock_error:
+            self.test_vpn_handler._trigger_commission()
+            mock_error.assert_called_once_with("Error commissioning VPN.")
+            mock_status_handler.failing.assert_called_once()
+        # self.mock_vpn_channel.put.assert_called_with('read_data')
+
+    @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._is_nuvlaedge_commissioned')
+    def test_vpn_needs_commission(self, mock_is_commissioned):
+        self.mock_nuvla_client.vpn_credential.vpn_certificate = False
+        mock_is_commissioned.return_value = True
         self.assertTrue(self.test_vpn_handler._vpn_needs_commission())
 
         mock_vpn_credential = Mock()

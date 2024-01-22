@@ -154,8 +154,9 @@ class Worker:
         logger.info(f"Entering main loop of {self.worker_name}")
 
         # Initially ex_time container the start delay of each worker. Computed here
-        ex_time: float = float(self.period) - (float(self.period) - self.initial_delay)
+        ex_time: float = float(self.period) - self.initial_delay
 
+        logger.info(f"Initial delay for {self.worker_name} is {self.period-ex_time}s")
         # Start loop of the worker
         while not self.exit_event.wait(self.period - ex_time):
             start_time = time.perf_counter()

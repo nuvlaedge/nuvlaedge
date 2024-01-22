@@ -3,22 +3,9 @@ from unittest import TestCase
 from unittest.mock import Mock, patch
 
 from nuvlaedge.agent.workers.monitor.data.nuvlaedge_data import NuvlaEdgeData
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.workers.telemetry import Telemetry, model_diff, TelemetryPayloadAttributes
+from nuvlaedge.agent.nuvla.resources import NuvlaID
+from nuvlaedge.agent.workers.telemetry import Telemetry
 from nuvlaedge.agent.orchestrator import COEClient
-
-
-def test_model_diff():
-    model_1 = TelemetryPayloadAttributes()
-    model_2 = TelemetryPayloadAttributes()
-
-    assert model_diff(model_1, model_2) == (set(), set())
-
-    model_1.hostname = "my_host"
-    assert model_diff(model_1, model_2) == (set(), {'hostname'})
-
-    model_2.hostname = "my_host_2"
-    assert model_diff(model_1, model_2) == ({'hostname'}, set())
 
 
 class TestTelemetry(TestCase):

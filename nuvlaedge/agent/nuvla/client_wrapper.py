@@ -11,12 +11,16 @@ from nuvla.api import Api as NuvlaApi
 from requests import Response
 
 from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.agent.nuvla.resources.credential import CredentialResource
-from nuvlaedge.agent.nuvla.resources.infrastructure_service import InfrastructureServiceResource
+from nuvlaedge.agent.nuvla.resources import (NuvlaID,
+                                             NuvlaEdgeResource,
+                                             NuvlaEdgeStatusResource,
+                                             CredentialResource,
+                                             InfrastructureServiceResource,
+                                             AutoUpdateNuvlaEdgeTrackedResource,
+                                             AutoNuvlaEdgeResource,
+                                             AutoNuvlaEdgeStatusResource,
+                                             AutoInfrastructureServiceResource)
 from nuvlaedge.agent.settings import AgentSettings
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.nuvla.resources.nuvlaedge import NuvlaEdgeResource
-from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import NuvlaEdgeStatusResource
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.common.file_operations import read_file, write_file
@@ -59,24 +63,20 @@ def format_host(host: str) -> str:
 
 class NuvlaClientWrapper:
     """
-    NuvlaClientWrapper is a class that provides a wrapper around the Nuvla API client for interacting with NuvlaEdge resources.
+    Provides a wrapper around the Nuvla API client for interacting with NuvlaEdge resources.
 
     Attributes:
         MIN_SYNC_TIME (int): The minimum time interval for updating resources (default is 60 seconds)
+        NUVLAEDGE_STATUS_REQUIRED_FIELDS (str):
+        NUVLAEDGE_REQUIRED_FIELDS (str):
+        VPN_CREDENTIAL_FILTER (str): template used to search for the VPN credential within the NuvlaEdge associated
+         credentials
 
         _host (str): The hostname of the Nuvla API server
         _verify (bool): Whether to verify the SSL certificate of the Nuvla API server
         _nuvlaedge_uuid (NuvlaID): The ID of the NuvlaEdge resource
 
-        _nuvlaedge_resource (NuvlaEdgeResource | None): The cached NuvlaEdge resource instance
-        _nuvlaedge_status_resource (NuvlaEdgeStatusResource | None): The cached NuvlaEdge status resource instance
-        _vpn_credential_resource (CredentialResource | None): The cached VPN credential resource instance
-        _vpn_server_resource (InfrastructureServiceResource | None): The cached VPN server resource instance
-
-        _nuvlaedge_sync_time (float): The last time the NuvlaEdge resource was synced
-        _status_sync_time (float): The last time the NuvlaEdge status resource was synced
-        _vpn_credential_time (float): The last time the VPN credential resource was synced
-        _vpn_server_time (float): The last time the VPN server resource was synced
+        _resources (dict[str, any]): A dictionary containing the NuvlaEdge resources handled by the client
 
         nuvlaedge_client (NuvlaApi): The Nuvla API client for interacting with NuvlaEdge resources
 
@@ -88,10 +88,23 @@ class NuvlaClientWrapper:
 
     """
     MIN_SYNC_TIME: int = 60  # Resource min update time
+    FULL_RESOURCE_SYNC_TIME: int = 60*15  # Synchronise the whole resource from Nuvla to prevent errors
+
     NUVLAEDGE_STATUS_REQUIRED_FIELDS: set = {'node-id'}
-    NUVLAEDGE_REQUIRED_FIELDS: set = {'nuvlabox-status',
+    NUVLAEDGE_REQUIRED_FIELDS: set = {'id',
+                                      'state',
+                                      'host-level-management-api-key',
+                                      'nuvlabox-status',
+                                      'refresh-interval',
+                                      'heartbeat-interval'
                                       'infrastructure-service-group',
+                                      'credential-api-key',
+                                      'ssh-keys',
                                       'vpn-server-id'}
+
+    VPN_CREDENTIAL_FILTER: str = ('method="create-credential-vpn-nuvlabox" and '
+                                  'vpn-common-name="{nuvlaedge_uuid}" and '
+                                  'parent="{vpn_server_id}"')
 
     def __init__(self, host: str, verify: bool, nuvlaedge_uuid: NuvlaID):
         """
@@ -106,15 +119,9 @@ class NuvlaClientWrapper:
         self._host: str = format_host(host)
         self._verify: bool = verify
 
-        self._nuvlaedge_resource: NuvlaEdgeResource | None = None  # NuvlaEdgeResource(id=nuvlaedge_uuid)
-        self._nuvlaedge_status_resource: NuvlaEdgeStatusResource | None = None
-        self._vpn_credential_resource: CredentialResource | None = None
-        self._vpn_server_resource: InfrastructureServiceResource | None = None
-
-        self._nuvlaedge_sync_time: float = 0.0
-        self._status_sync_time: float = 0.0
-        self._vpn_credential_time: float = 0.0
-        self._vpn_server_time: float = 0.0
+        # Dictionary containing the NuvlaEdge resources handled by the client
+        # nuvlaedge, nuvlaedge-status, vpn-credential, vpn-server
+        self._resources: dict[str, any] = {}
 
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
         self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
@@ -149,6 +156,20 @@ class NuvlaClientWrapper:
             self._nuvlaedge_status_uuid = self.nuvlaedge.nuvlabox_status
         return self._nuvlaedge_status_uuid
 
+    def _is_resource_available(self, res_name: str):
+        return res_name in self._resources and self._resources.get(res_name) is not None
+
+    def _init_resource(self,
+                       res_name: str,
+                       res_type: type[AutoUpdateNuvlaEdgeTrackedResource],
+                       res_id: NuvlaID,
+                       **kwargs):
+        logger.info(f"Initializing resource {res_name} with id {res_id}{kwargs}")
+        self._resources[res_name] = res_type(nuvla_client=self.nuvlaedge_client,
+                                             resource_id=res_id,
+                                             **kwargs)
+        self._resources[res_name].force_update()
+
     @property
     def nuvlaedge(self) -> NuvlaEdgeResource:
         """
@@ -161,35 +182,44 @@ class NuvlaClientWrapper:
         Returns:
             NuvlaEdgeResource: The current NuvlaEdgeResource instance.
         """
-        if time.time() - self._nuvlaedge_sync_time > self.MIN_SYNC_TIME:
-            self._sync_nuvlaedge()
-        return self._nuvlaedge_resource
+        _res_name = 'nuvlaedge'
+        if not self._is_resource_available(_res_name):
+            self._init_resource(_res_name, AutoNuvlaEdgeResource, self._nuvlaedge_uuid)
+        return self._resources.get(_res_name)
 
     @property
     def nuvlaedge_status(self) -> NuvlaEdgeStatusResource:
-        if time.time() - self._status_sync_time > self.MIN_SYNC_TIME:
-
-            # We only need to retrieve the whole NuvlaBox-status resource once on agent start-up. Then, the only
-            # field needed to be updated is node-id. Required by Commissioner to trigger the creation of the
-            # nuvlaedge infrastructure service. The creation requires the node-id field. TODO: Improve commissioning op
-            if not self._nuvlaedge_status_resource:
-                self._sync_nuvlaedge_status()
-            else:
-                self._sync_nuvlaedge_status(select=self.NUVLAEDGE_STATUS_REQUIRED_FIELDS)
-
-        return self._nuvlaedge_status_resource
+        _res_name = 'nuvlaedge-status'
+        if not self._is_resource_available(_res_name):
+            self._init_resource(_res_name, AutoNuvlaEdgeStatusResource, self._nuvlaedge_uuid)
+        return self._resources.get(_res_name)
 
     @property
-    def vpn_credential(self) -> CredentialResource:
-        if time.time() - self._vpn_credential_time > self.MIN_SYNC_TIME:
-            self._sync_vpn_credential()
-        return self._vpn_credential_resource
+    def vpn_credential(self) -> CredentialResource | None:
+        if self.nuvlaedge.vpn_server_id is None:
+            # This is a safety check. VPN server resource should only be requested if the NuvlaEdge has a VPN server
+            logger.warning(f"VPN server not found in NuvlaEdge {self.nuvlaedge_uuid}. This point should not be reached")
+            return None
+
+        _res_name = 'vpn-credential'
+        if not self._is_resource_available(_res_name):
+            self._init_resource(_res_name, CredentialResource, NuvlaID(''),
+                                nuvlaedge_id=self._nuvlaedge_uuid,
+                                vpn_server_id=self.nuvlaedge.vpn_server_id)
+
+        return self._resources.get(_res_name)
 
     @property
-    def vpn_server(self) -> InfrastructureServiceResource:
-        if time.time() - self._vpn_server_time > self.MIN_SYNC_TIME:
-            self._sync_vpn_server()
-        return self._vpn_server_resource
+    def vpn_server(self) -> InfrastructureServiceResource | None:
+        if self.nuvlaedge.vpn_server_id is None:
+            # This is a safety check. VPN server resource should only be requested if the NuvlaEdge has a VPN server
+            logger.warning(f"VPN server not found in NuvlaEdge {self.nuvlaedge_uuid}. This point should not be reached")
+            return None
+
+        _res_name = 'vpn-server'
+        if not self._is_resource_available(_res_name):
+            self._init_resource(_res_name, AutoInfrastructureServiceResource, self.nuvlaedge.vpn_server_id)
+        return self._resources.get(_res_name)
 
     def login_nuvlaedge(self):
         login_response: Response = self.nuvlaedge_client.login_apikey(self.nuvlaedge_credentials.key,
@@ -201,10 +231,13 @@ class NuvlaClientWrapper:
             logger.info(f"Error logging in: {login_response}")
 
     def activate(self):
-        """
-        Activates the NuvlaEdge, saves the returned api-keys and logs in. If we already have api-keys, logs in
+        """ Activates the NuvlaEdge, saves the returned api-keys and logs in.
+        If we already have api-keys, logs in.
+        This method will raise any exception should anything fail. This is a compulsory step for the NuvlaEdge without
+         which the system cannot work.
+
         Returns: None
-        Raises: ActivationNotPossible if no api-keys are presents and NuvlaEdge activation returns and error
+
         """
 
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
@@ -212,9 +245,14 @@ class NuvlaClientWrapper:
         self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
-
+        # Firstly, save the key pair to file
         self._save_current_state_to_file()
+
+        # Then log in to access NuvlaEdge resources
         self.login_nuvlaedge()
+
+        # Finally, force update the NuvlaEdge resource to get the latest state
+        self.nuvlaedge.force_update()
 
     def commission(self, payload: dict):
         """ Executes nuvlaedge resource commissioning operation in the Nuvla endpoint
@@ -229,11 +267,14 @@ class NuvlaClientWrapper:
         try:
             response: dict = self.nuvlaedge_client._cimi_post(resource_id=f"{self.nuvlaedge_uuid}/commission",
                                                               json=payload)
+            if response:
+                self.nuvlaedge.force_update()
+
             return response
         except Exception as e:
             logger.warning(f"Cannot commission NuvlaEdge with Payload {payload}: {e}")
 
-    def heartbeat(self) -> CimiResponse:
+    def heartbeat(self) -> dict:
         """ Executes nuvlaedge resource heartbeat operation in the Nuvla endpoint
 
         Returns: a CimiResponse instance with the response of the server which includes any possible
@@ -244,13 +285,12 @@ class NuvlaClientWrapper:
         try:
             if not self.nuvlaedge_client.is_authenticated():
                 self.login_nuvlaedge()
-            res: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_uuid)
-            response: CimiResponse = self.nuvlaedge_client.operation(res, 'heartbeat')
+            response: dict = self.nuvlaedge_client._cimi_post(f"{self.nuvlaedge_uuid}/heartbeat")
             return response
         except Exception as e:
             logger.warning(f"Heartbeat to {self.nuvlaedge_uuid} failed with error: {e}")
 
-    def telemetry(self, new_status: dict, attributes_to_delete: set[str]):
+    def telemetry(self, new_status: dict, attributes_to_delete: set[str]) -> dict:
         """ Sends telemetry metrics to the nuvlaedge-status resource using edit(put) operation
 
         Args:
@@ -260,98 +300,11 @@ class NuvlaClientWrapper:
         Returns: a CimiResponse instance with the response of the server including jobs queued for this NuvlaEdge
 
         """
-        response: CimiResponse = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
+        response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)
         logger.debug(f"Response received from telemetry report: {response.data}")
-        return response
-
-    def _sync_vpn_credential(self):
-        """ Retrieves the VPN credential when requested.
-
-        It accesses the VPN credential associated with the NuvlaEdge and updates the local variable
-        The VPN credential is created via commissioning, then it can only be accessed after the VPN keys
-         are commissioned which creates the credential and the infrastructure service
-
-        We assume NuvlaEdge has only 1 vpn credential associated.
-
-        Returns: None
-        """
-        vpn_credential_filter = (f'method="create-credential-vpn-nuvlabox" and '
-                                 f'vpn-common-name="{self.nuvlaedge_uuid}" and '
-                                 f'parent="{self.nuvlaedge.vpn_server_id}"')
-
-        creds: CimiCollection = self.nuvlaedge_client.search(resource_type="credential",
-                                                             filter=vpn_credential_filter,
-                                                             last=1)
-
-        if creds.count >= 1:
-            logger.info("VPN credential found in NuvlaEdge")
-            self._vpn_credential_resource = CredentialResource.model_validate(creds.resources[0].data)
-            self._vpn_credential_time = time.time()
-        else:
-            logger.debug("VPN credential not found in Nuvla")
-
-    def _sync_vpn_server(self):
-        """ If the NuvlaEdge has VPN enabled, tries to retrieve the VPN infrastructure service resource
-
-        It reads the VPN server ID from nuvlaedge resource and tries to retrieve its content, then it is
-        stored locally.
-
-        Returns: None
-
-        """
-        if not self.nuvlaedge.vpn_server_id:
-            logger.warning("Cannot retrieve the vpn server resource for a NuvlaEdge without Server ID defined")
-            return
-
-        response: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge.vpn_server_id)
-        if response.data:
-            self._vpn_server_resource = InfrastructureServiceResource.model_validate(response.data)
-            self._vpn_server_time = time.time()
-
-    def _sync_nuvlaedge(self, select: set = None):
-        """ Updates the nuvlaedge resource when requested.
-
-        Parameter select allows for cherry-picking the fields of the resource to synchronise which allows for data
-         consumption optimisation reducing unnecessary data transfer
-
-        Args:
-            select: set of fields to retrieve when synchronising nuvlaedge resource
-
-        Returns: None
-
-        """
-        resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_uuid, select=select)
-        if resource.data:
-            self._nuvlaedge_resource = NuvlaEdgeResource.model_validate(resource.data)
-            print_me = json.dumps(self._nuvlaedge_resource.model_dump(exclude_none=True,
-                                                                      exclude={'operations', 'acl'}),
-                                  indent=4)
-
-            logger.info(f"Data retrieved for Nuvlaedge: {print_me}")
-            self._nuvlaedge_sync_time = time.time()
-        else:
-            logger.error("Error retrieving NuvlaEdge resource")
-
-    def _sync_nuvlaedge_status(self, select: set = None):
-        """ Synchronises the nuvlaedge-status resource and saves it locally
-
-        The nuvlaedge-status id is only set when the nuvlaedge is activated. During this operation, the server,
-         creates the nuvlaedge-status resource and adds the id to the nuvlaedge resource
-
-        Args:
-            select: set of fields to retrieve when synchronising nuvlaedge-status resource
-
-        Returns: None
-
-        """
-        resource: CimiResource = self.nuvlaedge_client.get(self.nuvlaedge_status_uuid, select=select)
-        if resource and resource.data:
-            self._nuvlaedge_status_resource = NuvlaEdgeStatusResource.model_validate(resource.data)
-            self._status_sync_time = time.time()
-        else:
-            logger.error("Error retrieving NuvlaEdge resource")
+        return response.data
 
     def _save_current_state_to_file(self):
 

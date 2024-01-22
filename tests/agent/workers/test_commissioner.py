@@ -6,7 +6,6 @@ from nuvlaedge.agent.workers.commissioner import Commissioner
 from nuvlaedge.agent.workers.commissioner import CommissioningAttributes
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.orchestrator import COEClient
-from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from pathlib import Path
 import json
 
@@ -15,12 +14,10 @@ class TestCommissioner(TestCase):
     def setUp(self):
         self.mock_coe = Mock(spec=COEClient)
         self.mock_nuvla_client = Mock(spec=NuvlaClientWrapper)
-        self.mock_queue = Mock(spec=Queue)
         self.mock_status_channel = Mock(spec=Queue)
         self.test_commissioner = Commissioner(self.mock_coe,
                                               self.mock_nuvla_client,
-                                              self.mock_status_channel,
-                                              self.mock_queue)
+                                              self.mock_status_channel)
 
     @patch('nuvlaedge.agent.workers.commissioner.VPNHandler.get_vpn_ip')
     def test_build_nuvlaedge_endpoint(self, mock_vpn_ip):
@@ -53,10 +50,10 @@ class TestCommissioner(TestCase):
                 mock_open.return_value.__enter__.return_value = mock_file
                 load_dict = {'nuvlaedge_uuid': 'nuvlaedge-id'}
                 mock_json.return_value = load_dict
-                self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'random'
+                self.test_commissioner.nuvla_client._nuvlaedge_uuid = 'random'
                 self.test_commissioner._load_previous_commission()
                 self.assertEqual(self.test_commissioner._last_payload.tags, None)
-                self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'nuvlaedge-id'
+                self.test_commissioner.nuvla_client._nuvlaedge_uuid = 'nuvlaedge-id'
                 self.test_commissioner._load_previous_commission()
                 mock_json.side_effect = json.JSONDecodeError('msg', 'doc', 1)
                 self.test_commissioner._load_previous_commission()
@@ -69,7 +66,7 @@ class TestCommissioner(TestCase):
         test_wrapper.return_value = True
         with patch.object(CommissioningAttributes, 'model_dump') as mock_model_dump:
             mock_model_dump.return_value = {'nuvlaedge_uuid': ''}
-            self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'nuvlaedge-id'
+            self.test_commissioner.nuvla_client._nuvlaedge_uuid = 'nuvlaedge-id'
             self.test_commissioner._commission()
             self.assertEqual(self.test_commissioner._last_payload.tags, self.test_commissioner._current_payload.tags)
 
@@ -82,16 +79,8 @@ class TestCommissioner(TestCase):
         self.test_commissioner._update_cluster_data = Mock()
 
         self.test_commissioner._last_payload = self.test_commissioner._current_payload
-        self.test_commissioner.nuvla_client.nuvlaedge_uuid = 'nuvlaedge-id'
+        self.test_commissioner.nuvla_client._nuvlaedge_uuid = 'nuvlaedge-id'
         self.test_commissioner.run()
         self.test_commissioner._commission.assert_not_called()
         self.assertNotEqual('vpn_csr', self.test_commissioner._current_payload.vpn_csr)
-
-        self.test_commissioner._current_payload = CommissioningAttributes()
-        self.mock_queue.empty.return_value = False
-        self.mock_queue.get.return_value = 'vpn_csr'
-        self.test_commissioner.run()
-        self.test_commissioner._commission.assert_called_once()
-        self.assertEqual('vpn_csr', self.test_commissioner._current_payload.vpn_csr)
-        self.mock_queue.reset_mock()
 

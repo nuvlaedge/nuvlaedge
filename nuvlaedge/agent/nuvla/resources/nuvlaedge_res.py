@@ -1,19 +1,19 @@
+import json
 import logging
-import time
 
 from nuvla.api import Api
-from nuvla.api.models import CimiResource
 from pydantic import field_validator
 from strenum import UppercaseStrEnum
 from enum import auto
 from typing import Optional
 
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
-from nuvlaedge.agent.nuvla.resources.base import NuvlaEdgeTrackedResource
+from .nuvla_id import NuvlaID
+from .base import AutoUpdateNuvlaEdgeTrackedResource, NuvlaResourceBase
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
+# logger.setLevel(logging.DEBUG)
 
 
 class State(UppercaseStrEnum):
@@ -35,7 +35,7 @@ class State(UppercaseStrEnum):
             raise ValueError(f"'{cls.__name__}' enum not found for '{value}'")
 
 
-class NuvlaEdgeResource(NuvlaEdgeTrackedResource):
+class NuvlaEdgeResource(NuvlaResourceBase):
     """
     Class representing a NuvlaEdge resource.
 
@@ -76,3 +76,8 @@ class NuvlaEdgeResource(NuvlaEdgeTrackedResource):
     def cast_str_to_state(cls, v):
         if isinstance(v, str):
             return State.value_of(v)
+
+
+class AutoNuvlaEdgeResource(NuvlaEdgeResource,
+                            AutoUpdateNuvlaEdgeTrackedResource):
+    ...

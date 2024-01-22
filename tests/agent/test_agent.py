@@ -4,11 +4,11 @@ from unittest import TestCase
 from unittest.mock import Mock, patch
 
 from nuvlaedge.agent.job import Job
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.settings import AgentSettingsMissMatch, InsufficientSettingsProvided
-from nuvlaedge.agent.nuvla.resources.nuvlaedge import State
+from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent import AgentSettings, Agent
 
@@ -195,12 +195,12 @@ class TestAgent(TestCase):
     def test_process_response(self, mock_process_jobs):
         mock_response = Mock()
         operation = "mocked_operation"
-        mock_response.data.get.return_value = []
+        mock_response.get.return_value = []
 
         self.agent._process_response(mock_response, operation)
         mock_process_jobs.assert_not_called()
 
-        mock_response.data.get.return_value = ['job/mock_id']
+        mock_response.get.return_value = ['job/mock_id']
         self.agent._process_response(mock_response, operation)
         mock_process_jobs.assert_called_once()
 

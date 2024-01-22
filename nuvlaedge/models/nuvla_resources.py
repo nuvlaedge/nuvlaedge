@@ -4,7 +4,7 @@ Contains the definitions and spec of Nuvla Resources
 
 from pydantic import field_validator
 
-from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase
+from nuvlaedge.agent.nuvla.resources import NuvlaResourceBase
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.models.peripheral import PeripheralData
 

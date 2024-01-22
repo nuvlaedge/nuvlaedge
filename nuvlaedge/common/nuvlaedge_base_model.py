@@ -1,7 +1,6 @@
-import pprint
 from typing import ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from threading import Lock
 
 
@@ -34,8 +33,7 @@ class NuvlaEdgeStaticModel(NuvlaEdgeBaseModel):
 
     def update(self, data: dict[str, any] | BaseModel):
         if isinstance(data, BaseModel):
-            data = data.model_dump(exclude_none=True)
-
+            data = data.model_dump(exclude_none=True, by_alias=False)
         for k, v in data.items():
             if hasattr(self, k):
                 with self.update_lock:

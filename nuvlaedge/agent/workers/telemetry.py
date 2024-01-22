@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
-from nuvlaedge.agent.nuvla.resources.nuvla_id import NuvlaID
+from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.workers.monitor.components import get_monitor, active_monitors
 from nuvlaedge.agent.workers.monitor import Monitor
@@ -106,26 +106,6 @@ class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
     orchestrator:                   Optional[str] = None
     container_plugins:              Optional[list[str]] = None
     kubelet_version:                Optional[str] = None
-
-
-def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[str]]:
-    """
-    Calculate the differences between two models.
-
-    Args:
-        reference (BaseModel): The reference model to compare against.
-        target (BaseModel): The target model to compare with.
-
-    Returns:
-        tuple[set[str], set[str]]: A tuple containing two sets. The first set contains the fields that have different values between the reference and target models. The second set contains
-    * the fields that exist in the reference model but not in the target model.
-    """
-    to_send: set = set()
-    for field, value in iter(target):
-        if value != getattr(reference, field) and value is not None:
-            to_send.add(field)
-    to_delete = reference.model_fields_set - target.model_fields_set
-    return to_send, to_delete
 
 
 class Telemetry:

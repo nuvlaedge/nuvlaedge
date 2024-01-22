@@ -1,11 +1,9 @@
-import pprint
 from typing import Optional
-from datetime import datetime
 from enum import auto
 from strenum import UppercaseStrEnum
 
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
-from nuvlaedge.agent.nuvla.resources.base import NuvlaResourceBase, NuvlaEdgeTrackedResource
+from .base import AutoUpdateNuvlaEdgeTrackedResource, NuvlaResourceBase
 
 
 class Status(UppercaseStrEnum):
@@ -112,7 +110,7 @@ class StatusOrchestrationEngineConfiguration(NuvlaEdgeBaseModel):
     cluster_join_address: Optional[str] = None
 
 
-class NuvlaEdgeStatusResource(NuvlaEdgeTrackedResource,
+class NuvlaEdgeStatusResource(NuvlaResourceBase,
                               StatusTelemetry,
                               StatusSystemConfiguration,
                               StatusOrchestrationEngineConfiguration):
@@ -147,7 +145,6 @@ class NuvlaEdgeStatusResource(NuvlaEdgeTrackedResource,
         # Set the vulnerabilities attribute
         edge_status.vulnerabilities = {"CVE-2022-1234": "High"}
 
-    Note: This class does not define its own methods, as it inherits functionality from its parent classes.
     """
     status: Optional[Status] = None
     status_notes: Optional[list[str]] = None
@@ -155,3 +152,8 @@ class NuvlaEdgeStatusResource(NuvlaEdgeTrackedResource,
     current_time: Optional[str] = None
 
     vulnerabilities: Optional[dict] = None
+
+
+class AutoNuvlaEdgeStatusResource(NuvlaEdgeStatusResource,
+                                  AutoUpdateNuvlaEdgeTrackedResource):
+    ...

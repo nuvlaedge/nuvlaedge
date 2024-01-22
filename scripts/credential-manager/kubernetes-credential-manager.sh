@@ -1,7 +1,7 @@
 #!/bin/sh -xe
 
 WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}
-CSR_NAME=${CSR_NAME:-nuvlaedge-csr}                                                                     
+CSR_NAME=${CSR_NAME:-nuvlaedge-csr}
 
 SHARED="/srv/nuvlaedge/shared"
 SYNC_FILE=".tls"

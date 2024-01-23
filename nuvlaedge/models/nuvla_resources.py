@@ -50,7 +50,6 @@ class NuvlaBoxResource(NuvlaEdgeBaseModel):
 
     @field_validator('*')
     def non_empty_str(cls, v):
-        print(v)
         if isinstance(v, str):
             return v if v else None
         return v

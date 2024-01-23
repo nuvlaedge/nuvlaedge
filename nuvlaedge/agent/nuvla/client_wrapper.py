@@ -236,8 +236,6 @@ class NuvlaClientWrapper:
         This method will raise any exception should anything fail. This is a compulsory step for the NuvlaEdge without
          which the system cannot work.
 
-        Returns: None
-
         """
 
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
@@ -263,7 +261,7 @@ class NuvlaClientWrapper:
         Returns: a dictionary the response of the server to the commissioning operation
 
         """
-        logger.info(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid}")
+        logger.info(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid} with payload {payload}")
         try:
             response: dict = self.nuvlaedge_client._cimi_post(resource_id=f"{self.nuvlaedge_uuid}/commission",
                                                               json=payload)
@@ -307,7 +305,18 @@ class NuvlaClientWrapper:
         return response.data
 
     def _save_current_state_to_file(self):
+        """ Saves the current state of the NuvlaEdge client to a file.
 
+        This method serializes the current state of the NuvlaEdge client, including the host, SSL verification setting,
+        NuvlaEdge credentials, and NuvlaEdge UUIDs, into a NuvlaEdgeSession object. The serialized session is then written
+        to a file for future use.
+
+        The file used to store the session is defined by the FILE_NAMES.NUVLAEDGE_SESSION constant.
+
+        Raises:
+            Any exceptions raised by the `write_file` function will be propagated up.
+
+        """
         serial_session = NuvlaEdgeSession(
             endpoint=self._host,
             verify=self._verify,
@@ -325,7 +334,8 @@ class NuvlaClientWrapper:
         Args:
             file: path to saved session file
 
-        Returns: a NuvlaEdgeClient object
+        Returns:
+            NuvlaEdgeClient object
 
         """
         session_store = read_file(file, decode_json=True)

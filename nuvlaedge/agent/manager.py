@@ -14,30 +14,6 @@ class WorkerManager:
 
     Attributes:
         registered_workers (dict[str, Worker]): A dictionary containing registered worker instances.
-
-    Methods:
-        add_worker(period: int, worker_type: Type, init_params: tuple[tuple, dict], actions: list[str],
-                   initial_delay: float | None = None) -> None:
-            Adds a worker to the manager's collection of registered workers.
-
-            Args:
-                period (int): The interval between each execution of the worker's actions.
-                worker_type (Type): The type of worker to be added.
-                init_params (tuple[tuple, dict]): The parameters required to initialize the worker.
-                actions (list[str]): The list of actions to be performed by the worker.
-                initial_delay (float | None): The optional initial delay before starting the worker. Defaults to None.
-
-        status_report() -> dict:
-            Generates and returns a report on the status of the registered workers.
-
-            Returns:
-                dict: A dictionary containing the status report of each worker.
-
-        start() -> None:
-            Starts all the registered workers.
-
-        stop() -> None:
-            Stops all the registered workers.
     """
     def __init__(self):
         self.registered_workers: dict[str, Worker] = {}
@@ -72,17 +48,20 @@ class WorkerManager:
             logger.info(f"Worker {worker_type.__name__} already registered")
             return False
 
-    def status_report(self):
+    def summary(self) -> str:
         """
         Returns a formatted status report for each registered worker.
 
         The status report includes the total number of errors and the list of error types for each worker.
 
         """
-        for name, worker in self.registered_workers.items():
-            logger.info(f"Worker {name} errors: \n"
-                        f"\t Total errors: {worker.error_count} \n"
-                        f"\t Error types: {[e.__class__.__name__ for e in worker.exceptions]}")
+        _summary: str = (f'Worker Summary:\n{"Name":<20} {"Period":>10} {"Rem. Time":>10} {"Err. Count":>10}'
+                         f' {"Errors":>25}\n')
+
+        for _, worker in self.registered_workers.items():
+            _summary += worker.worker_summary()
+
+        return _summary
 
     def start(self):
         """
@@ -116,5 +95,6 @@ class WorkerManager:
                            f"cannot update with {new_period}")
             return
 
-        self.registered_workers[worker_name].period = new_period
+        self.registered_workers[worker_name].edit_period(new_period)
+
         logger.info(f"Worker {worker_name} period updated to {new_period}")

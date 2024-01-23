@@ -16,7 +16,7 @@ from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, Status
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.models import model_diff
 from nuvlaedge.agent.nuvla.resources import NuvlaID, State
-from nuvlaedge.common.file_operations import file_exists_and_not_empty
+from nuvlaedge.common.file_operations import file_exists_and_not_empty, write_file
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -65,8 +65,21 @@ class CommissioningAttributes(NuvlaEdgeStaticModel):
 
 class Commissioner:
     """
-    Compares the information in Nuvla with the system configuration and commissions any difference
+        The Commissioner class is responsible for controlling the Commission operation in NuvlaEdge.
+
+        The Commission operation controls infrastructure-services and credentials of the NuvlaEdge. In this case,
+        commission controls the credentials of the swarm/kubernetes cluster and the VPN, as well as creating the
+        corresponding infrastructure service and cluster resources for either swarm or kubernetes.
+
+        Attributes:
+            COMMISSIONING_FILE (Path): Path to the file where commissioning data is stored.
+            coe_client (COEClient): Client to interact with the container orchestration engine.
+            nuvla_client (NuvlaClientWrapper): Client to interact with Nuvla.
+            status_channel (Queue[StatusReport]): Channel to send status updates.
+            _last_payload (CommissioningAttributes): The last payload data sent to Nuvla.
+            _current_payload (CommissioningAttributes): The current payload data to be sent to Nuvla.
     """
+
     COMMISSIONING_FILE: Path = FILE_NAMES.COMMISSIONING_FILE
 
     def __init__(self,
@@ -94,19 +107,27 @@ class Commissioner:
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'commissioner')
 
     def _commission(self):
-        """ Executes the commissioning operation """
-        logger.info(f"Commissioning NuvlaEdge with data:"
-                    f" {self._current_payload.model_dump(mode='json', exclude_none=True, by_alias=True)}")
+        """ Executes the commissioning operation.
 
+        This method compares the last payload sent to Nuvla (_last_payload) and the current payload (_current_payload).
+        If there are any changes, it prepares a new commission payload with the changed/new fields and removed fields.
+        The new commission payload is then sent to Nuvla for commissioning.
+
+        If the commissioning is successful, the last payload is updated with the current payload and the commissioning data
+        is saved to a file.
+        """
         # Get new field
         new_fields, removed_fields = model_diff(self._last_payload, self._current_payload)
-        logger.info("New fields: \n {}".format(new_fields))
-        logger.info("Removed fields:\n {}".format(removed_fields))
+        logger.info(f"Commissioning changed/new fields: {new_fields} and removing no longer present: {removed_fields}")
 
-        if self.nuvla_client.commission(payload=self._current_payload.model_dump(exclude_none=True,
-                                                                                 exclude={'vpn_csr'},
-                                                                                 by_alias=True,
-                                                                                 include=new_fields)):
+        _commission_payload: dict = self._current_payload.model_dump(exclude_none=True,
+                                                                     exclude={'vpn_csr'},
+                                                                     by_alias=True,
+                                                                     include=new_fields)
+        if len(removed_fields) > 0:
+            _commission_payload['removed'] = list(removed_fields)
+
+        if self.nuvla_client.commission(payload=_commission_payload):
             self._last_payload = self._current_payload.model_copy(deep=True)
             self._save_commissioned_data()
 
@@ -153,14 +174,19 @@ class Commissioner:
         - kubernetes-client-cert
         - kubernetes-client-key
         """
+        # Construct Swarm/K8s endpoint
         nuvlaedge_endpoint = self._build_nuvlaedge_endpoint()
+
+        # Retrieve TLS keys for Docker endpoints
         tls_keys = self.get_tls_keys()
+
+        # Builds the data structure with the required information for the creation/update of the infrastructure service
         nuvla_infra_service = self.coe_client.define_nuvla_infra_service(nuvlaedge_endpoint, *tls_keys)
-        logger.info(f"Updating COE data: {json.dumps(nuvla_infra_service, indent=4)}")
+
+        # Update the current payload with the infrastructure service information
         self._current_payload.update(nuvla_infra_service)
 
         # Only required for Docker
-
         if self.coe_client.ORCHESTRATOR_COE == 'swarm':
             logger.info("Updating Swarm Join Tokens")
             manager_token, worker_token = self.coe_client.get_join_tokens()
@@ -188,7 +214,7 @@ class Commissioner:
         else:
             logger.info(f"Nuvlabox-status still not ready. It should be updated in a bit...")
 
-        self._current_payload.capabilities = self.get_nuvlaedge_capabilities()
+        self._current_payload.capabilities = self._get_nuvlaedge_capabilities()
         self._update_coe_data()
 
     def run(self):
@@ -202,20 +228,18 @@ class Commissioner:
         NuvlaEdgeStatusHandler.running(self.status_channel, 'commissioner')
 
         # Read the current status of the device and update the attributes
+        self._current_payload = CommissioningAttributes()
         self._update_attributes()
 
         # Compare what have been sent to Nuvla (_last_payload) and whatis locally updated (_current_payload)
         if self._last_payload != self._current_payload:
-            logger.info("Payloads are different, go commission")
-            logger.info(f"Last Payload: \n {json.dumps(sorted(self._last_payload.model_dump(exclude_none=True)),indent=4)}")
-            logger.info(f"Current Payload: \n {json.dumps(sorted(self._current_payload.model_dump(exclude_none=True)), indent=4)}")
+            logger.debug("Commissioning data has changed, commissioning...")
             self._commission()
-
         else:
             logger.info("Nothing to commission, system configuration remains the same.")
 
     @staticmethod
-    def get_nuvlaedge_capabilities() -> list[str]:
+    def _get_nuvlaedge_capabilities() -> list[str]:
         return ['NUVLA_HEARTBEAT', 'NUVLA_JOB_PULL']
 
     @staticmethod
@@ -266,10 +290,7 @@ class Commissioner:
         return None
 
     def _load_previous_commission(self) -> None:
-        """
-        Load previous commissioning data from a file.
-
-        """
+        """ Load previous commissioning data from a file. """
         if not file_exists_and_not_empty(self.COMMISSIONING_FILE):
             logger.info(f"No commissioning file found in {self.COMMISSIONING_FILE}. "
                         f"NuvlaEdge is probably never been commissioned before")
@@ -291,11 +312,16 @@ class Commissioner:
                 logger.warning("Error decoding previous commission")
 
     def _save_commissioned_data(self) -> None:
-        try:
-            with self.COMMISSIONING_FILE.open('w') as f:
-                data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
-                data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
-                json.dump(data, f)
-        except Exception as ex:
-            logger.error(f'Unable save commissioning data : {ex}')
-            self.COMMISSIONING_FILE.unlink()
+        """
+        Saves the last payload data to a file.
+
+        This method dumps the last payload data into a JSON format, excluding any None values.
+        It also adds the NuvlaEdge UUID to the data. The resulting data is then written to the
+        commissioning file.
+
+        Raises:
+            Any exceptions raised by the `write_file` function will be propagated up.
+        """
+        data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
+        data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
+        write_file(data, self.COMMISSIONING_FILE)

@@ -74,7 +74,6 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     # Required with default values
     compose_project_name:               str = "nuvlaedge"
     nuvlaedge_log_level:                str = "DEBUG"
-    nuvlaedge_thread_monitors:          bool = False
     vpn_interface_name:                 str = 'vpn'
     nuvla_endpoint:                     str = 'nuvla.io'
     nuvla_endpoint_insecure:            bool = False
@@ -82,6 +81,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     ne_image_tag:                       Optional[str] = None  # Default value provided by compose
 
     # Optional
+    nuvlaedge_thread_monitors:          Optional[bool] = False
     nuvlaedge_api_key:                  Optional[str] = None
     nuvlaedge_api_secret:               Optional[str] = None
     nuvlaedge_excluded_monitors:        Optional[str] = None

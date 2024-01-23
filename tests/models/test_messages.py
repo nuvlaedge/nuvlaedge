@@ -5,7 +5,6 @@ from pydantic import ValidationError
 
 import mock
 import sys
-print(f'\n\n\n {sys.version}\n\n\n')
 
 from nuvlaedge.models.messages import parse_message, NuvlaEdgeMessage
 

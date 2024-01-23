@@ -1,4 +1,10 @@
+import logging
+
 from pydantic import BaseModel
+
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 def are_models_equal(model_one: BaseModel, model_two: BaseModel):
@@ -26,13 +32,19 @@ def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[s
         target (BaseModel): The target model to compare with.
 
     Returns:
-        tuple[set[str], set[str]]: A tuple containing two sets. The first set contains the fields that have different values between the reference and target models. The second set contains
-    * the fields that exist in the reference model but not in the target model.
+        tuple[set[str], set[str]]: A tuple containing two sets. The first set contains the fields that have different
+         values between the reference and target models. The second set contains the fields that exist in the
+         reference model but not in the target model.
     """
     to_send: set = set()
-    for field, value in iter(target):
-        if value != getattr(reference, field) and value is not None:
-            to_send.add(field)
-    to_delete = reference.model_fields_set - target.model_fields_set
-    return to_send, to_delete
+    to_delete: set = set()
 
+    for field, value in iter(target):
+        if value != getattr(reference, field):
+            if value is not None:
+                to_send.add(field)
+            else:
+                to_delete.add(field)
+
+    # to_delete = reference.model_fields_set - target.model_fields_set
+    return to_send, to_delete

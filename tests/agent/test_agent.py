@@ -167,13 +167,13 @@ class TestAgent(TestCase):
         mock_response = Mock()
         mock_response.data = mock_response
         self.mock_nuvla_client.telemetry.return_value = mock_response
-        with patch('nuvlaedge.agent.agent.json.dumps') as mock_json:
+        with patch('nuvlaedge.agent.agent.write_file') as mock_json:
             self.assertEqual(mock_response, self.agent._telemetry())
         self.assertEqual(2, mock_payload.model_copy.call_count)
 
         mock_channel.empty.return_value = False
         mock_channel.get.return_value = mock_payload
-        with patch('nuvlaedge.agent.agent.json.dumps') as mock_json:
+        with patch('nuvlaedge.agent.agent.write_file') as mock_json:
             self.assertEqual(mock_response, self.agent._telemetry())
         mock_channel.get.assert_called_once()
 

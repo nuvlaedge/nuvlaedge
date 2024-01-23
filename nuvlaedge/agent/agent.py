@@ -23,7 +23,6 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
-import json
 import logging
 import sys
 import time
@@ -120,18 +119,16 @@ class Agent:
         # Status channel connecting any module and the status handler
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
-        # Report
+        # Report initial status
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'agent')
 
     @staticmethod
     def check_uuid_missmatch(env_uuid, other_uuid):
-        """
-
+        """ This method checks if the UUID provided as an environmental variable matches the one stored locally
         Args:
             env_uuid: UUID parsed as an environmental variable
             other_uuid: UUID stored locally or retrieved from API keys
 
-        Returns: None
         Raises: AgentSettingsMissMatch if the UUID's are not equal
 
         """
@@ -376,10 +373,14 @@ class Agent:
             self.action_handler.edit_period('heartbeat', self.heartbeat_period)
 
     def _telemetry(self) -> dict | None:
-        """
-        Gather the information from the workers and executes the telemetry operation against Nuvla
-        Returns: List of jobs if Nuvla requests so
+        """ This method is responsible for executing the telemetry operation.
+        It retrieves the telemetry data from the telemetry channel and updates the telemetry payload. If the telemetry
+         channel is empty, it logs a warning and updates the status of the agent. The telemetry data is then sent to
+         Nuvla via the NuvlaClientWrapper. If the telemetry data is successfully sent, the telemetry payload is
+         updated and saved locally.
 
+        Returns:
+            dict | None: The response from the telemetry operation if successful, None otherwise.
         """
         logger.info("Executing telemetry")
 
@@ -393,7 +394,8 @@ class Agent:
         else:
             # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest
             new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
-            logger.info(f"Telemetry retrieved from channel: {new_telemetry.model_dump_json(indent=4)}")
+            logger.debug("Metrics received from Telemetry class")
+
         # Gather the status report
         self._gather_status(new_telemetry)
 
@@ -402,15 +404,15 @@ class Agent:
         data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
 
         # Send telemetry via NuvlaClientWrapper
-        logger.debug(f"Sending telemetry data to Nuvla \n "
-                     f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
+        logger.info(f"Sending telemetry data to Nuvla \n "
+                    f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
 
         response: dict = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
 
         # If telemetry is successful save telemetry
         if response:
-            logger.info("Storing sent data on telemetry")
-            logger.info(f"Data on telemetry operation response: {json.dumps(response, indent=4)}")
+            logger.info("Telemetry sent successfully to Nuvla")
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
             write_file(self.telemetry_payload, FILE_NAMES.NUVLAEDGE_STATUS_FILE)
 
@@ -505,10 +507,13 @@ class Agent:
 
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle
-            logger.info(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
-            logger.info(self.action_handler.actions_summary())
+            logger.debug(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
+            logger.debug(self.action_handler.actions_summary())
+
             # Cycle next action time and function
             next_cycle_in = self.action_handler.sleep_time()
             next_action = self.action_handler.next
             logger.debug(self.action_handler.actions_summary())
             logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
+
+            logger.info(self.worker_manager.summary())

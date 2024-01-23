@@ -18,15 +18,12 @@ class TestWorker(TestCase):
         self.mock_thread = Mock()
         self.test_worker.run_thread = self.mock_thread
 
-    @patch('nuvlaedge.agent.worker.random.randint')
-    def test_init(self, mock_randint):
-        mock_randint.return_value = 4
+    def test_init(self):
         self.setUp()
 
         self.assertEqual(self.test_worker.worker_name, 'mock_type_name')
         self.assertIsInstance(self.test_worker.exit_event, threading.Event)
-        self.assertEqual(self.test_worker.period, 60)
-        self.assertEqual(self.test_worker.initial_delay, 4)
+        self.assertEqual(self.test_worker._period, 60)
         self.assertEqual(self.test_worker.class_init_parameters, ((), {}))
         self.assertEqual(self.test_worker.actions, ['mock_action'])
         self.assertEqual(self.test_worker.callable_actions, [self.mock_type().mock_action])
@@ -34,10 +31,6 @@ class TestWorker(TestCase):
         self.assertEqual(self.test_worker.run_thread, self.mock_thread)
         self.assertEqual(self.test_worker.error_count, 0)
         self.assertEqual(self.test_worker.exceptions, [])
-
-        mock_randint.return_value = 65
-        self.setUp()
-        self.assertEqual(self.test_worker.initial_delay, 60)
 
     def test_init_actions(self):
         def mock_callable():

@@ -1,8 +1,6 @@
 import logging
-import random
 import threading
 import time
-from datetime import datetime
 from threading import Thread, Event
 from typing import Callable, Type
 
@@ -10,7 +8,6 @@ from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
-random.seed(datetime.now().strftime("%Y%m%d%H%M%S"))
 
 
 class WorkerExitException(Exception):
@@ -33,7 +30,7 @@ class Worker:
                  worker_type: Type,
                  init_params: tuple[tuple, dict],
                  actions: list[str],
-                 initial_delay: float | None = None):
+                 initial_delay: float = 0.0):
         """
         Initializes an instance of the class.
 
@@ -51,12 +48,12 @@ class Worker:
 
         # Thread control
         self.exit_event: Event = Event()
-        self.period: int = period
+        self._period: int = period
 
-        # If no initial delay, add a random delay to distribute the workers in time
-        self.initial_delay: float = initial_delay if initial_delay else random.randint(4, 8)
-        if self.initial_delay > self.period:
-            self.initial_delay = self.period
+        # Here we initialise the variables so that the first execution aligned with the desired initial delay
+        self._exec_start_time: float = 0.0
+        self._exec_finish_time: float = 0.0
+        self._initial_delay: float = initial_delay
 
         # Class init Parameters
         self.class_init_parameters: tuple[tuple, dict] = init_params
@@ -71,6 +68,26 @@ class Worker:
         self.error_count: int = 0
         self.exceptions: list[Exception] = []
         self._init_actions()
+
+    @property
+    def remaining_time(self) -> float:
+        """
+        Returns the remaining time for the next execution of the worker's actions.
+
+        Returns:
+            float: The remaining time in seconds.
+        """
+        return (self._exec_finish_time + self._period - self.last_execution_duration) - time.time()
+
+    @property
+    def last_execution_duration(self) -> float:
+        """
+        Returns the time it took to execute the worker's actions.
+
+        Returns:
+            float: The execution time in seconds.
+        """
+        return self._exec_finish_time - self._exec_start_time
 
     def _init_actions(self):
         """
@@ -139,6 +156,16 @@ class Worker:
         self.worker = self.worker_type(*self.class_init_parameters[0],
                                        **self.class_init_parameters[1])
 
+    def edit_period(self, new_period: int):
+        """
+        Edits the period of the worker.
+
+        Args:
+            new_period (int): The new period of execution for the worker.
+
+        """
+        self._period = new_period
+
     def run(self):
         """
         Generic worker infinite loop. It will run the actions in the worker class. If the action throws an exception,
@@ -153,61 +180,55 @@ class Worker:
         """
         logger.info(f"Entering main loop of {self.worker_name}")
 
-        # Initially ex_time container the start delay of each worker. Computed here
-        ex_time: float = float(self.period) - self.initial_delay
+        logger.info(f"Initial delay for {self.worker_name} is {self.remaining_time}s")
+        wait_time: float = self._initial_delay
+        self._initial_delay = 0.0
 
-        logger.info(f"Initial delay for {self.worker_name} is {self.period-ex_time}s")
         # Start loop of the worker
-        while not self.exit_event.wait(self.period - ex_time):
-            start_time = time.perf_counter()
+        while not self.exit_event.wait(wait_time):
+            # Register the time at the start of the execution
+            self._exec_start_time = time.time()
             for action in self.callable_actions:
                 try:
                     logger.debug(f"Running {action.__name__} from {self.worker_name}")
                     action()
                     logger.debug(f"Finished {action.__name__} from {self.worker_name}")
+
+                # Catch the exception that allows workers to exit themselves
                 except WorkerExitException as ex:
                     logger.warning(f"Worker {self.worker_name} exiting: {ex}")
                     self._process_exception(ex, is_exit=True)
 
+                # Catch all other exceptions and store them
                 except Exception as ex:
                     logger.error(f"Error {ex.__class__.__name__} running action {action.__name__} on class "
                                  f"{self.worker_name}", exc_info=True, )
                     self._process_exception(ex)
                     self._init_thread()
 
-            ex_time = time.perf_counter() - start_time
-            logger.info(f"{self.worker_name} worker actions run  in {ex_time}s, next iteration in "
-                        f"{self.period - ex_time}")
+            # Store the time of the end of the execution
+            self._exec_finish_time = time.time()
+            logger.info(f"{self.worker_name} worker actions run  in {self._exec_finish_time-self._exec_start_time}s,"
+                        f" next iteration in {self.remaining_time}s")
+            wait_time = self.remaining_time
 
         logger.info(f"{self.worker_name} exiting loop...")
 
+    def worker_summary(self) -> str:
+        """ Returns a formatted status report for the worker. """
+        return (f'{self.worker_name:<20} {self._period:>10} {self.remaining_time:>10.2f} {self.error_count:>10} '
+                f'{" ".join([e.__class__.__name__ for e in self.exceptions]):>25}\n')
+
     def start(self):
-        """
-        Initializes the thread and starts the worker.
+        """ Initializes the thread and starts the worker.
 
         This method should be called to start the worker thread.
-
-        Returns:
-            None
-
-        Example:
-            >>> worker = Worker()
-            >>> worker.start()
-            Worker thread started successfully
-
-        Raises:
-            None
         """
         self._init_thread()
         logger.info(f"{self.worker_name} worker started")
 
     def stop(self):
-        """
-        Stop method for stopping the execution of the run_thread.
-
-        Returns: None
-
-        """
+        """ Stop method for stopping the execution of the run_thread. """
         self.exit_event.set()
-        self.run_thread.join(timeout=self.period)
+        self.run_thread.join(timeout=self._period)
 

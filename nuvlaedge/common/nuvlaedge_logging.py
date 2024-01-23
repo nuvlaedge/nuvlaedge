@@ -12,7 +12,7 @@ from pathlib import Path
 
 # Global logging settings. They should only be modified from set_logging_configuration.
 # This settings won't affect already existing loggers
-_DEBUG: bool = True
+_DEBUG: bool = False
 _LOG_LEVEL: int = logging.INFO
 _DISABLE_FILE_LOGGING: bool = False
 
@@ -93,11 +93,12 @@ def __get_common_handler() -> logging.StreamHandler:
     """
     Returns the common handler for logging.
 
-    The method checks if the global variable COMMON_HANDLER is already set. If it is set, the method returns the value of the variable. If not, it creates a new instance of logging.Stream
-    *Handler and assigns it to the variable COMMON_HANDLER.
+    The method checks if the global variable COMMON_HANDLER is already set. If it is set, the method returns the value
+     of the variable. If not, it creates a new instance of logging.StreamHandler and assigns it to the
+     variable COMMON_HANDLER.
 
-    The created handler is configured with the common log formatter(COMMON_LOG_FORMATTER) and the log level(_LOG_LEVEL). If the _DEBUG flag is set, the log level is set to logging.DEBUG
-    *.
+    The created handler is configured with the common log formatter(COMMON_LOG_FORMATTER) and the log level(_LOG_LEVEL).
+     If the _DEBUG flag is set, the log level is set to logging.DEBUG.
 
     Returns:
         logging.StreamHandler: The common console handler for logging.

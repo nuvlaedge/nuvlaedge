@@ -170,7 +170,23 @@ def write_file(content: str | dict | list[dict] | BaseModel,
                file: str | Path,
                fail_if_error: bool = False,
                **kwargs):
+    """
+    Writes the provided content to a file. The content can be a string, dictionary, list of dictionaries, or a
+     BaseModel instance.
+    The method uses atomic writing to ensure data integrity. If the content is a BaseModel instance, it is serialized
+     to JSON before writing.
+    If the content is a dictionary or a list of dictionaries, it is converted to a JSON string before writing.
 
+    Args:
+        content (str | dict | list[dict] | BaseModel): The content to write to the file. Can be a string, dictionary,
+         list of dictionaries, or a BaseModel instance.
+        file (str | Path): The path of the file to write to. Can be a string or a Path instance.
+        fail_if_error (bool, optional): If True, raises an exception if an error occurs while writing. Defaults to False
+        **kwargs: Additional keyword arguments passed to the underlying writing functions.
+
+    Raises:
+        ValueError: If the content type is not supported or if the content is empty and fail_if_error is True.
+        """
     # From this line on, file handling only works with pathlib for consistency
     if isinstance(file, str):
         file = Path(file)

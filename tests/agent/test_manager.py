@@ -40,15 +40,16 @@ class TestManager(TestCase):
                 mock_worker.assert_called_once()
                 mock_info.assert_called_once_with("Registering worker: mock_type_name_2 in manager")
 
-    def test_status_report(self):
+    @patch('nuvlaedge.agent.manager.Worker')
+    def test_summary(self, mock_worker):
         mock_worker = Mock()
         mock_worker.status_report.return_value = {'mock_key': 'mock_value'}
         mock_worker.exceptions = []
         self.test_manager.registered_workers['mock_type_name'] = mock_worker
-
-        with patch('nuvlaedge.agent.manager.logging.Logger.info') as mock_info:
-            self.test_manager.status_report()
-            mock_info.assert_called_once()
+        mock_worker.worker_summary.return_value = 'mock_summary'
+        sample = (f'Worker Summary:\n{"Name":<20} {"Period":>10} {"Rem. Time":>10} {"Err. Count":>10}'
+                  f' {"Errors":>25}\n')
+        self.assertEqual(sample + 'mock_summary',self.test_manager.summary())
 
     def test_start(self):
         worker_1 = Mock()

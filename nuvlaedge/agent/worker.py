@@ -89,6 +89,19 @@ class Worker:
         """
         return self._exec_finish_time - self._exec_start_time
 
+    @property
+    def is_running(self) -> bool:
+        """
+        Returns whether the worker is currently running.
+
+        Returns:
+            bool: True if the worker is running, False otherwise.
+        """
+
+        return (self.run_thread is not None and
+                self.run_thread.ident is not None and
+                self.run_thread.is_alive())
+
     def _init_actions(self):
         """
         Initializes the actions for the worker.
@@ -108,18 +121,12 @@ class Worker:
             self.callable_actions.append(c)
 
     def _init_thread(self):
+        """ Initializes the worker thread and starts it.
+
+        This method creates a new thread for the worker and sets it to daemon mode.
+        The target of the thread is the `run` method of the worker.
+        After initializing the thread, it immediately starts it.
         """
-            Initializes and starts a new thread to execute the `run` method.
-
-            This method creates a new thread, sets it to run the `run` method of the current instance, and starts
-             the thread. The thread is set as a daemon thread, meaning that it can be terminated when the main program exits.
-
-            Parameters:
-                self (object): The current instance.
-
-            Returns:
-                None
-            """
         self.run_thread = threading.Thread(target=self.run, daemon=True)
         self.run_thread.start()
 
@@ -141,9 +148,10 @@ class Worker:
             raise ExceptionGroup(f"Exit requested from worker {self.worker_name}, raising all", self.exceptions)
 
         if self.error_count > 10:
+            logger.error(f"Error limit reached in {self.worker_name} worker, raising all")
             raise ExceptionGroup(f"Too many errors in {self.worker_name} worker", self.exceptions)
 
-    def _reset_worker(self, new_init_params: tuple[tuple, dict] = ()):
+    def reset_worker(self, new_init_params: tuple[tuple, dict] = ()):
         """
         Resets the worker instance with new initialization parameters.
 
@@ -180,12 +188,12 @@ class Worker:
         """
         logger.info(f"Entering main loop of {self.worker_name}")
 
-        logger.info(f"Initial delay for {self.worker_name} is {self.remaining_time}s")
-        wait_time: float = self._initial_delay
-        self._initial_delay = 0.0
+        _wait_time: float = self._initial_delay
+        self._initial_delay = -1.0
+        logger.info(f"Initial delay for {self.worker_name} is {_wait_time}s")
 
         # Start loop of the worker
-        while not self.exit_event.wait(wait_time):
+        while not self.exit_event.wait(_wait_time):
             # Register the time at the start of the execution
             self._exec_start_time = time.time()
             for action in self.callable_actions:
@@ -210,7 +218,7 @@ class Worker:
             self._exec_finish_time = time.time()
             logger.info(f"{self.worker_name} worker actions run  in {self._exec_finish_time-self._exec_start_time}s,"
                         f" next iteration in {self.remaining_time}s")
-            wait_time = self.remaining_time
+            _wait_time = self.remaining_time
 
         logger.info(f"{self.worker_name} exiting loop...")
 

@@ -288,7 +288,7 @@ class NuvlaClientWrapper:
         except Exception as e:
             logger.warning(f"Heartbeat to {self.nuvlaedge_uuid} failed with error: {e}")
 
-    def telemetry(self, new_status: dict, attributes_to_delete: set[str]) -> dict:
+    def telemetry(self, new_status: dict, attributes_to_delete: list[str]) -> dict:
         """ Sends telemetry metrics to the nuvlaedge-status resource using edit(put) operation
 
         Args:

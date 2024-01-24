@@ -194,7 +194,7 @@ class Telemetry:
                 logger.exception(f'Error retrieving data from monitor {it_monitor.name}.', ex)
                 continue
 
-        self._local_telemetry.update(temp_dict)
+        self._local_telemetry = TelemetryPayloadAttributes.model_validate(temp_dict)
 
     def _check_monitors_health(self):
         """

@@ -1,3 +1,4 @@
+import json
 import logging
 
 from pydantic import BaseModel
@@ -44,7 +45,6 @@ def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[s
             if value is not None:
                 to_send.add(field)
             else:
-                to_delete.add(field)
+                to_delete.add(field.replace('_', '-'))
 
-    # to_delete = reference.model_fields_set - target.model_fields_set
     return to_send, to_delete

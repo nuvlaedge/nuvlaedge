@@ -114,7 +114,7 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.common.timed_actions.ActionHandler.add')
     def test_init_actions(self, mock_add):
         self.agent._init_actions()
-        self.assertEqual(3, mock_add.call_count)
+        self.assertEqual(4, mock_add.call_count)
 
     @patch('nuvlaedge.agent.agent.Agent._init_workers')
     @patch('nuvlaedge.agent.agent.Agent._init_actions')

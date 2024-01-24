@@ -1,4 +1,5 @@
 """ NuvlaEdge container monitor """
+import logging
 import os
 import datetime
 from subprocess import CompletedProcess
@@ -12,6 +13,10 @@ from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.util import execute_cmd
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 @monitor('container_stats_monitor')
@@ -90,8 +95,8 @@ class ContainerStatsMonitor(Monitor):
         labels = self.coe_client.get_node_labels()
 
         cluster_managers = self.coe_client.get_cluster_managers()
-        if not self.data.cluster_data:
-            self.data.cluster_data = ClusterStatusData()
+
+        self.data.cluster_data = ClusterStatusData()
 
         if node_id:
             self.data.cluster_data.node_id = node_id

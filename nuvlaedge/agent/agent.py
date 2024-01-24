@@ -304,8 +304,28 @@ class Agent:
                 remaining_time=60
             )
         )
-        # FUTURE: Status report for Worker Manager
+
+        # Status report for Worker Manager
+        self.action_handler.add(
+            TimedAction(
+                name='watch_workers',
+                period=45,
+                action=self._watch_workers,
+                remaining_time=45
+            )
+        )
         # FUTURE: Status report for Job Manager
+
+    def _watch_workers(self):
+        """
+        Checks the worker status and restarts them if needed
+        Returns: None
+
+        """
+        logger.info("Checking worker status")
+        logger.info(self.worker_manager.summary())
+
+        self.worker_manager.heal_workers()
 
     def start_agent(self):
         """
@@ -404,10 +424,9 @@ class Agent:
         data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
 
         # Send telemetry via NuvlaClientWrapper
-        logger.info(f"Sending telemetry data to Nuvla \n "
-                    f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
-
-        response: dict = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=to_delete)
+        logger.debug(f"Sending telemetry data to Nuvla \n "
+                     f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
+        response: dict = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
         # If telemetry is successful save telemetry
         if response:
@@ -508,12 +527,10 @@ class Agent:
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle
             logger.debug(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
-            logger.debug(self.action_handler.actions_summary())
+            logger.info(self.action_handler.actions_summary())
 
             # Cycle next action time and function
             next_cycle_in = self.action_handler.sleep_time()
             next_action = self.action_handler.next
             logger.debug(self.action_handler.actions_summary())
             logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
-
-            logger.info(self.worker_manager.summary())

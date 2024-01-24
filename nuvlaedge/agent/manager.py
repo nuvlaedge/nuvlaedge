@@ -48,6 +48,16 @@ class WorkerManager:
             logger.info(f"Worker {worker_type.__name__} already registered")
             return False
 
+    def heal_workers(self):
+        """
+        Iterates over the registered workers and restarts any worker that is not running.
+        """
+        for _, worker in self.registered_workers.items():
+            if not worker.is_running:
+                logger.info(f"Worker {worker.worker_name} is not running, restarting...")
+                # Should we recreate the worker class or just the threads
+                worker.reset_worker()
+
     def summary(self) -> str:
         """
         Returns a formatted status report for each registered worker.
@@ -84,8 +94,10 @@ class WorkerManager:
             worker.stop()
 
     def edit_period(self, worker_name: str | type, new_period: int):
+        """ Updates the period of a registered worker."""
         if isinstance(worker_name, type):
             worker_name = worker_name.__name__
+
         if worker_name not in self.registered_workers:
             logger.error(f"Worker {worker_name} is not registered on manager, cannot update its period")
             return

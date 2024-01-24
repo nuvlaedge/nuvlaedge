@@ -86,12 +86,12 @@ class TestWorker(TestCase):
 
     def test_reset_worker(self):
         self.mock_type.reset_mock()
-        self.test_worker._reset_worker()
+        self.test_worker.reset_worker()
         self.mock_type.assert_called_once()
         self.mock_type.reset_mock()
 
         test_params = ((), {'mock_key': 'mock_value'})
-        self.test_worker._reset_worker(test_params)
+        self.test_worker.reset_worker(test_params)
         self.assertEqual(self.test_worker.class_init_parameters, test_params)
         self.mock_type.assert_called_once_with(*test_params[0], **test_params[1])
 

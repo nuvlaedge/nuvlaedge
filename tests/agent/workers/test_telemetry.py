@@ -32,7 +32,7 @@ class TestTelemetry(TestCase):
         self.test_telemetry._initialize_monitors()
         self.assertEqual(monitor_count - 2, len(self.test_telemetry.monitor_list))
 
-    @patch('nuvlaedge.agent.workers.telemetry.TelemetryPayloadAttributes.update')
+    @patch('nuvlaedge.agent.workers.telemetry.TelemetryPayloadAttributes.model_validate')
     def test_collect_monitor_metrics(self, mock_update):
         mock_monitor = Mock()
         mock_monitor.name = 'mock_monitor'
@@ -43,7 +43,6 @@ class TestTelemetry(TestCase):
             mock_monitor.updated = False
             self.test_telemetry._collect_monitor_metrics()
             mock_monitor.populate_nb_report.assert_not_called()
-            mock_update.assert_called_once_with({})
             mock_info.assert_called_once_with(f'Data not updated yet in monitor {mock_monitor.name}')
 
         # Normal execution

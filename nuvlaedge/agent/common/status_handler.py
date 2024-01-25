@@ -69,7 +69,7 @@ class NuvlaEdgeStatusHandler:
         self._notes = temp_notes
 
     def update_status(self):
-        logger.debug(f"Consuming received status reports")
+        logger.debug("Consuming received status reports")
         while not self.status_channel.empty():
             self.add_module(self.status_channel.get())
 

@@ -279,7 +279,7 @@ class Commissioner:
 
         """
         endpoint = "https://{ip}:{port}"
-        vpn_ip = VPNHandler.get_vpn_ip()  # TODO: Find a way of retrieving VPN
+        vpn_ip = VPNHandler.get_vpn_ip()
         api_address, api_port = self.coe_client.get_api_ip_port()
 
         if vpn_ip and api_port:

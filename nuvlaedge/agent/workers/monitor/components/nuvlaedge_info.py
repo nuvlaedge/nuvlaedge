@@ -20,9 +20,6 @@ from ..components import monitor
 @monitor('nuvlaedge_info_monitor')
 class NuvlaEdgeInfoMonitor(Monitor):
     """ NuvlaEdge information monitor class. """
-    # FIXME: Providing type hint for `telemetry` in the constructor
-    #  "telemetry: Telemetry", and effectively importing Telemetry creates
-    #  circular dependency error in tests/agent/_test_activate.py.
     def __init__(self, name: str, telemetry,
                  enable_monitor: bool = True):
         super().__init__(name, NuvlaInfo, enable_monitor)

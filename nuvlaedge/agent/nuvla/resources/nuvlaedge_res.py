@@ -13,7 +13,6 @@ from .base import AutoUpdateNuvlaEdgeTrackedResource, NuvlaResourceBase
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
-# logger.setLevel(logging.DEBUG)
 
 
 class State(UppercaseStrEnum):
@@ -31,8 +30,7 @@ class State(UppercaseStrEnum):
         for k, v in cls.__members__.items():
             if k == value:
                 return v
-        else:
-            raise ValueError(f"'{cls.__name__}' enum not found for '{value}'")
+        raise ValueError(f"'{cls.__name__}' enum not found for '{value}'")
 
 
 class NuvlaEdgeResource(NuvlaResourceBase):

@@ -127,8 +127,6 @@ class NuvlaClientWrapper:
         self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
                                                    insecure=not verify,
                                                    reauthenticate=True)
-        # self.job_client: NuvlaApi = NuvlaApi(endpoint=host, insecure=not verify, persist_cookie=False)
-        # self.deployment_client: NuvlaApi = NuvlaApi(endpoint=host, insecure=not verify, persist_cookie=False)
 
         self._headers: dict = {}
         self.nuvlaedge_credentials: NuvlaApiKeyTemplate | None = None

@@ -62,7 +62,7 @@ class Worker:
         self.actions: list[str] = actions
         self.callable_actions: list[Callable[[], None]] = []
         self.worker_type: Type = worker_type
-        self.worker: worker_type = self.worker_type(*init_params[0], **init_params[1])
+        self.worker_instance: worker_type = self.worker_type(*init_params[0], **init_params[1])
 
         self.run_thread: Thread | None = None
         self.error_count: int = 0
@@ -114,7 +114,7 @@ class Worker:
 
         """
         for a in self.actions:
-            c: Callable = getattr(self.worker, a)
+            c: Callable = getattr(self.worker_instance, a)
             if not isinstance(c, Callable):
                 logger.warning(f"Cannot gather function {a} from {self.worker_name}")
                 continue
@@ -161,8 +161,8 @@ class Worker:
         """
         if new_init_params:
             self.class_init_parameters = new_init_params
-        self.worker = self.worker_type(*self.class_init_parameters[0],
-                                       **self.class_init_parameters[1])
+        self.worker_instance = self.worker_type(*self.class_init_parameters[0],
+                                                **self.class_init_parameters[1])
 
     def edit_period(self, new_period: int):
         """

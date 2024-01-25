@@ -23,6 +23,7 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
+import json
 import logging
 import sys
 import time
@@ -368,7 +369,7 @@ class Agent:
         """ Gathers the status from the workers and stores it in the telemetry payload """
         # Gather the status report
         status, notes = self.status_handler.get_status()
-        logger.info(f"Status gathered: {status} - {notes}")
+        logger.info(f"Status gathered: \n{status} \n {json.dumps(notes,indent=4)}")
         telemetry.status = status
         telemetry.status_notes = notes
 

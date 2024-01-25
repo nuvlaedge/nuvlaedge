@@ -870,7 +870,6 @@ class DockerClient(COEClient):
             message = 'Failed to find the current container by id. Cannot proceed'
             logger.error(message)
             raise
-            # return None
 
         last_update = myself.attrs.get('Created', '')
         working_dir = self.get_working_dir_from_labels(myself.labels)

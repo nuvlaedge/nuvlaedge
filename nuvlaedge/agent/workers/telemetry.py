@@ -139,7 +139,7 @@ class Telemetry:
             excluded_monitors: The list of excluded monitors as a comma-separated string.
 
         """
-        logger.info(f"Creating Telemetry object...")
+        logger.info("Creating Telemetry object...")
 
         self.coe_client = coe_client
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid

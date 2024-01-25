@@ -115,9 +115,8 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     @field_validator('*', mode='before')
     def non_empty_str(cls, v):
-        if isinstance(v, str):
-            if v == "":
-                return None
+        if isinstance(v, str) and v == "":
+            return None
         return v
 
 
@@ -126,7 +125,7 @@ __agent_settings: AgentSettings | None = None
 
 def parse_cmd_line_args() -> Namespace | None:
 
-    parser: ArgumentParser = ArgumentParser(description=f"NuvlaEdge agent",
+    parser: ArgumentParser = ArgumentParser(description="NuvlaEdge agent",
                                             exit_on_error=False)
     parser.add_argument('-l', '--log-level', dest='log_level',
                         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],

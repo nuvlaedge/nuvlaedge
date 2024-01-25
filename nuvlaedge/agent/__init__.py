@@ -24,9 +24,6 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 def main():
     agent_event: Event = Event()
 
-    # sigterm_handler = partial(sigterm_stop, agent_stop=agent_event)
-    # signal.signal(signal.SIGTERM, sigterm_handler)
-
     nuvlaedge_agent: Agent = Agent(exit_event=agent_event, settings=get_agent_settings())
     nuvlaedge_agent.start_agent()
     nuvlaedge_agent.run()

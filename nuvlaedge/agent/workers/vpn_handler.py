@@ -266,7 +266,7 @@ class VPNHandler:
                '-out', str(self.VPN_CSR_FILE),
                '-subj', f'/CN={self.nuvla_client.nuvlaedge_uuid.split("/")[-1]}']
 
-        logger.info(f"Requesting VPN certificates creation to OpenSSL...")
+        logger.info("Requesting VPN certificates creation to OpenSSL...")
         r = util.execute_cmd(cmd, method_flag=False)
 
         if r.get('returncode', -1) != 0:
@@ -277,7 +277,7 @@ class VPNHandler:
         if wait:
             logger.debug("Waiting for the certificates to appear")
             self._wait_certificates_ready()
-        logger.info(f"Requesting VPN certificates creation to OpenSSL... Success")
+        logger.info("Requesting VPN certificates creation to OpenSSL... Success")
 
     def _trigger_commission(self):
         """

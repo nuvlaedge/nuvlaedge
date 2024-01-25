@@ -139,7 +139,7 @@ class Telemetry:
             excluded_monitors: The list of excluded monitors as a comma-separated string.
 
         """
-        logger.info(f"Initialising Telemetry with logger name {__name__}")
+        logger.info(f"Creating Telemetry object...")
 
         self.coe_client = coe_client
         self.nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
@@ -158,7 +158,9 @@ class Telemetry:
 
         # Monitors modular system initialisation
         self.excluded_monitors: list[str] = excluded_monitors.replace("'", "").split(',') if excluded_monitors else []
-        logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
+        if self.excluded_monitors:
+            logger.info(f'Excluded monitors received in Telemetry: {self.excluded_monitors}')
+
         self.monitor_list: dict[str, Monitor] = {}
         self._initialize_monitors()
 

@@ -374,8 +374,7 @@ class Agent:
 
     # Agent Actions
     def _update_periodic_actions(self):
-        logger.info("Executing update_periodic_actions")
-
+        logger.info("Updating periodic actions...")
         # Check telemetry period
         if self._nuvla_client.nuvlaedge.refresh_interval != self.telemetry_period:
             logger.info(f"Telemetry period has changed from {self.telemetry_period} to"
@@ -402,7 +401,7 @@ class Agent:
         Returns:
             dict | None: The response from the telemetry operation if successful, None otherwise.
         """
-        logger.info("Executing telemetry")
+        logger.info("Executing telemetry...")
 
         # If there is no telemetry available there is nothing to do
         if self.telemetry_channel.empty():
@@ -430,7 +429,7 @@ class Agent:
 
         # If telemetry is successful save telemetry
         if response:
-            logger.info("Telemetry sent successfully to Nuvla")
+            logger.info("Executing telemetry... Success")
             NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
             write_file(self.telemetry_payload, FILE_NAMES.NUVLAEDGE_STATUS_FILE)
@@ -442,7 +441,7 @@ class Agent:
         Executes the heartbeat operation against Nuvla
         Returns: List of jobs if Nuvla Requests so
         """
-        logger.info("Executing heartbeat")
+        logger.info("Executing heartbeat...")
 
         # Usually takes ~10/15 seconds for the commissioner to commission NuvlaEdge for the first time
         # Until that happens, heartbeat operation is not available
@@ -453,7 +452,13 @@ class Agent:
                         f"Current state {self._nuvla_client.nuvlaedge.state}")
             return None
 
-        return self._nuvla_client.heartbeat()
+        response: dict = self._nuvla_client.heartbeat()
+
+        if response:
+            logger.info("Executing heartbeat... Success")
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+
+        return response
 
     def _process_response(self, response: dict, operation: str):
         """
@@ -469,8 +474,7 @@ class Agent:
         logger.info(f"{len(jobs)} jobs received from operation: {operation}")
         if jobs:
             self._process_jobs([NuvlaID(j) for j in jobs])
-
-        logger.info(f"Jobs Response process finished in {time.perf_counter() - start_time}")
+            logger.info(f"Jobs Response process finished in {time.perf_counter() - start_time}")
 
     def _process_jobs(self, jobs: list[NuvlaID]):
         """
@@ -492,7 +496,7 @@ class Agent:
                 logger.info(f"Starting job {i}")
                 job.launch()
             else:
-                logger.info(f"Job {job.job_id} already running, do nothing")
+                logger.debug(f"Job {job.job_id} already running, do nothing")
 
     def stop(self):
         self._exit.set()
@@ -505,20 +509,20 @@ class Agent:
             None
 
         """
+        logger.info("Running Agent...")
         self.worker_manager.start()
 
         next_cycle_in = self.action_handler.sleep_time()
-        logger.info(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
-        logger.debug(self.action_handler.actions_summary())
-
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+        logger.debug(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
 
         while not self._exit.wait(next_cycle_in):
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
             start_cycle: float = time.perf_counter()
 
             NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
 
             next_action = self.action_handler.next
+
             response = next_action()
 
             if response:
@@ -527,7 +531,7 @@ class Agent:
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle
             logger.debug(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
-            logger.info(self.action_handler.actions_summary())
+            logger.debug(self.action_handler.actions_summary())
 
             # Cycle next action time and function
             next_cycle_in = self.action_handler.sleep_time()

@@ -238,8 +238,6 @@ class TestAgent(TestCase):
         # Test once for each call before the infinite loop
         mock_manager.start.assert_called_once()
         mock_actions.sleep_time.assert_called_once()
-        mock_actions.actions_summary.assert_called_once()
-        mock_status_running.assert_called_once()
         mock_status_running.reset_mock()
 
         # Enter the infinite loop once

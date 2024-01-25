@@ -92,6 +92,7 @@ class Commissioner:
             nuvla_client (NuvlaClientWrapper): Client to interact with Nuvla
             status_channel (Queue[StatusReport]): Channel to send status updates
         """
+        logger.info("Creating commissioner object...")
 
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
@@ -118,7 +119,7 @@ class Commissioner:
         """
         # Get new field
         new_fields, removed_fields = model_diff(self._last_payload, self._current_payload)
-        logger.info(f"Commissioning changed/new fields: {new_fields} and removing no longer present: {removed_fields}")
+        logger.debug(f"Commissioning changed/new fields: {new_fields} and removing no longer present: {removed_fields}")
 
         _commission_payload: dict = self._current_payload.model_dump(exclude_none=True,
                                                                      exclude={'vpn_csr'},
@@ -188,7 +189,7 @@ class Commissioner:
 
         # Only required for Docker
         if self.coe_client.ORCHESTRATOR_COE == 'swarm':
-            logger.info("Updating Swarm Join Tokens")
+            logger.debug("Updating Swarm Join Tokens")
             manager_token, worker_token = self.coe_client.get_join_tokens()
             self._current_payload.swarm_token_manager = manager_token
             self._current_payload.swarm_token_worker = worker_token
@@ -209,10 +210,10 @@ class Commissioner:
             None.
         """
         if self.nuvla_client.nuvlaedge_status.node_id:
-            logger.info("Updating Cluster data, node id present in NuvlaEdge-status")
+            logger.debug("Updating Cluster data, node id present in NuvlaEdge-status")
             self._update_cluster_data()
         else:
-            logger.info(f"Nuvlabox-status still not ready. It should be updated in a bit...")
+            logger.debug("Cluster data not yet pushed to telemetry. Waiting to commission it")
 
         self._current_payload.capabilities = self._get_nuvlaedge_capabilities()
         self._update_coe_data()
@@ -233,7 +234,7 @@ class Commissioner:
 
         # Compare what have been sent to Nuvla (_last_payload) and whatis locally updated (_current_payload)
         if self._last_payload != self._current_payload:
-            logger.debug("Commissioning data has changed, commissioning...")
+            logger.info("Commissioning data has changed, commissioning...")
             self._commission()
         else:
             logger.info("Nothing to commission, system configuration remains the same.")

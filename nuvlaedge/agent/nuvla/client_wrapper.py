@@ -164,7 +164,7 @@ class NuvlaClientWrapper:
                        res_type: type[AutoUpdateNuvlaEdgeTrackedResource],
                        res_id: NuvlaID,
                        **kwargs):
-        logger.info(f"Initializing resource {res_name} with id {res_id}{kwargs}")
+        logger.debug(f"Initializing resource {res_name} with id {res_id}{kwargs}")
         self._resources[res_name] = res_type(nuvla_client=self.nuvlaedge_client,
                                              resource_id=res_id,
                                              **kwargs)
@@ -226,9 +226,9 @@ class NuvlaClientWrapper:
                                                                       self.nuvlaedge_credentials.secret)
 
         if login_response.status_code in [200, 201]:
-            logger.info("Log in successful")
+            logger.debug("Log in successful")
         else:
-            logger.info(f"Error logging in: {login_response}")
+            logger.warning(f"Error logging in: {login_response}")
 
     def activate(self):
         """ Activates the NuvlaEdge, saves the returned api-keys and logs in.
@@ -237,9 +237,9 @@ class NuvlaClientWrapper:
          which the system cannot work.
 
         """
-
+        logger.info("Activating NuvlaEdge...")
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
-        logger.info(f"Credentials received from activation: {credentials}")
+
         self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
@@ -261,7 +261,7 @@ class NuvlaClientWrapper:
         Returns: a dictionary the response of the server to the commissioning operation
 
         """
-        logger.info(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid} with payload {payload}")
+        logger.debug(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid} with payload {payload}")
         try:
             response: dict = self.nuvlaedge_client._cimi_post(resource_id=f"{self.nuvlaedge_uuid}/commission",
                                                               json=payload)
@@ -270,7 +270,7 @@ class NuvlaClientWrapper:
 
             return response
         except Exception as e:
-            logger.warning(f"Cannot commission NuvlaEdge with Payload {payload}: {e}")
+            logger.warning(f"Error commissioning NuvlaEdge with Payload {payload}: {e}")
 
     def heartbeat(self) -> dict:
         """ Executes nuvlaedge resource heartbeat operation in the Nuvla endpoint
@@ -279,7 +279,6 @@ class NuvlaClientWrapper:
             jobs queued for this NuvlaEdge
 
         """
-        logger.info("Sending heartbeat")
         try:
             if not self.nuvlaedge_client.is_authenticated():
                 self.login_nuvlaedge()
@@ -298,6 +297,9 @@ class NuvlaClientWrapper:
         Returns: a CimiResponse instance with the response of the server including jobs queued for this NuvlaEdge
 
         """
+        logger.debug(f"Sending telemetry report to Nuvla: \n"
+                     f"Changed fields: {new_status.keys()}\n"
+                     f"Deleted fields: {attributes_to_delete}")
         response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)

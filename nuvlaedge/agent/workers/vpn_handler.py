@@ -129,7 +129,7 @@ class VPNHandler:
             vpn_extra_conf (str): Additional configuration for the VPN.
         """
 
-        logger.info("Creating VPN handler object")
+        logger.debug("Creating VPN handler object")
 
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = nuvla_client
@@ -154,7 +154,7 @@ class VPNHandler:
         self._load_vpn_server()
 
         if not self.VPN_FOLDER.exists():
-            logger.info("Create VPN directory tree")
+            logger.debug("Creating VPN directory tree")
             self.VPN_FOLDER.mkdir()
 
         NuvlaEdgeStatusHandler.starting(self.status_channel, self.__class__.__name__)
@@ -208,7 +208,7 @@ class VPNHandler:
         while time.perf_counter() - start_time < timeout:
 
             if self._certificates_exists():
-                logger.info("Certificates ready")
+                logger.debug("Certificates ready")
                 return
             time.sleep(0.3)
 
@@ -232,12 +232,12 @@ class VPNHandler:
         while time.perf_counter() - start_time < timeout:
             if self.nuvla_client.vpn_credential.vpn_certificate is not None:
                 self.vpn_credential = self.nuvla_client.vpn_credential.model_copy()
-                logger.info("VPN credential created in Nuvla")
+                logger.debug(f"VPN credential {self.nuvla_client.vpn_credential.id} created in Nuvla")
                 self._save_credential()
                 return True
             time.sleep(1)
 
-        logger.info(f"VPN credential not created in time with timeout {timeout}")
+        logger.warning(f"VPN credential not created in time with timeout {timeout}")
         return False
 
     def _generate_certificates(self, wait: bool = True):
@@ -266,18 +266,18 @@ class VPNHandler:
                '-out', str(self.VPN_CSR_FILE),
                '-subj', f'/CN={self.nuvla_client.nuvlaedge_uuid.split("/")[-1]}']
 
-        logger.info(f"Requesting certificates with command: \n {' '.join(cmd)}")
+        logger.info(f"Requesting VPN certificates creation to OpenSSL...")
         r = util.execute_cmd(cmd, method_flag=False)
 
-        logger.info(f"Certificate generation response: \n{r.get('stdout')} \n {r.get('stderr')}")
         if r.get('returncode', -1) != 0:
             logger.error(f'Cannot generate certificates for VPN connection: '
                          f'{r.get("stdout")} | {r.get("stderr")}')
             return
 
         if wait:
-            logger.info("Waiting for the certificates to appear")
+            logger.debug("Waiting for the certificates to appear")
             self._wait_certificates_ready()
+        logger.info(f"Requesting VPN certificates creation to OpenSSL... Success")
 
     def _trigger_commission(self):
         """
@@ -287,6 +287,7 @@ class VPNHandler:
         Returns: None
 
         """
+        logger.info("Commissioning VPN...")
         vpn_data = file_operations.read_file(self.VPN_CSR_FILE)
         logger.debug(f"Triggering commission with VPN Data: {vpn_data}")
 
@@ -300,7 +301,7 @@ class VPNHandler:
                                            'VPNHandler',
                                            "Error commissioning VPN. Will retry in 60s")
         else:
-            logger.info("Successfully commissioned VPN.")
+            logger.info("Commissioning VPN... Success")
             NuvlaEdgeStatusHandler.starting(self.status_channel, 'VPNHandler')
 
         logger.debug(f"Commission response: {json.dumps(commission_response, indent=4)}")
@@ -486,13 +487,13 @@ class VPNHandler:
             logger.info("VPN credentials aligned. No need for commissioning")
             return
 
-        logger.info("Starting VPN commissioning...")
+        logger.info("Starting VPN commissioning and configuration...")
 
         # Generate SSL certificates
-        logger.info("Request SSL certificate generation")
+        logger.debug("Request SSL certificate generation")
         self._generate_certificates()
 
-        logger.info("Conform the certificate sign request and send it to Nuvla via commissioning")
+        logger.debug("Conform the certificate sign request and send it to Nuvla via commissioning")
         self._trigger_commission()
 
         # Wait for VPN credential to show up in Nuvla (Timeout needs to be commissioner_period + sometime
@@ -504,6 +505,7 @@ class VPNHandler:
 
         # Then we need to (re)configure the VPN client
         self._configure_vpn_client()
+        logger.info("Starting VPN commissioning and configuration... Success")
 
     def _save_credential(self):
         """ Saves the VPN credential to the file system."""

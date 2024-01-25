@@ -55,7 +55,7 @@ class NuvlaEdgeStatusHandler:
                 temp_status = 'DEGRADED'
 
             if module_report.module_status in ['STARTING', 'RUNNING'] and temp_status != 'DEGRADED':
-                logger.info(f"Module {module_name} is in STARTING or RUNNING")
+                logger.debug(f"Module {module_name} is in STARTING or RUNNING")
                 temp_status = 'OPERATIONAL'
 
             temp_notes.append('{name: <16} - {time_d: <6}s: {status: <9}{message}'.format(
@@ -69,11 +69,11 @@ class NuvlaEdgeStatusHandler:
         self._notes = temp_notes
 
     def update_status(self):
-        logger.info(f"Consuming received status reports")
+        logger.debug(f"Consuming received status reports")
         while not self.status_channel.empty():
             self.add_module(self.status_channel.get())
 
-        logger.info(f"Processing {len(self.module_reports)} status reports")
+        logger.debug(f"Processing {len(self.module_reports)} status reports")
         self.process_status()
 
     def get_status(self) -> tuple[str, list[str]]:

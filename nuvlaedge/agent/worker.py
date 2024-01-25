@@ -186,11 +186,11 @@ class Worker:
         Returns: None
 
         """
-        logger.info(f"Entering main loop of {self.worker_name}")
+        logger.info(f"Starting {self.worker_name} worker")
 
         _wait_time: float = self._initial_delay
         self._initial_delay = -1.0
-        logger.info(f"Initial delay for {self.worker_name} is {_wait_time}s")
+        logger.debug(f"Initial delay for {self.worker_name} is {_wait_time}s")
 
         # Start loop of the worker
         while not self.exit_event.wait(_wait_time):
@@ -198,9 +198,9 @@ class Worker:
             self._exec_start_time = time.time()
             for action in self.callable_actions:
                 try:
-                    logger.debug(f"Running {action.__name__} from {self.worker_name}")
+                    logger.debug(f"Running {action.__name__} from {self.worker_name}...")
                     action()
-                    logger.debug(f"Finished {action.__name__} from {self.worker_name}")
+                    logger.debug(f"Running {action.__name__} from {self.worker_name}... Success")
 
                 # Catch the exception that allows workers to exit themselves
                 except WorkerExitException as ex:
@@ -216,11 +216,11 @@ class Worker:
 
             # Store the time of the end of the execution
             self._exec_finish_time = time.time()
-            logger.info(f"{self.worker_name} worker actions run  in {self._exec_finish_time-self._exec_start_time}s,"
-                        f" next iteration in {self.remaining_time}s")
+            logger.debug(f"{self.worker_name} worker actions run  in {self._exec_finish_time-self._exec_start_time}s,"
+                         f" next iteration in {self.remaining_time}s")
             _wait_time = self.remaining_time
 
-        logger.info(f"{self.worker_name} exiting loop...")
+        logger.warning(f"{self.worker_name} exiting loop...")
 
     def worker_summary(self) -> str:
         """ Returns a formatted status report for the worker. """
@@ -233,7 +233,7 @@ class Worker:
         This method should be called to start the worker thread.
         """
         self._init_thread()
-        logger.info(f"{self.worker_name} worker started")
+        logger.debug(f"{self.worker_name} worker started")
 
     def stop(self):
         """ Stop method for stopping the execution of the run_thread. """

@@ -1,4 +1,5 @@
 import logging
+import pprint
 from typing import Type
 
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -34,8 +35,9 @@ class WorkerManager:
             actions (list[str]): The list of actions that the worker will perform.
             initial_delay (float | None, optional): An optional initial delay in seconds before the worker starts performing actions. Defaults to None.
         """
-        if worker_type.__class__.__name__ not in self.registered_workers:
-            logger.info(f"Registering worker: {worker_type.__name__} in manager")
+
+        if worker_type.__class__.__name__ not in self.registered_workers.keys():
+            logger.debug(f"Registering worker: {worker_type.__name__} in manager")
             self.registered_workers[worker_type.__name__] = (
                 Worker(period=period,
                        worker_type=worker_type,
@@ -45,7 +47,7 @@ class WorkerManager:
             )
             return True
         else:
-            logger.info(f"Worker {worker_type.__name__} already registered")
+            logger.warning(f"Worker {worker_type.__name__} already registered")
             return False
 
     def heal_workers(self):
@@ -81,7 +83,7 @@ class WorkerManager:
 
         """
         for name, worker in self.registered_workers.items():
-            logger.info(f"Starting {name} worker...")
+            logger.debug(f"Starting {name} worker...")
             worker.start()
 
     def stop(self):

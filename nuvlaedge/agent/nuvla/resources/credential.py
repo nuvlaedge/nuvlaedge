@@ -55,7 +55,7 @@ class CredentialResource(AutoUpdateNuvlaEdgeTrackedResource):
 
         if creds.count >= 1:
             cred_data: dict = creds.resources[0].data
-            logger.info(f"VPN credential found in NuvlaEdge with id: {cred_data.get('id')}")
+            logger.debug(f"VPN credential found in NuvlaEdge with id: {cred_data.get('id')}")
             self._update_fields(cred_data)
             self._is_synced = True
             self._last_update_time = time.perf_counter()

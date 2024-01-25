@@ -74,7 +74,7 @@ class AutoUpdateNuvlaEdgeTrackedResource(NuvlaResourceBase):
 
         # If it is the first time retrieving the NuvlaEdge, retrieve the full document
         if self._last_update_time < 0:
-            logger.info(f"Retrieving complete NuvlaEdge resource")
+            logger.debug(f"Retrieving full {self._resource_id} resource")
             _select = None
 
         logger.debug(f"Updating NuvlaEdge fields: {_select}")
@@ -105,7 +105,7 @@ class AutoUpdateNuvlaEdgeTrackedResource(NuvlaResourceBase):
             self._accessed_fields.update({item.replace('_', '-'): time.perf_counter()})
 
             if time.perf_counter() - self._last_update_time > self._MIN_UPDATE_PERIOD:
-                logger.info(f"Updating {self.__class__.__name__} resource")
+                logger.debug(f"Updating {self.__class__.__name__} resource")
                 self._sync()
         return object.__getattribute__(self, item)
 

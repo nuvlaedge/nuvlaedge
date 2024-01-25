@@ -77,12 +77,12 @@ class TestWorker(TestCase):
         mock_set.assert_called_once()  # assertion
         self.mock_thread.join.assert_called_once()
 
-    @patch('nuvlaedge.agent.worker.logging.Logger.info')
+    @patch('nuvlaedge.agent.worker.logging.Logger.debug')
     @patch('nuvlaedge.agent.worker.Worker._init_thread')
-    def test_start(self, mock_init_th, mock_info):
+    def test_start(self, mock_init_th, mock_debug):
         self.test_worker.start()
         mock_init_th.assert_called_once()
-        mock_info.assert_called_once_with("mock_type_name worker started")
+        mock_debug.assert_called_once_with("mock_type_name worker started")
 
     def test_reset_worker(self):
         self.mock_type.reset_mock()
@@ -110,7 +110,7 @@ class TestWorker(TestCase):
         with patch('nuvlaedge.agent.worker.logging.Logger.debug') as mock_debug:
             self.test_worker.run()
             mock_callable.assert_called_once()
-            self.assertEqual(mock_debug.call_count, 2)
+            self.assertEqual(mock_debug.call_count, 4)
             mock_process.assert_not_called()
 
         # Test normal exception
@@ -136,7 +136,7 @@ class TestWorker(TestCase):
             self.test_worker.run()
             mock_callable.assert_called_once()
             mock_process.assert_called_once_with(ex, is_exit=True)
-            self.assertEqual(mock_debug.call_count, 1)
+            self.assertEqual(mock_debug.call_count, 3)
 
 
 

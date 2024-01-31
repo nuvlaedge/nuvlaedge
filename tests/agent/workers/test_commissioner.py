@@ -53,7 +53,7 @@ class TestCommissioner(TestCase):
                 mock_json.return_value = load_dict
                 self.test_commissioner.nuvla_client._nuvlaedge_uuid = 'random'
                 self.test_commissioner._load_previous_commission()
-                self.assertEqual(self.test_commissioner._last_payload.tags, None)
+                self.assertIsNone(self.test_commissioner._last_payload.tags)
                 self.test_commissioner.nuvla_client._nuvlaedge_uuid = 'nuvlaedge-id'
                 self.test_commissioner._load_previous_commission()
                 mock_json.side_effect = json.JSONDecodeError('msg', 'doc', 1)

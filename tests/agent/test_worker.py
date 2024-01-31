@@ -95,9 +95,8 @@ class TestWorker(TestCase):
         self.assertEqual(self.test_worker.class_init_parameters, test_params)
         self.mock_type.assert_called_once_with(*test_params[0], **test_params[1])
 
-    @patch('nuvlaedge.agent.worker.Worker._init_thread')
     @patch('nuvlaedge.agent.worker.Worker._process_exception')
-    def test_run(self, mock_process, mock_init_th):
+    def test_run(self, mock_process):
         mock_callable = Mock()
         mock_callable.__name__ = 'mock_callable'
         mock_exit = Mock()
@@ -123,7 +122,6 @@ class TestWorker(TestCase):
         self.test_worker.run()
         mock_callable.assert_called_once()
         mock_process.assert_called_once_with(ex)
-        mock_init_th.assert_called_once()
 
         # Test WorkerExitException
         mock_callable.reset_mock()

@@ -121,7 +121,7 @@ class DockerClient(COEClient):
 
         return None, None
 
-    def list_nodes(self, optional_filter={}):
+    def list_nodes(self, optional_filter: dict = None):
         """
         Args:
             optional_filter: A dictionary specifying optional filtering for the list of nodes. The keys in the dictionary represent the filtering criteria and the values represent the corresponding

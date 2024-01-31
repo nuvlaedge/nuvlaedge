@@ -212,7 +212,6 @@ class Worker:
                     logger.error(f"Error {ex.__class__.__name__} running action {action.__name__} on class "
                                  f"{self.worker_name}", exc_info=True, )
                     self._process_exception(ex)
-                    self._init_thread()
 
             # Store the time of the end of the execution
             self._exec_finish_time = time.time()

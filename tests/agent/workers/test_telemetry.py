@@ -118,6 +118,10 @@ class TestTelemetry(TestCase):
         self.mock_report_channel.put.assert_called_once_with(self.test_telemetry._local_telemetry, block=False)
 
         with patch('nuvlaedge.agent.workers.telemetry.logging.Logger.warning') as mock_warning:
-            self.mock_report_channel.put.side_effect = Full()
+            self.mock_report_channel.reset_mock()
+            self.mock_report_channel.put.side_effect = [Full(), None]
             self.test_telemetry.run()
-            mock_warning.assert_called_once_with("Telemetry Queue is full, agent not consuming data...")
+            mock_warning.assert_called_once_with(
+                "Telemetry Queue is full, agent not consuming data... Discarding oldest telemetry.")
+            self.assertEqual(self.mock_report_channel.put.call_count, 2)
+            self.mock_report_channel.get.assert_called_once()

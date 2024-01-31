@@ -154,20 +154,6 @@ class NuvlaClientWrapper:
             self._nuvlaedge_status_uuid = self.nuvlaedge.nuvlabox_status
         return self._nuvlaedge_status_uuid
 
-    def _is_resource_available(self, res_name: str):
-        return res_name in self._resources and self._resources.get(res_name) is not None
-
-    def _init_resource(self,
-                       res_name: str,
-                       res_type: type[AutoUpdateNuvlaEdgeTrackedResource],
-                       res_id: NuvlaID,
-                       **kwargs):
-        logger.debug(f"Initializing resource {res_name} with id {res_id}{kwargs}")
-        self._resources[res_name] = res_type(nuvla_client=self.nuvlaedge_client,
-                                             resource_id=res_id,
-                                             **kwargs)
-        self._resources[res_name].force_update()
-
     @property
     def nuvlaedge(self) -> NuvlaEdgeResource:
         """
@@ -218,6 +204,20 @@ class NuvlaClientWrapper:
         if not self._is_resource_available(_res_name):
             self._init_resource(_res_name, AutoInfrastructureServiceResource, self.nuvlaedge.vpn_server_id)
         return self._resources.get(_res_name)
+
+    def _is_resource_available(self, res_name: str) -> bool:
+        return res_name in self._resources and self._resources.get(res_name) is not None
+
+    def _init_resource(self,
+                       res_name: str,
+                       res_type: type[AutoUpdateNuvlaEdgeTrackedResource],
+                       res_id: NuvlaID,
+                       **kwargs):
+        logger.debug(f"Initializing resource {res_name} with id {res_id}{kwargs}")
+        self._resources[res_name] = res_type(nuvla_client=self.nuvlaedge_client,
+                                             resource_id=res_id,
+                                             **kwargs)
+        self._resources[res_name].force_update()
 
     def login_nuvlaedge(self):
         login_response: Response = self.nuvlaedge_client.login_apikey(self.nuvlaedge_credentials.key,
@@ -344,6 +344,7 @@ class NuvlaClientWrapper:
         try:
             session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(session_store)
         except Exception as ex:
+            print('\n\n Excep \n\n')
             logger.warning(f'Could not validate session \n{session_store} \nwith error : {ex}')
             return None
 
@@ -369,7 +370,6 @@ class NuvlaClientWrapper:
         """
         client = cls(host=host, verify=verify, nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid))
         client.nuvlaedge_credentials = credentials
-        client.login_nuvlaedge()
         client.login_nuvlaedge()
         return client
 

@@ -131,7 +131,6 @@ class Docker(COEClient):
 
     @staticmethod
     def get_current_image_from_env():
-        # TODO: Centrilise COE clients to nuvlaedge level module to prevent cross import from agent to sm and viceversa
         registry = os.getenv('NE_IMAGE_REGISTRY', '')
         organization = os.getenv('NE_IMAGE_ORGANIZATION', 'sixsq')
         repository = os.getenv('NE_IMAGE_REPOSITORY', 'nuvlaedge')

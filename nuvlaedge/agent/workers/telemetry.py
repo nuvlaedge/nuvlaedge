@@ -285,6 +285,7 @@ class Telemetry:
             self.report_channel.put(self._local_telemetry, block=False)
 
         except Full:
-            logger.warning("Telemetry Queue is full, agent not consuming data...")
-            # TODO: Should we empty the channel here?
+            logger.warning("Telemetry Queue is full, agent not consuming data... Discarding oldest telemetry.")
+            _ = self.report_channel.get(block=False)
+            self.report_channel.put(self._local_telemetry, block=False)
 

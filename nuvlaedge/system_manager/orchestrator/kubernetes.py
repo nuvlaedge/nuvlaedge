@@ -117,9 +117,14 @@ class Kubernetes(COEClient):
     def read_system_issues(self, node_info):
         errors = []
         warnings = []
-        # TODO: is there a way to get any system errors from the k8s API?
         # The cluster-info dump reports a lot of stuff but is all verbose
-
+        field_selector = 'type!=Normal'
+        events = self.client.list_event_for_all_namespaces(field_selector=field_selector).items
+        for event in events:
+            if event.type == 'Warning':
+                warnings.append(event.message)
+            elif event.type == 'Error':
+                errors.append(event.message)
         return errors, warnings
 
     def set_nuvlaedge_node_label(self, node_id=None):
@@ -170,5 +175,4 @@ class Kubernetes(COEClient):
         return self.get_node_info().status.node_info.kubelet_version
 
     def get_current_container_id(self) -> str:
-        # TODO
         return ''

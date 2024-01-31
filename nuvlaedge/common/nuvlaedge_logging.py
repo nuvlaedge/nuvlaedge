@@ -47,8 +47,7 @@ def set_logging_configuration(debug: bool,
         _LOG_PATH = log_path
 
     if not _LOG_PATH.exists():
-        logging.error(f"Configured logging path {log_path} doesn't exist, creating it.")
-        # TODO: Should we create the folder structure for the logging or disable it if it doesn't exist?
+        logging.warning(f"Configured logging path {log_path} doesn't exist, creating it.")
         """
         It is expected the logging to be stored in a docker/k8s volume to give it persistence
         service:

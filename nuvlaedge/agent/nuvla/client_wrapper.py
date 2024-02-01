@@ -19,7 +19,8 @@ from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              AutoUpdateNuvlaEdgeTrackedResource,
                                              AutoNuvlaEdgeResource,
                                              AutoNuvlaEdgeStatusResource,
-                                             AutoInfrastructureServiceResource)
+                                             AutoInfrastructureServiceResource,
+                                             AutoCredentialResource)
 from nuvlaedge.agent.settings import AgentSettings
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -187,7 +188,7 @@ class NuvlaClientWrapper:
 
         _res_name = 'vpn-credential'
         if not self._is_resource_available(_res_name):
-            self._init_resource(_res_name, CredentialResource, NuvlaID(''),
+            self._init_resource(_res_name, AutoCredentialResource, NuvlaID(''),
                                 nuvlaedge_id=self._nuvlaedge_uuid,
                                 vpn_server_id=self.nuvlaedge.vpn_server_id)
 

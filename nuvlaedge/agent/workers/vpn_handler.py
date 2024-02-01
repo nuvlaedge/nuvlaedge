@@ -539,3 +539,14 @@ class VPNHandler:
     def _save_vpn_server(self):
         """ Saves the VPN server to the file system."""
         file_operations.write_file(self.vpn_server, self.VPN_SERVER_FILE, exclude_none=True, by_alias=True)
+
+    def _load_vpn_credential(self):
+        _credential = file_operations.read_file(self.VPN_CREDENTIAL_FILE, decode_json=True)
+        if _credential:
+            self.vpn_credential = CredentialResource.model_validate(_credential)
+        else:
+            self.vpn_credential = CredentialResource()
+
+    def _save_vpn_credential(self):
+        """ Saves the VPN credential to the file system."""
+        file_operations.write_file(self.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)

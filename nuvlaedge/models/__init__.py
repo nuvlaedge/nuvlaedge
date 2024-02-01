@@ -20,8 +20,15 @@ def are_models_equal(model_one: BaseModel, model_two: BaseModel):
         bool: True if the BaseModel objects are equal, False otherwise.
 
     """
-    return (model_one.model_dump(exclude_none=True, by_alias=False) ==
-            model_two.model_dump(exclude_none=True, by_alias=False))
+    model_one_map = None
+    if model_one is not None:
+        model_one_map = model_one.model_dump(exclude_none=True, by_alias=False)
+
+    model_two_map = None
+    if model_two is not None:
+        model_two_map = model_two.model_dump(exclude_none=True, by_alias=False)
+
+    return model_one_map == model_two_map
 
 
 def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[str]]:

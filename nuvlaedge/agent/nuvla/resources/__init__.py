@@ -12,7 +12,7 @@ from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import (AutoNuvlaEdgeResource
                                                            State)
 
 # credential resource for the VPN credential
-from nuvlaedge.agent.nuvla.resources.credential import (CredentialResource)
+from nuvlaedge.agent.nuvla.resources.credential import (CredentialResource, AutoCredentialResource)
 
 # VPN server infrastructure service resource
 from nuvlaedge.agent.nuvla.resources.infrastructure_service import (InfrastructureServiceResource,

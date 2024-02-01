@@ -7,12 +7,12 @@ from nuvla.api.models import CimiCollection
 
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from .nuvla_id import NuvlaID
-from .base import AutoUpdateNuvlaEdgeTrackedResource
+from .base import AutoUpdateNuvlaEdgeTrackedResource, NuvlaResourceBase
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
-class CredentialResource(AutoUpdateNuvlaEdgeTrackedResource):
+class CredentialResource(NuvlaResourceBase):
     """
     This is a partial implementation of the Credential Resource Spec of Nuvla.
     It is only used for NuvlaEdge VPN
@@ -24,9 +24,9 @@ class CredentialResource(AutoUpdateNuvlaEdgeTrackedResource):
     vpn_common_name:        Optional[NuvlaID] = None
     vpn_intermediate_ca:    Optional[list[str]] = None
 
-#
-# class AutoCredentialResource(CredentialResource,
-#                              AutoUpdateNuvlaEdgeTrackedResource):
+
+class AutoCredentialResource(CredentialResource,
+                             AutoUpdateNuvlaEdgeTrackedResource):
 
     _VPN_CREDENTIAL_FILTER_TEMPLATE: str = ('method="create-credential-vpn-nuvlabox" and '
                                             'vpn-common-name="{nuvlaedge_uuid}" and '

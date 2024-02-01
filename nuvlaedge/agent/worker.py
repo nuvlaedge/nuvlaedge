@@ -149,6 +149,8 @@ class Worker:
 
         if self.error_count > 10:
             logger.error(f"Error limit reached in {self.worker_name} worker, raising all")
+            for e in self.exceptions:
+                logger.exception(e)
             raise ExceptionGroup(f"Too many errors in {self.worker_name} worker", self.exceptions)
 
     def reset_worker(self, new_init_params: tuple[tuple, dict] = ()):

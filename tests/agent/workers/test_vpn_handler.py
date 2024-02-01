@@ -100,7 +100,7 @@ class TestVPNHandler(TestCase):
             self.test_vpn_handler._wait_certificates_ready()
 
     @patch('nuvlaedge.agent.workers.vpn_handler.time')
-    @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._save_credential')
+    @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._save_vpn_credential')
     def test_wait_credential_creation(self, mock_save_creds, mock_time):
         mock_time.perf_counter.side_effect = [0, 25]
         self.assertFalse(self.test_vpn_handler._wait_credential_creation())

@@ -14,6 +14,7 @@ from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, Status
 from nuvlaedge.agent.worker import WorkerExitException
 from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource, CredentialResource, NuvlaID, State)
 from nuvlaedge.agent.common import util
+from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common import file_operations
@@ -104,7 +105,7 @@ class VPNHandler:
     VPN_FOLDER: Path = FILE_NAMES.VPN_FOLDER
     VPN_CSR_FILE: Path = FILE_NAMES.VPN_CSR_FILE
     VPN_KEY_FILE: Path = FILE_NAMES.VPN_KEY_FILE
-    VPN_CONF_FILE: Path = FILE_NAMES.VPN_CLIENT_CONF_FILE
+    VPN_CLIENT_CONF_FILE: Path = FILE_NAMES.VPN_CLIENT_CONF_FILE
     VPN_PLAIN_CONF_FILE: Path = FILE_NAMES.VPN_HANDLER_CONF
     VPN_CREDENTIAL_FILE: Path = FILE_NAMES.VPN_CREDENTIAL
     VPN_SERVER_FILE: Path = FILE_NAMES.VPN_SERVER_FILE
@@ -457,6 +458,7 @@ class VPNHandler:
 
         self._save_vpn_config(vpn_client_configuration)
         self._save_vpn_credential()
+        self._save_vpn_server()
 
     def run(self):
         """
@@ -465,7 +467,7 @@ class VPNHandler:
             - After, watches the vpn credential in Nuvla. If there are any changes, re-commissions the VPN and
             generates new certificates
         - Generates the certificates of the VPN
-        - Configures the OpenVPN client running in a different container using VPN_CONF_FILE
+        - Configures the OpenVPN client running in a different container using VPN_CLIENT_CONF_FILE
 
         """
         NuvlaEdgeStatusHandler.running(self.status_channel, 'VPNHandler')
@@ -507,7 +509,7 @@ class VPNHandler:
 
     def _load_vpn_config(self):
         """ Loads the VPN configuration from the file system."""
-        config = file_operations.read_file(self.VPN_CONF_FILE, decode_json=True)
+        config = file_operations.read_file(self.VPN_PLAIN_CONF_FILE, decode_json=True)
         if config:
             self.vpn_config = VPNConfig.model_validate(config)
         else:
@@ -520,13 +522,16 @@ class VPNHandler:
             vpn_client_conf (str): The VPN client configuration.
         """
         file_operations.write_file(self.vpn_config, self.VPN_PLAIN_CONF_FILE, exclude_none=True, by_alias=True)
-        file_operations.write_file(vpn_client_conf, self.VPN_CONF_FILE)
+        file_operations.write_file(vpn_client_conf, self.VPN_CLIENT_CONF_FILE)
 
     def _load_vpn_server(self):
         """ Loads the VPN server from the file system."""
         _server = file_operations.read_file(self.VPN_SERVER_FILE, decode_json=True)
         if _server:
             self.vpn_server = InfrastructureServiceResource.model_validate(_server)
+            return
+        if file_exists_and_not_empty(self.VPN_CLIENT_CONF_FILE):
+            self.vpn_server = self.nuvla_client.vpn_server.model_copy()
         else:
             self.vpn_server = InfrastructureServiceResource()
 
@@ -538,6 +543,9 @@ class VPNHandler:
         _credential = file_operations.read_file(self.VPN_CREDENTIAL_FILE, decode_json=True)
         if _credential:
             self.vpn_credential = CredentialResource.model_validate(_credential)
+            return
+        if file_exists_and_not_empty(self.VPN_CLIENT_CONF_FILE):
+            self.vpn_credential = self.nuvla_client.vpn_credential.model_copy()
         else:
             self.vpn_credential = CredentialResource()
 

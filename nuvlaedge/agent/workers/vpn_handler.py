@@ -143,7 +143,7 @@ class VPNHandler:
 
         # Client configuration data structure
         self.vpn_config: VPNConfig | None = None
-        self._load_vpn_config()
+
         self.vpn_extra_conf: str = vpn_extra_conf
 
         # Last VPN credentials used to create the VPN configuration
@@ -151,7 +151,7 @@ class VPNHandler:
 
         # Last VPN server configuration used to create the client VPN configuration
         self.vpn_server: InfrastructureServiceResource = ...
-        self._load_vpn_server()
+        self._load_configurations()
 
         if not self.VPN_FOLDER.exists():
             logger.debug("Creating VPN directory tree")
@@ -233,7 +233,7 @@ class VPNHandler:
             if self.nuvla_client.vpn_credential.vpn_certificate is not None:
                 self.vpn_credential = self.nuvla_client.vpn_credential.model_copy()
                 logger.debug(f"VPN credential {self.nuvla_client.vpn_credential.id} created in Nuvla")
-                self._save_credential()
+                self._save_vpn_credential()
                 return True
             time.sleep(1)
 
@@ -352,9 +352,6 @@ class VPNHandler:
         if not are_models_equal(self.vpn_credential, self.nuvla_client.vpn_credential):
             # There is missmatch between local credential and Nuvla credential
             logger.info("VPN needs commission due to missmatch local VPN credential and Nuvla credential")
-            logger.debug(f"Local credential: \n {self.vpn_credential.model_dump_json(indent=4, exclude_none=True)}")
-            logger.debug(f"Nuvla credential: \n "
-                         f"{self.nuvla_client.vpn_credential.model_dump_json(indent=4, exclude_none=True)}")
             return True
 
         if self.vpn_server.id != self.nuvla_client.nuvlaedge.vpn_server_id:
@@ -459,6 +456,7 @@ class VPNHandler:
             string.Template(util.VPN_CONFIG_TEMPLATE).substitute(self.vpn_config.dump_to_template()))
 
         self._save_vpn_config(vpn_client_configuration)
+        self._save_vpn_credential()
 
     def run(self):
         """
@@ -507,10 +505,6 @@ class VPNHandler:
         self._configure_vpn_client()
         logger.info("Starting VPN commissioning and configuration... Success")
 
-    def _save_credential(self):
-        """ Saves the VPN credential to the file system."""
-        file_operations.write_file(self.nuvla_client.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)
-
     def _load_vpn_config(self):
         """ Loads the VPN configuration from the file system."""
         config = file_operations.read_file(self.VPN_CONF_FILE, decode_json=True)
@@ -550,3 +544,9 @@ class VPNHandler:
     def _save_vpn_credential(self):
         """ Saves the VPN credential to the file system."""
         file_operations.write_file(self.vpn_credential, self.VPN_CREDENTIAL_FILE, exclude_none=True, by_alias=True)
+
+    def _load_configurations(self):
+        """ Loads the VPN configurations from the file system."""
+        self._load_vpn_config()
+        self._load_vpn_server()
+        self._load_vpn_credential()

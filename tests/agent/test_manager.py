@@ -51,6 +51,22 @@ class TestManager(TestCase):
                   f' {"Errors":>25}\n')
         self.assertEqual(sample + 'mock_summary',self.test_manager.summary())
 
+    # Tests for heal_workers
+    @patch('nuvlaedge.agent.manager.logging.Logger.info')
+    def test_heal_workers(self, mock_info):
+        mock_worker = Mock()
+        mock_worker.is_running = False
+        mock_worker.worker_name = 'mock_type_name'
+        self.test_manager.registered_workers['mock_type_name'] = mock_worker
+        self.test_manager.heal_workers()
+        mock_worker.reset_worker.assert_called_once()
+        mock_info.assert_called_once_with("Worker mock_type_name is not running, restarting...")
+
+        mock_worker.is_running = True
+        self.test_manager.heal_workers()
+        mock_worker.reset_worker.assert_called_once()
+        mock_info.assert_called_once_with("Worker mock_type_name is not running, restarting...")
+
     def test_start(self):
         worker_1 = Mock()
         self.test_manager.registered_workers['mock_type_name'] = worker_1
@@ -64,3 +80,20 @@ class TestManager(TestCase):
         self.test_manager.registered_workers['mock_type_name_2'] = worker_1
         self.test_manager.stop()
         self.assertEqual(2, worker_1.stop.call_count)
+
+    # Tests edit_period
+    @patch('nuvlaedge.agent.manager.logging.Logger.warning')
+    @patch('nuvlaedge.agent.manager.logging.Logger.error')
+    def test_edit_period(self, mock_error, mock_warning):
+        worker_1 = Mock()
+        self.test_manager.registered_workers[type(worker_1).__name__] = worker_1
+        self.test_manager.edit_period(type(worker_1), 20)
+        worker_1.edit_period.assert_called_once_with(20)
+
+        self.test_manager.edit_period('mock_type_name_2', 10)
+        mock_error.assert_called_once_with('Worker mock_type_name_2 is not registered on manager, '
+                                           'cannot update its period')
+
+        self.test_manager.edit_period(type(worker_1).__name__, 10)
+        mock_warning.assert_called_once_with(f"Workers should not have less than 15 seconds of periodic execution, "
+                                             f"cannot update with {10}")

@@ -44,7 +44,6 @@ class AutoUpdateNuvlaEdgeTrackedResource(NuvlaResourceBase):
     # Keeps track of the accessed field of the model. This allows for selective retrieval from Nuvla,
     # reducing network traffic
     _accessed_fields: dict[str, float] = {}
-    _is_synced: bool = False
 
     # Nuvla Client used to sync the resource
     _nuvla_client: Api | None = None

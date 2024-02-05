@@ -72,17 +72,17 @@ def execute_cmd(command: list[str], method_flag: bool = True) -> dict | Complete
                     'stderr': stderr,
                     'returncode': shell_pipe.returncode}
 
-    except OSError as ex:
-        logging.error(f"Trying to execute non existent file: {ex}")
-
     except ValueError as ex:
-        logging.error(f"Invalid arguments executed: {ex}")
+        logger.error(f"Invalid arguments executed: {ex}")
 
     except TimeoutExpired as ex:
-        logging.error(f"Timeout {ex} expired waiting for command: {command}")
+        logger.error(f"Timeout {ex} expired waiting for command: {command}")
 
     except SubprocessError as ex:
-        logging.error(f"Exception not identified: {ex}")
+        logger.error(f"Exception not identified: {ex}")
+
+    except OSError as ex:
+        logger.error(f"Trying to execute non existent file: {ex}")
 
     return None
 
@@ -106,6 +106,7 @@ def timeout(time):
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
 
+# pragma: no cover
 VPN_CONFIG_TEMPLATE: str = """client
 
 dev ${vpn_interface_name}

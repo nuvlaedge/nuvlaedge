@@ -146,9 +146,9 @@ def get_cmd_line_settings(env_settings: AgentSettings) -> AgentSettings:
         return env_settings
 
     if cmd_settings.debug:
-        env_settings.debug = (cmd_settings.debug == 'true' or
-                              cmd_settings.debug is True or
-                              cmd_settings.debug == "True")
+        env_settings.agent_debug = (cmd_settings.debug == 'true' or
+                                    cmd_settings.debug is True or
+                                    cmd_settings.debug == "True")
 
     if cmd_settings.log_level:
         env_settings.nuvlaedge_log_level = cmd_settings.log_level
@@ -164,8 +164,3 @@ def get_agent_settings() -> AgentSettings:
     __agent_settings = get_cmd_line_settings(env_settings)
 
     return __agent_settings
-
-
-
-
-

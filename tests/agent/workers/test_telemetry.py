@@ -1,4 +1,5 @@
 from queue import Queue, Full
+from threading import Thread
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
@@ -15,17 +16,20 @@ class TestTelemetry(TestCase):
         self.mock_status_channel = Mock(spec=Queue)
         self.uuid = NuvlaID('nuvlabox/uuid')
         self.excluded_monitors = []
-        self.test_telemetry = Telemetry(self.mock_coe_client,
-                                        self.mock_report_channel,
-                                        self.mock_status_channel,
-                                        self.uuid,
-                                        self.excluded_monitors)
+        with patch('nuvlaedge.agent.workers.telemetry.Telemetry._initialize_monitors') as mock_init_monitors:
+            self.test_telemetry = Telemetry(self.mock_coe_client,
+                                            self.mock_report_channel,
+                                            self.mock_status_channel,
+                                            self.uuid,
+                                            self.excluded_monitors)
 
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
-    def test_initialize_monitors(self, mock_get_monitors):
-        mock_get_monitors.return_value = Mock()
+    @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')
+    def test_initialize_monitors(self, mock_check_health, mock_get_monitors):
+        mock_get_monitors.return_value.return_value = Mock()
         self.test_telemetry._initialize_monitors()
         monitor_count = len(self.test_telemetry.monitor_list)
+        mock_check_health.assert_called_once()
 
         self.test_telemetry.monitor_list = {}
         self.test_telemetry.excluded_monitors = ['power', 'container_stats']
@@ -70,10 +74,10 @@ class TestTelemetry(TestCase):
 
     @patch('nuvlaedge.agent.workers.telemetry.is_thread_creation_needed')
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
-    @patch('nuvlaedge.agent.workers.telemetry.json')
-    def test_check_monitors_health(self, mock_json, mock_get_monitor, mock_is_thread_creation_needed):
+    def test_check_monitors_health(self, mock_get_monitor, mock_is_thread_creation_needed):
         mock_monitor = Mock()
         mock_monitor.name = 'mock_monitor'
+        mock_monitor.last_process_duration = 0.92
         mock_monitor.is_thread = False
 
         # Test not threaded
@@ -89,10 +93,9 @@ class TestTelemetry(TestCase):
 
         # Test threaded and creation needed
         mock_is_thread_creation_needed.return_value = True
-        mock_get_monitor.return_value = mock_monitor
+        mock_get_monitor.return_value.return_value = mock_monitor
         self.test_telemetry._check_monitors_health()
         mock_get_monitor.assert_called_once_with('mock_monitor')
-        mock_monitor.assert_called_once_with('mock_monitor', self.test_telemetry, True)
 
     def test_sync_status_to_telemetry(self):
         test_data: NuvlaEdgeData = NuvlaEdgeData()

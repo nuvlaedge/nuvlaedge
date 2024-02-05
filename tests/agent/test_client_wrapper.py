@@ -49,7 +49,8 @@ class TestClientWrapper(TestCase):
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper._is_resource_available')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper._init_resource')
-    def test_nuvlaedge_status_property(self, mock_init, mock_available):
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge',new_callable=mock.PropertyMock)
+    def test_nuvlaedge_status_property(self, test_nuvlaedge, mock_init, mock_available):
         self.test_client._resources = {'nuvlaedge-status': 'resource_1'}
         mock_available.return_value = True
         self.assertEqual('resource_1', self.test_client.nuvlaedge_status)

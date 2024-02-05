@@ -176,7 +176,7 @@ class NuvlaClientWrapper:
     def nuvlaedge_status(self) -> NuvlaEdgeStatusResource:
         _res_name = 'nuvlaedge-status'
         if not self._is_resource_available(_res_name):
-            self._init_resource(_res_name, AutoNuvlaEdgeStatusResource, self._nuvlaedge_uuid)
+            self._init_resource(_res_name, AutoNuvlaEdgeStatusResource, self.nuvlaedge_status_uuid)
         return self._resources.get(_res_name)
 
     @property
@@ -260,13 +260,15 @@ class NuvlaClientWrapper:
         Returns: a dictionary the response of the server to the commissioning operation
 
         """
-        logger.debug(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid} with payload {payload}")
+        logger.debug(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid} with payload \n{json.dumps(payload, indent=4)}...")
         try:
             response: dict = self.nuvlaedge_client._cimi_post(resource_id=f"{self.nuvlaedge_uuid}/commission",
                                                               json=payload)
+            logger.debug(f"Commissioning response: {response}")
             if response:
                 self.nuvlaedge.force_update()
-
+            else:
+                logger.warning(f"Commissioning NuvlaEdge {self.nuvlaedge_uuid} with Payload {payload}... Failed")
             return response
         except Exception as e:
             logger.warning(f"Error commissioning NuvlaEdge with Payload {payload}: {e}")
@@ -297,7 +299,7 @@ class NuvlaClientWrapper:
 
         """
         logger.debug(f"Sending telemetry report to Nuvla: \n"
-                     f"Changed fields: {new_status.keys()}\n"
+                     f"Changed fields: {new_status}\n"
                      f"Deleted fields: {attributes_to_delete}")
         response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,

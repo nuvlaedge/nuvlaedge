@@ -77,10 +77,9 @@ class AutoUpdateNuvlaEdgeTrackedResource(NuvlaResourceBase):
             logger.debug(f"Retrieving full {self._resource_id} resource")
             _select = None
 
-        logger.debug(f"Updating NuvlaEdge fields: {_select}")
+        logger.debug(f"Updating NuvlaEdge fields: {_select} from resource {self._resource_id}")
         resource: CimiResource = self._nuvla_client.get(self._resource_id, select=_select)
 
-        logger.debug(f"Resource fields: {json.dumps(resource.data, indent=2)}")
         self._update_fields(resource.data)
 
         self._last_update_time = time.perf_counter()
@@ -104,7 +103,8 @@ class AutoUpdateNuvlaEdgeTrackedResource(NuvlaResourceBase):
         if item in object.__getattribute__(self, 'model_fields'):
             self._accessed_fields.update({item.replace('_', '-'): time.perf_counter()})
 
-            if time.perf_counter() - self._last_update_time > self._MIN_UPDATE_PERIOD:
+            if (time.perf_counter() - self._last_update_time > self._MIN_UPDATE_PERIOD or
+                    object.__getattribute__(self, item) is None):
                 logger.debug(f"Updating {self.__class__.__name__} resource")
                 self._sync()
         return object.__getattribute__(self, item)

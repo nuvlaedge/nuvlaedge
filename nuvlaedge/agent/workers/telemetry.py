@@ -1,7 +1,6 @@
 """
 
 """
-import json
 import logging
 from queue import Queue, Full
 from datetime import datetime
@@ -9,17 +8,17 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
+from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
 from nuvlaedge.agent.nuvla.resources import NuvlaID
+from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import Status
+from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.workers.monitor.components import get_monitor, active_monitors
 from nuvlaedge.agent.workers.monitor import Monitor
-from nuvlaedge.agent.nuvla.resources.nuvlaedge_status import Status
-from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
-from nuvlaedge.agent.common.thread_handler import is_thread_creation_needed
-
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.utils import dump_dict_to_str
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -177,6 +176,8 @@ class Telemetry:
                 continue
             self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
 
+        self._check_monitors_health()
+
     def _collect_monitor_metrics(self):
         """
         Collects monitoring metrics from the monitor list and updates the local telemetry data.
@@ -233,7 +234,7 @@ class Telemetry:
                 it_monitor.run_update_data(monitor_name=monitor_name)
 
         monitor_process_duration = {k: v.last_process_duration for k, v in self.monitor_list.items()}
-        logger.debug(f'Monitors processing duration: {json.dumps(monitor_process_duration, indent=4)}')
+        logger.debug(f'Monitors processing duration: {dump_dict_to_str(monitor_process_duration)}')
 
     def _sync_status_to_telemetry(self):
         """

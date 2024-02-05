@@ -119,8 +119,9 @@ class Commissioner:
         """
         # Get new field
         new_fields, removed_fields = model_diff(self._last_payload, self._current_payload)
-        logger.debug(f"Commissioning changed/new fields: {new_fields} and removing no longer present: {removed_fields}")
-
+        logger.debug(f"Commissioning changed/new fields: "
+                     f"{self._current_payload.model_dump_json(indent=4, include=new_fields, by_alias=True)} ")
+        logger.debug(f"Commissioning removed fields: {removed_fields}")
         _commission_payload: dict = self._current_payload.model_dump(exclude_none=True,
                                                                      exclude={'vpn_csr'},
                                                                      by_alias=True,
@@ -131,6 +132,7 @@ class Commissioner:
         if self.nuvla_client.commission(payload=_commission_payload):
             self._last_payload = self._current_payload.model_copy(deep=True)
             self._save_commissioned_data()
+
 
     @property
     def nuvlaedge_uuid(self) -> NuvlaID:
@@ -209,7 +211,7 @@ class Commissioner:
         Returns:
             None.
         """
-        if self.nuvla_client.nuvlaedge_status.node_id:
+        if self.nuvla_client.nuvlaedge_status.node_id is not None:
             logger.debug("Updating Cluster data, node id present in NuvlaEdge-status")
             self._update_cluster_data()
         else:

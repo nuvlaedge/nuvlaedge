@@ -130,23 +130,23 @@ class ContainerStatsMonitor(Monitor):
         If the docker swarm certs can be found, try to infer their expiration date
 
         """
-        if os.path.exists(self.swarm_node_cert_path):
-            command: list[str] = \
-                ["openssl", "x509", "-enddate", "-noout", "-in",
-                 self.swarm_node_cert_path]
+        if not os.path.exists(self.swarm_node_cert_path):
+            return None
 
-            cert_check: CompletedProcess = execute_cmd(command)
+        command: list[str] = \
+            ["openssl", "x509", "-enddate", "-noout", "-in",
+             self.swarm_node_cert_path]
 
-            if cert_check.returncode != 0 or not cert_check.stdout:
-                return None
+        cert_check: CompletedProcess = execute_cmd(command)
 
-            expiry_date_raw = cert_check.stdout.strip().split('=')[-1]
-            raw_format = '%b %d %H:%M:%S %Y %Z'
+        if cert_check.returncode != 0 or not cert_check.stdout:
+            return None
 
-            return datetime.datetime.strptime(expiry_date_raw, raw_format).strftime(
-                self.nuvla_timestamp_format)
+        expiry_date_raw = cert_check.stdout.strip().split('=')[-1]
+        raw_format = '%b %d %H:%M:%S %Y %Z'
 
-        return None
+        return datetime.datetime.strptime(expiry_date_raw, raw_format).strftime(
+            self.nuvla_timestamp_format)
 
     def update_data(self):
         self.refresh_container_info()

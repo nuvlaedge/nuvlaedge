@@ -25,10 +25,11 @@ class TestVulnerabilitiesMonitor(unittest.TestCase):
 
         fake_data: dict = {"name": "file"}
         with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.read_file') as mock_read_file:
-            mock_read_file.side_effect = [fake_data]
-            ans = test_monitor.retrieve_security_vulnerabilities()
-            self.assertEqual(ans["name"],
-                             "file")
+            with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.file_exists_and_not_empty') as mock_exists:
+                mock_exists.return_value = True
+                mock_read_file.side_effect = [fake_data]
+                ans = test_monitor.retrieve_security_vulnerabilities()
+                self.assertEqual(ans["name"], "file")
 
     @patch.object(VulnerabilitiesMonitor, 'retrieve_security_vulnerabilities')
     def test_update_data(self, mock_retrieve):

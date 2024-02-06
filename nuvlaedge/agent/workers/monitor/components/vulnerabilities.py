@@ -1,6 +1,7 @@
 """
     VulnerabilitiesMonitor.py
 """
+import logging
 import os
 import json
 
@@ -10,7 +11,10 @@ from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.workers.monitor.data.vulnerabilities_data import (VulnerabilitiesData,
                                                      VulnerabilitiesSummary)
-from nuvlaedge.common.file_operations import read_file
+from nuvlaedge.common.file_operations import read_file, file_exists_and_not_empty
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 @monitor('vulnerabilities_monitor')
@@ -28,6 +32,11 @@ class VulnerabilitiesMonitor(Monitor):
 
             :return: contents of the file
         """
+        if not file_exists_and_not_empty(FILE_NAMES.VULNERABILITIES_FILE):
+            # Added redundant check for file existence to prevent warning message. Log message in debug level
+            logger.debug(f"File {FILE_NAMES.VULNERABILITIES_FILE} does not exist or is empty")
+            return None
+
         return read_file(FILE_NAMES.VULNERABILITIES_FILE, True)
 
     def update_data(self):

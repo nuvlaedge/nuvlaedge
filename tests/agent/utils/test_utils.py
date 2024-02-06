@@ -32,21 +32,21 @@ class TestUtils(unittest.TestCase):
         # Test OSError
         with patch('nuvlaedge.agent.common.util.run') as mock_run:
             mock_run.side_effect = OSError('mock_exception')
-            self.assertEqual(execute_cmd(['some'], method_flag=True), None)
+            self.assertIsNone(execute_cmd(['some'], method_flag=True))
             mock_error.assert_called_once_with('Trying to execute non existent file: mock_exception')
             mock_error.reset_mock()
 
         # Test ValueError
         with patch('nuvlaedge.agent.common.util.run') as mock_run:
             mock_run.side_effect = ValueError('value_exception')
-            self.assertEqual(execute_cmd(['some'], method_flag=True), None)
+            self.assertIsNone(execute_cmd(['some'], method_flag=True))
             mock_error.assert_called_once_with('Invalid arguments executed: value_exception')
             mock_error.reset_mock()
 
         # Test TimeoutExpired
         with patch('nuvlaedge.agent.common.util.run') as mock_run:
             mock_run.side_effect = TimeoutExpired('time_exception', 0.1)
-            self.assertEqual(execute_cmd(['some'], method_flag=True), None)
+            self.assertIsNone(execute_cmd(['some'], method_flag=True))
             mock_error.assert_called_once_with("Timeout Command 'time_exception' timed out after 0.1 seconds "
                                                "expired waiting for command: ['some']")
             mock_error.reset_mock()
@@ -54,7 +54,7 @@ class TestUtils(unittest.TestCase):
         # Test SubprocessError
         with patch('nuvlaedge.agent.common.util.run') as mock_run:
             mock_run.side_effect = SubprocessError('mock_exception')
-            self.assertEqual(execute_cmd(['some'], method_flag=True), None)
+            self.assertIsNone(execute_cmd(['some'], method_flag=True))
             mock_error.assert_called_once_with("Exception not identified: mock_exception")
             mock_error.reset_mock()
 
@@ -73,7 +73,7 @@ class TestUtils(unittest.TestCase):
                 mock_warning.assert_called_once_with('Cannot retrieve NuvlaEdge version', exc_info=mock_pkg.side_effect)
 
     def test_str_if_value_or_none(self):
-        self.assertEqual(None, str_if_value_or_none(None))
+        self.assertIsNone(str_if_value_or_none(None))
         self.assertEqual('test', str_if_value_or_none('test'))
 
     def test_raise_timeout(self):

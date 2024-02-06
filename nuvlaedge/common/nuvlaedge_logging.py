@@ -13,7 +13,7 @@ from pathlib import Path
 # Global logging settings. They should only be modified from set_logging_configuration.
 # This settings won't affect already existing loggers
 _DEBUG: bool = False
-_LOG_LEVEL: int = logging.DEBUG
+_LOG_LEVEL: int = logging.INFO
 _DISABLE_FILE_LOGGING: bool = False
 
 

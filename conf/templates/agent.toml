@@ -1,4 +1,4 @@
-nuvlaedge_uuid = [ "u", "u", "i", "d", "/", "u", "u", "i", "t", "t", "s", "t", "s",]
+nuvlaedge_uuid = ""
 host_home = "/Users/nacho"
 compose_project_name = "nuvlaedge"
 nuvlaedge_log_level = "INFO"

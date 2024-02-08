@@ -40,6 +40,8 @@ class FileConstants(object):
     GPU_PERIPHERAL = PERIPHERALS_FOLDER + 'gpu'
 
     NUVLAEDGE_SESSION = 'nuvlaedge_session.json'
+    LEGACY_NUVLAEDGE_SESSION = ACTIVATION_FLAG
+    LEGACY_NUVLA_CONFIGURATION = '.nuvla-configuration'
 
     @property
     def root_fs(self):

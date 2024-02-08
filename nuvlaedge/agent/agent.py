@@ -179,6 +179,13 @@ class Agent:
             else:
                 FILE_NAMES.NUVLAEDGE_SESSION.unlink()
 
+        # Check for backwards compatibility <= 2.13.1
+        if file_exists_and_not_empty(FILE_NAMES.LEGACY_NUVLAEDGE_SESSION):
+            logger.info("Starting NuvlaEdge from legacy session")
+            self._nuvla_client = NuvlaClientWrapper.from_legacy_credentials(self.settings.nuvlaedge_uuid,
+                                                                            FILE_NAMES.LEGACY_NUVLAEDGE_SESSION,
+                                                                            FILE_NAMES.LEGACY_NUVLA_CONFIGURATION)
+
         # API keys log-in
         if self.settings.nuvlaedge_api_key is not None and self.settings.nuvlaedge_api_secret is not None:
             logger.info("Logging in with keys parsed from Environmental variables")

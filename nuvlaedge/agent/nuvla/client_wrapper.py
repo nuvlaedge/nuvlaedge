@@ -24,8 +24,7 @@ from nuvlaedge.agent.nuvla.resources import (NuvlaID,
 from nuvlaedge.agent.settings import AgentSettings
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.file_operations import read_file, write_file
-
+from nuvlaedge.common.file_operations import read_file, write_file, file_exists_and_not_empty
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -354,6 +353,42 @@ class NuvlaClientWrapper:
         temp_client.nuvlaedge_credentials = session.credentials
         temp_client.login_nuvlaedge()
         return temp_client
+
+    @classmethod
+    def from_legacy_credentials(cls, nuvlaedge_uuid: str, credentials_file: Path, legacy_nuvla_configuration: Path):
+        _endpoint: str = 'nuvla.io'
+        _verify: bool = True
+        # Try to read the endpoint and verify from the legacy configuration
+        if file_exists_and_not_empty(legacy_nuvla_configuration):
+            try:
+                legacy_config = read_file(legacy_nuvla_configuration, decode_json=False)
+                legacy_config = legacy_config.split()
+                _endpoint = legacy_config[0].replace("NUVLA_ENDPOINT=", "")
+                _verify = bool(legacy_config[1].replace("NUVLA_ENDPOINT_INSECURE=", ""))
+
+            except Exception as ex:
+                logger.warning(f'Could not read legacy configuration file '
+                               f'{legacy_nuvla_configuration} with error: {ex}')
+                # Roll back to default values
+                _endpoint: str = 'nuvla.io'
+                _verify: bool = True
+
+        # Process credentials
+        if file_exists_and_not_empty(credentials_file):
+            try:
+                credentials = read_file(credentials_file, decode_json=True)
+                credentials = NuvlaApiKeyTemplate(key=credentials['api-key'], secret=credentials['secret-key'])
+            except Exception as ex:
+                logger.warning(f'Could not validate credentials file {credentials_file} with error: {ex}')
+                return None
+        else:
+            logger.warning(f'Could not read credentials file {credentials_file}')
+            return None
+
+        return cls.from_nuvlaedge_credentials(host=_endpoint,
+                                              verify=_verify,
+                                              nuvlaedge_uuid=nuvlaedge_uuid,
+                                              credentials=credentials)
 
     @classmethod
     def from_nuvlaedge_credentials(cls, host: str, verify: bool, nuvlaedge_uuid: str, credentials: NuvlaApiKeyTemplate):

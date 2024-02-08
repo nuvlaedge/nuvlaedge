@@ -10,7 +10,8 @@ from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.settings import AgentSettingsMissMatch, InsufficientSettingsProvided
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
-from nuvlaedge.agent import AgentSettings, Agent
+from nuvlaedge.agent import AgentSettings
+from nuvlaedge.agent.agent import Agent
 
 
 class TestAgent(TestCase):

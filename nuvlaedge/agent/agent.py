@@ -185,11 +185,12 @@ class Agent:
             self._nuvla_client = NuvlaClientWrapper.from_nuvlaedge_credentials(
                 host=self.settings.nuvla_endpoint,
                 verify=not self.settings.nuvla_endpoint_insecure,
+                nuvlaedge_uuid=self.settings.nuvlaedge_uuid,
                 credentials=NuvlaApiKeyTemplate(key=self.settings.nuvlaedge_api_key,
                                                 secret=self.settings.nuvlaedge_api_secret))
-
             if self.settings.nuvlaedge_uuid:
                 self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+
             return self._nuvla_client.nuvlaedge.state
 
         # If we reached this point we should have a NEW Nuvlaedge, and we need the uuid to start
@@ -328,6 +329,16 @@ class Agent:
 
         self.worker_manager.heal_workers()
 
+    def _install_ssh_key(self):
+        """
+        Installs the SSH key on the COE
+        Returns: None
+
+        """
+        if self.settings.nuvlaedge_immutable_ssh_pub_key is not None and self.settings.host_home is not None:
+            logger.info("Installing SSH key...")
+            self._coe_engine.install_ssh_key(self.settings.nuvlaedge_immutable_ssh_pub_key, self.settings.host_home)
+
     def start_agent(self):
         """
         Only called once at the start of NuvlaEdge. Controls the initialisation process
@@ -338,6 +349,10 @@ class Agent:
         # Run start up process if needed
         logger.info("Initialising Agent...")
 
+        # Install SSH key if provided in the settings
+        self._install_ssh_key()
+
+        # Assert current state
         current_state: State = self._assert_current_state()
         logger.info(f"NuvlaEdge initial state {current_state.name}")
 

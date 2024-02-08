@@ -42,7 +42,7 @@ class Monitors:
             p_monitor: Monitor module to be registered
         """
 
-        file_logger.info(f'Distribution {monitor_name} registered')
+        file_logger.debug(f'Distribution {monitor_name} registered')
         cls.active_monitors[monitor_name] = p_monitor
 
     @classmethod

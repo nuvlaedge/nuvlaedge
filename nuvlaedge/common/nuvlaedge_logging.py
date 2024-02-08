@@ -4,6 +4,7 @@ NuvlaEdge logging
 NuvlaEdge logging is configured so by default logs to console with the level configured. Also, logs to individual files
 errors and warnings
 """
+import inspect
 import logging
 import os
 import sys
@@ -41,9 +42,16 @@ def set_logging_configuration(debug: bool,
     _LOG_LEVEL = log_level
     _DISABLE_FILE_LOGGING = disable_file_logging
 
+    # RemoveME
+    caller_frame_record = inspect.stack()[1]
+    frame = caller_frame_record[0]
+    info = inspect.getframeinfo(frame)
+    me = f'Called by {info.function} on line {info.lineno} in {info.filename}'
+    logging.error(f"Setting logging configuration: debug={_DEBUG}, log_level={_LOG_LEVEL}, log_path={_LOG_PATH}. Caller: {me}")
+
     if isinstance(log_path, str):
         _LOG_PATH = Path(log_path)
-    else:
+    elif isinstance(log_path, Path):
         _LOG_PATH = log_path
 
     if not _LOG_PATH.exists():
@@ -80,10 +88,13 @@ def __get_file_handler(filename: str) -> logging.FileHandler:
         _LOG_PATH.mkdir(parents=True, exist_ok=True)
     file_handler = RotatingFileHandler(_LOG_PATH/f"{filename}.log", maxBytes=5*1024*1024)
     file_handler.setFormatter(COMMON_LOG_FORMATTER)
-    file_handler.setLevel(logging.WARNING)
 
+    # Default log level for file logging is WARNING unless debug is enabled
+    _level = logging.WARNING
     if _DEBUG:
-        file_handler.setLevel(_LOG_LEVEL)
+        _level = logging.DEBUG
+
+    file_handler.setLevel(level=_level)
 
     return file_handler
 
@@ -107,10 +118,11 @@ def __get_common_handler() -> logging.StreamHandler:
     stream_handler = logging.StreamHandler(stream=sys.stdout)
 
     stream_handler.setFormatter(COMMON_LOG_FORMATTER)
-    stream_handler.setLevel(_LOG_LEVEL)
 
+    _level = _LOG_LEVEL
     if _DEBUG:
-        stream_handler.setLevel(logging.DEBUG)
+        _level = logging.DEBUG
+    stream_handler.setLevel(_level)
 
     return stream_handler
 
@@ -156,7 +168,11 @@ def get_nuvlaedge_logger(name: str | None = None) -> logging.Logger:
 
     sub_logger = logging.getLogger(package)
     sub_logger.propagate = False
-    sub_logger.level = _LOG_LEVEL
+
+    _level = _LOG_LEVEL
+    if _DEBUG:
+        _level = logging.DEBUG
+    sub_logger.level = _level
     sub_logger.addHandler(__get_common_handler())
     sub_logger.addHandler(__get_file_handler(module_name))
 

@@ -29,6 +29,7 @@ fallback_image = CTE.FALLBACK_IMAGE
 
 COMPUTE_API_INTERNAL_PORT = 5000
 
+
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 

@@ -9,7 +9,9 @@ if __name__ == '__main__':
 from nuvlaedge.agent import main
 from nuvlaedge.common.constants import CTE
 
+logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
+    logger.info('Setting up agent from main.py')
     socket.setdefaulttimeout(CTE.NETWORK_TIMEOUT)
     main()

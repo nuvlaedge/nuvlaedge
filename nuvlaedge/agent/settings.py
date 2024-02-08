@@ -1,11 +1,9 @@
 from argparse import ArgumentParser, Namespace
 import logging
-from pathlib import Path
 from typing import Optional
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 
-from nuvlaedge.agent.common.util import extract_nuvlaedge_version
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 
@@ -106,12 +104,6 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     agent_logging_directory:            Optional[str] = None
     agent_debug:                        bool = False
     disable_agent_file_logging:         bool = False
-
-    @field_validator('ne_image_tag', mode='before')
-    def validate_image_tag(cls, v):
-        if v is None or v == "":
-            return extract_nuvlaedge_version('')
-        return v
 
     @field_validator('*', mode='before')
     def non_empty_str(cls, v):

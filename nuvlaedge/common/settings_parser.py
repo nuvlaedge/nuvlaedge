@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from pathlib import Path
 
-logger: logging.Logger = logging.getLogger('settings')
 SettingsSourceCallable = Callable[[str], any]
 
 

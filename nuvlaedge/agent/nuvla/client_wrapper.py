@@ -347,7 +347,6 @@ class NuvlaClientWrapper:
         try:
             session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(session_store)
         except Exception as ex:
-            print('\n\n Excep \n\n')
             logger.warning(f'Could not validate session \n{session_store} \nwith error : {ex}')
             return None
 

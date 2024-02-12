@@ -205,7 +205,7 @@ class Agent:
             if self._nuvla_client is not None and self.settings.nuvlaedge_uuid:
                 self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
 
-            return State.value_of(self._nuvla_client.nuvlaedge.state)
+                return State.value_of(self._nuvla_client.nuvlaedge.state)
 
         # If we reached this point we should have a NEW Nuvlaedge, and we need the uuid to start
         if not self.settings.nuvlaedge_uuid:

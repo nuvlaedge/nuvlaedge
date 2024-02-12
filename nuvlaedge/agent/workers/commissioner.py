@@ -16,7 +16,7 @@ from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, Status
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.models import model_diff
 from nuvlaedge.agent.nuvla.resources import NuvlaID, State
-from nuvlaedge.common.file_operations import file_exists_and_not_empty, write_file
+from nuvlaedge.common.file_operations import file_exists_and_not_empty, write_file, read_file
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeStaticModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -132,7 +132,6 @@ class Commissioner:
         if self.nuvla_client.commission(payload=_commission_payload):
             self._last_payload = self._current_payload.model_copy(deep=True)
             self._save_commissioned_data()
-
 
     @property
     def nuvlaedge_uuid(self) -> NuvlaID:
@@ -300,19 +299,13 @@ class Commissioner:
             return
 
         logger.info("Loading previous commissioning data")
-        with self.COMMISSIONING_FILE.open('r') as f:
-            try:
-                prev_payload = json.load(f)
-                prev_nuvlaedge_uuid = prev_payload['nuvlaedge_uuid']
-                if prev_nuvlaedge_uuid != self.nuvlaedge_uuid:
-                    logger.warning("Detected previous installation of NuvlaEdge WHAT TO DO????")  # FIXME: Decide what to do here
-                    # For the moment just override it
-                    self._last_payload = CommissioningAttributes()
-                    return
-                self._last_payload = CommissioningAttributes.model_validate(prev_payload)
-                self._current_payload = self._last_payload.model_copy(deep=True)
-            except json.JSONDecodeError:
-                logger.warning("Error decoding previous commission")
+        commissioning_data = read_file(self.COMMISSIONING_FILE, as_json=True)
+
+        if commissioning_data is None:
+            commissioning_data = {}
+
+        self._last_payload = CommissioningAttributes.model_validate(commissioning_data)
+        self._current_payload = CommissioningAttributes.model_validate(commissioning_data)
 
     def _save_commissioned_data(self) -> None:
         """
@@ -326,5 +319,4 @@ class Commissioner:
             Any exceptions raised by the `write_file` function will be propagated up.
         """
         data = self._last_payload.model_dump(exclude_none=True, by_alias=True)
-        data['nuvlaedge_uuid'] = self.nuvlaedge_uuid
         write_file(data, self.COMMISSIONING_FILE)

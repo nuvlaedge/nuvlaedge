@@ -25,7 +25,7 @@ class FileBroker(NuvlaEdgeBroker):
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
 
         self.root_path: Path = Path(root_path)
-        self.logger.warning(f'Root path {self.root_path}')
+        self.logger.debug(f'File broker root path: {self.root_path}')
 
     def decode_message_from_file_name(self, file_name):
         if not re.match(self.FILE_PATTERN, file_name):

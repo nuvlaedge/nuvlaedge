@@ -42,13 +42,6 @@ def set_logging_configuration(debug: bool,
     _LOG_LEVEL = log_level
     _DISABLE_FILE_LOGGING = disable_file_logging
 
-    # RemoveME
-    caller_frame_record = inspect.stack()[1]
-    frame = caller_frame_record[0]
-    info = inspect.getframeinfo(frame)
-    me = f'Called by {info.function} on line {info.lineno} in {info.filename}'
-    logging.error(f"Setting logging configuration: debug={_DEBUG}, log_level={_LOG_LEVEL}, log_path={_LOG_PATH}. Caller: {me}")
-
     if isinstance(log_path, str):
         _LOG_PATH = Path(log_path)
     elif isinstance(log_path, Path):

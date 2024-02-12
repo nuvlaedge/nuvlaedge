@@ -3,7 +3,7 @@
 WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}
 CSR_NAME=${CSR_NAME:-nuvlaedge-csr}
 
-SHARED="/srv/nuvlaedge/shared"
+SHARED="/srv/nuvlaedge/shared/v3"
 SYNC_FILE=".tls"
 CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 USER="nuvla"

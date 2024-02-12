@@ -75,7 +75,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     vpn_interface_name:                 str = 'vpn'
     nuvla_endpoint:                     str = 'nuvla.io'
     nuvla_endpoint_insecure:            bool = False
-    shared_data_volume:                 str = "/srv/nuvlaedge/shared/"
+    shared_data_volume:                 str = "/srv/nuvlaedge/shared/v3"
     ne_image_tag:                       Optional[str] = None  # Default value provided by compose
 
     # Optional

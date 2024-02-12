@@ -4,10 +4,8 @@ import logging
 from unittest import TestCase
 from pathlib import Path
 from datetime import datetime
-import json
-import time
-from mock import patch, mock_open, Mock
-import signal
+from mock import patch, Mock
+
 
 import xml.etree.ElementTree
 
@@ -15,8 +13,7 @@ import nuvlaedge.security.security
 from nuvlaedge.security.security import (
     VulnerabilitiesInfo,
     Security,
-    SecurityConfig,
-    timeout, raise_timeout)
+    SecurityConfig)
 from nuvlaedge.security import main
 from nuvlaedge.security.constants import (
     ONLINE_VULSCAN_DB_PREFIX,
@@ -113,40 +110,6 @@ class TestSecurity(TestCase):
         self.assertEqual(
             [ONLINE_VULSCAN_DB_PREFIX + 'DATA'],
             self.security.offline_vulscan_db)
-
-    @patch('nuvlaedge.security.security.read_file')
-    @patch('nuvlaedge.security.security.Api.login_apikey')
-    def test_authenticate(self, mock_api_login, mock_read):
-
-        mock_read.side_effect = [None]
-        self.assertIsNone(self.security.authenticate())
-
-        mock_read.side_effect = [{'api-key': 'key',
-                                  'secret-key': 'secret'}]
-        self.security.authenticate()
-        mock_api_login.assert_called_once()
-
-    @patch.object(time, 'sleep')
-    @patch.object(nuvlaedge.security.security, 'timeout')
-    @patch.object(os.path, 'exists')
-    def test_wait_for_nuvlaedge_ready(self, mock_exists, mock_timeout, mock_time):
-        mock_timeout.return_value.__enter__.return_value.name = 'timeout'
-        mock_time.sleep.return_value = None
-        mock_exists.side_effect = [False, True, False, True]
-
-        with patch('nuvlaedge.security.security.read_file') as mock_read:
-            mock_read.side_effect = ['random data']
-            self.security.wait_for_nuvlaedge_ready()
-            self.assertEqual(2, mock_time.call_count)
-            self.assertFalse(self.security.nuvla_endpoint_insecure)
-
-        mock_exists.reset_mock()
-        mock_exists.side_effect = [False, True, False, True]
-        with patch('nuvlaedge.security.security.read_file') as mock_read:
-            mock_read.side_effect = ["NUVLA_ENDPOINT=nuvla.io\nNUVLA_ENDPOINT_INSECURE=True"]
-            self.security.wait_for_nuvlaedge_ready()
-            self.assertTrue(self.security.nuvla_endpoint_insecure)
-            self.assertEqual('nuvla.io', self.security.nuvla_endpoint)
 
     @patch.object(os, 'listdir')
     def test_get_external_db_as_csv(self, mock_listdir):
@@ -260,30 +223,6 @@ class TestSecurity(TestCase):
             self.security.vulscan_dbs = False
             self.assertEqual(datetime(1970, 1, 1), self.security.get_previous_external_db_update())
 
-    @patch.object(Security, 'authenticate')
-    @patch.object(Security, 'get_external_db_as_csv')
-    def test_update_vulscan_db(self, mock_external_db, mock_auth):
-        mock_api = Mock()
-        mock_auth.return_value = mock_api
-        mock_collection = Mock()
-        mock_collection.resources = []
-        mock_api.search.return_value = mock_collection
-
-        self.assertIsNone(self.security.update_vulscan_db())
-        mock_api.logout.assert_called_once()
-        mock_external_db.assert_not_called()
-
-        mock_res = Mock()
-        mock_res.data = {'updated': 2022}
-        mock_collection.resources = [mock_res]
-        self.security.local_db_last_update = 2023
-        self.security.update_vulscan_db()
-        mock_external_db.assert_not_called()
-
-        self.security.local_db_last_update = False
-        self.security.update_vulscan_db()
-        mock_external_db.assert_called_once()
-
     def test_extract_product_info(self):
         mock_service = {}
         self.assertFalse(self.security.extract_product_info(mock_service))
@@ -298,6 +237,47 @@ class TestSecurity(TestCase):
             'product': 'OPEN'
         }
         self.assertEqual('OPEN ', self.security.extract_product_info(mock_service))
+
+    @patch.object(Security, 'get_external_db_as_csv')
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.from_session_store')
+    @patch.object(nuvlaedge.security.security, 'file_exists_and_not_empty')
+    def test_update_vulscan_db(self, mock_exists, mock_session, mock_external_db):
+        mock_api = Mock()
+        self.security.api = None
+        mock_exists.return_value = False
+
+        with patch('nuvlaedge.security.security.logging.Logger.warning') as mock_logger:
+            self.assertIsNone(self.security.update_vulscan_db())
+            mock_logger.assert_called_with('No Nuvla session found to update vulnerabilities DB')
+            mock_external_db.assert_not_called()
+
+        mock_exists.return_value = True
+        mock_session.return_value = mock_api
+        mock_api.endpoint = 'nuvla.io'
+        mock_api.nuvlaedge_client.search.return_value.resources = None
+        self.security.api = None
+        with patch('nuvlaedge.security.security.logging.Logger.warning') as mock_logger:
+            self.assertIsNone(self.security.update_vulscan_db())
+            mock_logger.assert_called_with(f'Nuvla endpoint {mock_api.endpoint} does not contain any vulnerability')
+            mock_session.assert_called_once()
+            mock_external_db.assert_not_called()
+
+        self.assertIsNone(self.security.update_vulscan_db())
+        mock_api.login_nuvlaedge.assert_called_once()
+
+        mock_db = Mock()
+        mock_db.data.get.return_value = 10
+        res_mock = [mock_db]
+        mock_api.nuvlaedge_client.search.return_value.resources = res_mock
+        self.security.local_db_last_update = 15
+        with patch('nuvlaedge.security.security.logging.Logger.info') as mock_logger:
+            self.assertIsNone(self.security.update_vulscan_db())
+            self.assertEqual(2, mock_logger.call_count)
+            mock_external_db.assert_not_called()
+
+        self.security.local_db_last_update = 5
+        self.assertIsNone(self.security.update_vulscan_db())
+        mock_external_db.assert_called_once()
 
     def test_clean_output_attribute(self):
         sample_input = ''

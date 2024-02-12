@@ -46,6 +46,21 @@ def __atomic_write(file, data, **kwargs):
         return f.write(data)
 
 
+def file_exists(file: str | Path):
+    """
+    Checks whether a file exists (and it is a file)
+    Args:
+        file: File path to check
+
+    Returns: true if conditions are met
+
+    """
+    if isinstance(file, str):
+        file = Path(file)
+
+    return file.exists() and file.is_file()
+
+
 def file_exists_and_not_empty(filename: str | Path):
     """
     Checks whether a file exists (and it is a file) and whether it's empty
@@ -58,7 +73,7 @@ def file_exists_and_not_empty(filename: str | Path):
     if isinstance(filename, str):
         filename = Path(filename)
 
-    return filename.exists() and filename.is_file() and filename.stat().st_size != 0
+    return file_exists(filename) and filename.stat().st_size != 0
 
 
 def read_file(file: str | Path, decode_json=False, remove_file_on_error=True, **kwargs) -> dict | str | None:

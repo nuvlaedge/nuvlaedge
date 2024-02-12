@@ -139,6 +139,14 @@ class NuvlaClientWrapper:
         return self._nuvlaedge_uuid
 
     @property
+    def host(self) -> str:
+        return self._host
+
+    @property
+    def endpoint(self) -> str:
+        return self._host
+
+    @property
     def nuvlaedge_status_uuid(self) -> NuvlaID:
         """
         Property for the UUID of the NuvlaEdge status.
@@ -385,13 +393,14 @@ class NuvlaClientWrapper:
             logger.warning(f'Could not read credentials file {credentials_file}')
             return None
 
-        return cls.from_nuvlaedge_credentials(host=_endpoint,
-                                              verify=_verify,
-                                              nuvlaedge_uuid=nuvlaedge_uuid,
-                                              credentials=credentials)
+        _session = cls.from_nuvlaedge_credentials(host=_endpoint,
+                                                  verify=_verify,
+                                                  nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid),
+                                                  credentials=credentials)
+        return _session
 
     @classmethod
-    def from_nuvlaedge_credentials(cls, host: str, verify: bool, nuvlaedge_uuid: str, credentials: NuvlaApiKeyTemplate):
+    def from_nuvlaedge_credentials(cls, host: str, verify: bool, nuvlaedge_uuid: NuvlaID, credentials: NuvlaApiKeyTemplate):
         """ Creates a NuvlaEdgeClient object from the API keys
 
         It retrieves the nuvlaedge resource from the log-in session
@@ -405,7 +414,7 @@ class NuvlaClientWrapper:
         Returns: a NuvlaEdgeClient object
 
         """
-        client = cls(host=host, verify=verify, nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid))
+        client = cls(host=host, verify=verify, nuvlaedge_uuid=nuvlaedge_uuid)
         client.nuvlaedge_credentials = credentials
         client.login_nuvlaedge()
         return client

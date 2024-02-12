@@ -4,7 +4,6 @@ Module for the security scanner class
 from contextlib import contextmanager
 from datetime import datetime
 import signal
-import json
 import logging
 import os
 import re
@@ -21,13 +20,13 @@ from subprocess import (run,
                         CalledProcessError)
 
 from xml.etree import ElementTree
-from nuvla.api import Api
 
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.security.settings import SecurityConfig
 import nuvlaedge.security.constants as cte
-from nuvlaedge.common.file_operations import read_file, write_file
+from nuvlaedge.common.file_operations import read_file, write_file, file_exists_and_not_empty
 
 
 @contextmanager
@@ -69,7 +68,7 @@ class Security:
         self.nuvla_endpoint_insecure: bool = False
 
         self.wait_for_nuvlaedge_ready()
-        self.api: Api | None = None
+        self.api: NuvlaClientWrapper | None = None
         self.event: Event = Event()
 
         self.local_db_last_update = None
@@ -87,23 +86,6 @@ class Security:
             self.offline_vulscan_db = [db for db in os.listdir(self.config.vulscan_db_dir) if
                                        db.startswith(cte.ONLINE_VULSCAN_DB_PREFIX)]
 
-    def authenticate(self):
-        """ Uses the NB ApiKey credential to authenticate against Nuvla
-
-        :return: Api client
-        """
-        api_instance = Api(endpoint=f'https://{self.nuvla_endpoint}',
-                           insecure=self.nuvla_endpoint_insecure,
-                           reauthenticate=True)
-
-        apikey = read_file(cte.APIKEY_FILE, decode_json=True)
-        if apikey is None:
-            return None
-
-        api_instance.login_apikey(apikey['api-key'], apikey['secret-key'])
-
-        return api_instance
-
     def wait_for_nuvlaedge_ready(self):
         """ Waits on a loop for the NuvlaEdge bootstrap and activation to be accomplished
 
@@ -117,18 +99,8 @@ class Security:
             logger.info('Waiting and searching for Nuvla connection parameters '
                         'after NuvlaEdge activation')
 
-            while not os.path.exists(FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION):
+            while not os.path.exists(FILE_NAMES.NUVLAEDGE_SESSION):
                 time.sleep(5)
-
-        # If we get here, it means both files have been written, and we can finally
-        # get Nuvla's conf parameters
-        nuvla_conf = read_file(file=FILE_NAMES.NUVLAEDGE_NUVLA_CONFIGURATION, decode_json=False, remove_file_on_error=True,
-                               encoding='UTF-8')
-        for line in nuvla_conf.split():
-            if line and 'NUVLA_ENDPOINT=' in line:
-                self.nuvla_endpoint = line.split('=')[-1]
-            if line and 'NUVLA_ENDPOINT_INSECURE=' in line:
-                self.nuvla_endpoint_insecure = bool(line.split('=')[-1])
 
     @staticmethod
     def execute_cmd(command: list[str]) -> dict | CompletedProcess | None:
@@ -243,15 +215,22 @@ class Security:
 
     def update_vulscan_db(self):
         """ Updates the local registry of the vulnerabilities data """
+        if self.api is None and file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION):
+            logger.info("Loading Nuvla session from file to update vulnerabilities DB")
+            self.api = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
+        elif self.api is not None:
+            self.api.login_nuvlaedge()
+        else:
+            logger.warning('No Nuvla session found to update vulnerabilities DB')
+            return
 
-        self.api = self.authenticate()
-        nuvla_vul_db: list = self.api.search('vulnerability',
-                                             orderby='modified:desc',
-                                             last=1).resources
-        self.api.logout()
+        nuvla_vul_db: list = self.api.nuvlaedge_client.search('vulnerability',
+                                                              orderby='modified:desc',
+                                                              last=1).resources
+        # self.api.logout()
 
         if not nuvla_vul_db:
-            logger.warning(f'Nuvla endpoint {self.nuvla_endpoint} does not contain any vulnerability')
+            logger.warning(f'Nuvla endpoint {self.api.endpoint} does not contain any vulnerability')
             return
 
         temp_db_last_update = nuvla_vul_db[0].data.get('updated')

@@ -20,6 +20,7 @@ from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common import file_operations
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from nuvlaedge.agent.settings import get_agent_settings
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.models import are_models_equal
 
@@ -95,11 +96,9 @@ class VPNHandler:
         VPN_FOLDER (Path): Path to the VPN folder
         VPN_CSR_FILE (Path): Path to the VPN CSR file
         VPN_KEY_FILE (Path): Path to the VPN key file
-        VPN_CONF_FILE (Path): Path to the VPN client config file
         VPN_PLAIN_CONF_FILE (Path): Path to the VPN handler config file
         VPN_CREDENTIAL_FILE (Path): Path to the VPN credential file
         VPN_SERVER_FILE (Path): Path to the VPN server file
-        VPN_INTERFACE_NAME (str): Name of the VPN interface
 
     """
     VPN_FOLDER: Path = FILE_NAMES.VPN_FOLDER
@@ -109,13 +108,14 @@ class VPNHandler:
     VPN_PLAIN_CONF_FILE: Path = FILE_NAMES.VPN_HANDLER_CONF
     VPN_CREDENTIAL_FILE: Path = FILE_NAMES.VPN_CREDENTIAL
     VPN_SERVER_FILE: Path = FILE_NAMES.VPN_SERVER_FILE
-    VPN_INTERFACE_NAME: str = 'vpn'
+
 
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,
                  status_channel: Queue[StatusReport],
-                 vpn_extra_conf: str):
+                 vpn_extra_conf: str,
+                 interface_name: str = 'vpn'):
         """
         Controls and configures the VPN client based on configuration parsed by the agent. It  commissions itself
         via the commissioner class by editing the field `self.commission_payload.vpn_csr`.
@@ -146,6 +146,7 @@ class VPNHandler:
         self.vpn_config: VPNConfig | None = None
 
         self.vpn_extra_conf: str = vpn_extra_conf
+        self.interface_name: str = interface_name
 
         # Last VPN credentials used to create the VPN configuration
         self.vpn_credential: CredentialResource | None = None
@@ -445,7 +446,7 @@ class VPNHandler:
                      f" {self.vpn_config.model_dump_json(indent=4, exclude_none=True)}")
 
         # VPN interface name can be renamed from the agent settings, assign it here
-        self.vpn_config.vpn_interface_name = self.VPN_INTERFACE_NAME
+        self.vpn_config.vpn_interface_name = self.interface_name
 
         temp_ca = self.vpn_server.vpn_intermediate_ca
         self.vpn_config.vpn_intermediate_ca_is = temp_ca

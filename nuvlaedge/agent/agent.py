@@ -36,7 +36,7 @@ from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, Status
 from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
-from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.common.file_operations import file_exists_and_not_empty, write_file
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
@@ -180,11 +180,17 @@ class Agent:
                 FILE_NAMES.NUVLAEDGE_SESSION.unlink()
 
         # Check for backwards compatibility <= 2.13.1
-        if file_exists_and_not_empty(FILE_NAMES.LEGACY_NUVLAEDGE_SESSION):
+        if file_exists_and_not_empty(LEGACY_FILES.ACTIVATION_FLAG):
             logger.info("Starting NuvlaEdge from legacy session")
             self._nuvla_client = NuvlaClientWrapper.from_legacy_credentials(self.settings.nuvlaedge_uuid,
-                                                                            FILE_NAMES.LEGACY_NUVLAEDGE_SESSION,
-                                                                            FILE_NAMES.LEGACY_NUVLA_CONFIGURATION)
+                                                                            LEGACY_FILES.ACTIVATION_FLAG,
+                                                                            LEGACY_FILES.NUVLAEDGE_NUVLA_CONFIGURATION)
+            if self._nuvla_client is not None:
+                if self.settings.nuvlaedge_uuid:
+                    self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+
+                return State.value_of(self._nuvla_client.nuvlaedge.state)
+            logger.error(f"Could not start NuvlaEdge from legacy session and there is no previous installation")
 
         # API keys log-in
         if self.settings.nuvlaedge_api_key is not None and self.settings.nuvlaedge_api_secret is not None:
@@ -195,10 +201,11 @@ class Agent:
                 nuvlaedge_uuid=self.settings.nuvlaedge_uuid,
                 credentials=NuvlaApiKeyTemplate(key=self.settings.nuvlaedge_api_key,
                                                 secret=self.settings.nuvlaedge_api_secret))
-            if self.settings.nuvlaedge_uuid:
+
+            if self._nuvla_client is not None and self.settings.nuvlaedge_uuid:
                 self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
 
-            return self._nuvla_client.nuvlaedge.state
+            return State.value_of(self._nuvla_client.nuvlaedge.state)
 
         # If we reached this point we should have a NEW Nuvlaedge, and we need the uuid to start
         if not self.settings.nuvlaedge_uuid:
@@ -455,7 +462,7 @@ class Agent:
             logger.info("Executing telemetry... Success")
             NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
-            write_file(self.telemetry_payload, FILE_NAMES.NUVLAEDGE_STATUS_FILE)
+            write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
         return response
 

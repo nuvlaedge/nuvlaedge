@@ -13,6 +13,7 @@ import docker.models.networks
 import docker.errors
 import OpenSSL
 
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.common.file_operations import read_file
 from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
@@ -94,7 +95,7 @@ class Supervise:
             return False
 
         for file in check_expiry_date_on:
-            file_path = f"{utils.data_volume}/{file}"
+            file_path = f"{FILE_NAMES.root_fs}/{file}"
             content = read_file(file_path)
             if content is None:
                 continue

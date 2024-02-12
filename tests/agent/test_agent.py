@@ -82,11 +82,11 @@ class TestAgent(TestCase):
             self.agent._assert_current_state()
 
         with patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch') as mock_check_uuid_missmatch:
-            self.agent.settings.nuvlaedge_uuid = None
+            self.agent.settings.nuvlaedge_uuid = 'not None'
             self.mock_nuvla_client.nuvlaedge.id = 'some_uuid'
             self.mock_nuvla_client.nuvlaedge.state = 'ACTIVATED'
             self.assertEqual(State.ACTIVATED, self.agent._assert_current_state())
-            mock_check_uuid_missmatch.assert_not_called()
+            mock_check_uuid_missmatch.assert_called_once()
 
         """ Test No UUID provided """
         self.agent.settings.nuvlaedge_api_key = None

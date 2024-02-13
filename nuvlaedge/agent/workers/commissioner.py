@@ -299,7 +299,7 @@ class Commissioner:
             return
 
         logger.info("Loading previous commissioning data")
-        commissioning_data = read_file(self.COMMISSIONING_FILE, as_json=True)
+        commissioning_data = read_file(self.COMMISSIONING_FILE, decode_json=True)
 
         if commissioning_data is None:
             commissioning_data = {}

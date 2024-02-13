@@ -1,18 +1,16 @@
+import json
 import logging
+import shutil
+
 import dotenv
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaEdgeSession, NuvlaApiKeyTemplate
 from nuvlaedge.agent.nuvla.resources import NuvlaID
-from nuvlaedge.common.file_operations import read_file, write_file
-from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES, LegacyFileConstants
+from nuvlaedge.common.file_operations import read_file, write_file, copy_file
+from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 
 
 logger: logging.Logger = logging.getLogger(__name__)
-
-
-def _build_commissioning_data():
-    ...
 
 
 def _extract_nuvla_configuration() -> tuple[str, bool]:
@@ -37,7 +35,7 @@ def _extract_nuvla_configuration() -> tuple[str, bool]:
 
 
 def _extract_credentials() -> tuple[str, str]:
-    credentials = read_file(LEGACY_FILES.CREDENTIALS, decode_json=True)
+    credentials = read_file(LEGACY_FILES.ACTIVATION_FLAG, decode_json=True)
     return credentials.get('api-key', ''), credentials.get('secret-key', '')
 
 
@@ -78,28 +76,54 @@ def _build_nuvlaedge_session():
 
 
 def _build_vpn_config():
-    ...
+    """ Extract data from legacy configuration and build the new VPN configuration """
+    # Extract keys and csr
+    copy_file(LEGACY_FILES.VPN_KEY_FILE, FILE_NAMES.VPN_KEY_FILE)
+    copy_file(LEGACY_FILES.VPN_CSR_FILE, FILE_NAMES.VPN_CSR_FILE)
+
+    # Extract the VPN configuration
+    copy_file(LEGACY_FILES.VPN_CLIENT_CONF_FILE, FILE_NAMES.VPN_CLIENT_CONF_FILE)
+
+    # Copy the VPN credential structure and let the handler recreate the session
+    copy_file(LEGACY_FILES.VPN_CREDENTIAL, FILE_NAMES.VPN_CREDENTIAL)
 
 
 def _need_legacy_config_transformation():
-    if FILE_NAMES.root_fs.exists():
+    if FILE_NAMES.root_fs.exists() and FILE_NAMES.NUVLAEDGE_SESSION.exists():
         logger.info("New root file system structure found, assuming new configuration format already in place")
         return False
+
+    if not LEGACY_FILES.ACTIVATION_FLAG.exists():
+        logger.debug("No legacy activation flag found, couldn't find legacy configuration, nor new. "
+                     "NuvlaEdge must be new")
+        return False
+
     logger.info("Legacy root file system structure found, assuming legacy configuration format, transformation needed")
 
     # Start by creating the new root file system structure
-    FILE_NAMES.root_fs.mkdir(parents=True)
-    FILE_NAMES.PERIPHERALS_FOLDER.mkdir(parents=True)
-    FILE_NAMES.VPN_FOLDER.mkdir(parents=True)
+    FILE_NAMES.root_fs.mkdir(parents=True, exist_ok=True)
+    FILE_NAMES.PERIPHERALS_FOLDER.mkdir(parents=True, exist_ok=True)
+    FILE_NAMES.VPN_FOLDER.mkdir(parents=True, exist_ok=True)
 
     return True
 
 
-def transform_legacy_config():
+def transform_legacy_config_if_needed():
 
     if not _need_legacy_config_transformation():
         logger.debug("Configuration up to date with new format")
         return
+
+    # There is no way of being sure if the commissioning data is really the last one,
+    # so we act as if the NuvlaEdge was never commissioned before and let the agent
+    # update all the commissioning data.
+
+    # Extract the NuvlaEdge session data
+    _build_nuvlaedge_session()
+
+    # Extract the VPN configuration. The VPN configuration (if exists) is required to be parsed
+    # to prevent the recreation of the keys
+    _build_vpn_config()
 
     logger.info('Transforming legacy configuration to new format')
 

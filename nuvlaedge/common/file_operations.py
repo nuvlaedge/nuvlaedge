@@ -222,3 +222,29 @@ def write_file(content: str | dict | list[dict] | BaseModel,
             logger.warning(f"Write File function can only write types: str, dict, BaseModel. Cannot write file {file}")
             if fail_if_error:
                 raise ValueError("Cannot write empty content")
+
+
+def copy_file(origin: Path, target: Path, overwrite: bool = False, fail_if_error: bool = False):
+    """
+    Copy a file to another location
+    Args:
+        origin: Path of the file to be copied
+        target: Path of the location where the file is to be copied
+        overwrite: If True, overwrites the target file if it exists. Defaults to False
+        fail_if_error: If True, raises an exception if an error occurs while copying. Defaults to False
+    Returns: None
+    """
+    if not file_exists_and_not_empty(origin):
+        logger.warning(f"File {origin} does not exist")
+        return
+
+    if file_exists_and_not_empty(target) and not overwrite:
+        logger.warning(f"File {target} already exists and overwrite is not set")
+        return
+
+    try:
+        target.write_bytes(origin.read_bytes())
+    except Exception as ex:
+        logger.warning(f"Could not copy file {origin} to {target} : {ex}")
+        if fail_if_error:
+            raise

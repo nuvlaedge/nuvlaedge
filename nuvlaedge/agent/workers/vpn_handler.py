@@ -109,7 +109,6 @@ class VPNHandler:
     VPN_CREDENTIAL_FILE: Path = FILE_NAMES.VPN_CREDENTIAL
     VPN_SERVER_FILE: Path = FILE_NAMES.VPN_SERVER_FILE
 
-
     def __init__(self,
                  coe_client: COEClient,
                  nuvla_client: NuvlaClientWrapper,

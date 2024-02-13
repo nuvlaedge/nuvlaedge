@@ -64,7 +64,7 @@ class FileConstants(BaseFileConstants):
     VULNERABILITIES_FILE = 'vulnerabilities'
 
     # Keep track of the last commissioned data
-    COMMISSIONING_FILE = '.commission'
+    COMMISSIONING_FILE = 'commission_data.json'
     CA = 'ca.pem'
     CERT = 'cert.pem'
     KEY = 'key.pem'

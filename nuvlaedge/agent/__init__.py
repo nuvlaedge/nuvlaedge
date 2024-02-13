@@ -2,6 +2,7 @@ import logging
 import socket
 from threading import Event
 
+from nuvlaedge.agent.common.legacy_support import transform_legacy_config_if_needed
 from nuvlaedge.common.nuvlaedge_logging import set_logging_configuration
 from nuvlaedge.agent.settings import AgentSettings, get_agent_settings
 
@@ -14,6 +15,9 @@ def main():
                               log_path=get_agent_settings().agent_logging_directory,
                               disable_file_logging=get_agent_settings().disable_agent_file_logging)
     agent_event: Event = Event()
+
+    # Adds support for updating to NuvlaEdge > 2.13.0
+    transform_legacy_config_if_needed()
 
     from nuvlaedge.common.constants import CTE
     from nuvlaedge.agent.agent import Agent

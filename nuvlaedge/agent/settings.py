@@ -113,7 +113,8 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     @field_validator('nuvlaedge_uuid', mode='before')
     def nameless_uuid(cls, v):
-        if not v.startswith('nuvlabox/'):
+
+        if v is not None and not v.startswith('nuvlabox/'):
             return f"nuvlabox/{v}"
         return v
 

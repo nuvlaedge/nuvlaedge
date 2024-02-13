@@ -2,7 +2,7 @@ from argparse import ArgumentParser, Namespace
 import logging
 from typing import Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, validator
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
@@ -109,6 +109,12 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     def non_empty_str(cls, v):
         if isinstance(v, str) and v == "":
             return None
+        return v
+
+    @field_validator('nuvlaedge_uuid', mode='before')
+    def nameless_uuid(cls, v):
+        if not v.startswith('nuvlabox/'):
+            return f"nuvlabox/{v}"
         return v
 
 

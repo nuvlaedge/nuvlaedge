@@ -71,12 +71,11 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     # Required with default values
     compose_project_name:               str = "nuvlaedge"
-    nuvlaedge_log_level:                str = "DEBUG"
+    nuvlaedge_log_level:                str = "INFO"
     vpn_interface_name:                 str = 'vpn'
     nuvla_endpoint:                     str = 'nuvla.io'
     nuvla_endpoint_insecure:            bool = False
     shared_data_volume:                 str = "/srv/nuvlaedge/shared/v3"
-    ne_image_tag:                       Optional[str] = None  # Default value provided by compose
 
     # Optional
     nuvlaedge_thread_monitors:          Optional[bool] = False
@@ -92,6 +91,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     ne_image_organization:              Optional[str] = None
     ne_image_repository:                Optional[str] = None
     ne_image_installer:                 Optional[str] = None
+    ne_image_tag:                       Optional[str] = None  # Default value provided by compose
 
     # Below variables are not directly used by agent but are here
     # to be sent to Nuvla, so they are not lost when updating NE
@@ -101,9 +101,9 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     compute_api_port:                   Optional[int] = None
 
     # New
-    agent_logging_directory:            Optional[str] = None
-    agent_debug:                        bool = False
-    disable_agent_file_logging:         bool = False
+    nuvlaedge_logging_directory:        Optional[str] = None
+    nuvlaedge_debug:                    bool = False
+    disable_file_logging:               bool = False
 
     @field_validator('*', mode='before')
     def non_empty_str(cls, v):
@@ -111,11 +111,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             return None
         return v
 
-    @field_validator('nuvlaedge_uuid', mode='before')
+    @field_validator('nuvlaedge_uuid', mode='after')
     def nameless_uuid(cls, v):
-
         if v is not None and not v.startswith('nuvlabox/'):
-            return f"nuvlabox/{v}"
+            return NuvlaID(f"nuvlabox/{v}")
         return v
 
 
@@ -145,9 +144,9 @@ def get_cmd_line_settings(env_settings: AgentSettings) -> AgentSettings:
         return env_settings
 
     if cmd_settings.debug:
-        env_settings.agent_debug = (cmd_settings.debug == 'true' or
-                                    cmd_settings.debug is True or
-                                    cmd_settings.debug == "True")
+        env_settings.nuvlaedge_debug = (cmd_settings.debug == 'true' or
+                                        cmd_settings.debug is True or
+                                        cmd_settings.debug == "True")
 
     if cmd_settings.log_level:
         env_settings.nuvlaedge_log_level = cmd_settings.log_level

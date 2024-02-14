@@ -172,12 +172,14 @@ class Agent:
             self._nuvla_client = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
 
             if self._nuvla_client is not None:
-                if self.settings.nuvlaedge_uuid:
+                # If the uuid is provided we should check if it matches the stored one
+                if self.settings.nuvlaedge_uuid is not None and self.settings.nuvlaedge_uuid != "":
                     self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+                # If the uuid is not provided, retrieve the uuid from the stored session
+                else:
+                    self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
 
                 return State.value_of(self._nuvla_client.nuvlaedge.state)
-            else:
-                FILE_NAMES.NUVLAEDGE_SESSION.unlink()
 
         # Check for backwards compatibility <= 2.13.1
         if file_exists_and_not_empty(LEGACY_FILES.ACTIVATION_FLAG):

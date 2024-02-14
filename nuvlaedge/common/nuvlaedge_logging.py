@@ -42,11 +42,13 @@ def set_logging_configuration(debug: bool,
     _LOG_LEVEL = log_level
     _DISABLE_FILE_LOGGING = disable_file_logging
 
+    if _DISABLE_FILE_LOGGING:
+        return
+
     if isinstance(log_path, str):
         _LOG_PATH = Path(log_path)
     elif isinstance(log_path, Path):
         _LOG_PATH = log_path
-
     if not _LOG_PATH.exists():
         logging.warning(f"Configured logging path {log_path} doesn't exist, creating it.")
         """
@@ -167,12 +169,17 @@ def get_nuvlaedge_logger(name: str | None = None) -> logging.Logger:
         _level = logging.DEBUG
     sub_logger.level = _level
     sub_logger.addHandler(__get_common_handler())
-    sub_logger.addHandler(__get_file_handler(module_name))
+
+    if not _DISABLE_FILE_LOGGING:
+        sub_logger.addHandler(__get_file_handler(module_name))
 
     return sub_logger
 
 
 def recompute_nuvlaedge_loggers():
+    """ Recompute all nuvlaedge loggers. This is useful when the logging configuration changes.
+    Not used at the moment.
+    """
     for k, v in logging.root.manager.loggerDict.items():
         if isinstance(v, logging.Logger) and k.startswith(('nuvlaedge.', 'nuvla.', '__main__')):
             logging.root.manager.loggerDict[k] = get_nuvlaedge_logger(k)

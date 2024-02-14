@@ -337,7 +337,7 @@ class DockerClient(COEClient):
             if job_container.status.lower() in ['running', 'restarting']:
                 logger.info(f'Job {job_id} is already running in container {job_container.name}')
                 return True
-            elif job_container.status.lower() in ['created']:
+            elif job_container.status.lower() in ['created', 'exited']:
                 logger.warning(f'Job {job_id} was created but not started. Removing it and starting a new one')
                 job_container.remove()
             else:
@@ -501,7 +501,7 @@ class DockerClient(COEClient):
             command=command,
             name=job_execution_id,
             hostname=job_execution_id,
-            auto_remove=True,
+            # auto_remove=True,
             detach=True,
             network=local_net,
             volumes=volumes,
@@ -534,7 +534,8 @@ class DockerClient(COEClient):
             logger.warning(f'Could not attach {job_execution_id} to bridge network: {str(e)}')
 
         try:
-            container.start()
+            resp = container.start()
+            logger.info(f'Job "{job_id}" started with response: {resp}')
         except Exception as ex:
             logger.warning(f"Error when starting container for job {job_id}", exc_info=True)
             container.remove(force=True)

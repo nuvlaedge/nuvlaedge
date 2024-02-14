@@ -34,6 +34,6 @@ class TestAgentSettings(TestCase):
 
         mock_parse_cmd_line_args.return_value = mock.Mock(debug=True, log_level='DEBUG')
         self.assertEqual(get_cmd_line_settings(self.test_settings), self.test_settings)
-        self.assertTrue(self.test_settings.agent_debug)
+        self.assertTrue(self.test_settings.nuvlaedge_debug)
         self.assertEqual(self.test_settings.nuvlaedge_log_level, 'DEBUG')
 

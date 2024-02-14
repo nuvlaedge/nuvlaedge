@@ -39,7 +39,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         vpn_interface_name (str): The name of the VPN interface. Default value is 'vpn'.
         nuvla_endpoint (str): The Nuvla API endpoint. Default value is 'nuvla.io'.
         nuvla_endpoint_insecure (bool): Flag to enable or disable insecure connection to Nuvla endpoint. Default value is False.
-        shared_data_volume (str): The path to the shared data volume. Default value is "/srv/nuvlaedge/shared/".
+        shared_data_volume (str): The path to the shared data volume. Default value is "/var/lib/nuvlaedge/".
         ne_image_tag (Optional[str]): The tag for the NuvlaEdge image. Default value is None.
 
         nuvlaedge_api_key (Optional[str]): The API key for NuvlaEdge.
@@ -75,7 +75,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     vpn_interface_name:                 str = 'vpn'
     nuvla_endpoint:                     str = 'nuvla.io'
     nuvla_endpoint_insecure:            bool = False
-    shared_data_volume:                 str = "/srv/nuvlaedge/shared/v3"
+    shared_data_volume:                 str = "/var/lib/nuvlaedge/"
 
     # Optional
     nuvlaedge_thread_monitors:          Optional[bool] = False

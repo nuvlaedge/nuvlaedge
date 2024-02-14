@@ -93,5 +93,5 @@ class FileConstants(BaseFileConstants):
 
 
 # Nuvlaedge configuration
-FILE_NAMES = FileConstants(os.getenv('SHARED_DATA_VOLUME', '/srv/nuvlaedge/shared/v3/'))
+FILE_NAMES = FileConstants(os.getenv('SHARED_DATA_VOLUME', '/var/lib/nuvlaedge/'))
 LEGACY_FILES = LegacyFileConstants(os.getenv('SHARED_DATA_VOLUME', '/srv/nuvlaedge/shared/'))

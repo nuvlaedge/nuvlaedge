@@ -367,7 +367,6 @@ RUN chmod +x \
     /usr/bin/kubernetes-credential-manager
 
 # Configuration files
-COPY --link nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
 COPY --link conf/example/* /etc/nuvlaedge/
 
 # Job engine

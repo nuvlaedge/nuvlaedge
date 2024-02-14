@@ -29,6 +29,11 @@ from nuvlaedge.common.file_operations import read_file, write_file, file_exists_
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
+class SessionValidationError(Exception):
+    """ An exception raised when the session structure is not as expected. """
+    ...
+
+
 @dataclass(frozen=True)
 class NuvlaEndPoints:
     base_path: str = '/api/'
@@ -351,11 +356,12 @@ class NuvlaClientWrapper:
         session_store = read_file(file, decode_json=True)
         if session_store is None:
             return None
+
         try:
             session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(session_store)
         except Exception as ex:
             logger.warning(f'Could not validate session \n{session_store} \nwith error : {ex}')
-            return None
+            raise SessionValidationError(f'Could not validate session \n{session_store} \nwith error : {ex}')
 
         temp_client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
         temp_client.nuvlaedge_credentials = session.credentials
@@ -388,7 +394,7 @@ class NuvlaClientWrapper:
                 credentials = NuvlaApiKeyTemplate(key=credentials['api-key'], secret=credentials['secret-key'])
             except Exception as ex:
                 logger.warning(f'Could not validate credentials file {credentials_file} with error: {ex}')
-                return None
+                raise
         else:
             logger.warning(f'Could not read credentials file {credentials_file}')
             return None
@@ -414,9 +420,21 @@ class NuvlaClientWrapper:
         Returns: a NuvlaEdgeClient object
 
         """
+        def find_uuid(c: NuvlaApi, resource_type: str) -> NuvlaID:
+            try:
+                response: CimiCollection = c.search(resource_type=resource_type)
+                return NuvlaID(response.resources[0].id)
+            except Exception as e:
+                logger.warning(f"Could not find {resource_type} with filter {filter} with error: {e}")
+                raise
+
         client = cls(host=host, verify=verify, nuvlaedge_uuid=nuvlaedge_uuid)
         client.nuvlaedge_credentials = credentials
         client.login_nuvlaedge()
+
+        if client.nuvlaedge_uuid is None or client.nuvlaedge_uuid == NuvlaID(''):
+            client._nuvlaedge_uuid = find_uuid(client.nuvlaedge_client, 'nuvlabox')
+
         return client
 
     @classmethod

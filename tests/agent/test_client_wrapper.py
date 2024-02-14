@@ -8,7 +8,7 @@ from nuvla.api.models import CimiResource, CimiCollection
 
 import nuvlaedge.agent.nuvla.client_wrapper
 from nuvlaedge.agent.nuvla.resources import NuvlaID, AutoNuvlaEdgeResource, AutoUpdateNuvlaEdgeTrackedResource
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate, SessionValidationError
 
 
 class TestClientWrapper(TestCase):
@@ -225,9 +225,10 @@ class TestClientWrapper(TestCase):
         mock_read.return_value = 'session'
         mock_validate.side_effect = ValueError('mock_exception')
         with patch('nuvlaedge.agent.nuvla.client_wrapper.logging.Logger.warning') as mock_warning:
-            self.assertIsNone(NuvlaClientWrapper.from_session_store(test_file))
-            mock_read.assert_called_once()
-            mock_warning.assert_called_once()
+            with self.assertRaises(SessionValidationError):
+                self.assertIsNone(NuvlaClientWrapper.from_session_store(test_file))
+                mock_read.assert_called_once()
+                mock_warning.assert_called_once()
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     def test_from_nuvlaedge_credentials(self, mock_login):

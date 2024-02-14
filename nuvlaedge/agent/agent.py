@@ -171,15 +171,14 @@ class Agent:
             logger.info("Starting NuvlaEdge from previously stored session")
             self._nuvla_client = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
 
-            if self._nuvla_client is not None:
-                # If the uuid is provided we should check if it matches the stored one
-                if self.settings.nuvlaedge_uuid is not None and self.settings.nuvlaedge_uuid != "":
-                    self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
-                # If the uuid is not provided, retrieve the uuid from the stored session
-                else:
-                    self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
+            # If the uuid is provided we should check if it matches the stored one
+            if self.settings.nuvlaedge_uuid is not None and self.settings.nuvlaedge_uuid != "":
+                self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+            # If the uuid is not provided, retrieve the uuid from the stored session
+            else:
+                self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
 
-                return State.value_of(self._nuvla_client.nuvlaedge.state)
+            return State.value_of(self._nuvla_client.nuvlaedge.state)
 
         # Check for backwards compatibility <= 2.13.1
         if file_exists_and_not_empty(LEGACY_FILES.ACTIVATION_FLAG):
@@ -187,9 +186,8 @@ class Agent:
             self._nuvla_client = NuvlaClientWrapper.from_legacy_credentials(self.settings.nuvlaedge_uuid,
                                                                             LEGACY_FILES.ACTIVATION_FLAG,
                                                                             LEGACY_FILES.NUVLAEDGE_NUVLA_CONFIGURATION)
-            if self._nuvla_client is not None:
-                if self.settings.nuvlaedge_uuid:
-                    self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
+            if self._nuvla_client is not None and self.settings.nuvlaedge_uuid:
+                self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)
 
                 return State.value_of(self._nuvla_client.nuvlaedge.state)
             logger.error(f"Could not start NuvlaEdge from legacy session and there is no previous installation")
@@ -203,6 +201,9 @@ class Agent:
                 nuvlaedge_uuid=self.settings.nuvlaedge_uuid,
                 credentials=NuvlaApiKeyTemplate(key=self.settings.nuvlaedge_api_key,
                                                 secret=self.settings.nuvlaedge_api_secret))
+
+            if self.settings.nuvlaedge_uuid is None or self.settings.nuvlaedge_uuid == "":
+                self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
 
             if self._nuvla_client is not None and self.settings.nuvlaedge_uuid:
                 self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge.id)

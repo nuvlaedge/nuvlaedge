@@ -53,9 +53,9 @@ class NuvlaEdgeSession(NuvlaEdgeBaseModel):
     endpoint:               str
     verify:                 bool
 
-    credentials:            NuvlaApiKeyTemplate | None = None
+    credentials:            NuvlaApiKeyTemplate
 
-    nuvlaedge_uuid:         NuvlaID
+    nuvlaedge_uuid:         NuvlaID | None = None
     nuvlaedge_status_uuid:  NuvlaID | None = None
 
 
@@ -342,6 +342,14 @@ class NuvlaClientWrapper:
 
         write_file(serial_session, FILE_NAMES.NUVLAEDGE_SESSION)
 
+    def _find_uuid_from_api(self, resource_type: str) -> NuvlaID:
+        try:
+            response: CimiCollection = self.nuvlaedge_client.search(resource_type=resource_type)
+            return NuvlaID(response.resources[0].id)
+        except Exception as e:
+            logger.warning(f"Could not find {resource_type} with filter {filter} with error: {e}")
+            return NuvlaID("")
+
     @classmethod
     def from_session_store(cls, file: Path | str):
         """ Creates a NuvlaEdgeClient object from a saved session file
@@ -353,89 +361,27 @@ class NuvlaClientWrapper:
             NuvlaEdgeClient object
 
         """
-        session_store = read_file(file, decode_json=True)
-        if session_store is None:
-            return None
-
+        _stored_session = None
         try:
-            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(session_store)
+            _stored_session = read_file(file, decode_json=True)
+            session: NuvlaEdgeSession = (NuvlaEdgeSession.model_validate(_stored_session))
         except Exception as ex:
-            logger.warning(f'Could not validate session \n{session_store} \nwith error : {ex}')
-            raise SessionValidationError(f'Could not validate session \n{session_store} \nwith error : {ex}')
+            logger.warning(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
+            raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
 
-        temp_client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
-        temp_client.nuvlaedge_credentials = session.credentials
-        temp_client.login_nuvlaedge()
-        return temp_client
+        _client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
 
-    @classmethod
-    def from_legacy_credentials(cls, nuvlaedge_uuid: str, credentials_file: Path, legacy_nuvla_configuration: Path):
-        _endpoint: str = 'nuvla.io'
-        _verify: bool = True
-        # Try to read the endpoint and verify from the legacy configuration
-        if file_exists_and_not_empty(legacy_nuvla_configuration):
-            try:
-                legacy_config = read_file(legacy_nuvla_configuration, decode_json=False)
-                legacy_config = legacy_config.split()
-                _endpoint = legacy_config[0].replace("NUVLA_ENDPOINT=", "")
-                _verify = bool(legacy_config[1].replace("NUVLA_ENDPOINT_INSECURE=", ""))
+        if session.credentials is not None:
+            _client.nuvlaedge_credentials = session.credentials
+            _client.login_nuvlaedge()
 
-            except Exception as ex:
-                logger.warning(f'Could not read legacy configuration file '
-                               f'{legacy_nuvla_configuration} with error: {ex}')
-                # Roll back to default values
-                _endpoint: str = 'nuvla.io'
-                _verify: bool = True
+        # If uuid is none in session, retrieve it from the API
+        if _client.nuvlaedge_uuid is None or _client.nuvlaedge_uuid == NuvlaID('') and _client.nuvlaedge_credentials is not None:
+            logger.info("NuvlaEdge UUID not found in session, retrieving from API...")
+            _client._nuvlaedge_uuid = _client._find_uuid_from_api('nuvlabox')
+            logger.info(f"NuvlaEdge UUID not found in session, retrieving from API... {_client._nuvlaedge_uuid}")
 
-        # Process credentials
-        if file_exists_and_not_empty(credentials_file):
-            try:
-                credentials = read_file(credentials_file, decode_json=True)
-                credentials = NuvlaApiKeyTemplate(key=credentials['api-key'], secret=credentials['secret-key'])
-            except Exception as ex:
-                logger.warning(f'Could not validate credentials file {credentials_file} with error: {ex}')
-                raise
-        else:
-            logger.warning(f'Could not read credentials file {credentials_file}')
-            return None
-
-        _session = cls.from_nuvlaedge_credentials(host=_endpoint,
-                                                  verify=_verify,
-                                                  nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid),
-                                                  credentials=credentials)
-        return _session
-
-    @classmethod
-    def from_nuvlaedge_credentials(cls, host: str, verify: bool, nuvlaedge_uuid: NuvlaID, credentials: NuvlaApiKeyTemplate):
-        """ Creates a NuvlaEdgeClient object from the API keys
-
-        It retrieves the nuvlaedge resource from the log-in session
-
-        Args:
-            host: Nuvla endpoint
-            verify: whether to the endpoint is secured or not
-            nuvlaedge_uuid: nuvlaedge id
-            credentials: api key pair
-
-        Returns: a NuvlaEdgeClient object
-
-        """
-        def find_uuid(c: NuvlaApi, resource_type: str) -> NuvlaID:
-            try:
-                response: CimiCollection = c.search(resource_type=resource_type)
-                return NuvlaID(response.resources[0].id)
-            except Exception as e:
-                logger.warning(f"Could not find {resource_type} with filter {filter} with error: {e}")
-                raise
-
-        client = cls(host=host, verify=verify, nuvlaedge_uuid=nuvlaedge_uuid)
-        client.nuvlaedge_credentials = credentials
-        client.login_nuvlaedge()
-
-        if client.nuvlaedge_uuid is None or client.nuvlaedge_uuid == NuvlaID(''):
-            client._nuvlaedge_uuid = find_uuid(client.nuvlaedge_client, 'nuvlabox')
-
-        return client
+        return _client
 
     @classmethod
     def from_agent_settings(cls, settings: AgentSettings):
@@ -450,6 +396,23 @@ class NuvlaClientWrapper:
         Returns: a NuvlaEdgeClient object
 
         """
+        logger.debug("Initializing NuvlaEdge client from agent settings...")
+        _client = cls(host=settings.nuvla_endpoint,
+                      verify=settings.nuvla_endpoint_insecure,
+                      nuvlaedge_uuid=settings.nuvlaedge_uuid)
+
+        if settings.nuvlaedge_api_key is not None and settings.nuvlaedge_api_secret is not None:
+            logger.debug("API keys found in settings, logging in...")
+            _client.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=settings.nuvlaedge_api_key,
+                                                                secret=settings.nuvlaedge_api_secret)
+            _client.login_nuvlaedge()
+
+        if ((_client.nuvlaedge_uuid is None or _client.nuvlaedge_uuid == NuvlaID(''))
+                and _client.nuvlaedge_credentials is not None):
+            logger.info("NuvlaEdge UUID not found in settings, retrieving from API...")
+            _client._nuvlaedge_uuid = _client._find_uuid_from_api('nuvlabox')
+            logger.info(f"NuvlaEdge UUID not found in settings, retrieving from API... {_client._nuvlaedge_uuid}")
+
         return cls(host=settings.nuvla_endpoint,
                    verify=not settings.nuvla_endpoint_insecure,
                    nuvlaedge_uuid=settings.nuvlaedge_uuid)

@@ -210,9 +210,6 @@ class TestClientWrapper(TestCase):
     @patch('nuvlaedge.agent.nuvla.client_wrapper.read_file')
     def test_from_session_store(self, mock_read, mock_validate, mock_login):
         test_file = 'file'
-        mock_read.return_value = None
-        self.assertIsNone(NuvlaClientWrapper.from_session_store(test_file))
-        mock_read.assert_called_once()
 
         mock_read.reset_mock()
         mock_read.return_value = 'session'
@@ -230,20 +227,10 @@ class TestClientWrapper(TestCase):
                 mock_read.assert_called_once()
                 mock_warning.assert_called_once()
 
-    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
-    def test_from_nuvlaedge_credentials(self, mock_login):
-        mock_cred = Mock()
-        self.assertIsInstance(
-            NuvlaClientWrapper.from_nuvlaedge_credentials(
-                host='host',
-                verify=True,
-                nuvlaedge_uuid=self.mock_uuid,
-                credentials=mock_cred),
-            NuvlaClientWrapper)
-        mock_login.assert_called_once()
-
     def test_from_agent_settings(self):
         mock_settings = Mock()
+        mock_settings.nuvlaedge_api_key = None
+        mock_settings.nuvlaedge_api_secret = None
         mock_settings.nuvla_endpoint = 'endpoint'
         mock_settings.nuvlaedge_uuid = 'uuid'
         mock_settings.nuvla_endpoint_insecure = True

@@ -67,7 +67,7 @@ def _build_nuvlaedge_session():
     session = NuvlaEdgeSession(endpoint=endpoint,
                                verify=verify,
                                credentials=NuvlaApiKeyTemplate(key=api_key, secret=secret_key),
-                               nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid),
+                               nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid) if nuvlaedge_uuid else None,
                                nuvlabox_status_uuid=NuvlaID(nuvlaedge_status_uuid) if nuvlaedge_status_uuid else None
                                )
 
@@ -117,6 +117,7 @@ def transform_legacy_config_if_needed():
     # There is no way of being sure if the commissioning data is really the last one,
     # so we act as if the NuvlaEdge was never commissioned before and let the agent
     # update all the commissioning data.
+    logger.info('Transforming legacy configuration to new format')
 
     # Extract the NuvlaEdge session data
     _build_nuvlaedge_session()
@@ -125,5 +126,4 @@ def transform_legacy_config_if_needed():
     # to prevent the recreation of the keys
     _build_vpn_config()
 
-    logger.info('Transforming legacy configuration to new format')
 

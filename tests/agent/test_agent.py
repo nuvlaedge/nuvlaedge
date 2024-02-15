@@ -46,59 +46,19 @@ class TestAgent(TestCase):
         """ Test that the agent does not raise an exception when the UUIDs match """
         self.agent.check_uuid_missmatch(one, one)
 
-    @patch('nuvlaedge.agent.agent.file_exists_and_not_empty')
-    @patch('nuvlaedge.agent.agent.NuvlaClientWrapper.from_agent_settings')
-    @patch('nuvlaedge.agent.agent.NuvlaClientWrapper.from_nuvlaedge_credentials')
-    @patch('nuvlaedge.agent.agent.NuvlaClientWrapper.from_session_store')
-    def test_assert_current_state(self,
-                                  mock_from_session_store,
-                                  mock_from_nuvla_creds,
-                                  mock_from_agent_settings,
-                                  mock_file_exists):
-        """ This test asserts that the agent state is set to NEW when there is no Nuvla session file and no API keys """
-        self.agent.settings.nuvlaedge_uuid = 'some_uuid'
-        mock_file_exists.return_value = True
-        mock_from_session_store.return_value = self.mock_nuvla_client
+    @patch('nuvlaedge.agent.agent.Agent._create_nuvla_client')
+    @patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch')
+    def test_assert_current_state(self, mock_missmatch, mock_nuvla_client):
+        mock_nuvla_client.return_value = self.mock_nuvla_client
+        self.mock_nuvla_client.nuvlaedge_uuid = 'some_uuid'
+        self.mock_nuvla_client.nuvlaedge_credentials = None
 
-        with self.assertRaises(AgentSettingsMissMatch):
-            self.agent._assert_current_state()
-
-        with patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch') as mock_check_uuid_missmatch:
-            self.agent.settings.nuvlaedge_uuid = None
-            self.mock_nuvla_client.nuvlaedge.id = 'some_uuid'
-            self.mock_nuvla_client.nuvlaedge.state = 'ACTIVATED'
-            self.assertEqual(State.ACTIVATED, self.agent._assert_current_state())
-            mock_check_uuid_missmatch.assert_not_called()
-
-        """ Test API Keys agent initialisation """
-        self.agent.settings.nuvlaedge_api_key = "API_KEY"
-        self.agent.settings.nuvlaedge_api_secret = "SECRET_KEY"
-        self.agent.settings.nuvlaedge_uuid = 'some_uuid'
-        self.mock_nuvla_client.nuvlaedge.id = None
-        mock_file_exists.return_value = False
-        mock_from_nuvla_creds.return_value = self.mock_nuvla_client
-
-        with self.assertRaises(AgentSettingsMissMatch):
-            self.agent._assert_current_state()
-
-        with patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch') as mock_check_uuid_missmatch:
-            self.agent.settings.nuvlaedge_uuid = 'not None'
-            self.mock_nuvla_client.nuvlaedge.id = 'some_uuid'
-            self.mock_nuvla_client.nuvlaedge.state = 'ACTIVATED'
-            self.assertEqual(State.ACTIVATED, self.agent._assert_current_state())
-            mock_check_uuid_missmatch.assert_called_once()
-
-        """ Test No UUID provided """
-        self.agent.settings.nuvlaedge_api_key = None
-        self.agent.settings.nuvlaedge_api_secret = None
-        self.agent.settings.nuvlaedge_uuid = None
-        mock_file_exists.return_value = False
-        with self.assertRaises(InsufficientSettingsProvided):
-            self.agent._assert_current_state()
-
-        self.agent.settings.nuvlaedge_uuid = 'some_uuid'
         self.assertEqual(State.NEW, self.agent._assert_current_state())
-        mock_from_agent_settings.assert_called_once()
+        mock_missmatch.assert_called_once()
+
+        self.mock_nuvla_client.nuvlaedge_credentials = 'creds'
+        self.mock_nuvla_client.nuvlaedge.state = "ACTIVATED"
+        self.assertEqual(State.ACTIVATED, self.agent._assert_current_state())
 
     @patch('nuvlaedge.agent.manager.WorkerManager.add_worker')
     def test_init_workers(self, mock_add_worker):

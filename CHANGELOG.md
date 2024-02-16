@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.13.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.1) (2024-02-16)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.0...2.13.1)
+
+**Merged pull requests:**
+
+- Make the csr and cluster role naming bindings unique [\#156](https://github.com/nuvlaedge/nuvlaedge/pull/156) ([giovannibianco](https://github.com/giovannibianco))
+
 ## [2.13.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.0) (2023-12-16)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.12.2...2.13.0)

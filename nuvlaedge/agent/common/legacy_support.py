@@ -87,6 +87,9 @@ def _build_vpn_config():
     # Copy the VPN credential structure and let the handler recreate the session
     copy_file(LEGACY_FILES.VPN_CREDENTIAL, FILE_NAMES.VPN_CREDENTIAL)
 
+    # Copy VPN IP address file
+    copy_file(LEGACY_FILES.VPN_IP_FILE, FILE_NAMES.VPN_IP_FILE)
+
 
 def _need_legacy_config_transformation():
     if FILE_NAMES.root_fs.exists() and FILE_NAMES.NUVLAEDGE_SESSION.exists():

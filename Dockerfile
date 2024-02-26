@@ -6,7 +6,7 @@ ARG GOLANG_VERSION="1.20.4"
 ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
-ARG JOB_LITE_VERSION="3.9.3"
+ARG JOB_ENGINE_VERSION="4.0.2"
 ARG JOB_LITE_IMG_ORG="nuvla"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -14,10 +14,6 @@ ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/s
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
-
-# Import job-lite image
-FROM ${JOB_LITE_IMG_ORG}/job-lite:${JOB_LITE_VERSION} AS job-lite
-
 
 # ------------------------------------------------------------------------
 # NuvlaEdge base image for labels and environments variables
@@ -31,8 +27,6 @@ ARG GITHUB_RUN_NUMBER
 ARG GITHUB_RUN_ID
 ARG PROJECT_URL
 
-ARG JOB_LITE_VERSION
-ENV JOB_LITE_VERSION=${JOB_LITE_VERSION}
 
 LABEL git.branch=${GIT_BRANCH} \
       git.commit.id=${GIT_COMMIT_ID} \
@@ -230,7 +224,6 @@ COPY --link --from=network-builder        ${PYTHON_LOCAL_SITE_PACKAGES}       ${
 COPY --link --from=modbus-builder         ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=bt-builder             ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
 COPY --link --from=gpu-builder            ${PYTHON_LOCAL_SITE_PACKAGES}       ${PYTHON_LOCAL_SITE_PACKAGES}
-COPY --link --from=job-lite               ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla
 
 COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
@@ -371,7 +364,8 @@ COPY --link nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent
 COPY --link conf/example/* /etc/nuvlaedge/
 
 # Job engine
-COPY --link --from=job-lite /app/* /app/
+RUN mkdir -p /app/
+RUN ln -s ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla/scripts/* /app/
 
 # my_init
 WORKDIR /app

@@ -202,8 +202,10 @@ class TestClientWrapper(TestCase):
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.write_file')
     def test_save_current_state_to_file(self, mock_write, mock_session):
+        self.test_client.nuvlaedge_credentials = Mock()
         self.test_client._save_current_state_to_file()
-        mock_write.assert_called_once()
+        self.assertEqual(3, mock_write.call_count)
+
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession.model_validate')

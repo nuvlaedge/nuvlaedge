@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from nuvla.api import Api as NuvlaApi
 from requests import Response
 
-from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              NuvlaEdgeResource,
                                              NuvlaEdgeStatusResource,
@@ -341,6 +341,15 @@ class NuvlaClientWrapper:
         )
 
         write_file(serial_session, FILE_NAMES.NUVLAEDGE_SESSION)
+
+        # To provide support for legacy (<2.14) NuvlaEdge agents, we also save the session to the legacy location,
+        # both .activated and .context files
+        legacy_credentials = {"api-key": self.nuvlaedge_credentials.key,
+                              "secret-key": self.nuvlaedge_credentials.secret}
+        write_file(legacy_credentials, LEGACY_FILES.ACTIVATION_FLAG)
+
+        legacy_context = {"id": self.nuvlaedge_uuid}
+        write_file(legacy_context, LEGACY_FILES.CONTEXT)
 
     def _find_uuid_from_api(self, resource_type: str) -> NuvlaID:
         try:

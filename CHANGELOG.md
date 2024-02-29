@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.2](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.1...2.13.2) (2024-02-29)
+
+
+### Documentation
+
+* fix job-engine build workflow link in README.md ([#159](https://github.com/nuvlaedge/nuvlaedge/issues/159)) ([c24f776](https://github.com/nuvlaedge/nuvlaedge/commit/c24f77632cfc1f7480719ca908e92ed61fcf9f2c))
+
 ## [2.13.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.1) (2024-02-16)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.0...2.13.1)

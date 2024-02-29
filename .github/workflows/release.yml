@@ -4,10 +4,12 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
+# It is important to trigger the release only when the main branch is updated since the release is against the branch
+# that triggers this workflow
 on:
   push:
     branches:
-      - tasklist-issue-2994
+      - main
 
 permissions:
   contents: write
@@ -150,12 +152,11 @@ jobs:
             PACKAGE_NAME=${{ env.PACKAGE_NAME }}
           push: true
           tags: >
-            nuvladev/nuvlaedge:${{ github.ref_name }},
-#            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
-#            nuvlaedge/${{ github.event.repository.name }}:latest,
-#            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
-#            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest,
-#            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }},
-#            sixsq/${{ github.event.repository.name }}:latest
+            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
+            nuvlaedge/${{ github.event.repository.name }}:latest,
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest,
+            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }},
+            sixsq/${{ github.event.repository.name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

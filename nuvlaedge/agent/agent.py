@@ -377,7 +377,8 @@ class Agent:
     def _gather_status(self, telemetry: TelemetryPayloadAttributes):
         """ Gathers the status from the workers and stores it in the telemetry payload """
         # Gather the status report
-        status, notes = self.status_handler.get_status()
+        status, notes = self.status_handler.get_status(self._coe_engine)
+
         logger.info(f"Status gathered: \n{status} \n {json.dumps(notes,indent=4)}")
         telemetry.status = status
         telemetry.status_notes = notes

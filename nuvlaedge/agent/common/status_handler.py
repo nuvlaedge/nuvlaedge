@@ -5,6 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.file_operations import read_file
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
@@ -76,7 +79,47 @@ class NuvlaEdgeStatusHandler:
         logger.debug(f"Processing {len(self.module_reports)} status reports")
         self.process_status()
 
-    def get_status(self) -> tuple[str, list[str]]:
+    def _get_coe_status(self, coe_client: COEClient) -> None:
+        _coe_errors, _ = coe_client.read_system_issues(coe_client.get_node_info())
+        if _coe_errors:
+            err_msg = "\n".join(_coe_errors)
+            logger.warning(f"COE is reporting errors: {err_msg}")
+            self.status_channel.put(StatusReport(origin_module='COE',
+                                                 module_status='FAILING',
+                                                 message=err_msg,
+                                                 date=datetime.now()))
+
+    def _get_system_manager_status(self) -> None:
+        """
+        System Manager is expected to report its status into two files:
+         - .status: containing the status of the System Manager
+         - .status_notes: containing the notes of the System Manager
+
+        This method reads the content of these files and updates the status and notes of the System Manager
+        Returns: None. Status is reported via the status_channel for consistency
+
+        """
+        _status: str = read_file(FILE_NAMES.STATUS_FILE)
+        # Notes from the System Manager are suposed to already be a multiline string with \n separators
+        _notes: str = read_file(FILE_NAMES.STATUS_NOTES)
+
+        match _status:
+            case "OPERATIONAL":
+                _module_status = "RUNNING"
+            case "DEGRADED":
+                _module_status = "FAILING"
+            case _:
+                _module_status = "UNKNOWN"
+
+        self.status_channel.put(StatusReport(origin_module='System Manager',
+                                             module_status=_module_status,
+                                             message=_notes if _notes is not None else '',
+                                             date=datetime.now()))
+
+    def get_status(self, coe_client: COEClient) -> tuple[str, list[str]]:
+        self._get_coe_status(coe_client)
+        self._get_system_manager_status()
+
         self.update_status()
         return self._status, self._notes
 

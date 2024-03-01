@@ -71,9 +71,11 @@ class TestStatusHandler(TestCase):
         mock_process.assert_called_once()
 
     @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.update_status')
-    def test_get_status(self, mock_update):
+    @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler._get_system_manager_status')
+    @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler._get_coe_status')
+    def test_get_status(self, mock_coe, mock_sm_status, mock_update):
         self.test_status_handler._status = 'OPERATIONAL'
         self.test_status_handler._notes = ['Test note']
-        self.assertEqual(self.test_status_handler.get_status(), ('OPERATIONAL', ['Test note']))
+        self.assertEqual(self.test_status_handler.get_status(Mock()), ('OPERATIONAL', ['Test note']))
         mock_update.assert_called_once()
 

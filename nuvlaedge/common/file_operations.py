@@ -150,8 +150,8 @@ def __get_json_kwargs(target_kwargs: dict) -> tuple[dict, dict]:
 
 
 def _write_content_to_file(content: str, file: Path, fail_if_error: bool, **kwargs):
-    if content == "" or content is None:
-        logger.info("Content empty, won't write an empty file. Such a waste...")
+    if content is None:
+        logger.info(f"Content empty, won't write an empty file {file}. Such a waste...")
         return
 
     # Write and raise issue if so indicated in the parameter fail_if_error

@@ -110,7 +110,7 @@ class NuvlaEdgeStatusHandler:
                 _module_status = "FAILING"
             case _:
                 _module_status = "UNKNOWN"
-
+        logger.debug(f"System Manager status: {_module_status} - {_notes}")
         self.status_channel.put(StatusReport(origin_module='System Manager',
                                              module_status=_module_status,
                                              message=_notes if _notes is not None else '',

@@ -98,7 +98,7 @@ class TestFileOperations(unittest.TestCase):
 
     @patch('nuvlaedge.common.file_operations.__atomic_write')
     def test_write_content_to_file(self, mock_atomic_write):
-        self.assertIsNone(write_content_to_file("", Path('empty_path'), fail_if_error=True))
+        self.assertIsNone(write_content_to_file(None, Path('empty_path'), fail_if_error=True))
 
         self.assertIsNone(write_content_to_file("Content", Path('empty_path'), fail_if_error=True))
         mock_atomic_write.assert_called_once()

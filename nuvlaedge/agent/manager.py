@@ -58,7 +58,7 @@ class WorkerManager:
             if not worker.is_running:
                 logger.info(f"Worker {worker.worker_name} is not running, restarting...")
                 # Should we recreate the worker class or just the threads
-                worker.reset_worker()
+                worker.reset_worker(start=True)
 
     def summary(self) -> str:
         """

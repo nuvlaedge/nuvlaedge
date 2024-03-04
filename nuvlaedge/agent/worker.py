@@ -144,6 +144,7 @@ class Worker:
         """
         self.error_count += 1
         self.exceptions.append(ex)
+        self._exec_finish_time = time.time()
         if ex and is_exit:
             raise ExceptionGroup(f"Exit requested from worker {self.worker_name}, raising all", self.exceptions)
 
@@ -153,18 +154,24 @@ class Worker:
                 logger.exception(e)
             raise ExceptionGroup(f"Too many errors in {self.worker_name} worker", self.exceptions)
 
-    def reset_worker(self, new_init_params: tuple[tuple, dict] = ()):
+    def reset_worker(self, new_init_params: tuple[tuple, dict] = (), start: bool = False):
         """
         Resets the worker instance with new initialization parameters.
 
         Args:
             new_init_params (tuple[tuple, dict]): Optional. The new initialization parameters for the worker instance.
+            start
 
         """
         if new_init_params:
             self.class_init_parameters = new_init_params
+        logger.info(f"Creating new {self.worker_name} worker from reset")
+        self.error_count = 0
+        self.exceptions = []
         self.worker_instance = self.worker_type(*self.class_init_parameters[0],
                                                 **self.class_init_parameters[1])
+        if start:
+            self.worker_instance.start()
 
     def edit_period(self, new_period: int):
         """

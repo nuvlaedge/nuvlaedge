@@ -11,7 +11,6 @@ import docker.errors
 from pydantic import BaseModel
 
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
-from nuvlaedge.agent.worker import WorkerExitException
 from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource, CredentialResource, NuvlaID, State)
 from nuvlaedge.agent.common import util
 from nuvlaedge.common.file_operations import file_exists_and_not_empty
@@ -20,7 +19,6 @@ from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common import file_operations
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
-from nuvlaedge.agent.settings import get_agent_settings
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.models import are_models_equal
 
@@ -114,6 +112,7 @@ class VPNHandler:
                  nuvla_client: NuvlaClientWrapper,
                  status_channel: Queue[StatusReport],
                  vpn_extra_conf: str,
+                 vpn_enable_flag: int,
                  interface_name: str = 'vpn'):
         """
         Controls and configures the VPN client based on configuration parsed by the agent. It  commissions itself
@@ -146,6 +145,7 @@ class VPNHandler:
 
         self.vpn_extra_conf: str = vpn_extra_conf
         self.interface_name: str = interface_name
+        self.vpn_enable_flag: int = vpn_enable_flag
 
         # Last VPN credentials used to create the VPN configuration
         self.vpn_credential: CredentialResource | None = None
@@ -470,18 +470,25 @@ class VPNHandler:
         - Configures the OpenVPN client running in a different container using VPN_CLIENT_CONF_FILE
 
         """
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'VPNHandler')
 
         if not self.nuvla_client.nuvlaedge.vpn_server_id:
-            logger.error("VPN is disabled, we should have not reached this point, exiting VPN handler")
-            raise WorkerExitException("VPN handler needs a NuvlaEdge with VPN Enabled ")
+            NuvlaEdgeStatusHandler.stopped(self.status_channel, 'VPNHandler')
+            logger.info("VPN is disabled from Nuvla, Wait for next iteration")
+            return
 
         vpn_client_exists, _ = self._check_vpn_client_state()
         if not vpn_client_exists:
-            logger.error("VPN Client container doesn't exist, this means that it has been disabled in the installation"
-                         "process. However, it was activated during NuvlaEdge creation.")
-            raise VPNConfigurationMissmatch("VPN client is not running although the VPN was enabled when creating the "
-                                            "NuvlaEdge, cannot run...")
+            if self.vpn_enable_flag == 0:
+                logger.info("VPN is disabled from env. settings, Wait for next iteration")
+                NuvlaEdgeStatusHandler.stopped(self.status_channel, 'VPNHandler')
+                return
+
+            NuvlaEdgeStatusHandler.failing(self.status_channel, 'VPNHandler',
+                                           message="VPN Client container doesn't exist.")
+            logger.warning("VPN Client container doesn't exist, cannot start VPN client. Waiting for next iteration...")
+            return
+
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'VPNHandler')
 
         if not self._vpn_needs_commission():
             logger.info("VPN credentials aligned. No need for commissioning")

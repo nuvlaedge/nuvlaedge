@@ -36,6 +36,7 @@ class TestVPNHandler(TestCase):
                 coe_client=self.mock_coe_client,
                 nuvla_client=self.mock_nuvla_client,
                 status_channel=self.mock_status_channel,
+                vpn_enable_flag=1,
                 vpn_extra_conf=self.mock_vpn_extra_conf)
 
     @patch('nuvlaedge.agent.workers.vpn_handler.NuvlaEdgeStatusHandler')
@@ -47,6 +48,7 @@ class TestVPNHandler(TestCase):
             coe_client=self.mock_coe_client,
             nuvla_client=self.mock_nuvla_client,
             status_channel=self.mock_status_channel,
+            vpn_enable_flag=1,
             vpn_extra_conf=self.mock_vpn_extra_conf)
         mock_mkdir.assert_called_once()
         mock_status_handler.starting.assert_called_once()
@@ -232,7 +234,7 @@ class TestVPNHandler(TestCase):
         self.assertEqual(2, mock_vpn_config.update.call_count)
         mock_save_vpn_config.assert_called_once()
 
-    @patch('nuvlaedge.agent.workers.vpn_handler.NuvlaEdgeStatusHandler.running')
+    @patch('nuvlaedge.agent.workers.vpn_handler.NuvlaEdgeStatusHandler')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._check_vpn_client_state')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._vpn_needs_commission')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._generate_certificates')
@@ -246,17 +248,16 @@ class TestVPNHandler(TestCase):
                  mock_generate_certificates,
                  mock_needs_commission,
                  mock_client_state,
-                 mock_running):
+                 mock_status):
 
         self.mock_nuvla_client.nuvlaedge.vpn_server_id = None
-        with self.assertRaises(WorkerExitException):
-            self.test_vpn_handler.run()
-            mock_running.assert_called_once()
+        self.test_vpn_handler.run()
+        mock_status.stopped.assert_called_once()
 
         self.mock_nuvla_client.nuvlaedge.vpn_server_id = "infrastructure-service/uuid"
         mock_client_state.return_value = (False, False)
-        with self.assertRaises(VPNConfigurationMissmatch):
-            self.test_vpn_handler.run()
+        self.test_vpn_handler.run()
+        mock_status.failing.assert_called_once()
 
         mock_client_state.return_value = (True, False)
         mock_needs_commission.return_value = False

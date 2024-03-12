@@ -241,17 +241,17 @@ class Agent:
         """ Initialise VPN Handler """
         # Initialise only if VPN server ID is present on the resource
         logger.info("Registering VPN Handler")
-        if self._nuvla_client.nuvlaedge.vpn_server_id:
-            self.worker_manager.add_worker(
-                period=60,
-                worker_type=VPNHandler,
-                init_params=((), {'coe_client': self._coe_engine,
-                                  'status_channel': self.status_channel,
-                                  'nuvla_client': self._nuvla_client,
-                                  'vpn_extra_conf': self.settings.vpn_config_extra}),
-                actions=['run'],
-                initial_delay=10
-            )
+        self.worker_manager.add_worker(
+            period=60,
+            worker_type=VPNHandler,
+            init_params=((), {'coe_client': self._coe_engine,
+                              'status_channel': self.status_channel,
+                              'nuvla_client': self._nuvla_client,
+                              'vpn_extra_conf': self.settings.vpn_config_extra,
+                              'vpn_enable_flag': self.settings.nuvlaedge_vpn_client_enable}),
+            actions=['run'],
+            initial_delay=10
+        )
 
         """ Initialise Peripheral Manager """
         logger.info("Registering Peripheral Manager")

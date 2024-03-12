@@ -67,11 +67,6 @@ class TestAgent(TestCase):
         self.agent._init_workers()
         self.assertEqual(4, mock_add_worker.call_count)
 
-        mock_add_worker.reset_mock()
-        self.mock_nuvla_client.nuvlaedge.vpn_server_id = None
-        self.agent._init_workers()
-        self.assertEqual(3, mock_add_worker.call_count)
-
     @patch('nuvlaedge.common.timed_actions.ActionHandler.add')
     def test_init_actions(self, mock_add):
         self.agent._init_actions()

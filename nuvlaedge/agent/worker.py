@@ -171,7 +171,7 @@ class Worker:
         self.worker_instance = self.worker_type(*self.class_init_parameters[0],
                                                 **self.class_init_parameters[1])
         if start:
-            self.worker_instance.start()
+            self.start()
 
     def edit_period(self, new_period: int):
         """

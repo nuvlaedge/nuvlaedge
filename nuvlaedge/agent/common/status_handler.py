@@ -16,7 +16,7 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 class StatusReport(BaseModel):
     origin_module: str
-    module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'FAILING', 'FAILED']
+    module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'FAILING', 'FAILED', 'UNKNOWN']
     date: datetime
     message: str = ''
 

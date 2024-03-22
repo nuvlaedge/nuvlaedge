@@ -1,3 +1,4 @@
+import json
 from argparse import ArgumentParser, Namespace
 import logging
 from typing import Optional
@@ -105,16 +106,16 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_debug:                    bool = False
     disable_file_logging:               bool = False
 
-    @field_validator('*', mode='before')
-    def non_empty_str(cls, v):
-        if isinstance(v, str) and v == "":
-            return None
-        return v
-
     @field_validator('nuvlaedge_uuid', mode='after')
     def nameless_uuid(cls, v):
         if v is not None and not v.startswith('nuvlabox/'):
             return NuvlaID(f"nuvlabox/{v}")
+        return v
+
+    @field_validator('vpn_config_extra', mode='after')
+    def clean_config_extra(cls, v):
+        if v is not None and v != "":
+            return v.replace(r'\n', '\n')
         return v
 
 
@@ -162,3 +163,7 @@ def get_agent_settings() -> AgentSettings:
     __agent_settings = get_cmd_line_settings(env_settings)
 
     return __agent_settings
+
+
+if __name__ == '__main__':
+    print(get_agent_settings().model_dump_json(indent=4))

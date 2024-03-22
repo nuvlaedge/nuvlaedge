@@ -453,6 +453,9 @@ class VPNHandler:
         self.vpn_config.vpn_endpoints_mapped = self._map_endpoints()
 
         if self.vpn_extra_conf is not None:
+            # If self.vpn_extra_conf is not none means it has been intentionally defined
+            # in NuvlaEdge settings. Either to overwrite a previous configuration if it is
+            # an empty string or just to add extra custom configuration.
             self.vpn_config.vpn_extra_config = self.vpn_extra_conf
 
         # Then save the configuration

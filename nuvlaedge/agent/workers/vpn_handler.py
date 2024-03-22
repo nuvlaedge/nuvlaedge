@@ -453,7 +453,7 @@ class VPNHandler:
         self.vpn_config.vpn_endpoints_mapped = self._map_endpoints()
 
         if self.vpn_extra_conf is not None:
-            self.vpn_config = self.vpn_extra_conf
+            self.vpn_config.vpn_extra_config = self.vpn_extra_conf
 
         # Then save the configuration
         vpn_client_configuration: str = (

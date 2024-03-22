@@ -452,6 +452,9 @@ class VPNHandler:
         self.vpn_config.nuvlaedge_vpn_key = self._get_vpn_key()
         self.vpn_config.vpn_endpoints_mapped = self._map_endpoints()
 
+        if self.vpn_extra_conf is not None:
+            self.vpn_config = self.vpn_extra_conf
+
         # Then save the configuration
         vpn_client_configuration: str = (
             string.Template(util.VPN_CONFIG_TEMPLATE).substitute(self.vpn_config.dump_to_template()))

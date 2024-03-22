@@ -62,4 +62,5 @@ class AutoCredentialResource(CredentialResource,
 
         else:
             logger.debug("VPN credential not found (or present) in Nuvla")
+            self._update_fields({k: None for k in self.model_fields})
 

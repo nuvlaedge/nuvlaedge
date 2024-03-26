@@ -16,7 +16,7 @@ import (
 )
 
 const DatetimeFormat = "01022006150405"
-const NuvlaEdgeRootFileSystem = "/srv/nuvlaedge/shared/"
+const NuvlaEdgeRootFileSystem = "/var/lib/nuvlaedge/"
 const PeripheralsFolder = ".peripherals/"
 const PeripheralName = "usb"
 const ChannelPath = NuvlaEdgeRootFileSystem + PeripheralsFolder + PeripheralName + "/buffer/"

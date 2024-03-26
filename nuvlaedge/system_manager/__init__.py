@@ -14,6 +14,8 @@ import signal
 import sys
 import time
 
+from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.file_operations import file_exists
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
 import nuvlaedge.system_manager.requirements as MinReq
 from nuvlaedge.system_manager.common import utils
@@ -70,17 +72,11 @@ def requirements_check(sw_rq: MinReq.SoftwareRequirements,
 
     operational_status += sw_rq.check_sw_optional_requirements()
 
-    if not utils.status_file_exists():
+    if not file_exists(FILE_NAMES.STATUS_FILE):
         utils.set_operational_status(utils.status_operational)
 
-        peripherals = '{}/.peripherals'.format(utils.data_volume)
-
-        try:
-            # Dynamically create directory for peripheral managers
-            os.mkdir(peripherals)
-            logger.info("Successfully created peripherals directory")
-        except FileExistsError:
-            logger.info("Directory " + peripherals + " already exists")
+        # Create peripherals folder ignoring errors if it already exists and creating parents if needed
+        FILE_NAMES.PERIPHERALS_FOLDER.mkdir(parents=True, exist_ok=True)
 
 
 def main():

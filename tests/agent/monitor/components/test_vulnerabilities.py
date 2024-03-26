@@ -5,31 +5,31 @@ from pathlib import Path
 from mock import Mock, patch, mock_open
 import unittest
 
-from nuvlaedge.agent.monitor.components.vulnerabilities import VulnerabilitiesMonitor
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components.vulnerabilities import VulnerabilitiesMonitor
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestVulnerabilitiesMonitor(unittest.TestCase):
     openssh_ctr: str = 'OpenSSH 7.6p1 Ubuntu 4ubuntu0.5'
 
-    @patch.object(Path, 'exists')
-    def test_retrieve_security_vulnerabilities(self, mock_exists):
+    def test_retrieve_security_vulnerabilities(self):
         fake_telemetry: Mock = Mock()
-        mock_exists.return_value = False
         test_monitor: VulnerabilitiesMonitor = VulnerabilitiesMonitor(
             'vul_mon', fake_telemetry, Mock()
         )
         self.assertIsNone(test_monitor.retrieve_security_vulnerabilities())
 
-        fake_data: str = ":"
-        with patch.object(Path, 'open', mock_open(read_data=fake_data)):
+        with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.read_file') as mock_read_file:
+            mock_read_file.side_effect = [None]
             self.assertIsNone(test_monitor.retrieve_security_vulnerabilities())
 
-        fake_data: str = '{"name": "file"}'
-        mock_exists.return_value = True
-        with patch.object(Path, 'open', mock_open(read_data=fake_data)):
-            self.assertEqual(test_monitor.retrieve_security_vulnerabilities(),
-                             {'name': 'file'})
+        fake_data: dict = {"name": "file"}
+        with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.read_file') as mock_read_file:
+            with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.file_exists_and_not_empty') as mock_exists:
+                mock_exists.return_value = True
+                mock_read_file.side_effect = [fake_data]
+                ans = test_monitor.retrieve_security_vulnerabilities()
+                self.assertEqual(ans["name"], "file")
 
     @patch.object(VulnerabilitiesMonitor, 'retrieve_security_vulnerabilities')
     def test_update_data(self, mock_retrieve):

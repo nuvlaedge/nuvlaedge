@@ -18,22 +18,11 @@ class DockerTestCase(unittest.TestCase):
 
     def test_set_operational_status(self):
         # writes twice
-        with mock.patch("nuvlaedge.system_manager.common.utils.open") as mock_open:
+        with mock.patch("nuvlaedge.system_manager.common.utils.write_file") as mock_open:
             self.assertIsNone(utils.set_operational_status('status', []),
                               'Failed to set operational status')
             self.assertEqual(mock_open.call_count, 2,
                              'Should write two files when setting operational status')
-
-    @mock.patch('os.path.exists')
-    def test_status_file_exists(self, mock_exists):
-        # simple check for file existence
-        mock_exists.return_value = False
-        self.assertFalse(utils.status_file_exists(),
-                         'Says status file exists when it does not')
-
-        mock_exists.return_value = True
-        self.assertTrue(utils.status_file_exists(),
-                        'Says status file does not exist when it does')
 
     def test_random_choices(self):
         assert ['a'] == utils.random_choices('a')

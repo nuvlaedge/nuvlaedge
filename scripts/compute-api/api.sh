@@ -16,7 +16,7 @@ echo "INFO: SAN=${SUBJECT_ALT_NAMES}"
 
 PASSPHRASE=$(openssl rand -base64 32)
 DOCKER_TLS=${DOCKER_TLS:-`pwd`}
-SHARED="/srv/nuvlaedge/shared"
+SHARED="/var/lib/nuvlaedge"
 SYNC_FILE=".tls"
 
 export RANDFILE=${DOCKER_TLS}/.rnd

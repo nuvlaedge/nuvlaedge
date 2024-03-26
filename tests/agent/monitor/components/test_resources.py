@@ -2,10 +2,10 @@
 import unittest
 from mock import Mock, patch, MagicMock
 
-from nuvlaedge.agent.monitor.components.resources import ResourcesMonitor
-from nuvlaedge.agent.monitor.data.resources_data import ResourcesData, DiskDataStructure, \
+from nuvlaedge.agent.workers.monitor.components.resources import ResourcesMonitor
+from nuvlaedge.agent.workers.monitor.data.resources_data import ResourcesData, DiskDataStructure, \
     CPUDataStructure, MemoryDataStructure
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestResourcesMonitor(unittest.TestCase):
@@ -45,7 +45,7 @@ class TestResourcesMonitor(unittest.TestCase):
         test_report['size'] = 0
         self.assertIsNone(ResourcesMonitor.clean_disk_report(test_report))
 
-    @patch('nuvlaedge.agent.monitor.components.resources.execute_cmd')
+    @patch('nuvlaedge.agent.workers.monitor.components.resources.execute_cmd')
     def test_get_disk_usage(self, mock_cmd):
         run = MagicMock()
         # if cmd fails, get a fallbacl list

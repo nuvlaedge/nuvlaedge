@@ -1,5 +1,4 @@
 import logging
-import pprint
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -98,7 +97,7 @@ class ActionHandler:
         return self._actions
 
     def add(self, action: TimedAction):
-        self.actions.append(action)
+        self._actions.append(action)
 
     @property
     def next(self) -> TimedAction:

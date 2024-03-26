@@ -1,29 +1,57 @@
-"""
+import json
+import logging
 
-"""
 from pydantic import BaseModel
 
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
-def underscore_to_hyphen(field_name: str) -> str:
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
+
+
+def are_models_equal(model_one: BaseModel, model_two: BaseModel):
     """
-    Alias generator that takes the field name and converts the underscore into hyphen
+    Compares two BaseModel objects and returns True if they are equal, False otherwise.
+
     Args:
-        field_name: string that contains the name of the field to be processed
+        model_one (BaseModel): The first BaseModel object to be compared.
+        model_two (BaseModel): The second BaseModel object to be compared.
 
-    Returns: the alias name with no underscores
+    Returns:
+        bool: True if the BaseModel objects are equal, False otherwise.
 
     """
-    return field_name.replace("_", "-")
+    model_one_map = None
+    if model_one is not None:
+        model_one_map = model_one.model_dump(exclude_none=True, by_alias=False)
+
+    model_two_map = None
+    if model_two is not None:
+        model_two_map = model_two.model_dump(exclude_none=True, by_alias=False)
+
+    return model_one_map == model_two_map
 
 
-class NuvlaEdgeBaseModel(BaseModel):
+def model_diff(reference: BaseModel, target: BaseModel) -> tuple[set[str], set[str]]:
     """
-    Base data structure for providing a common configuration for all data structures.
-    """
+    Calculate the differences between two models.
 
-    class Config:
-        """ Configuration class for base telemetry data """
-        exclude_none = True
-        allow_population_by_field_name = True
-        alias_generator = underscore_to_hyphen
-        validate_assignment = True
+    Args:
+        reference (BaseModel): The reference model to compare against.
+        target (BaseModel): The target model to compare with.
+
+    Returns:
+        tuple[set[str], set[str]]: A tuple containing two sets. The first set contains the fields that have different
+         values between the reference and target models. The second set contains the fields that exist in the
+         reference model but not in the target model.
+    """
+    to_send: set = set()
+    to_delete: set = set()
+
+    for field, value in iter(target):
+        if value != getattr(reference, field):
+            if value is not None:
+                to_send.add(field)
+            else:
+                to_delete.add(field.replace('_', '-'))
+
+    return to_send, to_delete

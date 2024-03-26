@@ -10,14 +10,12 @@ import unittest
 
 import nuvlaedge.system_manager.supervise as Supervise
 
-from nuvlaedge.system_manager.common.coe_client import Containers
 import tests.system_manager.utils.fake as fake
 
 
 class SuperviseTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        Supervise.__bases__ = (fake.Fake.imitate(Containers),)
         self.obj = Supervise.Supervise()
         self.obj.coe_client = mock.MagicMock()
         logging.disable(logging.CRITICAL)
@@ -101,7 +99,7 @@ class SuperviseTestCase(unittest.TestCase):
         cert_obj.get_notAfter.return_value = b'20200309161546Z'
         mock_load_cert.return_value = cert_obj
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.supervise.open'):
+        with mock.patch('nuvlaedge.system_manager.supervise.read_file'):
             self.assertTrue(self.obj.is_cert_rotation_needed(),
                             'Failed to recognize certificates in need of renewal')
 

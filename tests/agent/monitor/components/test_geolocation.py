@@ -4,16 +4,16 @@ import time
 from mock import Mock, patch
 import unittest
 
-from nuvlaedge.agent.monitor.components.geolocation import GeoLocationMonitor
-from nuvlaedge.agent.monitor.data.geolocation_data import GeoLocationData
+from nuvlaedge.agent.workers.monitor.components.geolocation import GeoLocationMonitor
+from nuvlaedge.agent.workers.monitor.data.geolocation_data import GeoLocationData
 
 
 class TestGeoLocationMonitor(unittest.TestCase):
 
     mock_telemetry = Mock()
-    _patch_send_req: str = 'nuvlaedge.agent.monitor.components.geolocation.GeoLocationMonitor.' \
+    _patch_send_req: str = 'nuvlaedge.agent.workers.monitor.components.geolocation.GeoLocationMonitor.' \
                            'send_request'
-    _patch_parse_geo: str = 'nuvlaedge.agent.monitor.components.geolocation.GeoLocationMonitor.' \
+    _patch_parse_geo: str = 'nuvlaedge.agent.workers.monitor.components.geolocation.GeoLocationMonitor.' \
                             'parse_geolocation'
 
     def test_constructor(self):
@@ -39,19 +39,19 @@ class TestGeoLocationMonitor(unittest.TestCase):
             ip_location_service_name]
 
         geolocation_response = {
-            ip_location_service_info['coordinates_key']: 'one,two'
+            ip_location_service_info['coordinates_key']: '1,2'
         }
         self.assertEqual(test_geo.parse_geolocation(ip_location_service_name,
                                                     ip_location_service_info,
-                                                    geolocation_response), ['two', 'one'],
+                                                    geolocation_response), [2.0, 1.0],
                          'Failed to get geolocation from string coordinates_key')
 
         geolocation_response = {
-            ip_location_service_info['coordinates_key']: ['one', 'two']
+            ip_location_service_info['coordinates_key']: ['1', '2']
         }
         self.assertEqual(test_geo.parse_geolocation(ip_location_service_name,
                                                     ip_location_service_info,
-                                                    geolocation_response), ['two', 'one'],
+                                                    geolocation_response), [2.0, 1.0],
                          'Failed to get geolocation from list coordinates_key')
 
         # else, raise a TypeError
@@ -107,11 +107,10 @@ class TestGeoLocationMonitor(unittest.TestCase):
 
         with patch(self._patch_send_req, autospec=True) as test_send_req, \
                 patch(self._patch_parse_geo, autospec=True) as test_parse:
-            test_parse.return_value = [1, 2]
+            test_parse.return_value = [1.0, 2.0]
             test_send_req.return_value = 'not_none'
             test_geo.update_data()
-            self.assertEqual(test_geo.data.latitude, 2)
-            self.assertEqual(test_geo.data.longitude, 1)
+            self.assertEqual([1.0, 2.0], test_geo.data.coordinates)
         test_geo.data.timestamp = None
         test_geo.data.coordinates = None
 
@@ -129,12 +128,6 @@ class TestGeoLocationMonitor(unittest.TestCase):
             test_geo.update_data()
             self.assertIsNone(test_geo.data.coordinates)
             self.assertIsNone(test_geo.data.timestamp)
-
-            test_parse.return_value = [-1, -1]
-            test_send_req.return_value = 'not_none'
-            test_geo.update_data()
-            self.assertEqual(test_geo.data.longitude, -1)
-            self.assertEqual(test_geo.data.latitude, -1)
 
         test_geo: GeoLocationMonitor = GeoLocationMonitor('geo_test', self.mock_telemetry,
                                                           True)
@@ -166,7 +159,7 @@ class TestGeoLocationMonitor(unittest.TestCase):
         test_geo: GeoLocationMonitor = GeoLocationMonitor('geo_test', self.mock_telemetry,
                                                           True)
 
-        with patch('nuvlaedge.agent.monitor.components.geolocation.GeoLocationMonitor.update_data',
+        with patch('nuvlaedge.agent.workers.monitor.components.geolocation.GeoLocationMonitor.update_data',
                    autospec=True) as mocked_updater:
             mocked_updater.return_value = 'TEST'
             test_geo.update_data()

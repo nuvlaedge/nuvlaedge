@@ -9,10 +9,9 @@ from pathlib import Path
 import requests
 from mock import Mock, mock_open, patch, MagicMock
 
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
-from nuvlaedge.agent.monitor.components import network as monitor
-from nuvlaedge.agent.monitor.data.network_data import NetworkInterface, NetworkingData, IP
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components import network as monitor
+from nuvlaedge.agent.workers.monitor.data.network_data import NetworkInterface, NetworkingData, IP
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 def generate_random_ip_address():
@@ -21,11 +20,11 @@ def generate_random_ip_address():
     return ".".join(it_str)
 
 
-atomic_write: str = 'nuvlaedge.agent.common.util.atomic_write'
+atomic_write: str = 'nuvlaedge.common.file_operations.write_file'
 
 
 class TestNetworkMonitor(unittest.TestCase):
-    built_open: str = "builtins.open"
+    file_operations_read: str = "nuvlaedge.agent.workers.monitor.components.network.read_file"
     _path_json: str = 'json.loads'
 
     def test_constructor(self):
@@ -117,14 +116,14 @@ class TestNetworkMonitor(unittest.TestCase):
         tel_mock.coe_client = runtime_mock
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", tel_mock, Mock())
-        with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
+        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
                    '_gather_host_ip_route') as test_gather:
             test_gather.return_value = None
             test_ip_monitor.set_local_data()
             self.assertFalse(test_ip_monitor.data.ips.local)
 
         # Test Skip routes
-        with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
+        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
                    'is_skip_route') as test_skip, \
                 patch(self._path_json) as json_dict:
             json_dict.return_value = [{'Test': None}]
@@ -167,7 +166,7 @@ class TestNetworkMonitor(unittest.TestCase):
             self.assertEqual(test_ip_monitor.data.ips.local, it_address)
 
         # Test traffic readings
-        with patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.'
+        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
                    'read_traffic_data') as test_traffic, \
                 patch(self._path_json) as json_dict:
             json_dict.return_value = None
@@ -207,28 +206,24 @@ class TestNetworkMonitor(unittest.TestCase):
 
     # -------------------- VPN data tests -------------------- #
 
-    @patch.object(Path, 'exists')
-    @patch.object(Path, 'stat')
-    def test_set_vpn_data(self, mock_stat, mock_exists):
+    def test_set_vpn_data(self):
         vpn_file = Mock()
         status = Mock()
         mock_telemetry = Mock()
-        mock_telemetry.get_vpn_ip = NuvlaEdgeCommon.get_vpn_ip
+        mock_telemetry.get_vpn_ip = "ASDFASF"
         status.iface_data = None
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor(vpn_file, mock_telemetry, status)
 
         it_ip: str = generate_random_ip_address()
-        mock_stat.return_value.st_size = 1
-        mock_exists.return_value = True
-        with patch.object(Path, 'open', mock_open(read_data=it_ip)):
+        with patch('nuvlaedge.agent.workers.commissioner.VPNHandler.get_vpn_ip') as mock_get_vpn_ip:
+            mock_get_vpn_ip.side_effect = [it_ip]
             test_ip_monitor.set_vpn_data()
             self.assertEqual(test_ip_monitor.data.ips.vpn, it_ip)
 
         test_ip_monitor.data.ips.vpn = ''
-        mock_stat.return_value.st_size = 0
-        mock_exists.return_value = True
-        with patch.object(Path, 'open', mock_open(read_data="")):
+        with patch('nuvlaedge.agent.workers.commissioner.VPNHandler.get_vpn_ip') as mock_get_vpn_ip:
+            mock_get_vpn_ip.side_effect = [""]
             test_ip_monitor.set_vpn_data()
             self.assertFalse(test_ip_monitor.data.ips.vpn)
 
@@ -252,10 +247,10 @@ class TestNetworkMonitor(unittest.TestCase):
         with self.assertRaises(TypeError):
             test_ip_monitor.set_swarm_data()
 
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_public_data')
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_local_data')
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_vpn_data')
-    @patch('nuvlaedge.agent.monitor.components.network.NetworkMonitor.set_swarm_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_public_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_local_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_vpn_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.set_swarm_data')
     def test_update_data(self, pub, local, vpn, swarm):
         runtime_mock = Mock()
         # r_ip: str = generate_random_ip_address()
@@ -276,7 +271,7 @@ class TestNetworkMonitor(unittest.TestCase):
 
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", Mock(), True)
-        with patch(self._path_json) as mock_json_loads, patch('os.listdir') as mock_ls:
+        with patch('os.listdir') as mock_ls:
             mock_ls.side_effect = FileNotFoundError
             test_ip_monitor.read_traffic_data()
 
@@ -287,19 +282,18 @@ class TestNetworkMonitor(unittest.TestCase):
             mock_ls.reset_mock(side_effect=True)
 
             # if previous net file cannot be found, or is malformed, don't load it
-            with patch(self.built_open, mock_open()) as mock_tel_open:
-                mock_tel_open.side_effect = [FileNotFoundError, MagicMock()]
+            with patch(self.file_operations_read) as mock_read:
+                mock_read.side_effect = [None, MagicMock()]
                 mock_ls.return_value = []  # no interfaces, get []
                 self.assertEqual(test_ip_monitor.read_traffic_data(), [],
                                  'Got net info even though no interfaces were found')
-                mock_json_loads.assert_not_called()
 
-            with patch(self.built_open, mock_open()) as mock_tel_open:
+            with patch(self.file_operations_read) as mock_read:
                 # if there are interfaces
                 mock_ls.return_value = ['iface1', 'iface2']
                 # try to open but if it fails, get []
-                mock_tel_open.side_effect = [FileNotFoundError, FileNotFoundError,
-                                             NotADirectoryError, MagicMock()]
+                mock_read.side_effect = [None, None,
+                                             None, None, MagicMock()]
                 self.assertEqual(
                     test_ip_monitor.read_traffic_data(),
                     [],
@@ -323,14 +317,9 @@ class TestNetworkMonitor(unittest.TestCase):
                     "bytes-received-carry": 0
                 }
             }
-            with patch(self.built_open, mock_open()) as mock_tel_open:
+            with patch(self.file_operations_read) as mock_read:
                 # 4 readers because open tx and rx per interface (2x2)
-                mock_tel_open.side_effect = [FileNotFoundError,
-                                             mock_open(read_data='1').return_value,
-                                             mock_open(read_data='2').return_value,
-                                             mock_open(read_data='3').return_value,
-                                             mock_open(read_data='4').return_value,
-                                             MagicMock()]
+                mock_read.side_effect = [None, '1', '2', '3', '4', MagicMock()]
 
                 # first time is all 0
                 self.assertEqual(
@@ -354,14 +343,9 @@ class TestNetworkMonitor(unittest.TestCase):
 
             # now that first_net_stats exists, if system counter are still going,
             # get the diff and return values
-            with patch(self.built_open) as mock_tel_open:
+            with patch(self.file_operations_read) as mock_read:
                 # 4 readers because open tx and rx per interface (2x2)
-                mock_tel_open.side_effect = [FileNotFoundError,
-                                             mock_open(read_data='10').return_value,
-                                             mock_open(read_data='10').return_value,
-                                             mock_open(read_data='20').return_value,
-                                             mock_open(read_data='20').return_value,
-                                             MagicMock()]
+                mock_read.side_effect = [None, '10', '10', '20', '20', MagicMock()]
 
                 # current-first+carry=x -> 20-4+0-16
                 self.assertEqual(test_ip_monitor.read_traffic_data(), [
@@ -377,14 +361,9 @@ class TestNetworkMonitor(unittest.TestCase):
                                  'first_net_stats were changed when they should not have')
 
             # when system counters are reset, the reads are smaller than the first ones
-            with patch(self.built_open) as mock_tel_open:
+            with patch(self.file_operations_read) as mock_read:
                 # 4 readers because open tx and rx per interface (2x2)
-                mock_tel_open.side_effect = [FileNotFoundError,
-                                             mock_open(read_data='0').return_value,
-                                             mock_open(read_data='1').return_value,
-                                             mock_open(read_data='2').return_value,
-                                             mock_open(read_data='3').return_value,
-                                             MagicMock()]
+                mock_read.side_effect = [None, '0', '1', '2', '3', MagicMock()]
                 # assuming once more previous_stats don't exist, we should get the
                 # reading as is
                 self.assertEqual(test_ip_monitor.read_traffic_data(), [
@@ -415,7 +394,7 @@ class TestNetworkMonitor(unittest.TestCase):
 
             # finally, if previous stats exist, and counters are reset, get their value
             # + current readings
-            with patch(self.built_open) as mock_tel_open:
+            with patch(self.file_operations_read) as mock_read:
                 previous_net_stats = {
                     'iface1': {
                         "bytes-transmitted": 1,
@@ -426,15 +405,9 @@ class TestNetworkMonitor(unittest.TestCase):
                         "bytes-received": 2
                     }
                 }
-                mock_json_loads.return_value = previous_net_stats
                 # 4 readers because open tx and rx per interface (2x2)
-                mock_tel_open.side_effect = [
-                    mock_open(read_data=json.dumps(previous_net_stats)).return_value,
-                    mock_open(read_data='0').return_value,
-                    mock_open(read_data='0').return_value,
-                    mock_open(read_data='1').return_value,
-                    mock_open(read_data='1').return_value,
-                    MagicMock()]
+                mock_read.side_effect = [previous_net_stats,
+                                         '0', '0', '1', '1', MagicMock()]
 
                 # result is the sum of previous + current
                 self.assertEqual(

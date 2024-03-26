@@ -5,16 +5,12 @@
 Relays pull-mode jobs to local job-engine-lite
 """
 
-import logging
-import json
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 
-from nuvlaedge.common.constant_files import FILE_NAMES
-
-from nuvlaedge.agent.common.nuvlaedge_common import NuvlaEdgeCommon
 from nuvlaedge.agent.orchestrator import COEClient
 
 
-class Job(NuvlaEdgeCommon):
+class Job:
     """ The Job class, which includes all methods and
     properties necessary to handle pull mode jobs
 
@@ -26,15 +22,14 @@ class Job(NuvlaEdgeCommon):
 
     def __init__(self, 
                  coe_client: COEClient,
-                 data_volume,
+                 client_wrapper: NuvlaClientWrapper,
                  job_id,
                  job_engine_lite_image):
         """
         Constructs an Job object
         """
-
-        super().__init__(coe_client=coe_client,
-                         shared_data_volume=data_volume)
+        self.coe_client: COEClient = coe_client
+        self.nuvla_client: NuvlaClientWrapper = client_wrapper
 
         self.job_id = job_id
         self.job_id_clean = job_id.replace('/', '-')
@@ -50,16 +45,9 @@ class Job(NuvlaEdgeCommon):
 
         :return:
         """
-        try:
-            with open(FILE_NAMES.ACTIVATION_FLAG) as a:
-                user_info = json.loads(a.read())
-        except FileNotFoundError:
-            logging.error(f'Cannot find NuvlaEdge API key for job {self.job_id}')
-            return
-
         self.coe_client.launch_job(
-            self.job_id, self.job_id_clean, self.nuvla_endpoint,
-            self.nuvla_endpoint_insecure,
-            user_info["api-key"],
-            user_info["secret-key"],
+            self.job_id, self.job_id_clean, self.nuvla_client._host.removeprefix("https://"),
+            self.nuvla_client._verify,
+            self.nuvla_client.nuvlaedge_credentials.key,
+            self.nuvla_client.nuvlaedge_credentials.secret,
             self.job_engine_lite_image)

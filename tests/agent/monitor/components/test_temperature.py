@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from mock import Mock, patch, mock_open, MagicMock
+from mock import Mock, patch, mock_open
 
-import nuvlaedge.agent.monitor.components.temperature
-from nuvlaedge.agent.monitor.components.temperature import TemperatureMonitor
-from nuvlaedge.agent.monitor.data.temperature_data import TemperatureData, TemperatureZone
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components.temperature import TemperatureMonitor
+from nuvlaedge.agent.workers.monitor.data.temperature_data import TemperatureData, TemperatureZone
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestTemperatureMonitor(unittest.TestCase):
@@ -28,14 +27,14 @@ class TestTemperatureMonitor(unittest.TestCase):
 
     def test_update_temperature_entry(self):
         test_monitor: TemperatureMonitor = self.get_base_monitor()
-        test_monitor.data.temperatures = {}
+        test_monitor.data.temperatures = []
         test_monitor.update_temperature_entry('cpu', 45.1)
 
-        self.assertIn('cpu', test_monitor.data.temperatures)
-        self.assertIsInstance(test_monitor.data.temperatures['cpu'], TemperatureZone)
+        self.assertIn('cpu', test_monitor.local_temp_registry)
+        self.assertIsInstance(test_monitor.local_temp_registry['cpu'], TemperatureZone)
 
-    @patch('nuvlaedge.agent.monitor.components.temperature.psutil')
-    @patch('nuvlaedge.agent.monitor.components.temperature.TemperatureMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.temperature.psutil')
+    @patch('nuvlaedge.agent.workers.monitor.components.temperature.TemperatureMonitor.'
            'update_temperature_entry')
     def test_update_temperatures_with_psutil(self, mock_entry, mock_ps):
         test_monitor: TemperatureMonitor = self.get_base_monitor()
@@ -51,18 +50,18 @@ class TestTemperatureMonitor(unittest.TestCase):
     def test_read_temperature_file(self):
         test_monitor: TemperatureMonitor = self.get_base_monitor()
         # if there's an error reading files, return None,None
-        with patch('nuvlaedge.agent.monitor.components.temperature.open', mock_open(read_data=None)):
+        with patch('nuvlaedge.agent.workers.monitor.components.temperature.open', mock_open(read_data=None)):
             self.assertEqual(test_monitor.read_temperature_file('', ''), (None, None),
                              'Failed to read temperature files when one cannot be read')
 
         # if files can be read, return their content
-        with patch('nuvlaedge.agent.monitor.components.temperature.open',
+        with patch('nuvlaedge.agent.workers.monitor.components.temperature.open',
                    mock_open(read_data='test')):
             self.assertEqual(test_monitor.read_temperature_file('', ''),
                              ('test', 'test'),
                              'Failed to read temperature files')
 
-    @patch('nuvlaedge.agent.monitor.components.temperature.TemperatureMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.temperature.TemperatureMonitor.'
            'read_temperature_file')
     @patch('os.listdir')
     @patch('os.path.exists')
@@ -70,7 +69,7 @@ class TestTemperatureMonitor(unittest.TestCase):
                                            mock_read_temperature_files):
 
         test_monitor: TemperatureMonitor = self.get_base_monitor()
-        test_monitor.data.temperatures = {}
+        test_monitor.data.temperatures = []
         # otherwise, if thermal paths do no exist, return []
         mock_listdir.return_value = ['dir1', 'dir2']
         mock_exists.side_effect = [True, False, False]
@@ -80,6 +79,7 @@ class TestTemperatureMonitor(unittest.TestCase):
         mock_listdir.assert_called_once()
 
         # same if thermal files do not exist
+        mock_exists.side_effect = [False]*100
         mock_listdir.return_value = ['thermal-dir1', 'thermal-dir2']
         test_monitor.update_temperatures_with_file()
         self.assertFalse(test_monitor.data.temperatures,
@@ -112,13 +112,13 @@ class TestTemperatureMonitor(unittest.TestCase):
             "value": 1
         }]
         test_monitor.update_temperatures_with_file()
-        self.assertEqual(test_monitor.data.temperatures['metric'].dict(by_alias=True),
+        self.assertEqual(test_monitor.local_temp_registry['metric'].dict(by_alias=True),
                          expected_output[0],
                          'Failed to get temperatures')
 
-    @patch('nuvlaedge.agent.monitor.components.temperature.TemperatureMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.temperature.TemperatureMonitor.'
            'update_temperatures_with_file')
-    @patch('nuvlaedge.agent.monitor.components.temperature.TemperatureMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.temperature.TemperatureMonitor.'
            'update_temperatures_with_psutil')
     @patch('os.path.exists')
     def test_update_data(self, mock_exists, mock_psutil, mock_update_file):
@@ -131,7 +131,7 @@ class TestTemperatureMonitor(unittest.TestCase):
         self.assertIsNone(test_monitor.data.temperatures)
 
         # Test data update
-        with patch('nuvlaedge.agent.monitor.components.temperature.psutil') as mock_sens:
+        with patch('nuvlaedge.agent.workers.monitor.components.temperature.psutil') as mock_sens:
             mock_exists.return_value = False
             mock_sens.__setattr__('sensors_temperatures', 'thisisavalue')
             test_monitor.update_data()

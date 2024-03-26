@@ -5,28 +5,26 @@ import os
 import mock
 import unittest
 
+
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 
 
 class CoeFactoryTestCase(unittest.TestCase):
 
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.__init__')
-    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.__init__')
-    def test_get_coe_client(self, mock_k8s, mock_docker):
-        from nuvlaedge.agent.orchestrator.docker import DockerClient
-        from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient
-
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient')
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient')
+    @mock.patch('nuvlaedge.agent.orchestrator.factory.os.getenv')
+    def test_get_coe_client(self, mock_getenv, mock_k8s, mock_docker):
         # Docker
-        mock_docker.return_value = None
+        mock_getenv.return_value = False
+        mock_docker.return_value = 'docker'
         coe_client = get_coe_client()
-        self.assertIsInstance(coe_client, DockerClient,
-                              'Failed to infer underlying K8s COE and return DockerClient')
-        self.assertEqual(coe_client.ORCHESTRATOR, 'docker')
+        self.assertEqual(coe_client, 'docker',
+                         'Failed to infer underlying K8s COE and return DockerClient')
 
         # Kubernetes
-        os.environ['KUBERNETES_SERVICE_HOST'] = 'something'
-        mock_k8s.return_value = None
+        mock_k8s.return_value = 'k8s'
+        mock_getenv.return_value = True
         coe_client = get_coe_client()
-        self.assertIsInstance(coe_client, KubernetesClient,
-                              'Failed to infer underlying K8s COE and return KubernetesClient')
-        self.assertEqual(coe_client.ORCHESTRATOR, 'kubernetes')
+        self.assertEqual(coe_client, 'k8s',
+                         'Failed to infer underlying K8s COE and return KubernetesClient')

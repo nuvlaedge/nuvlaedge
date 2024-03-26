@@ -8,8 +8,7 @@ import shutil
 import os
 
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.coe_client import Containers
-
+from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
 
 SKIP_MINIMUM_REQUIREMENTS = False
 if 'SKIP_MINIMUM_REQUIREMENTS' in os.environ and \
@@ -17,7 +16,7 @@ if 'SKIP_MINIMUM_REQUIREMENTS' in os.environ and \
     SKIP_MINIMUM_REQUIREMENTS = True
 
 
-class SystemRequirements(Containers):
+class SystemRequirements:
     """ The SystemRequirements contains all the methods and
     definitions for checking whether a device is physically capable of
     hosting the NuvlaEdge Engine
@@ -30,7 +29,8 @@ class SystemRequirements(Containers):
         """ Constructs an SystemRequirements object """
 
         self.log = logging.getLogger(__name__)
-        super().__init__(self.log)
+        self.coe_client = get_coe_client()
+        super().__init__()
 
         self.minimum_requirements = {
             "cpu": 1,
@@ -105,7 +105,7 @@ class SystemRequirements(Containers):
         return meets_disk_req and meets_ram_req and meets_cpu_req
 
 
-class SoftwareRequirements(Containers):
+class SoftwareRequirements:
     """ The SoftwareRequirements contains all the methods and
     definitions for checking whether a device has all the Software
     dependencies and configurations required by the NuvlaEdge Engine
@@ -119,7 +119,8 @@ class SoftwareRequirements(Containers):
 
         self.log = logging.getLogger(__name__)
         self.not_met = []
-        super().__init__(self.log)
+        self.coe_client = get_coe_client()
+        super().__init__()
 
     def check_sw_requirements(self):
         """ Checks all the SW requirements """

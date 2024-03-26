@@ -3,28 +3,28 @@ import json
 from pydantic import Field
 
 from nuvlaedge.security.constants import DEFAULT_NMAP_DIRECTORY
-from nuvlaedge.common.settings_parser import NuvlaConfig
+from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 
 
-class SecurityConfig(NuvlaConfig):
+class SecurityConfig(NuvlaEdgeBaseSettings):
     external_vulnerabilities_db: str = Field(
         'https://github.com/nuvla/vuln-db/blob/main/databases/all.aggregated.csv.gz?raw=true',
-        env='EXTERNAL_CVE_VULNERABILITY_DB')
+        alias='EXTERNAL_CVE_VULNERABILITY_DB')
 
     external_db_update_interval: int = Field(
         86400,
-        env='EXTERNAL_CVE_VULNERABILITY_DB_UPDATE_INTERVAL'
+        alias='EXTERNAL_CVE_VULNERABILITY_DB_UPDATE_INTERVAL'
     )
 
     scan_interval: int = Field(
         1800,
-        env='SECURITY_SCAN_INTERVAL'
+        alias='SECURITY_SCAN_INTERVAL'
     )
 
-    slice_size: int = Field(2000, env='DB_SLICE_SIZE')
+    slice_size: int = Field(2000, alias='DB_SLICE_SIZE')
 
-    vulscan_db_dir: str = Field(DEFAULT_NMAP_DIRECTORY, env='VULSCAN_DB_DIR')
+    vulscan_db_dir: str = DEFAULT_NMAP_DIRECTORY
 
     # Kubernetes Security configuration
-    kubernetes_service_host: str = Field('', env='KUBERNETES_SERVICE_HOST')
-    namespace: str = Field('nuvlaedge', env='MY_NAMESPACE')
+    kubernetes_service_host: str = ''
+    namespace: str = Field('nuvlaedge', alias='MY_NAMESPACE')

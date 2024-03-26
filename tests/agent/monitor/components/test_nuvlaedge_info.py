@@ -2,8 +2,8 @@
 import unittest
 from mock import Mock, patch
 import time
-from nuvlaedge.agent.monitor.components.nuvlaedge_info import NuvlaEdgeInfoMonitor
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components.nuvlaedge_info import NuvlaEdgeInfoMonitor
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestNuvlaEdgeInfoMonitor(unittest.TestCase):

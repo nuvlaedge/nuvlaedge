@@ -53,7 +53,7 @@ LABEL org.opencontainers.image.authors="support@sixsq.com" \
 FROM ${BASE_IMAGE} AS base-builder
 
 RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
+RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev rust cargo upx curl
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -367,7 +367,6 @@ RUN chmod +x \
     /usr/bin/kubernetes-credential-manager
 
 # Configuration files
-COPY --link nuvlaedge/agent/config/agent_logger_config.conf /etc/nuvlaedge/agent/config/agent_logger_config.conf
 COPY --link conf/example/* /etc/nuvlaedge/
 
 # Job engine

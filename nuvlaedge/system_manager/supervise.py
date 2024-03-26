@@ -9,12 +9,14 @@ from datetime import datetime
 from threading import Timer
 
 import docker
-import docker.models
+import docker.models.networks
 import docker.errors
 import OpenSSL
 
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.system_manager.common.coe_client import Containers
+from nuvlaedge.common.file_operations import read_file
+from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
 
 
 class ClusterNodeCannotManageDG(Exception):
@@ -33,7 +35,7 @@ def cluster_workers_cannot_manage(func):
     return wrapper
 
 
-class Supervise(Containers):
+class Supervise:
     """ The Supervise class contains all the methods and
     definitions for making sure the NuvlaEdge Engine is running smoothly,
     including all methods for dealing with system disruptions and
@@ -44,8 +46,8 @@ class Supervise(Containers):
         """ Constructs the Supervise object """
 
         self.log = logging.getLogger(__name__)
-        super().__init__(self.log)
-
+        super().__init__()
+        self.coe_client = get_coe_client()
         self.on_stop_docker_image = self.coe_client.infer_on_stop_docker_image()
         self.data_gateway_enabled = os.getenv('NUVLAEDGE_DATA_GATEWAY_ENABLED', 'true').lower() == 'true'
         self.data_gateway_image = os.getenv('NUVLAEDGE_DATA_GATEWAY_IMAGE',
@@ -93,25 +95,24 @@ class Supervise(Containers):
             return False
 
         for file in check_expiry_date_on:
-            file_path = f"{utils.data_volume}/{file}"
+            file_path = f"{FILE_NAMES.root_fs}/{file}"
+            content = read_file(file_path)
+            if content is None:
+                continue
 
-            if os.path.isfile(file_path):
-                with open(file_path) as fp:
-                    content = fp.read()
+            cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content.encode())
 
-                cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content.encode())
+            end_date = cert_obj.get_notAfter().decode()
+            formatted_end_date = datetime(int(end_date[0:4]),
+                                          int(end_date[4:6]),
+                                          int(end_date[6:8]))
 
-                end_date = cert_obj.get_notAfter().decode()
-                formatted_end_date = datetime(int(end_date[0:4]),
-                                              int(end_date[4:6]),
-                                              int(end_date[6:8]))
-
-                days_left = formatted_end_date - datetime.now()
-                # if expiring in less than d days, rotate all
-                d = 5
-                if days_left.days < d:
-                    self.log.warning(f"{file_path} is expiring in less than {d} days. Requesting rotation of all certs")
-                    return True
+            days_left = formatted_end_date - datetime.now()
+            # if expiring in less than d days, rotate all
+            d = 5
+            if days_left.days < d:
+                self.log.warning(f"{file_path} is expiring in less than {d} days. Requesting rotation of all certs")
+                return True
 
         return False
 
@@ -126,7 +127,7 @@ class Supervise(Containers):
         if os.path.isfile(utils.tls_sync_file):
             os.remove(utils.tls_sync_file)
             self.log.info(f"Removed {utils.tls_sync_file}. "
-                          f"Restarting {self.coe_client.credentials_manager_component}")
+                          f"Restarting credentials_manager_component")
             self.coe_client.restart_credentials_manager()
 
     @cluster_workers_cannot_manage
@@ -420,7 +421,7 @@ class Supervise(Containers):
         """
         Finds networks by name
 
-        :param network_name: names of the networks to list
+        :param network_names: names of the networks to list
         :return: Docker network object or None
         """
 

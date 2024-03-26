@@ -7,46 +7,36 @@ import os
 import logging
 import secrets
 
+from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.file_operations import write_file
 
-data_volume = "/srv/nuvlaedge/shared"
-operational_status_file = f'{data_volume}/.status'
-operational_status_notes_file = f'{data_volume}/.status_notes'
 base_label = "nuvlaedge.component=True"
 node_label_key = "nuvlaedge"
 
 compose_project_name = os.getenv('COMPOSE_PROJECT_NAME', 'nuvlaedge')
 nuvlaedge_shared_net = compose_project_name + '-shared-network'
-nuvlaedge_shared_net_unencrypted = f'{data_volume}/.nuvlabox-shared-net-unencrypted'
+nuvlaedge_shared_net_unencrypted = f'{FILE_NAMES.root_fs}/.nuvlabox-shared-net-unencrypted'
 overlay_network_service = compose_project_name + '-ack'
 
 status_degraded = 'DEGRADED'
 status_operational = 'OPERATIONAL'
 status_unknown = 'UNKNOWN'
 
-tls_sync_file = f"{data_volume}/.tls"
+tls_sync_file = f"{FILE_NAMES.root_fs}/.tls"
 
 log = logging.getLogger(__name__)
 
 
 def set_operational_status(status: str, notes: list = []):
-    log.debug(f'Write operational status "{status}" to file "{operational_status_file}"')
-    with open(operational_status_file, 'w') as s:
-        s.write(status)
-
+    log.debug(f'Write operational status "{status}" to file "{FILE_NAMES.STATUS_FILE}"')
+    write_file(status, FILE_NAMES.STATUS_FILE)
     try:
         notes_str = '\n'.join(notes)
-        log.debug(f'Write operational status notes to file "{operational_status_notes_file}": {notes_str}')
-        with open(operational_status_notes_file, 'w') as sn:
-            sn.write(notes_str)
+        log.debug(f'Write operational status notes to file "{FILE_NAMES.STATUS_NOTES}": {notes_str}')
+        write_file(notes_str, FILE_NAMES.STATUS_NOTES)
+
     except Exception as e:
-        log.warning(f'Failed to write status notes {notes} in {operational_status_notes_file}: {str(e)}')
-
-
-def status_file_exists() -> bool:
-    if os.path.exists(operational_status_file):
-        return True
-
-    return False
+        log.warning(f'Failed to write status notes {notes} in {FILE_NAMES.STATUS_NOTES}: {str(e)}')
 
 
 def random_choices(sequence, num=1) -> list:

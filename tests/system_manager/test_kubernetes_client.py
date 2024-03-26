@@ -12,12 +12,8 @@ import tests.system_manager.utils.fake as fake
 class KubernetesTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
-        os.environ.setdefault('KUBERNETES_SERVICE_HOST', 'force-k8s-coe')
-        with mock.patch.dict(sys.modules):
-            # sys.modules.clear()
-            if 'nuvlaedge.system_manager.common.coe_client' in sys.modules:
-                del sys.modules['nuvlaedge.system_manager.common.coe_client']
-            import nuvlaedge.system_manager.common.coe_client as coe_client
+        os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
+        from nuvlaedge.system_manager.orchestrator.kubernetes import Kubernetes
 
         with mock.patch('kubernetes.client.CoreV1Api') as mock_k8s_client_CoreV1Api:
             with mock.patch('kubernetes.client.AppsV1Api') as mock_k8s_client_AppsV1Api:
@@ -25,7 +21,7 @@ class KubernetesTestCase(unittest.TestCase):
                     mock_k8s_client_CoreV1Api.return_value = mock.MagicMock()
                     mock_k8s_client_AppsV1Api.return_value = mock.MagicMock()
                     mock_k8s_config.return_value = True
-                    self.obj = coe_client.Kubernetes(logging)
+                    self.obj = Kubernetes()
 
         logging.disable(logging.CRITICAL)
 
@@ -95,7 +91,7 @@ class KubernetesTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_ram_capacity(), 1,
                          'Failed to get RAM capacity')
 
-    @mock.patch('nuvlaedge.system_manager.common.coe_client.Kubernetes.get_version')
+    @mock.patch('nuvlaedge.system_manager.orchestrator.kubernetes.Kubernetes.get_version')
     def test_is_version_compatible(self, mock_get_version):
         # for old versions, False
         mock_get_version.return_value = 'v1.2'
@@ -227,7 +223,7 @@ class KubernetesTestCase(unittest.TestCase):
         self.assertEqual(self.obj.count_images_in_this_host(), len(fake.mock_kubernetes_node().status.images),
                          'Failed to get count of images in k8s node')
 
-    @mock.patch('nuvlaedge.system_manager.common.coe_client.Kubernetes.get_node_info')
+    @mock.patch('nuvlaedge.system_manager.orchestrator.kubernetes.Kubernetes.get_node_info')
     def test_get_version(self, mock_get_node_info):
         # lookup
         mock_get_node_info.return_value = fake.mock_kubernetes_node()

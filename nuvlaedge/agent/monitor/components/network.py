@@ -103,25 +103,27 @@ class NetworkMonitor(Monitor):
             self.logger.warning(f'Interface key not found {err}')
             return None
 
-    def is_already_registered(self, it_route: dict) -> bool:
+    @staticmethod
+    def is_already_registered(interfaces: dict[str, NetworkInterface], it_route: dict) -> bool:
         it_name = it_route.get('dev', '')
         it_ip = IP(address=it_route.get('prefsrc', ''))
-        return it_name in self.data.interfaces.keys() \
-               and it_ip in self.data.interfaces[it_name].ips
+        return it_name in interfaces.keys() \
+               and it_ip in interfaces[it_name].ips
 
-    def is_skip_route(self, it_route: dict) -> bool:
+    def is_skip_route(self, interfaces: dict[str, NetworkInterface], it_route: dict) -> bool:
         """
         Assess whether the IP route is a loopback or the interface is already
         registered
 
         Args:
+            interfaces: current list of interfaces
             it_route: single IP route report in
 
         Returns:
             True if the route is to be skipped
         """
         is_loop: bool = it_route.get('dst', '127.').startswith('127.')
-        is_already_registered: bool = self.is_already_registered(it_route)
+        is_already_registered: bool = self.is_already_registered(interfaces, it_route)
         not_complete: bool = 'prefsrc' not in it_route
 
         return is_loop or is_already_registered or not_complete
@@ -256,6 +258,7 @@ class NetworkMonitor(Monitor):
         output return
         """
         ip_route: str = self._gather_host_ip_route()
+        self.logger.debug(f'ip_route: {ip_route}')
 
         if not ip_route:
             return
@@ -268,7 +271,10 @@ class NetworkMonitor(Monitor):
         except json.decoder.JSONDecodeError as ex:
             self.logger.warning(f'Failed parsing IP info: {ex}')
 
+        interfaces: dict[str, NetworkInterface] = self.data.interfaces
+
         if readable_route:
+            interfaces = {}
             for route in readable_route:
                 it_name = route.get('dev')
                 it_ip = route.get('prefsrc')
@@ -277,16 +283,16 @@ class NetworkMonitor(Monitor):
                 if route.get('dst', 'not_def') == 'default':
                     self.data.default_gw = it_name
 
-                if self.is_skip_route(route):
+                if self.is_skip_route(interfaces, route):
                     continue
 
                 # Create new interface data structure
                 it_iface: NetworkInterface
-                if it_name in self.data.interfaces:
-                    it_iface = self.data.interfaces[it_name]
+                if it_name in interfaces:
+                    it_iface = interfaces[it_name]
                 else:
                     it_iface = self.parse_host_ip_json(route)
-                    self.data.interfaces[it_name] = it_iface
+                    interfaces[it_name] = it_iface
 
                 if it_iface and it_name and it_ip:
                     if it_name == self.data.default_gw:
@@ -296,19 +302,22 @@ class NetworkMonitor(Monitor):
                             self.data.ips.local = it_ip
 
                     ip_address = IP(address=it_ip)
-                    if ip_address not in self.data.interfaces[it_name].ips:
-                        self.data.interfaces[it_name].ips.append(ip_address)
+                    if ip_address not in interfaces[it_name].ips:
+                        interfaces[it_name].ips.append(ip_address)
 
         # Update traffic data
         it_traffic: list = self.read_traffic_data()
 
         for iface_traffic in it_traffic:
             it_name: str = iface_traffic.get("interface")
-            if it_name in self.data.interfaces.keys():
-                self.data.interfaces[it_name].tx_bytes = \
+            if it_name in interfaces.keys():
+                interfaces[it_name].tx_bytes = \
                     iface_traffic.get('bytes-transmitted', '')
-                self.data.interfaces[it_name].rx_bytes = \
+                interfaces[it_name].rx_bytes = \
                     iface_traffic.get('bytes-received', '')
+
+        self.logger.debug(f'interfaces (new): {interfaces}')
+        self.data.interfaces = interfaces
 
     def set_vpn_data(self) -> None:
         """ Discovers the NuvlaEdge VPN IP  """

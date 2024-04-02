@@ -256,6 +256,7 @@ class NetworkMonitor(Monitor):
         output return
         """
         ip_route: str = self._gather_host_ip_route()
+        self.logger.debug(f'ip_route: {ip_route}')
 
         if not ip_route:
             return
@@ -269,10 +270,10 @@ class NetworkMonitor(Monitor):
             self.logger.warning(f'Failed parsing IP info: {ex}')
 
         interfaces: dict[str, NetworkInterface] = self.data.interfaces
-
+        self.logger.debug(f'interfaces (old): {interfaces}')
+        self.logger.debug(f'readable_route: {readable_route}')
         if readable_route:
             interfaces = {}
-            self.logger.debug(f'readable_route: {readable_route}')
             for route in readable_route:
                 it_name = route.get('dev')
                 it_ip = route.get('prefsrc')
@@ -314,6 +315,7 @@ class NetworkMonitor(Monitor):
                 interfaces[it_name].rx_bytes = \
                     iface_traffic.get('bytes-received', '')
 
+        self.logger.debug(f'interfaces (new): {interfaces}')
         self.data.interfaces = interfaces
 
     def set_vpn_data(self) -> None:

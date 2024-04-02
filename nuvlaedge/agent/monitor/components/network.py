@@ -272,8 +272,7 @@ class NetworkMonitor(Monitor):
             self.logger.warning(f'Failed parsing IP info: {ex}')
 
         interfaces: dict[str, NetworkInterface] = self.data.interfaces
-        self.logger.debug(f'interfaces (old): {interfaces}')
-        self.logger.debug(f'readable_route: {readable_route}')
+
         if readable_route:
             interfaces = {}
             for route in readable_route:

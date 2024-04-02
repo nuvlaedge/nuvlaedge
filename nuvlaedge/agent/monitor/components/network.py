@@ -268,9 +268,10 @@ class NetworkMonitor(Monitor):
         except json.decoder.JSONDecodeError as ex:
             self.logger.warning(f'Failed parsing IP info: {ex}')
 
-        interfaces: dict[str, NetworkInterface] = {}
+        interfaces: dict[str, NetworkInterface] = self.data.interfaces
 
         if readable_route:
+            interfaces = {}
             for route in readable_route:
                 it_name = route.get('dev')
                 it_ip = route.get('prefsrc')

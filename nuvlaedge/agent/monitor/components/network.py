@@ -268,6 +268,8 @@ class NetworkMonitor(Monitor):
         except json.decoder.JSONDecodeError as ex:
             self.logger.warning(f'Failed parsing IP info: {ex}')
 
+        interfaces: dict[str, NetworkInterface] = {}
+
         if readable_route:
             for route in readable_route:
                 it_name = route.get('dev')
@@ -282,11 +284,11 @@ class NetworkMonitor(Monitor):
 
                 # Create new interface data structure
                 it_iface: NetworkInterface
-                if it_name in self.data.interfaces:
-                    it_iface = self.data.interfaces[it_name]
+                if it_name in interfaces:
+                    it_iface = interfaces[it_name]
                 else:
                     it_iface = self.parse_host_ip_json(route)
-                    self.data.interfaces[it_name] = it_iface
+                    interfaces[it_name] = it_iface
 
                 if it_iface and it_name and it_ip:
                     if it_name == self.data.default_gw:
@@ -296,19 +298,21 @@ class NetworkMonitor(Monitor):
                             self.data.ips.local = it_ip
 
                     ip_address = IP(address=it_ip)
-                    if ip_address not in self.data.interfaces[it_name].ips:
-                        self.data.interfaces[it_name].ips.append(ip_address)
+                    if ip_address not in interfaces[it_name].ips:
+                        interfaces[it_name].ips.append(ip_address)
 
         # Update traffic data
         it_traffic: list = self.read_traffic_data()
 
         for iface_traffic in it_traffic:
             it_name: str = iface_traffic.get("interface")
-            if it_name in self.data.interfaces.keys():
-                self.data.interfaces[it_name].tx_bytes = \
+            if it_name in interfaces.keys():
+                interfaces[it_name].tx_bytes = \
                     iface_traffic.get('bytes-transmitted', '')
-                self.data.interfaces[it_name].rx_bytes = \
+                interfaces[it_name].rx_bytes = \
                     iface_traffic.get('bytes-received', '')
+
+        self.data.interfaces = interfaces
 
     def set_vpn_data(self) -> None:
         """ Discovers the NuvlaEdge VPN IP  """

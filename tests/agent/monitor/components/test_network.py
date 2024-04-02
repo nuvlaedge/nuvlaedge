@@ -203,7 +203,7 @@ class TestNetworkMonitor(unittest.TestCase):
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", Mock(), True)
 
-        self.assertTrue(test_ip_monitor.is_skip_route({}))
+        self.assertTrue(test_ip_monitor.is_skip_route({}, {}))
 
     # -------------------- VPN data tests -------------------- #
 

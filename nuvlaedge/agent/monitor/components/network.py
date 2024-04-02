@@ -272,6 +272,7 @@ class NetworkMonitor(Monitor):
 
         if readable_route:
             interfaces = {}
+            self.logger.debug(f'readable_route: {readable_route}')
             for route in readable_route:
                 it_name = route.get('dev')
                 it_ip = route.get('prefsrc')

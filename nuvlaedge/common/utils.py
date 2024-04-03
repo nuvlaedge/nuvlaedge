@@ -1,6 +1,7 @@
 """
 
 """
+import json
 import logging
 from contextlib import contextmanager
 import threading
@@ -23,3 +24,14 @@ def timed_event(timeout: int):
         yield event
     finally:
         timer.cancel()
+
+
+def dump_dict_to_str(d: dict) -> str:
+    """
+    Dumps a dictionary to a string
+    :param d: dictionary to dump
+    :return: string representation of the dictionary
+    """
+    if not isinstance(d, dict) or not d:
+        return ""
+    return json.dumps(d, indent=4)

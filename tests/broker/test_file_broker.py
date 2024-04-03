@@ -88,19 +88,8 @@ class TestFileBroker(TestCase):
             mock_pub.return_value = False
             self.assertFalse(self.test_broker.publish_from_data(Path('channel'), {}, 'sender'))
 
-    def test_write_file(self):
-        opener = mock.mock_open()
-
-        def mocked_open(*args, **kwargs):
-            return opener(*args, **kwargs)
-
-        with mock.patch.object(Path, 'open', mocked_open):
-            with mock.patch("json.dump", mock.MagicMock()) as mock_dump:
-                self.test_broker.write_file(Path('file'), {})
-                mock_dump.assert_called_once()
-
     def test_publish_from_message(self):
-        with mock.patch.object(FileBroker, 'write_file') as mock_write:
+        with mock.patch('nuvlaedge.broker.file_broker.write_file') as mock_write:
             self.assertTrue(self.test_broker.publish_from_message(Path('channel'),
                                                                   NuvlaEdgeMessage(sender='', data={})))
             mock_write.assert_called_once()

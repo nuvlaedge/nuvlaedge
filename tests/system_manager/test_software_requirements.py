@@ -11,6 +11,7 @@ import unittest
 class SoftwareRequirementsTestCase(unittest.TestCase):
 
     def setUp(self):
+        os.environ['KUBERNETES_SERVICE_HOST'] = ''
         self.obj = SoftwareRequirements()
         self.obj.coe_client = mock.MagicMock()
         logging.disable(logging.CRITICAL)

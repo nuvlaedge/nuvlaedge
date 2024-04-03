@@ -299,7 +299,7 @@
 - refactor peripheral managers to ease community contribution [\#7](https://github.com/nuvlaedge/nuvlaedge/issues/7)
 - add discovery of GPU devices [\#6](https://github.com/nuvlaedge/nuvlaedge/issues/6)
 - discovery and categorization of tcp and serial peripherals [\#5](https://github.com/nuvlaedge/nuvlaedge/issues/5)
-- remove "device/sensor discovery" from agent, in NB architecture image [\#4](https://github.com/nuvlaedge/nuvlaedge/issues/4)
+- remove "device/sensor discovery" from nuvlaedge.agent, in NB architecture image [\#4](https://github.com/nuvlaedge/nuvlaedge/issues/4)
 - create peripheral manager for Modbus [\#3](https://github.com/nuvlaedge/nuvlaedge/issues/3)
 - Remove mention of HOSTNAME when starting NuvlaBox-Engine [\#2](https://github.com/nuvlaedge/nuvlaedge/issues/2)
 - create repository nuvlabox-lib [\#1](https://github.com/nuvlaedge/nuvlaedge/issues/1)

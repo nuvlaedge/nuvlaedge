@@ -1,0 +1,9 @@
+nuvlaedge_uuid = ""
+host_home = "/Users/nacho"
+compose_project_name = "nuvlaedge"
+nuvlaedge_log_level = "INFO"
+nuvlaedge_thread_monitors = false
+vpn_interface_name = "vpn"
+nuvla_endpoint = "nuvla.io"
+nuvla_endpoint_insecure = false
+ne_image_tag = ""

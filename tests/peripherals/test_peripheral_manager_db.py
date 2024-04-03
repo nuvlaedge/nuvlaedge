@@ -5,6 +5,7 @@ from unittest import TestCase
 
 import mock
 
+import nuvlaedge.peripherals.peripheral_manager_db
 from nuvlaedge.peripherals.peripheral_manager_db import PeripheralData, PeripheralsDBManager
 from nuvlaedge.models.nuvla_resources import NuvlaBoxPeripheralResource as PeripheralResource
 
@@ -78,12 +79,11 @@ class TestPeripheralsDBManager(TestCase):
 
         test_model = self.get_sample_peripheral_resource()
         with mock.patch.object(Path, 'open', mocked_open):
-            with mock.patch("json.dump") as mock_dump:
+            with mock.patch('nuvlaedge.peripherals.peripheral_manager_db.write_file') as mock_dump:
                 self.test_db._local_db = {'id_1': test_model}
                 self.test_db.update_local_storage()
-                mock_dump.assert_called_once_with({'id_1': test_model.dict(by_alias=True, exclude_none=True)},
+                mock_dump.assert_called_once_with({'id_1': test_model.model_dump(by_alias=True, exclude_none=True)},
                                                   mock.ANY,
-                                                  default=str,
                                                   indent=4
                                                   )
 

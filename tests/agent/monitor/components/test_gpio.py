@@ -3,9 +3,9 @@ import unittest
 
 from mock import Mock, patch
 
-from nuvlaedge.agent.monitor.components.gpio import GpioMonitor
-from nuvlaedge.agent.monitor.data.gpio_data import GpioData
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components.gpio import GpioMonitor
+from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestGpioMonitor(unittest.TestCase):
@@ -14,11 +14,11 @@ class TestGpioMonitor(unittest.TestCase):
     def get_base_monitor() -> GpioMonitor:
         mock_telemetry = Mock()
         mock_telemetry.edge_status = EdgeStatus()
-        with patch('nuvlaedge.agent.monitor.components.gpio.execute_cmd') as mock_cmd:
+        with patch('nuvlaedge.agent.workers.monitor.components.gpio.execute_cmd') as mock_cmd:
             mock_cmd.return_value = True
             return GpioMonitor('test_monitor', mock_telemetry, True)
 
-    @patch('nuvlaedge.agent.monitor.components.gpio.GpioMonitor.gpio_availability')
+    @patch('nuvlaedge.agent.workers.monitor.components.gpio.GpioMonitor.gpio_availability')
     def test_init(self, mock_availability):
         mock_availability.return_value = True
         edge_status = EdgeStatus()
@@ -26,7 +26,7 @@ class TestGpioMonitor(unittest.TestCase):
         self.assertTrue(edge_status.gpio_pins)
         self.assertIsInstance(edge_status.gpio_pins, GpioData)
 
-    @patch('nuvlaedge.agent.monitor.components.gpio.execute_cmd')
+    @patch('nuvlaedge.agent.workers.monitor.components.gpio.execute_cmd')
     def test_gpio_availability(self, mock_cmd):
         test_monitor: GpioMonitor = self.get_base_monitor()
         mock_cmd.return_value = "dummy"
@@ -97,7 +97,7 @@ class TestGpioMonitor(unittest.TestCase):
                 first_pin_indexes,
                 gpio_line))
 
-    @patch('nuvlaedge.agent.monitor.components.gpio.GpioMonitor.parse_pin_cell')
+    @patch('nuvlaedge.agent.workers.monitor.components.gpio.GpioMonitor.parse_pin_cell')
     def test_parse_pin_line(self, mock_cell):
         mock_cell.return_value = None
         test_monitor: GpioMonitor = self.get_base_monitor()

@@ -10,6 +10,7 @@ from nuvlaedge.models.messages import NuvlaEdgeMessage
 from nuvlaedge.broker import NuvlaEdgeBroker
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.file_operations import write_file
 
 
 class MessageFormatError(Exception):
@@ -24,7 +25,7 @@ class FileBroker(NuvlaEdgeBroker):
         self.logger: logging.Logger = logging.getLogger(self.__class__.__name__)
 
         self.root_path: Path = Path(root_path)
-        self.logger.warning(f'Root path {self.root_path}')
+        self.logger.debug(f'File broker root path: {self.root_path}')
 
     def decode_message_from_file_name(self, file_name):
         if not re.match(self.FILE_PATTERN, file_name):
@@ -95,17 +96,9 @@ class FileBroker(NuvlaEdgeBroker):
             )
         )
 
-    @staticmethod
-    def write_file(file_name: Path, data: dict):
-        with file_name.open('w') as file:
-            json.dump(data, file)
-
     def publish_from_message(self, channel: Path, message: NuvlaEdgeMessage) -> bool:
         self.logger.info(f'Writing message to {channel / self.BUFFER_NAME / self.compose_file_name(message.sender)}')
-        self.write_file(
-            channel / self.BUFFER_NAME / self.compose_file_name(message.sender),
-            message.data
-        )
+        write_file(message.data, channel / self.BUFFER_NAME / self.compose_file_name(message.sender))
         return True
 
     def publish(self, channel: str, data: dict | NuvlaEdgeMessage, sender: str = '') -> bool:

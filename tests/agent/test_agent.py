@@ -1,309 +1,218 @@
 import os
-import sys
-import threading
-
-from nuvla.api.models import CimiResource
-
-import nuvlaedge.agent.infrastructure
-from nuvlaedge.agent.agent import Agent
-from nuvlaedge.agent.activate import Activate
-
-from nuvlaedge.common.timed_actions import TimedAction
-
-from mock import ANY, Mock, PropertyMock, patch
+from threading import Event
 from unittest import TestCase
+from unittest.mock import Mock, patch
+
+from nuvlaedge.agent.job import Job
+from nuvlaedge.agent.nuvla.resources import NuvlaID
+from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.agent.settings import AgentSettingsMissMatch, InsufficientSettingsProvided
+from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import State
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from nuvlaedge.agent import AgentSettings
+from nuvlaedge.agent.agent import Agent
 
 
 class TestAgent(TestCase):
-    os_makedir: str = 'os.makedirs'
-    agent_open: str = 'nuvlaedge.agent.agent.open'
-    atomic_write: str = 'nuvlaedge.agent.common.util.atomic_write'
 
-    @patch(os_makedir)
-    @patch(atomic_write)
-    @patch('nuvlaedge.agent.common.nuvlaedge_common')
-    @patch('nuvlaedge.agent.activate.Activate')
-    def setUp(self, activate_mock, ne_mock, atomic_write_mock, os_makedir_mock) -> None:
-        os.environ['NUVLAEDGE_UUID'] = 'fake-uuid'
-        self.test_agent: Agent = Agent()
-        self.test_agent._activate = activate_mock
+    def setUp(self):
 
-    def tearDown(self):
-        del os.environ['NUVLAEDGE_UUID']
+        self.settings = Mock(spec=AgentSettings(nuvlaedge_uuid='some_uuid'))
+        self.exit_event = Mock(spec=Event)
+        self.mock_nuvla_client = Mock(spec=NuvlaClientWrapper)
+        self.mock_coe_client = Mock(spec=COEClient)
 
-    def test_fetch_nuvlaedge(self):
-        self.test_agent._activate.nuvlaedge_resource = None
-        self.assertIsNone(self.test_agent.nuvlaedge_resource)
+        # Create the agent
+        with patch('nuvlaedge.agent.agent.get_coe_client') as mock_coe:
+            mock_coe.return_value = self.mock_coe_client
+            self.agent = Agent(self.exit_event, self.settings)
 
-    @patch(atomic_write)
-    @patch('threading.Event.wait')
-    def test_activate_nuvlaedge(self, wait_mock, atomic_write_mock):
-        self.test_agent.activate.activation_is_possible.side_effect = [(False, None), (True, None), (True, True)]
+        # Mock the agent's nuvla client and COE client
+        self.agent._coe_client = self.mock_coe_client
+        self.agent._nuvla_client = self.mock_nuvla_client
 
-        self.test_agent.activate.nuvla_login.return_value = \
-            ({'nuvlabox-status': 1}, None)
-        self.test_agent.activate_nuvlaedge()
-        self.assertEqual(self.test_agent.activate.activation_is_possible.call_count, 2)
-        self.assertEqual(self.test_agent.activate.nuvla_login.call_count, 1)
+    def test_init(self):
+        assert isinstance(self.agent.settings, AgentSettings)
+        assert isinstance(self.agent._exit, Event)
 
-        self.test_agent.activate.nuvla_endpoint_insecure = False
-        self.test_agent.activate_nuvlaedge()
+    def test_check_uuid_missmatch(self):
+        """ Test that the agent raises an exception when the UUIDs do not match """
+        one = 'some_uuid'
+        two = 'some_other_uuid'
+        with self.assertRaises(AgentSettingsMissMatch):
+            self.agent.check_uuid_missmatch(one, two)
 
-        self.test_agent._activate = None
-        with patch('nuvlaedge.agent.agent.Activate') as mock_activate:
-            self.test_agent.activate
+        """ Test that the agent does not raise an exception when the UUIDs match """
+        self.agent.check_uuid_missmatch(one, one)
 
-    @patch('nuvlaedge.agent.agent.Infrastructure')
-    def test_initialize_infrastructure(self, infra_mock):
-        it_mock = Mock()
-        it_mock.installation_home = True
-        infra_mock.return_value = it_mock
-        with patch(self.agent_open) as mock_open, patch(self.atomic_write), patch(self.os_makedir):
-            self.test_agent.initialize_infrastructure()
-            # Host user home not defined
-            self.test_agent.infrastructure.installation_home = None
-            self.test_agent.initialize_infrastructure()
+    @patch('nuvlaedge.agent.agent.Agent._create_nuvla_client')
+    @patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch')
+    def test_assert_current_state(self, mock_missmatch, mock_nuvla_client):
+        mock_nuvla_client.return_value = self.mock_nuvla_client
+        self.mock_nuvla_client.nuvlaedge_uuid = 'some_uuid'
+        self.mock_nuvla_client.nuvlaedge_credentials = None
 
-    @patch('nuvlaedge.agent.agent.Telemetry')
-    def test_initialize_telemetry(self, tel_mock):
-        self.test_agent.telemetry
-        self.assertNotEqual(self.test_agent.telemetry, None)
+        self.assertEqual(State.NEW, self.agent._assert_current_state())
+        mock_missmatch.assert_called_once()
 
-    @patch('nuvlaedge.agent.agent.Agent.activate_nuvlaedge')
-    def test_initialize_agent(self, act_mock):
-        self.assertTrue(self.test_agent.initialize_agent())
-        act_mock.assert_called_once()
+        self.mock_nuvla_client.nuvlaedge_credentials = 'creds'
+        self.mock_nuvla_client.nuvlaedge.state = "ACTIVATED"
+        self.assertEqual(State.ACTIVATED, self.agent._assert_current_state())
 
-    def test_send_heartbeat(self):
-        tel_mock = Mock()
-        self.test_agent._telemetry = tel_mock
-        sample_data_return = {
-            'jobs': ['j1', 'j2']
-        }
-        api_mock = Mock()
-        response_mock = Mock()
-        response_mock.data = sample_data_return
+    @patch('nuvlaedge.agent.manager.WorkerManager.add_worker')
+    def test_init_workers(self, mock_add_worker):
+        self.mock_nuvla_client.nuvlaedge_uuid = 'some_uuid'
+        self.mock_nuvla_client.nuvlaedge_client = Mock()
+        self.agent._init_workers()
+        self.assertEqual(4, mock_add_worker.call_count)
 
-        # Heartbeat not supported on Nuvla server
-        api_mock.operation.return_value = response_mock
-        self.test_agent._telemetry.api.return_value = api_mock
-        self.assertEqual({}, self.test_agent.send_heartbeat())
+    @patch('nuvlaedge.common.timed_actions.ActionHandler.add')
+    def test_init_actions(self, mock_add):
+        self.agent._init_actions()
+        self.assertEqual(4, mock_add.call_count)
 
-        # Heartbeat supported on Nuvla server
-        nuvlaedge_resource = CimiResource(
-            {'operations': [{'href': 'nuvlabox/<uuid>/heartbeat',
-                            'rel': 'heartbeat'}]})
-        self.test_agent.activate.nuvlaedge_resource = nuvlaedge_resource
-        self.assertEqual(sample_data_return, self.test_agent.send_heartbeat())
-        api_mock.operation.assert_called_once_with(nuvlaedge_resource, 'heartbeat')
+    @patch('nuvlaedge.agent.agent.Agent._init_workers')
+    @patch('nuvlaedge.agent.agent.Agent._init_actions')
+    @patch('nuvlaedge.agent.agent.Agent._assert_current_state')
+    def test_start_agent(self, mock_assert_current_state, mock_init_actions, mock_init_workers):
+        mock_assert_current_state.return_value = State.NEW
+        self.mock_nuvla_client.activate.return_value = True
 
-        with patch('nuvlaedge.agent.agent.Agent.sync_nuvlaedge_resource') as mock_sync:
-            response_mock.data = {'doc-last-updated': 'some date'}
-            self.test_agent.send_heartbeat()
-            mock_sync.assert_called_once()
+        self.agent.start_agent()
+        self.mock_nuvla_client.activate.assert_called_once()
+        mock_init_actions.assert_called_once()
+        mock_init_workers.assert_called_once()
 
-    @patch(os_makedir)
-    @patch(atomic_write)
-    @patch('nuvlaedge.agent.agent.Agent.sync_nuvlaedge_resource')
-    @patch('nuvlaedge.agent.agent.Agent.is_heartbeat_supported_server_side', new_callable=PropertyMock)
-    def test_send_telemetry(self, is_heartbeat_mock, sync_mock, atomic_write_mock, os_makedir_mock):
-        self.test_agent._telemetry = Mock()
-        tel_mock = Mock()
-        tel_mock.diff.return_value = ({}, ['a'])
-        tel_mock.status.get.return_value = ''
-        self.test_agent._telemetry = tel_mock
-        with patch('logging.Logger.warning') as mock_warn:
-            self.test_agent.send_telemetry()
-        self.assertEqual(tel_mock.status.update.call_count, 1)
+        mock_assert_current_state.return_value = State.DECOMMISSIONED
+        with self.assertRaises(SystemExit):
+            self.agent.start_agent()
 
-        tel_mock.status.update.reset_mock()
-        tel_mock.status.get.return_value = 1
-        self.test_agent.past_status_time = 2
-        api_mock = Mock()
-        ret_mock = Mock()
-        ret_mock.data = "ret"
-        api_mock.edit.return_value = ret_mock
-        self.test_agent._telemetry.api.return_value = api_mock
-        self.assertEqual(self.test_agent.send_telemetry(), "ret")
-        self.assertEqual(tel_mock.status.update.call_count, 1)
-        self.assertEqual(api_mock.edit.call_count, 1)
+    @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.get_status')
+    def test_gather_status(self, mock_get_status):
+        mock_telemetry = Mock(spec=TelemetryPayloadAttributes)
+        mock_get_status.return_value = ("OPERATIONAL", ['RUNNING FINE'])
 
-        self.test_agent._telemetry.api.side_effect = OSError
-        with self.assertRaises(OSError):
-            self.test_agent.send_telemetry()
-        self.test_agent._telemetry.api.reset_mock(side_effect=True)
+        self.agent._gather_status(mock_telemetry)
+        self.assertEqual("OPERATIONAL", mock_telemetry.status)
+        self.assertEqual(["RUNNING FINE"], mock_telemetry.status_notes)
 
-        # heartbeat supported
-        is_heartbeat_mock.return_value = True
-        self.test_agent.send_telemetry()
-        sync_mock.assert_not_called()
+    @patch('nuvlaedge.agent.agent.model_diff')
+    @patch('nuvlaedge.agent.agent.Agent._gather_status')
+    def test_telemetry(self, mock_status, mock_model_diff):
+        mock_channel = Mock()
+        mock_payload = Mock(spec=TelemetryPayloadAttributes)
+        mock_channel.empty.return_value = True
+        mock_payload.model_copy.return_value = mock_payload
+        self.agent.telemetry_channel = mock_channel
+        self.agent.telemetry_payload = mock_payload
 
-        # heartbeat not supported
-        is_heartbeat_mock.return_value = False
-        self.test_agent.send_telemetry()
-        sync_mock.assert_called()
+        mock_model_diff.return_value = ('send', 'delete')
+        mock_payload.model_dump.return_value = {}
+        mock_payload.model_dump.return_value = "Data to send"
 
-        # status_current_time > past_status_time
-        tel_mock.status.update.reset_mock()
-        tel_mock.status.get.return_value = 2
-        self.test_agent.past_status_time = 1
-        self.test_agent.send_telemetry()
-        api_mock.edit.assert_called_with(ANY, data=ANY, select=['a'])
+        self.mock_nuvla_client.telemetry.return_value = None
+
+        self.assertIsNone(self.agent._telemetry())
+        mock_payload.model_dump.assert_called_once()
+        mock_payload.model_copy.assert_called_once()
+        mock_payload.model_dump_json.assert_called_once()
+        mock_status.assert_called_with(mock_payload)
+
+        mock_payload.reset_mock()
+        mock_response = Mock()
+        mock_response.data = mock_response
+        self.mock_nuvla_client.telemetry.return_value = mock_response
+        with patch('nuvlaedge.agent.agent.write_file') as mock_json:
+            self.assertEqual(mock_response, self.agent._telemetry())
+        self.assertEqual(2, mock_payload.model_copy.call_count)
+
+        mock_channel.empty.return_value = False
+        mock_channel.get.return_value = mock_payload
+        with patch('nuvlaedge.agent.agent.write_file') as mock_json:
+            self.assertEqual(mock_response, self.agent._telemetry())
+        mock_channel.get.assert_called_once()
+
+    def test_heartbeat(self):
+        self.mock_nuvla_client.nuvlaedge.state = State.NEW
+        self.assertIsNone(self.agent._heartbeat())
+
+        self.mock_nuvla_client.nuvlaedge.state = 'NOTREGISTERD'
+        self.assertIsNone(self.agent._heartbeat())
+
+        self.mock_nuvla_client.nuvlaedge.state = 'COMMISSIONED'
+        self.mock_nuvla_client.heartbeat.return_value = True
+        self.assertTrue(self.agent._heartbeat())
+
+        self.mock_nuvla_client.nuvlaedge.state = State.COMMISSIONED
+        self.assertTrue(self.agent._heartbeat())
+
+    @patch('nuvlaedge.agent.agent.Agent._process_jobs')
+    def test_process_response(self, mock_process_jobs):
+        mock_response = Mock()
+        operation = "mocked_operation"
+        mock_response.get.return_value = []
+
+        self.agent._process_response(mock_response, operation)
+        mock_process_jobs.assert_not_called()
+
+        mock_response.get.return_value = ['job/mock_id']
+        self.agent._process_response(mock_response, operation)
+        mock_process_jobs.assert_called_once()
 
     @patch('nuvlaedge.agent.agent.Job')
-    @patch('nuvlaedge.agent.job.Job.launch')
-    def test_run_pull_jobs(self, mock_launch, mock_job):
-        self.test_agent.run_pull_jobs([])
-        self.assertEqual(mock_job.call_count, 0)
+    def test_process_jobs(self, mock_job):
+        mocked_instance = Mock(spec=Job)
+        mocked_instance.do_nothing = True
+        mocked_instance.job_id = 'job/1'
+        mocked_instance.launch.return_value = True
+        mock_job.return_value = mocked_instance
+        self.mock_coe_client.job_engine_lite_image = 'image'
+        jobs = [NuvlaID('job/1')]
 
-        infra_mock = Mock()
-        self.test_agent._infrastructure = infra_mock
-        self.test_agent.run_pull_jobs(['1'])
-        self.assertEqual(mock_job.call_count, 1)
-        self.assertEqual(mock_launch.call_count, 0)
+        self.agent._process_jobs(jobs)
+        mock_job.assert_called_once()
+        mocked_instance.assert_not_called()
 
-        it_mock = Mock()
-        it_mock.do_nothing = False
-        it_mock.launch.return_value = "None"
-        mock_job.return_value = it_mock
-        self.test_agent.run_pull_jobs(['2'])
-        self.assertEqual(it_mock.launch.call_count, 1)
+        mocked_instance.do_nothing = False
+        self.agent._process_jobs(jobs)
+        mocked_instance.launch.assert_called_once()
 
-        it_mock.launch.side_effect = Exception('error')
-        self.test_agent.run_pull_jobs(['3'])
-        self.assertEqual(it_mock.launch.call_count, 2)
+    def test_stop(self):
+        self.agent.stop()
+        self.exit_event.set.assert_called_once()
 
+    @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
+    def test_run(self, mock_status_running):
+        mock_manager = Mock()
+        mock_actions = Mock()
+        self.agent.worker_manager = mock_manager
+        self.agent.action_handler = mock_actions
+        self.exit_event.wait.return_value = True
+        self.agent.run()
 
-    @patch('nuvlaedge.agent.agent.Infrastructure')
-    @patch('nuvlaedge.agent.agent.Thread.start')
-    def test_handle_pull_jobs(self, mock_thread, infra_mock):
-        infra_mock.coe_client.job_engine_lite_image = True
-        self.test_agent._infrastructure = infra_mock
-        self.test_agent.handle_pull_jobs({'jobs': ['1', '2']})
-        mock_thread.assert_called_once()
-        mock_thread.reset_mock()
+        # Test once for each call before the infinite loop
+        mock_manager.start.assert_called_once()
+        mock_actions.sleep_time.assert_called_once()
+        mock_status_running.reset_mock()
 
-        infra_mock.coe_client.job_engine_lite_image = False
-        self.test_agent.handle_pull_jobs({})
-        self.assertEqual(mock_thread.call_count, 0)
+        # Enter the infinite loop once
+        self.exit_event.wait.side_effect = [False, True]
+        mock_action = Mock()
+        mock_action.return_value = None
+        mock_action.name = 'mock_action'
+        mock_actions.sleep_time.return_value = 10
+        mock_actions.next = mock_action
 
-        with patch('logging.Logger.warning') as mock_warn:
-            self.test_agent.handle_pull_jobs({'jobs': 'PI'})
-            mock_warn.assert_called_once()
+        self.agent.run()
+        self.assertEqual(2, mock_status_running.call_count)
+        mock_action.assert_called_once()
 
-    @patch('nuvlaedge.agent.agent.Agent.send_telemetry')
-    @patch('nuvlaedge.agent.agent.Agent.handle_pull_jobs')
-    @patch('threading.Thread.start')
-    @patch('nuvlaedge.agent.agent.Infrastructure')
-    def test_run_single_cycle(self, inf_mock, mock_start, pull_mock, mock_beat):
-        self.test_agent.telemetry_thread = False
-        self.test_agent._telemetry = Mock()
-        self.test_agent._infrastructure = Mock()
-
-        action = TimedAction(
-            name='telemetry',
-            period=60,
-            action=self.test_agent.send_telemetry)
-
-        self.test_agent.run_single_cycle(action)
-        self.assertEqual(mock_start.call_count, 3)
-        pull_mock.assert_called_once()
-
-        # with threads alreay alive
-        with patch('threading.Thread.is_alive') as mock_th_is_alive:
-            mock_th_is_alive.return_value = True
-
-            # telemetry
-            self.test_agent.run_single_cycle(action)
-            self.assertIsNotNone(self.test_agent._peripheral_manager)
-
-            # heartbeat
-            action.name = 'heartbeat'
-            self.test_agent.telemetry_thread = None
-            self.test_agent.peripherals_thread = None
-            self.test_agent.run_single_cycle(action)
-            self.assertIsNone(self.test_agent.telemetry_thread)
-            self.assertIsNone(self.test_agent.peripherals_thread)
+        mock_action.return_value = "Data"
+        with patch('nuvlaedge.agent.agent.Agent._process_response') as mock_process_response:
+            self.exit_event.wait.side_effect = [False, True]
+            self.agent.run()
+            mock_process_response.assert_called_once()
 
 
-    def test_update_nuvlaedge_configuration(self):
-        mock_current = {
-            'updated': 0,
-            'vpn-server-id': 'ID'
-        }
-        mock_old = {
-            'updated': 0,
-            'vpn-server-id': 'ID'
-        }
-        self.test_agent.old_nuvlaedge_data = mock_old.copy()
-        self.test_agent.activate.nuvlaedge_resource = CimiResource(mock_current)
 
-        mock_update_periods = Mock()
-        self.test_agent.on_nuvlaedge_update = mock_update_periods
-
-        mock_infra = Mock()
-        self.test_agent._infrastructure = mock_infra
-
-        # Resource hasn't been updated since the last check, do nothing
-        self.test_agent.old_nuvlaedge_data = mock_old.copy()
-        self.test_agent._update_nuvlaedge_configuration()
-        mock_infra.commission_vpn.assert_not_called()
-        mock_update_periods.assert_not_called()
-
-        # Resource changed, with same vpn id
-        mock_current['updated'] = 1
-        self.test_agent.old_nuvlaedge_data = mock_old.copy()
-        self.test_agent._update_nuvlaedge_configuration()
-        mock_update_periods.assert_called_once()
-        mock_infra.commission_vpn.assert_not_called()
-        mock_update_periods.reset_mock()
-
-        # Everything has changed
-        mock_current['vpn-server-id'] = 'ID_BIS'
-        self.test_agent.old_nuvlaedge_data = mock_old.copy()
-        self.test_agent._update_nuvlaedge_configuration()
-        mock_update_periods.assert_called_once()
-        mock_infra.commission_vpn.assert_called_once()
-
-        # old_nuvlaedge_data and on_nuvlaedge_update not set
-        self.test_agent.old_nuvlaedge_data = None
-        self.test_agent.on_nuvlaedge_update = None
-        mock_read_ne_doc = Mock()
-        mock_read_ne_doc.return_value = {}
-        self.test_agent._activate.read_ne_document_file = mock_read_ne_doc
-        self.test_agent._update_nuvlaedge_configuration()
-        mock_read_ne_doc.assert_called_once()
-
-    @patch('nuvlaedge.agent.agent.Agent.fetch_nuvlaedge_resource')
-    @patch('nuvlaedge.agent.agent.Agent._update_nuvlaedge_configuration')
-    def test_resource_synchronization(self, mock_update_config, mock_fetch_nuvlaedge):
-        mock_activator = Mock()
-        self.test_agent._activate = mock_activator
-
-        mock_exit = Mock()
-        self.test_agent.exit_event = mock_exit
-
-        mock_infra = Mock()
-        self.test_agent._infrastructure = mock_infra
-
-        # If the nuvlaedge has been decommissioned
-        mock_activator.nuvlaedge_resource = CimiResource({'state': 'DECOMMISSIONING'})
-        self.test_agent.sync_nuvlaedge_resource()
-        mock_exit.set.assert_called_once()
-
-        # Normal state
-        mock_activator.nuvlaedge_resource = CimiResource({'state': 'ACTIVATED',
-                                                          'vpn-server-id': None})
-        self.test_agent.sync_nuvlaedge_resource()
-        mock_update_config.assert_called_once()
-        mock_infra.watch_vpn_credential.assert_not_called()
-
-        mock_activator.nuvlaedge_resource = CimiResource({'state': 'ACTIVATED',
-                                                          'vpn-server-id': 'ID'})
-        self.test_agent.sync_nuvlaedge_resource()
-        mock_infra.watch_vpn_credential.assert_called_with('ID')
-
-        # without exit_event
-        self.test_agent.exit_event = None
-        mock_activator.nuvlaedge_resource = CimiResource({'state': 'DECOMMISSIONING'})
-        self.test_agent.sync_nuvlaedge_resource()

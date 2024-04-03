@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.13.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.2) (2024-04-02)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.1...2.13.2)
+
+**Merged pull requests:**
+
+- agent telemetry: fix network interfaces not removed [\#163](https://github.com/nuvlaedge/nuvlaedge/pull/163) ([schaubl](https://github.com/schaubl))
+- ci: add local build script [\#162](https://github.com/nuvlaedge/nuvlaedge/pull/162) ([ignacio-penas](https://github.com/ignacio-penas))
+- docs: fix job-engine build workflow link in README.md [\#159](https://github.com/nuvlaedge/nuvlaedge/pull/159) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.13.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.1) (2024-02-16)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.0...2.13.1)

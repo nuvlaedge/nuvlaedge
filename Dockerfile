@@ -7,6 +7,8 @@ ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
+ARG PYDANTIC_VERSION="2.6.4-r0"
+ARG PYDANTIC_CORE_VERSION="2.16.3-r0"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -45,8 +47,17 @@ LABEL org.opencontainers.image.authors="support@sixsq.com" \
 # ------------------------------------------------------------------------
 FROM ${BASE_IMAGE} AS base-builder
 
+ARG PYDANTIC_VERSION
+ARG PYDANTIC_CORE_VERSION
+ARG PYTHON_SITE_PACKAGES
+ARG PYTHON_LOCAL_SITE_PACKAGES
+
 RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev rust cargo upx curl
+RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
+
+# Install pydantic form source to prevent bulding locally
+RUN apk add "py3-pydantic~${PYDANTIC_VERSION}" "py3-pydantic-core~${PYDANTIC_CORE_VERSION}" --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
+RUN cp -r ${PYTHON_SITE_PACKAGES}/* ${PYTHON_LOCAL_SITE_PACKAGES}/
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt

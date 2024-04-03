@@ -20,7 +20,8 @@ security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-pydantic = "2.5.2"
+# Pydantic version is fixed here and must be synced with the one in the Dockerfile
+pydantic = "2.6.4"
 requests = "2.27.1"
 nuvla-api = "3.0.9"
 docker = "6.1.1"

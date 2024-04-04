@@ -36,15 +36,39 @@ class TestAgent(TestCase):
         assert isinstance(self.agent.settings, AgentSettings)
         assert isinstance(self.agent._exit, Event)
 
-    def test_check_uuid_missmatch(self):
-        """ Test that the agent raises an exception when the UUIDs do not match """
-        one = 'some_uuid'
-        two = 'some_other_uuid'
-        with self.assertRaises(AgentSettingsMissMatch):
-            self.agent.check_uuid_missmatch(one, two)
+    @patch('nuvlaedge.agent.worker.logging.Logger.info')
+    @patch('nuvlaedge.agent.worker.logging.Logger.warning')
+    def test_check_uuid_missmatch(self, mock_warning, mock_info):
+        self.mock_nuvla_client.nuvlaedge_uuid = None
+        self.settings.nuvlaedge_uuid = None
 
-        """ Test that the agent does not raise an exception when the UUIDs match """
-        self.agent.check_uuid_missmatch(one, one)
+        # Test non valid uuid cases
+        with self.assertRaises(InsufficientSettingsProvided):
+            self.agent.check_uuid_missmatch()
+
+        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid')
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid')
+        with self.assertRaises(InsufficientSettingsProvided):
+            self.agent.check_uuid_missmatch()
+
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/1')
+        self.agent.check_uuid_missmatch()
+        self.assertEqual(self.settings.nuvlaedge_uuid, NuvlaID('some_uuid/1'))
+
+        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid')
+        mock_info.reset_mock()
+        self.agent.check_uuid_missmatch()
+        mock_info.assert_called_once_with(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")
+
+        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/2')
+        self.agent.check_uuid_missmatch()
+        mock_warning.assert_not_called()
+
+        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/1')
+        self.agent.check_uuid_missmatch()
+        mock_warning.assert_called_once()
 
     @patch('nuvlaedge.agent.agent.Agent._create_nuvla_client')
     @patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch')

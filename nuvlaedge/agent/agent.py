@@ -123,23 +123,44 @@ class Agent:
         # Report initial status
         NuvlaEdgeStatusHandler.starting(self.status_channel, 'agent')
 
-    @staticmethod
-    def check_uuid_missmatch(env_uuid, other_uuid):
-        """ This method checks if the UUID provided as an environmental variable matches the one stored locally
-        Args:
-            env_uuid: UUID parsed as an environmental variable
-            other_uuid: UUID stored locally or retrieved from API keys
-
-        Raises: AgentSettingsMissMatch if the UUID's are not equal
+    def check_uuid_missmatch(self):
+        """ Check if the UUID provided in the settings is the same as the one stored in the local session.
+        Check for possible settings missmatch
+        Check here for settings missmatch. The priority comes as follows:
+        1. Arg1 == Arg2 : All good, continue
+        2. Arg1 != Arg2 : Update Arg1 with Arg2
+        3. Arg1 == None : Update Arg1 with Arg2
+        4. Arg2 == None : New NE installation, no need to update
 
         """
+        def sanitise_uuid(uuid: NuvlaID) -> tuple[bool, str]:
+            if uuid is None:
+                return False, ""
+            return uuid.validate(), uuid.split("/")[-1]
+
+        env_valid, env_uuid = sanitise_uuid(self.settings.nuvlaedge_uuid)
+        local_valid, local_uuid = sanitise_uuid(self._nuvla_client.nuvlaedge_uuid)
+
+        if not env_valid and not local_valid:
+            logger.error("No UUID provided and no local session stored. "
+                         "Please provide a UUID or remove previous installation files")
+            raise InsufficientSettingsProvided("No UUID provided and no local session stored. "
+                                               "Please provide a UUID to start NuvlaEdge")
+
+        if not env_valid:
+            logger.info(f"Starting NuvlaEdge from previously stored session with UUID: "
+                        f"{self._nuvla_client.nuvlaedge_uuid}")
+            self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
+            return
+
+        if not local_valid:
+            logger.info(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")
+            return
+
         # Check UUID missmatch
-        if env_uuid != other_uuid:
-            logger.error(f"Parsed UUID {env_uuid} is different from the locally stored "
-                         f"{other_uuid} session. You are probably trying to install a "
-                         f"new NuvlaEdge, please remove previous volumes and installation files")
-            raise AgentSettingsMissMatch(f"Provided NuvlaEdge UUID {env_uuid} must"
-                                         f"match the locally stored. Remove previous installation of NuvlaEdge")
+        if env_uuid != local_uuid:
+            logger.warning(f"Provided UUID {self.settings.nuvlaedge_uuid} does not match local UUID "
+                           f"{self._nuvla_client.nuvlaedge_uuid}. NuvlaEdge will start from the local UUID ")
 
     def _create_nuvla_client(self) -> NuvlaClientWrapper:
         """
@@ -183,9 +204,7 @@ class Agent:
 
         self._nuvla_client = self._create_nuvla_client()
 
-        # Check for possible settings missmatch
-        if self.settings.nuvlaedge_uuid is not None and self._nuvla_client.nuvlaedge_uuid is not None:
-            self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge_uuid)
+        self.check_uuid_missmatch()
 
         _state: State = State.NEW
 

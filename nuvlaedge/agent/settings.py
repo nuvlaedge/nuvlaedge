@@ -108,9 +108,11 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     @field_validator('nuvlaedge_uuid', mode='after')
     def nameless_uuid(cls, v):
-        if v is not None and not v.startswith('nuvlabox/'):
+        if v is None:
+            return v
+        if not v.startswith('nuvlabox/') and v != "":
             return NuvlaID(f"nuvlabox/{v}")
-        return v
+        return NuvlaID(v)
 
     @field_validator('vpn_config_extra', mode='after')
     def clean_config_extra(cls, v):

@@ -136,7 +136,7 @@ class Agent:
         def sanitise_uuid(uuid: NuvlaID) -> tuple[bool, str]:
             if uuid is None:
                 return False, ""
-            return uuid.validate(), uuid.split("/")[-1]
+            return uuid != NuvlaID(""), uuid.split("/")[-1]
 
         env_valid, env_uuid = sanitise_uuid(self.settings.nuvlaedge_uuid)
         local_valid, local_uuid = sanitise_uuid(self._nuvla_client.nuvlaedge_uuid)

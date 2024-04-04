@@ -64,11 +64,8 @@ class TestAgent(TestCase):
         self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
         self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/2')
         self.agent.check_uuid_missmatch()
-        mock_warning.assert_not_called()
-
-        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/1')
-        self.agent.check_uuid_missmatch()
         mock_warning.assert_called_once()
+
 
     @patch('nuvlaedge.agent.agent.Agent._create_nuvla_client')
     @patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch')

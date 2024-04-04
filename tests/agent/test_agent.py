@@ -62,7 +62,7 @@ class TestAgent(TestCase):
         mock_info.assert_called_once_with(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")
 
         self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/2')
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/1')
         self.agent.check_uuid_missmatch()
         mock_warning.assert_called_once()
 

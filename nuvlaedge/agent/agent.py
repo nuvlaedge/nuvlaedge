@@ -151,13 +151,12 @@ class Agent:
                         f"{self._nuvla_client.nuvlaedge_uuid}")
             self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
 
-            if env_uuid != local_uuid:
-                logger.warning(f"Provided UUID {self.settings.nuvlaedge_uuid} does not match local UUID "
+            if env_valid and env_uuid != local_uuid:
+                logger.warning(f"Provided UUID {env_uuid} does not match local UUID "
                                f"{self._nuvla_client.nuvlaedge_uuid}. NuvlaEdge will start from the local UUID ")
 
-        elif env_valid and not local_valid:
+        elif env_valid:
             logger.info(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")
-
 
     def _create_nuvla_client(self) -> NuvlaClientWrapper:
         """

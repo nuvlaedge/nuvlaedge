@@ -146,19 +146,15 @@ class Agent:
                          "Please provide a UUID or remove previous installation files")
             raise InsufficientSettingsProvided("No UUID provided and no local session stored. "
                                                "Please provide a UUID to start NuvlaEdge")
-
-        if not env_valid:
+        elif not env_valid and local_valid:
             logger.info(f"Starting NuvlaEdge from previously stored session with UUID: "
                         f"{self._nuvla_client.nuvlaedge_uuid}")
             self.settings.nuvlaedge_uuid = self._nuvla_client.nuvlaedge_uuid
-            return
 
-        if not local_valid:
+        elif env_valid and not local_valid:
             logger.info(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")
-            return
 
-        # Check UUID missmatch
-        if env_uuid != local_uuid:
+        elif env_valid and local_valid and env_uuid != local_uuid:
             logger.warning(f"Provided UUID {self.settings.nuvlaedge_uuid} does not match local UUID "
                            f"{self._nuvla_client.nuvlaedge_uuid}. NuvlaEdge will start from the local UUID ")
 

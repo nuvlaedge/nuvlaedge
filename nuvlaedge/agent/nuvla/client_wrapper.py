@@ -353,10 +353,10 @@ class NuvlaClientWrapper:
 
     def _find_uuid_from_api(self, resource_type: str) -> NuvlaID:
         try:
-            response: CimiCollection = self.nuvlaedge_client.search(resource_type=resource_type)
-            return NuvlaID(response.resources[0].id)
+            nuvlaedge_id = self.nuvlaedge_client.get(self.nuvlaedge_client.current_session()).data['identifier']
+            return NuvlaID(nuvlaedge_id)
         except Exception as e:
-            logger.warning(f"Could not find {resource_type} with filter {filter} with error: {e}")
+            logger.warning(f"Could not find {resource_type} with with error: {e}")
             return NuvlaID("")
 
     @classmethod

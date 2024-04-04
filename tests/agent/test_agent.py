@@ -46,8 +46,8 @@ class TestAgent(TestCase):
         with self.assertRaises(InsufficientSettingsProvided):
             self.agent.check_uuid_missmatch()
 
-        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid')
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid')
+        self.settings.nuvlaedge_uuid = NuvlaID('')
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('')
         with self.assertRaises(InsufficientSettingsProvided):
             self.agent.check_uuid_missmatch()
 
@@ -56,7 +56,7 @@ class TestAgent(TestCase):
         self.assertEqual(self.settings.nuvlaedge_uuid, NuvlaID('some_uuid/1'))
 
         self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid')
+        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('')
         mock_info.reset_mock()
         self.agent.check_uuid_missmatch()
         mock_info.assert_called_once_with(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")

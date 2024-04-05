@@ -82,10 +82,11 @@ class TestAgent(TestCase):
         with self.assertRaises(SystemExit):
             self.agent.start_agent()
 
-    @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.get_status')
-    def test_gather_status(self, mock_get_status):
+    def test_gather_status(self):
+        mock_status = Mock()
         mock_telemetry = Mock(spec=TelemetryPayloadAttributes)
-        mock_get_status.return_value = ("OPERATIONAL", ['RUNNING FINE'])
+        self.agent.status_handler = mock_status
+        mock_status.get_status.return_value = ("OPERATIONAL", ['RUNNING FINE'])
 
         self.agent._gather_status(mock_telemetry)
         self.assertEqual("OPERATIONAL", mock_telemetry.status)

@@ -83,8 +83,7 @@ class Agent:
 
     def __init__(self,
                  exit_event: Event,
-                 settings: AgentSettings,
-                 status_handler: Optional[NuvlaEdgeStatusHandler] = None):
+                 settings: AgentSettings):
         """
         Initializes an instance of the Agent class.
 
@@ -111,7 +110,7 @@ class Agent:
         self.action_handler: ActionHandler = ActionHandler([])
 
         # Agent Status handler
-        self.status_handler: NuvlaEdgeStatusHandler = status_handler if status_handler else NuvlaEdgeStatusHandler()
+        self.status_handler: NuvlaEdgeStatusHandler = self.settings.status_handler
 
         # Telemetry sent to nuvla
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()

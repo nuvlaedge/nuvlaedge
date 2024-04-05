@@ -176,15 +176,17 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         if (stored_nuvlaedge_id and env_nuvlaedge_id and
                 get_uuid(stored_nuvlaedge_id) != get_uuid(env_nuvlaedge_id)):
-            self._status_handler.warning(self.status_handler.status_channel,
-                                         "AgentSettings",
-                                         "Trying to start a NuvlaEdge with and env UUID different from the "
-                                         "stored one. Running on stored ID and credentials... ")
-            logging.warning(f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
-                            f'though a previous NuvlaEdge installation ({stored_nuvlaedge_id}) '
-                            f'still exists in the system! You can either delete the previous '
-                            f'installation (removing all data volumes) or fix the NUVLAEDGE_UUID '
-                            f'environment variable to match the old {stored_nuvlaedge_id}')
+            self._status_handler.warning(
+                self.status_handler.status_channel,
+                "AgentSettings",
+                "Trying to start a NuvlaEdge with and env UUID different from the "
+                "stored one. Running on stored ID and credentials... ")
+            logging.warning(
+                f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
+                f'though a previous NuvlaEdge installation ({stored_nuvlaedge_id}) '
+                f'still exists in the system! You can either delete the previous '
+                f'installation (removing all data volumes) or fix the NUVLAEDGE_UUID '
+                f'environment variable to match the old {stored_nuvlaedge_id}')
 
         if (stored_nuvlaedge_id and nuvla_nuvlaedge_id and
                 get_uuid(stored_nuvlaedge_id) != get_uuid(nuvla_nuvlaedge_id)):
@@ -194,7 +196,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                                          "credentials.")
             logging.warning(f'NuvlaEdge from context file ({stored_nuvlaedge_id}) '
                             f'do not match session identifier ({nuvla_nuvlaedge_id})')
-
+        self._status_handler.running(self.status_handler.status_channel, "AgentSettings")
         if nuvla_nuvlaedge_id:
             logging.info("Using NuvlaEdge UUID from Nuvla session")
             _found_id = nuvla_nuvlaedge_id

@@ -196,7 +196,6 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                                          "credentials.")
             logging.warning(f'NuvlaEdge from context file ({stored_nuvlaedge_id}) '
                             f'do not match session identifier ({nuvla_nuvlaedge_id})')
-        self._status_handler.running(self.status_handler.status_channel, "AgentSettings")
         if nuvla_nuvlaedge_id:
             logging.info("Using NuvlaEdge UUID from Nuvla session")
             _found_id = nuvla_nuvlaedge_id

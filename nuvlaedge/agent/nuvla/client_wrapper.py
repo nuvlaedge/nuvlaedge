@@ -22,10 +22,9 @@ from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              AutoNuvlaEdgeStatusResource,
                                              AutoInfrastructureServiceResource,
                                              AutoCredentialResource)
-from ..settings import AgentSettings, NuvlaApiKeyTemplate, NuvlaEdgeSession
-from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
+from ..settings import NuvlaApiKeyTemplate, NuvlaEdgeSession
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.file_operations import read_file, write_file, file_exists_and_not_empty
+from nuvlaedge.common.file_operations import read_file, write_file
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -42,7 +41,6 @@ class NuvlaEndPoints:
 
     nuvlaedge: str = base_path + 'nuvlabox/'
     nuvlaedge_status: str = base_path + 'nuvlabox-status/'
-
 
 
 def format_host(host: str) -> str:

@@ -150,6 +150,8 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         self._create_client_from_settings()
 
         self._nuvlaedge_uuid = self._assert_nuvlaedge_uuid()
+        if self._stored_session:
+            self._stored_session.nuvlaedge_uuid = self._nuvlaedge_uuid
 
     def _assert_nuvlaedge_uuid(self) -> NuvlaID:
         """

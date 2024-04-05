@@ -5,7 +5,7 @@
 Relays pull-mode jobs to local job-engine-lite
 """
 
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from . import NuvlaClientWrapper
 
 from nuvlaedge.agent.orchestrator import COEClient
 

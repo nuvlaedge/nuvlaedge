@@ -18,7 +18,7 @@ class TestAgent(TestCase):
 
     def setUp(self):
 
-        self.settings = Mock(spec=AgentSettings(nuvlaedge_uuid='some_uuid'))
+        self.settings = Mock(spec=AgentSettings)
         self.exit_event = Mock(spec=Event)
         self.mock_nuvla_client = Mock(spec=NuvlaClientWrapper)
         self.mock_coe_client = Mock(spec=COEClient)
@@ -36,46 +36,13 @@ class TestAgent(TestCase):
         assert isinstance(self.agent.settings, AgentSettings)
         assert isinstance(self.agent._exit, Event)
 
-    @patch('nuvlaedge.agent.worker.logging.Logger.info')
-    @patch('nuvlaedge.agent.worker.logging.Logger.warning')
-    def test_check_uuid_missmatch(self, mock_warning, mock_info):
-        self.mock_nuvla_client.nuvlaedge_uuid = None
-        self.settings.nuvlaedge_uuid = None
-
-        # Test non valid uuid cases
-        with self.assertRaises(InsufficientSettingsProvided):
-            self.agent.check_uuid_missmatch()
-
-        self.settings.nuvlaedge_uuid = NuvlaID('')
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('')
-        with self.assertRaises(InsufficientSettingsProvided):
-            self.agent.check_uuid_missmatch()
-
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/1')
-        self.agent.check_uuid_missmatch()
-        self.assertEqual(self.settings.nuvlaedge_uuid, NuvlaID('some_uuid/1'))
-
-        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('')
-        mock_info.reset_mock()
-        self.agent.check_uuid_missmatch()
-        mock_info.assert_called_once_with(f"Starting NuvlaEdge from provided UUID: {self.settings.nuvlaedge_uuid}")
-
-        self.settings.nuvlaedge_uuid = NuvlaID('some_uuid/2')
-        self.mock_nuvla_client.nuvlaedge_uuid = NuvlaID('some_uuid/1')
-        self.agent.check_uuid_missmatch()
-        mock_warning.assert_called_once()
-
-
-    @patch('nuvlaedge.agent.agent.Agent._create_nuvla_client')
-    @patch('nuvlaedge.agent.agent.Agent.check_uuid_missmatch')
-    def test_assert_current_state(self, mock_missmatch, mock_nuvla_client):
-        mock_nuvla_client.return_value = self.mock_nuvla_client
+    def test_assert_current_state(self):
+        mock_settings = Mock()
+        self.agent.settings = mock_settings
         self.mock_nuvla_client.nuvlaedge_uuid = 'some_uuid'
         self.mock_nuvla_client.nuvlaedge_credentials = None
-
+        mock_settings.nuvla_client = self.mock_nuvla_client
         self.assertEqual(State.NEW, self.agent._assert_current_state())
-        mock_missmatch.assert_called_once()
 
         self.mock_nuvla_client.nuvlaedge_credentials = 'creds'
         self.mock_nuvla_client.nuvlaedge.state = "ACTIVATED"
@@ -85,6 +52,9 @@ class TestAgent(TestCase):
     def test_init_workers(self, mock_add_worker):
         self.mock_nuvla_client.nuvlaedge_uuid = 'some_uuid'
         self.mock_nuvla_client.nuvlaedge_client = Mock()
+        mock_settings = Mock()
+        self.agent.settings = mock_settings
+        mock_settings.nuvlaedge_excluded_monitors = []
         self.agent._init_workers()
         self.assertEqual(4, mock_add_worker.call_count)
 
@@ -97,6 +67,9 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.agent.agent.Agent._init_actions')
     @patch('nuvlaedge.agent.agent.Agent._assert_current_state')
     def test_start_agent(self, mock_assert_current_state, mock_init_actions, mock_init_workers):
+        mock_settings = Mock()
+        self.agent.settings = mock_settings
+        mock_settings.nuvlaedge_immutable_ssh_pub_key = None
         mock_assert_current_state.return_value = State.NEW
         self.mock_nuvla_client.activate.return_value = True
 

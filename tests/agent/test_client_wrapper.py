@@ -228,12 +228,3 @@ class TestClientWrapper(TestCase):
                 self.assertIsNone(NuvlaClientWrapper.from_session_store(test_file))
                 mock_read.assert_called_once()
                 mock_warning.assert_called_once()
-
-    def test_from_agent_settings(self):
-        mock_settings = Mock()
-        mock_settings.nuvlaedge_api_key = None
-        mock_settings.nuvlaedge_api_secret = None
-        mock_settings.nuvla_endpoint = 'endpoint'
-        mock_settings.nuvlaedge_uuid = 'uuid'
-        mock_settings.nuvla_endpoint_insecure = True
-        self.assertIsInstance(NuvlaClientWrapper.from_agent_settings(mock_settings), NuvlaClientWrapper)

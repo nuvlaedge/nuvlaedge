@@ -123,19 +123,22 @@ class TestClientWrapper(TestCase):
         mock_res.force_update.assert_called_once()
         mock_type.assert_called_once()
 
-    def test_login_nuvlaedge(self):
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper._save_current_state_to_file')
+    def test_login_nuvlaedge(self, mock_save):
         mock_response = Mock()
         self.mock_nuvla.login_apikey.return_value = mock_response
         self.test_client.nuvlaedge_credentials = Mock()
         with patch('nuvlaedge.agent.nuvla.client_wrapper.logging.Logger.warning') as mock_warning:
             mock_response.status_code = 401
             self.test_client.login_nuvlaedge()
+            mock_save.assert_not_called()
             self.mock_nuvla.login_apikey.assert_called_once()
             mock_warning.assert_called_once()
 
         with patch('nuvlaedge.agent.nuvla.client_wrapper.logging.Logger.debug') as mock_debug:
             mock_response.status_code = 200
             self.test_client.login_nuvlaedge()
+            mock_save.assert_called_once()
             mock_debug.assert_called_once()
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge')

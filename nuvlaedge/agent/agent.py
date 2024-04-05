@@ -29,6 +29,7 @@ import sys
 import time
 from queue import Queue
 from threading import Event
+from typing import Optional
 
 from nuvla.api.models import CimiResponse
 
@@ -82,7 +83,8 @@ class Agent:
 
     def __init__(self,
                  exit_event: Event,
-                 settings: AgentSettings):
+                 settings: AgentSettings,
+                 status_handler: Optional[NuvlaEdgeStatusHandler] = None):
         """
         Initializes an instance of the Agent class.
 
@@ -109,7 +111,7 @@ class Agent:
         self.action_handler: ActionHandler = ActionHandler([])
 
         # Agent Status handler
-        self.status_handler: NuvlaEdgeStatusHandler = NuvlaEdgeStatusHandler()
+        self.status_handler: NuvlaEdgeStatusHandler = status_handler if status_handler else NuvlaEdgeStatusHandler()
 
         # Telemetry sent to nuvla
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()

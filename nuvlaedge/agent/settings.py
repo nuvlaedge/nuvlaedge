@@ -127,12 +127,18 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     disable_file_logging:               bool = False
 
     _nuvla_client = None
+    _status_handler = None
+    _status_report_type = None
+
     _nuvlaedge_uuid:                    Optional[NuvlaID] = None
     _stored_session:                    Optional[NuvlaEdgeSession] = None
 
     def __init__(self, **values):
         super().__init__(**values)
         logging.info("Initialising AgentSettings...")
+        from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
+        self._status_handler = NuvlaEdgeStatusHandler()
+        self._status_report_type = StatusReport
 
         _dict_session = read_file(FILE_NAMES.NUVLAEDGE_SESSION, decode_json=True, warn_on_missing=False)
         if _dict_session is not None:
@@ -170,6 +176,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         if (stored_nuvlaedge_id and env_nuvlaedge_id and
                 get_uuid(stored_nuvlaedge_id) != get_uuid(env_nuvlaedge_id)):
+            self._status_handler.warning(self.status_handler.status_channel,
+                                         "AgentSettings",
+                                         "Trying to start a NuvlaEdge with and env UUID different from the "
+                                         "stored one. Running on stored ID and credentials... ")
             logging.warning(f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
                             f'though a previous NuvlaEdge installation ({stored_nuvlaedge_id}) '
                             f'still exists in the system! You can either delete the previous '
@@ -178,6 +188,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         if (stored_nuvlaedge_id and nuvla_nuvlaedge_id and
                 get_uuid(stored_nuvlaedge_id) != get_uuid(nuvla_nuvlaedge_id)):
+            self._status_handler.warning(self.status_handler.status_channel,
+                                         "AgentSettings",
+                                         "NuvlaEdge ID missmatch between stored data and Nuvla session "
+                                         "credentials.")
             logging.warning(f'NuvlaEdge from context file ({stored_nuvlaedge_id}) '
                             f'do not match session identifier ({nuvla_nuvlaedge_id})')
 
@@ -214,6 +228,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         if self._stored_session and self._stored_session.credentials:
             self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
+
+    @property
+    def status_handler(self):
+        return self._status_handler
 
     @property
     def nuvlaedge_uuid(self):

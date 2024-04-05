@@ -224,6 +224,7 @@ class NuvlaClientWrapper:
 
         if login_response.status_code in [200, 201]:
             logger.debug("Log in successful")
+            self._save_current_state_to_file()
             return True
         else:
             logger.warning(f"Error logging in: {login_response}")
@@ -242,11 +243,10 @@ class NuvlaClientWrapper:
         self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
-        # Firstly, save the key pair to file
-        self._save_current_state_to_file()
 
         # Then log in to access NuvlaEdge resources
-        self.login_nuvlaedge()
+        if self.login_nuvlaedge():
+            self._save_current_state_to_file()
 
         # Finally, force update the NuvlaEdge resource to get the latest state
         self.nuvlaedge.force_update()

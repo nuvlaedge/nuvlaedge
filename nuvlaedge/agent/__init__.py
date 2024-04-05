@@ -23,10 +23,14 @@ def main():
 
     from nuvlaedge.common.constants import CTE
     from nuvlaedge.agent.agent import Agent
+    from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler
 
     socket.setdefaulttimeout(CTE.NETWORK_TIMEOUT)
+    status_handler = NuvlaEdgeStatusHandler()
 
-    nuvlaedge_agent: Agent = Agent(exit_event=agent_event, settings=agent_settings)
+    nuvlaedge_agent: Agent = Agent(exit_event=agent_event,
+                                   settings=agent_settings,
+                                   status_handler=status_handler)
     nuvlaedge_agent.start_agent()
     nuvlaedge_agent.run()
 

@@ -16,7 +16,7 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 class StatusReport(BaseModel):
     origin_module: str
-    module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'FAILING', 'FAILED', 'UNKNOWN']
+    module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'WARNING', 'FAILING', 'FAILED', 'UNKNOWN']
     date: datetime
     message: str = ''
 
@@ -149,3 +149,7 @@ class NuvlaEdgeStatusHandler:
     @classmethod
     def failed(cls, channel: Queue, module_name: str, message: str = ''):
         cls.send_status(channel, module_name, 'FAILED', message)
+
+    @classmethod
+    def warning(cls, channel: Queue, module_name: str, message: str = ''):
+        cls.send_status(channel, module_name, 'WARNING', message)

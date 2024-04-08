@@ -150,8 +150,12 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         self._create_client_from_settings()
 
         self._nuvlaedge_uuid = self._assert_nuvlaedge_uuid()
+        self._nuvla_client.set_nuvlaedge_uuid(self._nuvlaedge_uuid)
+
         if self._stored_session:
             self._stored_session.nuvlaedge_uuid = self._nuvlaedge_uuid
+
+        logging.error("Initialising agent settings for NuvlaEdge: %s", self.nuvlaedge_uuid)
 
     def _assert_nuvlaedge_uuid(self) -> NuvlaID:
         """
@@ -198,6 +202,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                                          "credentials.")
             logging.warning(f'NuvlaEdge from context file ({stored_nuvlaedge_id}) '
                             f'do not match session identifier ({nuvla_nuvlaedge_id})')
+
         if nuvla_nuvlaedge_id:
             logging.info("Using NuvlaEdge UUID from Nuvla session")
             _found_id = nuvla_nuvlaedge_id
@@ -223,6 +228,9 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 
         self._nuvla_client = NuvlaClientWrapper(self.nuvla_endpoint, self.nuvla_endpoint_insecure, self.nuvlaedge_uuid)
+
+        # Handle a special case when the NuvlaEdge credentials are provided as ENV variables. These credentials need
+        # to replace any local session if the configuration match with the stored session and Nuvla after login.
         if self.nuvlaedge_api_key and self.nuvlaedge_api_secret:
             logging.info("Nuvla API keys passed as arguments, these will replace local session")
             self._stored_session.credentials = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
@@ -232,6 +240,13 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         if self._stored_session and self._stored_session.credentials:
             self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
+
+            _login_success = self._nuvla_client.login_nuvlaedge()
+            _uuids_match = (self._nuvla_client.find_nuvlaedge_id_from_nuvla_session() ==
+                            self._stored_session.nuvlaedge_uuid)
+            if _login_success and _uuids_match:
+                # After logging in if UUID's match, save the session to file
+                self._nuvla_client.save_current_state_to_file()
 
     @property
     def status_handler(self):
@@ -296,7 +311,3 @@ def get_agent_settings() -> AgentSettings:
     __agent_settings = get_cmd_line_settings(env_settings)
 
     return __agent_settings
-
-
-if __name__ == '__main__':
-    print(get_agent_settings().model_dump_json(indent=4))

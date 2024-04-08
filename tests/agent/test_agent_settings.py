@@ -39,3 +39,7 @@ class TestAgentSettings(TestCase):
         self.assertTrue(self.test_settings.nuvlaedge_debug)
         self.assertEqual(self.test_settings.nuvlaedge_log_level, 'DEBUG')
 
+    def test_assert_nuvlaedge_uuid(self):
+        self.test_settings.nuvlaedge_uuid_env = "nuvlabox/ENV_NUVLAEDGE_UUID"
+        self.assertEqual(self.test_settings._assert_nuvlaedge_uuid(), "nuvlabox/ENV_NUVLAEDGE_UUID")
+

@@ -123,6 +123,9 @@ class NuvlaClientWrapper:
         self._nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
         self._nuvlaedge_status_uuid: NuvlaID | None = None
 
+    def set_nuvlaedge_uuid(self, uuid: NuvlaID):
+        self._nuvlaedge_uuid = uuid
+
     @property
     def nuvlaedge_uuid(self) -> NuvlaID:
         return self._nuvlaedge_uuid
@@ -222,7 +225,7 @@ class NuvlaClientWrapper:
 
         if login_response.status_code in [200, 201]:
             logger.debug("Log in successful")
-            self._save_current_state_to_file()
+            self.save_current_state_to_file()
             return True
         else:
             logger.warning(f"Error logging in: {login_response}")
@@ -242,7 +245,7 @@ class NuvlaClientWrapper:
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
 
-        self._save_current_state_to_file()
+        self.save_current_state_to_file()
         # Then log in to access NuvlaEdge resources
         if not self.login_nuvlaedge():
             logger.warning("Could not log in after activation. NuvlaEdge will not work properly.")
@@ -306,7 +309,7 @@ class NuvlaClientWrapper:
         logger.debug(f"Response received from telemetry report: {response.data}")
         return response.data
 
-    def _save_current_state_to_file(self):
+    def save_current_state_to_file(self):
         """ Saves the current state of the NuvlaEdge client to a file.
 
         This method serializes the current state of the NuvlaEdge client, including the host, SSL verification setting,

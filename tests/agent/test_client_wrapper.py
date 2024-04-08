@@ -123,7 +123,7 @@ class TestClientWrapper(TestCase):
         mock_res.force_update.assert_called_once()
         mock_type.assert_called_once()
 
-    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper._save_current_state_to_file')
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.save_current_state_to_file')
     def test_login_nuvlaedge(self, mock_save):
         mock_response = Mock()
         self.mock_nuvla.login_apikey.return_value = mock_response
@@ -142,7 +142,7 @@ class TestClientWrapper(TestCase):
             mock_debug.assert_called_once()
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge')
-    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper._save_current_state_to_file')
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.save_current_state_to_file')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     def test_activate(self, mock_login, mock_save, mock_nuvlaedge):
         self.mock_nuvla._cimi_post.return_value = {}
@@ -206,7 +206,7 @@ class TestClientWrapper(TestCase):
     @patch('nuvlaedge.agent.nuvla.client_wrapper.write_file')
     def test_save_current_state_to_file(self, mock_write, mock_session):
         self.test_client.nuvlaedge_credentials = Mock()
-        self.test_client._save_current_state_to_file()
+        self.test_client.save_current_state_to_file()
         self.assertEqual(3, mock_write.call_count)
 
 

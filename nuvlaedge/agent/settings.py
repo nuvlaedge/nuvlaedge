@@ -181,7 +181,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             self._status_handler.warning(
                 self.status_handler.status_channel,
                 "AgentSettings",
-                "Trying to start a NuvlaEdge with and env UUID different from the "
+                "Trying to start a NuvlaEdge with an env UUID different from the "
                 "stored one. Running on stored ID and credentials... ")
             logging.warning(
                 f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
@@ -227,6 +227,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             logging.info("Nuvla API keys passed as arguments, these will replace local session")
             self._stored_session.credentials = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
                                                                    secret=self.nuvlaedge_api_secret)
+
             self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
 
         if self._stored_session and self._stored_session.credentials:
@@ -238,7 +239,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     @property
     def nuvlaedge_uuid(self):
-        return self.nuvlaedge_uuid_env
+        return self._nuvlaedge_uuid
 
     @property
     def nuvla_client(self):

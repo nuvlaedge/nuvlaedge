@@ -242,9 +242,10 @@ class NuvlaClientWrapper:
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
 
+        self._save_current_state_to_file()
         # Then log in to access NuvlaEdge resources
-        if self.login_nuvlaedge():
-            self._save_current_state_to_file()
+        if not self.login_nuvlaedge():
+            logger.warning("Could not log in after activation. NuvlaEdge will not work properly.")
 
         # Finally, force update the NuvlaEdge resource to get the latest state
         self.nuvlaedge.force_update()

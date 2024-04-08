@@ -482,7 +482,6 @@ class Agent:
             None
 
         """
-        logger.info("Running Agent...")
         self.worker_manager.start()
 
         next_cycle_in = self.action_handler.sleep_time()

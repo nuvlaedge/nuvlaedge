@@ -155,7 +155,11 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         if self._stored_session:
             self._stored_session.nuvlaedge_uuid = self._nuvlaedge_uuid
 
-        logging.error("Initialising agent settings for NuvlaEdge: %s", self.nuvlaedge_uuid)
+        logging.info("Initialising agent settings for NuvlaEdge: %s", self.nuvlaedge_uuid)
+
+    @staticmethod
+    def get_uuid(href):
+        return href.split('/')[-1] if href else href
 
     def _assert_nuvlaedge_uuid(self) -> NuvlaID:
         """
@@ -168,9 +172,6 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         Returns:
         """
 
-        def get_uuid(href):
-            return href.split('/')[-1] if href else href
-
         nuvla_nuvlaedge_id = None
         env_nuvlaedge_id = self.nuvlaedge_uuid_env
         stored_nuvlaedge_id = self._stored_session.nuvlaedge_uuid if self._stored_session else None
@@ -181,7 +182,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             nuvla_nuvlaedge_id = self._nuvla_client.find_nuvlaedge_id_from_nuvla_session()
 
         if (stored_nuvlaedge_id and env_nuvlaedge_id and
-                get_uuid(stored_nuvlaedge_id) != get_uuid(env_nuvlaedge_id)):
+                self.get_uuid(stored_nuvlaedge_id) != self.get_uuid(env_nuvlaedge_id)):
             self._status_handler.warning(
                 self.status_handler.status_channel,
                 "AgentSettings",
@@ -195,7 +196,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                 f'environment variable to match the old {stored_nuvlaedge_id}')
 
         if (stored_nuvlaedge_id and nuvla_nuvlaedge_id and
-                get_uuid(stored_nuvlaedge_id) != get_uuid(nuvla_nuvlaedge_id)):
+                self.get_uuid(stored_nuvlaedge_id) != self.get_uuid(nuvla_nuvlaedge_id)):
             self._status_handler.warning(self.status_handler.status_channel,
                                          "AgentSettings",
                                          "NuvlaEdge ID missmatch between stored data and Nuvla session "
@@ -242,8 +243,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
 
             _login_success = self._nuvla_client.login_nuvlaedge()
-            _uuids_match = (self._nuvla_client.find_nuvlaedge_id_from_nuvla_session() ==
-                            self._stored_session.nuvlaedge_uuid)
+            # To prevent a situation where the stored session is not valid anymore, we need to check if the UUID's match
+            # before the assessment of the uuid.
+            _uuids_match = (self.get_uuid(self._nuvla_client.find_nuvlaedge_id_from_nuvla_session()) ==
+                            self.get_uuid(self._stored_session.nuvlaedge_uuid))
             if _login_success and _uuids_match:
                 # After logging in if UUID's match, save the session to file
                 self._nuvla_client.save_current_state_to_file()

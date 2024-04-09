@@ -225,7 +225,6 @@ class NuvlaClientWrapper:
 
         if login_response.status_code in [200, 201]:
             logger.debug("Log in successful")
-            self.save_current_state_to_file()
             return True
         else:
             logger.warning(f"Error logging in: {login_response}")

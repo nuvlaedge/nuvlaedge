@@ -203,14 +203,13 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                                          "credentials.")
             logging.warning(f'NuvlaEdge from context file ({stored_nuvlaedge_id}) '
                             f'do not match session identifier ({nuvla_nuvlaedge_id})')
-
-        if nuvla_nuvlaedge_id:
-            logging.info("Using NuvlaEdge UUID from Nuvla session")
-            _found_id = nuvla_nuvlaedge_id
-
-        elif stored_nuvlaedge_id:
+        if stored_nuvlaedge_id:
             logging.info("Using NuvlaEdge UUID from stored session file")
             _found_id = stored_nuvlaedge_id
+
+        elif nuvla_nuvlaedge_id:
+            logging.info("Using NuvlaEdge UUID from Nuvla session")
+            _found_id = nuvla_nuvlaedge_id
 
         elif env_nuvlaedge_id:
             logging.info("Using NuvlaEdge UUID from environment variable. Most likely a new installation.")

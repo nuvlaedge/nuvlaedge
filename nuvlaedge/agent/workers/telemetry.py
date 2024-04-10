@@ -21,6 +21,7 @@ from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.common.utils import dump_dict_to_str
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
+_status_module_name = 'Telemetry'
 
 
 class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
@@ -163,7 +164,7 @@ class Telemetry:
         self.monitor_list: dict[str, Monitor] = {}
         self._initialize_monitors()
 
-        NuvlaEdgeStatusHandler.starting(self.status_channel, 'Telemetry')
+        NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
     def _initialize_monitors(self):
         """
@@ -267,7 +268,7 @@ class Telemetry:
         Returns:
             None
         """
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'Telemetry')
+        NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
 
         logger.info("Collecting monitor metrics...")
         """ Retrieve data from monitors (If not threaded) and check threaded monitors health"""

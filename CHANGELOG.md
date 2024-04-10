@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.14.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.0) (2024-04-03)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.2...2.14.0)
+
+**Merged pull requests:**
+
+- fix: adds a prebuild version of pydantic from Alpine edge repo. [\#164](https://github.com/nuvlaedge/nuvlaedge/pull/164) ([ignacio-penas](https://github.com/ignacio-penas))
+- Add nuvla-job-engine package to requirements to install job-engine tools [\#158](https://github.com/nuvlaedge/nuvlaedge/pull/158) ([ignacio-penas](https://github.com/ignacio-penas))
+- Refactor nuvlaedge common and agent [\#150](https://github.com/nuvlaedge/nuvlaedge/pull/150) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.13.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.2) (2024-04-02)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.1...2.13.2)

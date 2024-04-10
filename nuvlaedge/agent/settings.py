@@ -83,7 +83,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_api_key:                  Optional[str] = None
     nuvlaedge_api_secret:               Optional[str] = None
     nuvlaedge_excluded_monitors:        Optional[str] = None
-    nuvlaedge_immutable_ssh_pub_key:    Optional[str] = Field(None, alias='NUVLAEDGE_SSH_PUB_KEY')
+    nuvlaedge_immutable_ssh_pub_key:    Optional[str] = None
     vpn_config_extra:                   Optional[str] = None
 
     # Dev configuration

@@ -25,6 +25,7 @@ from nuvlaedge.agent.orchestrator import COEClient
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
+_status_module_name = 'Commissioner'
 
 
 class CommissioningAttributes(NuvlaEdgeStaticModel):
@@ -105,7 +106,7 @@ class Commissioner:
         # Find the commissioning file and load it as _last_payload if exists
         self._load_previous_commission()
 
-        NuvlaEdgeStatusHandler.starting(self.status_channel, 'commissioner')
+        NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
     def _commission(self):
         """ Executes the commissioning operation.
@@ -227,7 +228,7 @@ class Commissioner:
             None
         """
         logger.info("Running Commissioning checks")
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'commissioner')
+        NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
 
         # Read the current status of the device and update the attributes
         self._current_payload = CommissioningAttributes()

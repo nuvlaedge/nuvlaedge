@@ -2,6 +2,7 @@ import json
 import logging
 import time
 from pathlib import Path
+from typing import Optional
 
 from nuvla.api.models import CimiResponse, CimiCollection, CimiResource
 from pydantic import BaseModel
@@ -21,10 +22,9 @@ from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              AutoNuvlaEdgeStatusResource,
                                              AutoInfrastructureServiceResource,
                                              AutoCredentialResource)
-from nuvlaedge.agent.settings import AgentSettings
-from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
+from ..settings import NuvlaApiKeyTemplate, NuvlaEdgeSession
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.file_operations import read_file, write_file, file_exists_and_not_empty
+from nuvlaedge.common.file_operations import read_file, write_file
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -41,22 +41,6 @@ class NuvlaEndPoints:
 
     nuvlaedge: str = base_path + 'nuvlabox/'
     nuvlaedge_status: str = base_path + 'nuvlabox-status/'
-
-
-class NuvlaApiKeyTemplate(BaseModel, frozen=True):
-    key: str
-    secret: str
-    href: str = "session-template/api-key"
-
-
-class NuvlaEdgeSession(NuvlaEdgeBaseModel):
-    endpoint:               str
-    verify:                 bool
-
-    credentials:            NuvlaApiKeyTemplate
-
-    nuvlaedge_uuid:         NuvlaID | None = None
-    nuvlaedge_status_uuid:  NuvlaID | None = None
 
 
 def format_host(host: str) -> str:
@@ -138,6 +122,9 @@ class NuvlaClientWrapper:
 
         self._nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
         self._nuvlaedge_status_uuid: NuvlaID | None = None
+
+    def set_nuvlaedge_uuid(self, uuid: NuvlaID):
+        self._nuvlaedge_uuid = uuid
 
     @property
     def nuvlaedge_uuid(self) -> NuvlaID:
@@ -232,14 +219,16 @@ class NuvlaClientWrapper:
                                              **kwargs)
         self._resources[res_name].force_update()
 
-    def login_nuvlaedge(self):
+    def login_nuvlaedge(self) -> bool:
         login_response: Response = self.nuvlaedge_client.login_apikey(self.nuvlaedge_credentials.key,
                                                                       self.nuvlaedge_credentials.secret)
 
         if login_response.status_code in [200, 201]:
             logger.debug("Log in successful")
+            return True
         else:
             logger.warning(f"Error logging in: {login_response}")
+            return False
 
     def activate(self):
         """ Activates the NuvlaEdge, saves the returned api-keys and logs in.
@@ -254,11 +243,11 @@ class NuvlaClientWrapper:
         self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
-        # Firstly, save the key pair to file
-        self._save_current_state_to_file()
 
+        self.save_current_state_to_file()
         # Then log in to access NuvlaEdge resources
-        self.login_nuvlaedge()
+        if not self.login_nuvlaedge():
+            logger.warning("Could not log in after activation. NuvlaEdge will not work properly.")
 
         # Finally, force update the NuvlaEdge resource to get the latest state
         self.nuvlaedge.force_update()
@@ -319,7 +308,7 @@ class NuvlaClientWrapper:
         logger.debug(f"Response received from telemetry report: {response.data}")
         return response.data
 
-    def _save_current_state_to_file(self):
+    def save_current_state_to_file(self):
         """ Saves the current state of the NuvlaEdge client to a file.
 
         This method serializes the current state of the NuvlaEdge client, including the host, SSL verification setting,
@@ -351,13 +340,14 @@ class NuvlaClientWrapper:
         legacy_context = {"id": self.nuvlaedge_uuid}
         write_file(legacy_context, LEGACY_FILES.CONTEXT)
 
-    def _find_uuid_from_api(self, resource_type: str) -> NuvlaID:
+    def find_nuvlaedge_id_from_nuvla_session(self) -> Optional[NuvlaID]:
         try:
-            response: CimiCollection = self.nuvlaedge_client.search(resource_type=resource_type)
-            return NuvlaID(response.resources[0].id)
+            nuvlaedge_id = self.nuvlaedge_client.get(self.nuvlaedge_client.current_session()).data['identifier']
+            self._nuvlaedge_uuid = nuvlaedge_id
+            return NuvlaID(nuvlaedge_id)
         except Exception as e:
-            logger.warning(f"Could not find {resource_type} with filter {filter} with error: {e}")
-            return NuvlaID("")
+            logger.warning(f"Could not find id with with error: {e}")
+            return None
 
     @classmethod
     def from_session_store(cls, file: Path | str):
@@ -385,43 +375,9 @@ class NuvlaClientWrapper:
             _client.login_nuvlaedge()
 
         # If uuid is none in session, retrieve it from the API
-        if _client.nuvlaedge_uuid is None or _client.nuvlaedge_uuid == NuvlaID('') and _client.nuvlaedge_credentials is not None:
+        if not _client.nuvlaedge_uuid and _client.nuvlaedge_credentials is not None:
             logger.info("NuvlaEdge UUID not found in session, retrieving from API...")
-            _client._nuvlaedge_uuid = _client._find_uuid_from_api('nuvlabox')
+            _client._nuvlaedge_uuid = _client.find_nuvlaedge_id_from_nuvla_session()
             logger.info(f"NuvlaEdge UUID not found in session, retrieving from API... {_client._nuvlaedge_uuid}")
 
         return _client
-
-    @classmethod
-    def from_agent_settings(cls, settings: AgentSettings):
-        """ Creates a NuvlaEdgeClient object from the Agent settings
-
-        Args:
-            settings: configuration of the NuvlaEdge which should include,
-               - endpoint
-               - verify
-               - nuvlaedge_uuid
-
-        Returns: a NuvlaEdgeClient object
-
-        """
-        logger.debug("Initializing NuvlaEdge client from agent settings...")
-        _client = cls(host=settings.nuvla_endpoint,
-                      verify=settings.nuvla_endpoint_insecure,
-                      nuvlaedge_uuid=settings.nuvlaedge_uuid)
-
-        if settings.nuvlaedge_api_key is not None and settings.nuvlaedge_api_secret is not None:
-            logger.debug("API keys found in settings, logging in...")
-            _client.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=settings.nuvlaedge_api_key,
-                                                                secret=settings.nuvlaedge_api_secret)
-            _client.login_nuvlaedge()
-
-        if ((_client.nuvlaedge_uuid is None or _client.nuvlaedge_uuid == NuvlaID(''))
-                and _client.nuvlaedge_credentials is not None):
-            logger.info("NuvlaEdge UUID not found in settings, retrieving from API...")
-            _client._nuvlaedge_uuid = _client._find_uuid_from_api('nuvlabox')
-            logger.info(f"NuvlaEdge UUID not found in settings, retrieving from API... {_client._nuvlaedge_uuid}")
-
-        return cls(host=settings.nuvla_endpoint,
-                   verify=not settings.nuvla_endpoint_insecure,
-                   nuvlaedge_uuid=settings.nuvlaedge_uuid)

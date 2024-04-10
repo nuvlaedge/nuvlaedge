@@ -49,6 +49,12 @@ class TestStatusHandler(TestCase):
         self.test_module.module_status = 'STOPPED'
         self.test_status_handler.add_module(self.test_module)
         self.test_status_handler.process_status()
+        self.assertEqual(self.test_status_handler._status, 'OPERATIONAL')
+
+        # Test with one module in FAILING
+        self.test_module.module_status = 'FAILING'
+        self.test_status_handler.add_module(self.test_module)
+        self.test_status_handler.process_status()
         self.assertEqual(self.test_status_handler._status, 'DEGRADED')
 
     @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.add_module')

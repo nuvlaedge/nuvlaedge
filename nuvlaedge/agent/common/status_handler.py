@@ -16,7 +16,7 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 class StatusReport(BaseModel):
     origin_module: str
-    module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'FAILING', 'FAILED', 'UNKNOWN']
+    module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'WARNING', 'FAILING', 'FAILED', 'UNKNOWN']
     date: datetime
     message: str = ''
 
@@ -53,11 +53,11 @@ class NuvlaEdgeStatusHandler:
         for module_name, module_report in self.module_reports.items():
             logger.debug(f"Processing module {module_report}")
 
-            if module_report.module_status in ['STOPPED', 'FAILING', 'FAILED']:
+            if module_report.module_status in ['FAILING', 'FAILED']:
                 logger.debug(f"Module {module_name} is in STOPPED, FAILING or FAILED")
                 temp_status = 'DEGRADED'
 
-            if module_report.module_status in ['STARTING', 'RUNNING'] and temp_status != 'DEGRADED':
+            if module_report.module_status in ['STOPPED', 'STARTING', 'RUNNING'] and temp_status != 'DEGRADED':
                 logger.debug(f"Module {module_name} is in STARTING or RUNNING")
                 temp_status = 'OPERATIONAL'
 
@@ -149,3 +149,7 @@ class NuvlaEdgeStatusHandler:
     @classmethod
     def failed(cls, channel: Queue, module_name: str, message: str = ''):
         cls.send_status(channel, module_name, 'FAILED', message)
+
+    @classmethod
+    def warning(cls, channel: Queue, module_name: str, message: str = ''):
+        cls.send_status(channel, module_name, 'WARNING', message)

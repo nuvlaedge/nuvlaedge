@@ -21,6 +21,7 @@ from nuvlaedge.common.file_operations import create_directory
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
+_status_module_name = 'Peripheral Manager'
 
 
 class PeripheralManager:
@@ -82,7 +83,7 @@ class PeripheralManager:
 
         create_directory(FILE_NAMES.PERIPHERALS_FOLDER)
 
-        NuvlaEdgeStatusHandler.starting(self.status_channel, 'peripheral_manager')
+        NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
     def update_running_managers(self):
         """
@@ -184,7 +185,7 @@ class PeripheralManager:
         Method to run the scanning process for detected devices.
         """
         logger.info('Scanning for detected devices')
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'peripheral_manager')
+        NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
 
         self.update_running_managers()
 

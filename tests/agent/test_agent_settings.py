@@ -1,3 +1,4 @@
+import os
 from unittest import TestCase
 import mock
 
@@ -11,6 +12,7 @@ import nuvlaedge.agent.settings as settings
 
 class TestAgentSettings(TestCase):
     def setUp(self):
+        os.environ["NUVLAEDGE_UUID"] = 'some_uuid'
         self.test_settings = AgentSettings()
 
     # Tests for parse_cmd_line_args
@@ -36,4 +38,8 @@ class TestAgentSettings(TestCase):
         self.assertEqual(get_cmd_line_settings(self.test_settings), self.test_settings)
         self.assertTrue(self.test_settings.nuvlaedge_debug)
         self.assertEqual(self.test_settings.nuvlaedge_log_level, 'DEBUG')
+
+    def test_assert_nuvlaedge_uuid(self):
+        self.test_settings.nuvlaedge_uuid_env = "nuvlabox/ENV_NUVLAEDGE_UUID"
+        self.assertEqual(self.test_settings._assert_nuvlaedge_uuid(), "nuvlabox/ENV_NUVLAEDGE_UUID")
 

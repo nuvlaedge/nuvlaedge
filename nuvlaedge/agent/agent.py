@@ -29,6 +29,7 @@ import sys
 import time
 from queue import Queue
 from threading import Event
+from typing import Optional
 
 from nuvla.api.models import CimiResponse
 
@@ -47,15 +48,14 @@ from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.nuvla.resources import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate
 from nuvlaedge.agent.manager import WorkerManager
-from nuvlaedge.agent.settings import (AgentSettings,
-                                      AgentSettingsMissMatch,
-                                      InsufficientSettingsProvided)
+from nuvlaedge.agent.settings import (AgentSettings, InsufficientSettingsProvided)
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.models import model_diff
 
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
+_status_module_name: str = 'Agent'
 
 
 class Agent:
@@ -111,7 +111,7 @@ class Agent:
         self.action_handler: ActionHandler = ActionHandler([])
 
         # Agent Status handler
-        self.status_handler: NuvlaEdgeStatusHandler = NuvlaEdgeStatusHandler()
+        self.status_handler: NuvlaEdgeStatusHandler = self.settings.status_handler
 
         # Telemetry sent to nuvla
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
@@ -121,40 +121,7 @@ class Agent:
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
         # Report initial status
-        NuvlaEdgeStatusHandler.starting(self.status_channel, 'agent')
-
-    @staticmethod
-    def check_uuid_missmatch(env_uuid, other_uuid):
-        """ This method checks if the UUID provided as an environmental variable matches the one stored locally
-        Args:
-            env_uuid: UUID parsed as an environmental variable
-            other_uuid: UUID stored locally or retrieved from API keys
-
-        Raises: AgentSettingsMissMatch if the UUID's are not equal
-
-        """
-        # Check UUID missmatch
-        if env_uuid != other_uuid:
-            logger.error(f"Parsed UUID {env_uuid} is different from the locally stored "
-                         f"{other_uuid} session. You are probably trying to install a "
-                         f"new NuvlaEdge, please remove previous volumes and installation files")
-            raise AgentSettingsMissMatch(f"Provided NuvlaEdge UUID {env_uuid} must"
-                                         f"match the locally stored. Remove previous installation of NuvlaEdge")
-
-    def _create_nuvla_client(self) -> NuvlaClientWrapper:
-        """
-        Returns the Nuvla client wrapper.
-
-        Returns:
-            NuvlaClientWrapper: The Nuvla client wrapper.
-
-        """
-        # Stored session found -> Previous installation
-        if file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION):
-            logger.info("Starting NuvlaEdge from previously stored session")
-            return NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
-
-        return NuvlaClientWrapper.from_agent_settings(self.settings)
+        NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
     def _assert_current_state(self) -> State:
         """
@@ -181,11 +148,7 @@ class Agent:
         Raises: AgentSettingsMissMatch if the UUID's are not equal
         """
 
-        self._nuvla_client = self._create_nuvla_client()
-
-        # Check for possible settings missmatch
-        if self.settings.nuvlaedge_uuid is not None and self._nuvla_client.nuvlaedge_uuid is not None:
-            self.check_uuid_missmatch(self.settings.nuvlaedge_uuid, self._nuvla_client.nuvlaedge_uuid)
+        self._nuvla_client = self.settings.nuvla_client
 
         _state: State = State.NEW
 
@@ -329,8 +292,9 @@ class Agent:
         Returns: None
 
         """
-        if self.settings.nuvlaedge_immutable_ssh_pub_key is not None and self.settings.host_home is not None:
-            logger.info("Installing SSH key...")
+        if self.settings.nuvlaedge_immutable_ssh_pub_key and self.settings.host_home is not None:
+            logger.info(f"Installing SSH key... "
+                        f"{self.settings.nuvlaedge_immutable_ssh_pub_key} on {self.settings.host_home}")
             self._coe_engine.install_ssh_key(self.settings.nuvlaedge_immutable_ssh_pub_key, self.settings.host_home)
 
     def start_agent(self):
@@ -418,7 +382,7 @@ class Agent:
         if self.telemetry_channel.empty():
             logger.warning("Telemetry class not reporting fast enough to Agent")
             NuvlaEdgeStatusHandler.failing(self.status_channel,
-                                           'agent',
+                                           _status_module_name,
                                            "Telemetry not reported fast enough")
             new_telemetry: TelemetryPayloadAttributes = self.telemetry_payload.model_copy(deep=True)
         else:
@@ -441,7 +405,7 @@ class Agent:
         # If telemetry is successful save telemetry
         if response:
             logger.info("Executing telemetry... Success")
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
             write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
@@ -467,7 +431,7 @@ class Agent:
 
         if response:
             logger.info("Executing heartbeat... Success")
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
 
         return response
 
@@ -520,17 +484,16 @@ class Agent:
             None
 
         """
-        logger.info("Running Agent...")
         self.worker_manager.start()
 
         next_cycle_in = self.action_handler.sleep_time()
         logger.debug(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
 
         while not self._exit.wait(next_cycle_in):
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
             start_cycle: float = time.perf_counter()
 
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
 
             next_action = self.action_handler.next
 

@@ -81,7 +81,7 @@ def __get_file_handler(filename: str) -> logging.FileHandler:
     """
     if not _LOG_PATH.exists():
         _LOG_PATH.mkdir(parents=True, exist_ok=True)
-    file_handler = RotatingFileHandler(_LOG_PATH/f"{filename}.log", maxBytes=5*1024*1024)
+    file_handler = RotatingFileHandler(_LOG_PATH/f"{filename}.log", maxBytes=5*1024*1024, backupCount=3)
     file_handler.setFormatter(COMMON_LOG_FORMATTER)
 
     # Default log level for file logging is WARNING unless debug is enabled

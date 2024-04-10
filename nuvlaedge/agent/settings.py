@@ -3,10 +3,13 @@ from argparse import ArgumentParser, Namespace
 import logging
 from typing import Optional
 
-from pydantic import Field, field_validator, validator
+from pydantic import Field, field_validator, BaseModel, AliasChoices
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
+from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
+from nuvlaedge.common.file_operations import file_exists_and_not_empty, read_file
+from nuvlaedge.common.constant_files import FILE_NAMES
 
 
 DEFAULT_AGENT_SETTINGS_FILE = 'nuvlaedge'
@@ -24,6 +27,22 @@ class InsufficientSettingsProvided(Exception):
 class AgentSettingsMissMatch(Exception):
     """ An exception raised when there is a mismatch in the agent settings. """
     ...
+
+
+class NuvlaApiKeyTemplate(BaseModel, frozen=True):
+    key: str
+    secret: str
+    href: str = "session-template/api-key"
+
+
+class NuvlaEdgeSession(NuvlaEdgeBaseModel):
+    endpoint:               str
+    verify:                 bool
+
+    credentials:            NuvlaApiKeyTemplate
+
+    nuvlaedge_uuid:         NuvlaID | None = None
+    nuvlaedge_status_uuid:  NuvlaID | None = None
 
 
 class AgentSettings(NuvlaEdgeBaseSettings):
@@ -66,8 +85,12 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         validate_fields(self): Validates the fields of the AgentSettings instance.
 
     """
+
     # Required
-    nuvlaedge_uuid:                     Optional[NuvlaID] = None
+    nuvlaedge_uuid_env:                Optional[NuvlaID] = Field(None,
+                                                                 validation_alias=AliasChoices(
+                                                                     'NUVLAEDGE_UUID',
+                                                                     'NUVLABOX_UUID'))
     host_home:                          str = Field(..., alias="HOME")
 
     # Required with default values
@@ -106,11 +129,150 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_debug:                    bool = False
     disable_file_logging:               bool = False
 
-    @field_validator('nuvlaedge_uuid', mode='after')
-    def nameless_uuid(cls, v):
-        if v is not None and not v.startswith('nuvlabox/'):
-            return NuvlaID(f"nuvlabox/{v}")
-        return v
+    _nuvla_client = None
+    _status_handler = None
+    _status_report_type = None
+
+    _nuvlaedge_uuid:                    Optional[NuvlaID] = None
+    _stored_session:                    Optional[NuvlaEdgeSession] = None
+
+    def __init__(self, **values):
+        super().__init__(**values)
+        logging.info("Initialising AgentSettings...")
+
+        # Check legacy settings
+        # Adds support for updating to NuvlaEdge > 2.13.0
+        from nuvlaedge.agent.common.legacy_support import transform_legacy_config_if_needed
+        transform_legacy_config_if_needed()
+
+        from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
+        self._status_handler = NuvlaEdgeStatusHandler()
+        self._status_report_type = StatusReport
+
+        _dict_session = read_file(FILE_NAMES.NUVLAEDGE_SESSION, decode_json=True, warn_on_missing=False)
+        if _dict_session is not None:
+            logging.info(f"Loading NuvlaEdge session from file {FILE_NAMES.NUVLAEDGE_SESSION}")
+            self._stored_session = NuvlaEdgeSession.model_validate(_dict_session)
+            # Set immutable nuvla endpoint into settings
+            self.nuvla_endpoint = self._stored_session.endpoint
+
+        self._create_client_from_settings()
+
+        self._nuvlaedge_uuid = self._assert_nuvlaedge_uuid()
+        self._nuvla_client.set_nuvlaedge_uuid(self._nuvlaedge_uuid)
+
+        if self._stored_session:
+            self._stored_session.nuvlaedge_uuid = self._nuvlaedge_uuid
+
+        logging.info("Initialising agent settings for NuvlaEdge: %s", self.nuvlaedge_uuid)
+
+    @staticmethod
+    def get_uuid(href):
+        return href.split('/')[-1] if href else href
+
+    def _assert_nuvlaedge_uuid(self) -> NuvlaID:
+        """
+        NuvlaEdge UUID is asserted once when the agent starts and from then on it is immutable.
+        Priority:
+        1  NuvlaEdge UUID from NuvlaClient:
+          1.1 either from saved local session or from Nuvla
+          1.2 or inferred from Nuvla if API are provided from
+        2. NuvlaEdge UUID from the environment variable
+        Returns:
+        """
+
+        nuvla_nuvlaedge_id = None
+        env_nuvlaedge_id = self.nuvlaedge_uuid_env
+        stored_nuvlaedge_id = self._stored_session.nuvlaedge_uuid if self._stored_session else None
+        _found_id = None
+
+        if self._nuvla_client.nuvlaedge_credentials and self._nuvla_client.login_nuvlaedge():
+            # NuvlaEdge UUID will always prevail from
+            nuvla_nuvlaedge_id = self._nuvla_client.find_nuvlaedge_id_from_nuvla_session()
+
+        if (stored_nuvlaedge_id and env_nuvlaedge_id and
+                self.get_uuid(stored_nuvlaedge_id) != self.get_uuid(env_nuvlaedge_id)):
+            self._status_handler.warning(
+                self.status_handler.status_channel,
+                "Agent Settings",
+                "Trying to start a NuvlaEdge with an env UUID different from the "
+                "stored one. Running on stored ID and credentials... ")
+            logging.warning(
+                f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
+                f'though a previous NuvlaEdge installation ({stored_nuvlaedge_id}) '
+                f'still exists in the system! You can either delete the previous '
+                f'installation (removing all data volumes) or fix the NUVLAEDGE_UUID '
+                f'environment variable to match the old {stored_nuvlaedge_id}')
+
+        if (stored_nuvlaedge_id and nuvla_nuvlaedge_id and
+                self.get_uuid(stored_nuvlaedge_id) != self.get_uuid(nuvla_nuvlaedge_id)):
+            self._status_handler.warning(self.status_handler.status_channel,
+                                         "AgentSettings",
+                                         "NuvlaEdge ID missmatch between stored data and Nuvla session "
+                                         "credentials.")
+            logging.warning(f'NuvlaEdge from context file ({stored_nuvlaedge_id}) '
+                            f'do not match session identifier ({nuvla_nuvlaedge_id})')
+        if stored_nuvlaedge_id:
+            logging.info("Using NuvlaEdge UUID from stored session file")
+            _found_id = stored_nuvlaedge_id
+
+        elif nuvla_nuvlaedge_id:
+            logging.info("Using NuvlaEdge UUID from Nuvla session")
+            _found_id = nuvla_nuvlaedge_id
+
+        elif env_nuvlaedge_id:
+            logging.info("Using NuvlaEdge UUID from environment variable. Most likely a new installation.")
+            _found_id = env_nuvlaedge_id
+
+        else:
+            logging.error("We shouldn't have reached this point. NuvlaEdge UUID is required to start the agent")
+            raise InsufficientSettingsProvided("NuvlaEdge UUID is required to start the agent")
+
+        if not _found_id.startswith("nuvlabox/") and not _found_id.startswith("nuvlaedge/"):
+            return NuvlaID(f"nuvlabox/{_found_id}")
+
+        return _found_id
+
+    def _create_client_from_settings(self):
+        from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+
+        self._nuvla_client = NuvlaClientWrapper(self.nuvla_endpoint, self.nuvla_endpoint_insecure, self.nuvlaedge_uuid)
+
+        # Handle a special case when the NuvlaEdge credentials are provided as ENV variables. These credentials need
+        # to replace any local session if the configuration match with the stored session and Nuvla after login.
+        if self.nuvlaedge_api_key and self.nuvlaedge_api_secret:
+            logging.info("Nuvla API keys passed as arguments, these will replace local session")
+            creds = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
+                                        secret=self.nuvlaedge_api_secret)
+            if self._stored_session:
+                self._stored_session.credentials = creds
+
+            self._nuvla_client.nuvlaedge_credentials = creds
+
+        if self._stored_session and self._stored_session.credentials:
+            logging.info("Nuvla API keys found in stored session, using them to login")
+            self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
+
+            _login_success = self._nuvla_client.login_nuvlaedge()
+            # To prevent a situation where the stored session is not valid anymore, we need to check if the UUID's match
+            # before the assessment of the uuid.
+            _uuids_match = (self.get_uuid(self._nuvla_client.find_nuvlaedge_id_from_nuvla_session()) ==
+                            self.get_uuid(self._stored_session.nuvlaedge_uuid))
+            if _login_success and _uuids_match:
+                # After logging in if UUID's match, save the session to file
+                self._nuvla_client.save_current_state_to_file()
+
+    @property
+    def status_handler(self):
+        return self._status_handler
+
+    @property
+    def nuvlaedge_uuid(self):
+        return self._nuvlaedge_uuid
+
+    @property
+    def nuvla_client(self):
+        return self._nuvla_client
 
     @field_validator('vpn_config_extra', mode='after')
     def clean_config_extra(cls, v):
@@ -163,7 +325,3 @@ def get_agent_settings() -> AgentSettings:
     __agent_settings = get_cmd_line_settings(env_settings)
 
     return __agent_settings
-
-
-if __name__ == '__main__':
-    print(get_agent_settings().model_dump_json(indent=4))

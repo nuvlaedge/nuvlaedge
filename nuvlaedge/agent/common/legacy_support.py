@@ -1,8 +1,4 @@
-import json
 import logging
-import shutil
-
-import dotenv
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaEdgeSession, NuvlaApiKeyTemplate
 from nuvlaedge.agent.nuvla.resources import NuvlaID
@@ -10,7 +6,7 @@ from nuvlaedge.common.file_operations import read_file, write_file, copy_file
 from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 
 
-logger: logging.Logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger()
 
 
 def _extract_nuvla_configuration() -> tuple[str, bool]:
@@ -114,7 +110,7 @@ def _need_legacy_config_transformation():
 def transform_legacy_config_if_needed():
 
     if not _need_legacy_config_transformation():
-        logger.debug("Configuration up to date with new format")
+        logger.info("Configuration up to date with new format")
         return
 
     # There is no way of being sure if the commissioning data is really the last one,

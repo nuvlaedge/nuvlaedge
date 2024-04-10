@@ -76,21 +76,21 @@ def file_exists_and_not_empty(filename: str | Path):
     return file_exists(filename) and filename.stat().st_size != 0
 
 
-def read_file(file: str | Path, decode_json=False, remove_file_on_error=True, **kwargs) -> dict | str | None:
+def read_file(file: str | Path,
+              decode_json=False,
+              remove_file_on_error=True,
+              warn_on_missing: bool = True,
+              **kwargs) -> dict | str | None:
     """
-    Reads a JSON file. Json encoding errors should be handled by calling instance
 
-    :param decode_json: True if want to decode json file else not
-    :param remove_file_on_error: True if removes the file else not
-    :param file: path of the file to be read
-    :return: content of the file, as a dict if any. An empty dict if file doesn't exist or is empty
     """
 
     if isinstance(file, str):
         file = Path(file)
 
     if not file_exists_and_not_empty(file):
-        logger.warning(f"File {file} does not exists or is empty")
+        if warn_on_missing:
+            logger.warning(f"File {file} does not exists or is empty")
         return None
 
     with file.open(mode='r', **kwargs) as f:

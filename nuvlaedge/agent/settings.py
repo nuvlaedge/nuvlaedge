@@ -103,7 +103,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_api_key:                  Optional[str] = None
     nuvlaedge_api_secret:               Optional[str] = None
     nuvlaedge_excluded_monitors:        Optional[str] = None
-    nuvlaedge_immutable_ssh_pub_key:    Optional[str] = Field(None, alias='NUVLAEDGE_SSH_PUB_KEY')
+    nuvlaedge_immutable_ssh_pub_key:    Optional[str] = None
     vpn_config_extra:                   Optional[str] = None
 
     # Dev configuration
@@ -136,6 +136,12 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     def __init__(self, **values):
         super().__init__(**values)
         logging.info("Initialising AgentSettings...")
+
+        # Check legacy settings
+        # Adds support for updating to NuvlaEdge > 2.13.0
+        from nuvlaedge.agent.common.legacy_support import transform_legacy_config_if_needed
+        transform_legacy_config_if_needed()
+
         from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
         self._status_handler = NuvlaEdgeStatusHandler()
         self._status_report_type = StatusReport

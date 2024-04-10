@@ -18,9 +18,6 @@ def main():
                               disable_file_logging=agent_settings.disable_file_logging)
     agent_event: Event = Event()
 
-    # Adds support for updating to NuvlaEdge > 2.13.0
-    transform_legacy_config_if_needed()
-
     from nuvlaedge.common.constants import CTE
     from nuvlaedge.agent.agent import Agent
 
@@ -30,4 +27,3 @@ def main():
                                    settings=agent_settings)
     nuvlaedge_agent.start_agent()
     nuvlaedge_agent.run()
-

@@ -291,8 +291,9 @@ class Agent:
         Returns: None
 
         """
-        if self.settings.nuvlaedge_immutable_ssh_pub_key is not None and self.settings.host_home is not None:
-            logger.info("Installing SSH key...")
+        if self.settings.nuvlaedge_immutable_ssh_pub_key and self.settings.host_home is not None:
+            logger.info(f"Installing SSH key... "
+                        f"{self.settings.nuvlaedge_immutable_ssh_pub_key} on {self.settings.host_home}")
             self._coe_engine.install_ssh_key(self.settings.nuvlaedge_immutable_ssh_pub_key, self.settings.host_home)
 
     def start_agent(self):

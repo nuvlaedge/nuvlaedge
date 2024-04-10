@@ -185,7 +185,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                 self.get_uuid(stored_nuvlaedge_id) != self.get_uuid(env_nuvlaedge_id)):
             self._status_handler.warning(
                 self.status_handler.status_channel,
-                "AgentSettings",
+                "Agent Settings",
                 "Trying to start a NuvlaEdge with an env UUID different from the "
                 "stored one. Running on stored ID and credentials... ")
             logging.warning(
@@ -233,12 +233,15 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         # to replace any local session if the configuration match with the stored session and Nuvla after login.
         if self.nuvlaedge_api_key and self.nuvlaedge_api_secret:
             logging.info("Nuvla API keys passed as arguments, these will replace local session")
-            self._stored_session.credentials = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
-                                                                   secret=self.nuvlaedge_api_secret)
+            creds = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
+                                        secret=self.nuvlaedge_api_secret)
+            if self._stored_session:
+                self._stored_session.credentials = creds
 
-            self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
+            self._nuvla_client.nuvlaedge_credentials = creds
 
         if self._stored_session and self._stored_session.credentials:
+            logging.info("Nuvla API keys found in stored session, using them to login")
             self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
 
             _login_success = self._nuvla_client.login_nuvlaedge()

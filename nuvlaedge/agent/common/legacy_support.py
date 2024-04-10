@@ -114,7 +114,7 @@ def _need_legacy_config_transformation():
 def transform_legacy_config_if_needed():
 
     if not _need_legacy_config_transformation():
-        logger.debug("Configuration up to date with new format")
+        logger.info("Configuration up to date with new format")
         return
 
     # There is no way of being sure if the commissioning data is really the last one,

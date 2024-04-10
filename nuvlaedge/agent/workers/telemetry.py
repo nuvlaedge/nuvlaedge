@@ -163,7 +163,7 @@ class Telemetry:
         self.monitor_list: dict[str, Monitor] = {}
         self._initialize_monitors()
 
-        NuvlaEdgeStatusHandler.starting(self.status_channel, 'telemetry')
+        NuvlaEdgeStatusHandler.starting(self.status_channel, 'Telemetry')
 
     def _initialize_monitors(self):
         """
@@ -267,7 +267,7 @@ class Telemetry:
         Returns:
             None
         """
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'telemetry')
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'Telemetry')
 
         logger.info("Collecting monitor metrics...")
         """ Retrieve data from monitors (If not threaded) and check threaded monitors health"""

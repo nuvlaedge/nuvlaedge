@@ -120,7 +120,7 @@ class Agent:
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
         # Report initial status
-        NuvlaEdgeStatusHandler.starting(self.status_channel, 'agent')
+        NuvlaEdgeStatusHandler.starting(self.status_channel, 'Agent')
 
     def _assert_current_state(self) -> State:
         """
@@ -380,7 +380,7 @@ class Agent:
         if self.telemetry_channel.empty():
             logger.warning("Telemetry class not reporting fast enough to Agent")
             NuvlaEdgeStatusHandler.failing(self.status_channel,
-                                           'agent',
+                                           'Agent',
                                            "Telemetry not reported fast enough")
             new_telemetry: TelemetryPayloadAttributes = self.telemetry_payload.model_copy(deep=True)
         else:
@@ -403,7 +403,7 @@ class Agent:
         # If telemetry is successful save telemetry
         if response:
             logger.info("Executing telemetry... Success")
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'Agent')
             self.telemetry_payload = new_telemetry.model_copy(deep=True)
             write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
@@ -429,7 +429,7 @@ class Agent:
 
         if response:
             logger.info("Executing heartbeat... Success")
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'Agent')
 
         return response
 
@@ -488,10 +488,10 @@ class Agent:
         logger.debug(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
 
         while not self._exit.wait(next_cycle_in):
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'Agent')
             start_cycle: float = time.perf_counter()
 
-            NuvlaEdgeStatusHandler.running(self.status_channel, 'agent')
+            NuvlaEdgeStatusHandler.running(self.status_channel, 'Agent')
 
             next_action = self.action_handler.next
 

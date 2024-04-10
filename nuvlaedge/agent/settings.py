@@ -3,7 +3,7 @@ from argparse import ArgumentParser, Namespace
 import logging
 from typing import Optional
 
-from pydantic import Field, field_validator, validator, BaseModel
+from pydantic import Field, field_validator, BaseModel, AliasChoices
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
@@ -87,7 +87,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     """
 
     # Required
-    nuvlaedge_uuid_env:                Optional[NuvlaID] = Field(None, alias='NUVLAEDGE_UUID')
+    nuvlaedge_uuid_env:                Optional[NuvlaID] = Field(None,
+                                                                 validation_alias=AliasChoices(
+                                                                     'NUVLAEDGE_UUID',
+                                                                     'NUVLABOX_UUID'))
     host_home:                          str = Field(..., alias="HOME")
 
     # Required with default values

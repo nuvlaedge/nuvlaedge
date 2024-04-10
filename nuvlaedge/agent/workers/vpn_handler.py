@@ -299,11 +299,11 @@ class VPNHandler:
         if not commission_response:
             logger.error("Error commissioning VPN.")
             NuvlaEdgeStatusHandler.failing(self.status_channel,
-                                           'VPNHandler',
+                                           'VPN Handler',
                                            "Error commissioning VPN. Will retry in 60s")
         else:
             logger.info("Commissioning VPN... Success")
-            NuvlaEdgeStatusHandler.starting(self.status_channel, 'VPNHandler')
+            NuvlaEdgeStatusHandler.starting(self.status_channel, 'VPN Handler')
 
         logger.debug(f"Commission response: {json.dumps(commission_response, indent=4)}")
 
@@ -478,7 +478,7 @@ class VPNHandler:
         """
 
         if not self.nuvla_client.nuvlaedge.vpn_server_id:
-            NuvlaEdgeStatusHandler.stopped(self.status_channel, 'VPNHandler')
+            NuvlaEdgeStatusHandler.stopped(self.status_channel, 'VPN Handler')
             logger.info("VPN is disabled from Nuvla, Wait for next iteration")
             return
 
@@ -486,15 +486,15 @@ class VPNHandler:
         if not vpn_client_exists:
             if self.vpn_enable_flag == 0:
                 logger.info("VPN is disabled from env. settings, Wait for next iteration")
-                NuvlaEdgeStatusHandler.stopped(self.status_channel, 'VPNHandler')
+                NuvlaEdgeStatusHandler.stopped(self.status_channel, 'VPN Handler')
                 return
 
-            NuvlaEdgeStatusHandler.failing(self.status_channel, 'VPNHandler',
+            NuvlaEdgeStatusHandler.failing(self.status_channel, 'VPN Handler',
                                            message="VPN Client container doesn't exist.")
             logger.warning("VPN Client container doesn't exist, cannot start VPN client. Waiting for next iteration...")
             return
 
-        NuvlaEdgeStatusHandler.running(self.status_channel, 'VPNHandler')
+        NuvlaEdgeStatusHandler.running(self.status_channel, 'VPN Handler')
 
         if not self._vpn_needs_commission():
             logger.info("VPN credentials aligned. No need for commissioning")

@@ -91,7 +91,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                                                                  validation_alias=AliasChoices(
                                                                      'NUVLAEDGE_UUID',
                                                                      'NUVLABOX_UUID'))
-    host_home:                          str = Field(..., alias="HOME")
+    host_home:                          str = ""
 
     # Required with default values
     compose_project_name:               str = "nuvlaedge"
@@ -138,6 +138,9 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
     def __init__(self, **values):
         super().__init__(**values)
+        self.initialise()
+
+    def initialise(self):
         logging.info("Initialising AgentSettings...")
 
         # Check legacy settings

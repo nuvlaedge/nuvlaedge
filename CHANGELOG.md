@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.1) (2024-04-10)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.0...2.14.1)
+
+**Merged pull requests:**
+
+- Improved Settings and NuvlaEdge UUID retrival [\#165](https://github.com/nuvlaedge/nuvlaedge/pull/165) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.14.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.0) (2024-04-03)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.2...2.14.0)

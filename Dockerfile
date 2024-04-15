@@ -43,24 +43,35 @@ LABEL org.opencontainers.image.authors="support@sixsq.com" \
 
 
 # ------------------------------------------------------------------------
-# Base builder stage containing the common python and alpine dependencies
+# Pydantic version >2 uses rust and it is very slow to build. Sometimes causing the build to fail.
+# To prevent this, we install pydantic in a single stage and copy the installed package to the final image
+# to reduce the likelyhood of re-building the package
 # ------------------------------------------------------------------------
-FROM ${BASE_IMAGE} AS base-builder
-
+FROM ${BASE_IMAGE} AS pydantic-builder
 ARG PYDANTIC_VERSION
 ARG PYDANTIC_CORE_VERSION
+
+RUN apk update
+RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl rust cargo
+
+RUN pip install pydantic-core==${PYDANTIC_CORE_VERSION} pydantic==${PYDANTIC_VERSION}
+
+# ------------------------------------------------------------------------
+# Base builder stage containing the common python and alpine dependencies
+# ------------------------------------------------------------------------
+FROM pydantic-builder AS base-builder
+
 ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
-RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
-
 # Install pydantic form source to prevent bulding locally
-RUN apk add "py3-pydantic~${PYDANTIC_VERSION}" "py3-pydantic-core~${PYDANTIC_CORE_VERSION}" --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
-RUN cp -r ${PYTHON_SITE_PACKAGES}/* ${PYTHON_LOCAL_SITE_PACKAGES}/
+#RUN apk add "py3-pydantic~${PYDANTIC_VERSION}" "py3-pydantic-core~${PYDANTIC_CORE_VERSION}" --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
+#COPY --link scripts/install-pydantic.sh /tmp/install-pydantic.sh
+#RUN bash /tmp/install-pydantic.sh
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
+RUN cp -r ${PYTHON_SITE_PACKAGES}/* ${PYTHON_LOCAL_SITE_PACKAGES}/
 
 
 # ------------------------------------------------------------------------

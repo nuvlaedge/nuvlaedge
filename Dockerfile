@@ -7,12 +7,13 @@ ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
-ARG PYDANTIC_VERSION="2.6.4"
-ARG PYDANTIC_CORE_VERSION="2.16.3"
+ARG PYDANTIC_VERSION="2.4.0"
+ARG PYDANTIC_CORE_VERSION="2.10.0"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 
+ARG PYDANTIC_BASE_IMAGE=python:3.11.9-slim-bookworm
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
@@ -52,26 +53,28 @@ ARG PYDANTIC_VERSION
 ARG PYDANTIC_CORE_VERSION
 
 RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl rust cargo
+RUN apk add  curl rust cargo make
 
-RUN pip install pydantic-core==${PYDANTIC_CORE_VERSION} pydantic==${PYDANTIC_VERSION}
+
+RUN ls -la
+RUN pip install pydantic-core==${PYDANTIC_CORE_VERSION}
+RUN pip install pydantic==${PYDANTIC_VERSION}
+
 
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
 # ------------------------------------------------------------------------
-FROM pydantic-builder AS base-builder
+FROM ${BASE_IMAGE} AS base-builder
 
 ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
-# Install pydantic form source to prevent bulding locally
-#RUN apk add "py3-pydantic~${PYDANTIC_VERSION}" "py3-pydantic-core~${PYDANTIC_CORE_VERSION}" --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
-#COPY --link scripts/install-pydantic.sh /tmp/install-pydantic.sh
-#RUN bash /tmp/install-pydantic.sh
+RUN apk update
+RUN apk add git gcc musl-dev linux-headers python3-dev libffi-dev upx curl
+COPY --from=pydantic-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
-RUN cp -r ${PYTHON_SITE_PACKAGES}/* ${PYTHON_LOCAL_SITE_PACKAGES}/
 
 
 # ------------------------------------------------------------------------

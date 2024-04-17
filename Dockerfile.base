@@ -11,6 +11,8 @@ ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
 FROM ${BASE_IMAGE} AS nuvlaedge-base
 
+ARG PYDANTIC_VERSION
+ARG PYDANTIC_CORE_VERSION
 
 RUN rm /etc/apk/repositories
 RUN touch /etc/apk/repositories

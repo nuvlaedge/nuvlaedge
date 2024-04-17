@@ -7,7 +7,7 @@ ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
 ARG PYTHON_BCRYPT_VERSION="4.0.1"
 ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
-ARG PYDANTIC_VERSION="2.6.4"
+ARG PYDANTIC_VERSION=${PYDANTIC_VERSION:-"2.7.0"}
 ARG PYDANTIC_CORE_VERSION="2.16.3"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
@@ -15,6 +15,7 @@ ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/s
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
+ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:pydantic${PYDANTIC_VERSION}
 
 # ------------------------------------------------------------------------
 # NuvlaEdge base image for labels and environments variables
@@ -45,6 +46,7 @@ LABEL org.opencontainers.image.authors="support@sixsq.com" \
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
 # ------------------------------------------------------------------------
+FROM ${PRE_BUILD_IMAGE} as pre-builder-pydantic
 FROM ${BASE_IMAGE} AS base-builder
 
 ARG PYDANTIC_VERSION
@@ -56,8 +58,7 @@ RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
 
 # Install pydantic form source to prevent bulding locally
-RUN apk add "py3-pydantic~${PYDANTIC_VERSION}" "py3-pydantic-core~${PYDANTIC_CORE_VERSION}" --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community
-RUN cp -r ${PYTHON_SITE_PACKAGES}/* ${PYTHON_LOCAL_SITE_PACKAGES}/
+COPY --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt

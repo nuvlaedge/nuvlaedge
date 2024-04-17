@@ -37,5 +37,3 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: ghcr.io/nuvlaedge/ne-base:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max

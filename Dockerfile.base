@@ -5,6 +5,7 @@ ARG PYDANTIC_CORE_VERSION=${PYDANTIC_CORE_VERSION:-"fail"}
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
+LABEL org.opencontainers.image.source="https://github.com/nuvlaedge/nuvlaedge"
 # ------------------------------------------------------------------------
 # NuvlaEdge base image for labels and environments variables
 # ------------------------------------------------------------------------

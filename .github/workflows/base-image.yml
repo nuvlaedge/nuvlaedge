@@ -53,3 +53,6 @@ jobs:
           build-args: |
             PYDANTIC_CORE_VERSION=${{ vars.PYDANTIC_CORE_VERSION }}
             PYDANTIC_VERSION=${{ vars.PYDANTIC_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          visibility: public

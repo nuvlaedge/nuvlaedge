@@ -23,5 +23,5 @@ RUN apk update && apk upgrade
 RUN apk add rust cargo
 RUN pip install --upgrade pip
 
-RUN pip install pydantic-core==${PYDANTIC_VERSION}
-RUN pip install pydantic==${PYDANTIC_CORE_VERSION}
+RUN pip install pydantic-core==${PYDANTIC_CORE_VERSION}
+RUN pip install pydantic==${PYDANTIC_VERSION}

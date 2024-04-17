@@ -1,5 +1,7 @@
 ARG ALPINE_MAJ_MIN_VERSION="3.18"
 ARG PYTHON_MAJ_MIN_VERSION="3.11"
+ARG PYDANTIC_VERSION=${PYDANTIC_VERSION:-"fail"}
+ARG PYDANTIC_CORE_VERSION=${PYDANTIC_CORE_VERSION:-"fail"}
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
@@ -19,5 +21,5 @@ RUN apk update && apk upgrade
 RUN apk add rust cargo
 RUN pip install --upgrade pip
 
-RUN pip install pydantic-core==2.18.1
-RUN pip install pydantic==2.7.0
+RUN pip install pydantic-core==${PYDANTIC_VERSION}
+RUN pip install pydantic==${PYDANTIC_CORE_VERSION}

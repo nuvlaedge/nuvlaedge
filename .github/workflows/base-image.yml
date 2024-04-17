@@ -11,6 +11,7 @@ on:
       - 'add-nuvlaedge-base-image'
     paths:
       - "Dockerfile.base"
+      - ".github/workflows/base-image.yml"
   workflow_dispatch:
 
 jobs:
@@ -21,6 +22,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Log versions
+        run: |
+          echo "Pydantic Core: ${{ env.PYDANTIC_CORE_VERSION }}"
+          echo "Pydantic : ${{ env.PYDANTIC_VERSION }}"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
@@ -36,4 +42,7 @@ jobs:
           file: Dockerfile.base
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          tags: ghcr.io/nuvlaedge/ne-base:latest
+          tags: ghcr.io/nuvlaedge/ne-base:pydantic${{ env.PYDANTIC_VERSION}}
+          build-args: |
+            PYDANTIC_CORE_VERSION=${{ env.PYDANTIC_CORE_VERSION }}
+            PYDANTIC_VERSION=${{ env.PYDANTIC_VERSION }}

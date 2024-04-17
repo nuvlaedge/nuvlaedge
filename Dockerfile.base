@@ -1,0 +1,23 @@
+ARG ALPINE_MAJ_MIN_VERSION="3.18"
+ARG PYTHON_MAJ_MIN_VERSION="3.11"
+
+ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
+
+# ------------------------------------------------------------------------
+# NuvlaEdge base image for labels and environments variables
+# ------------------------------------------------------------------------
+
+FROM ${BASE_IMAGE} AS nuvlaedge-base
+
+
+RUN rm /etc/apk/repositories
+RUN touch /etc/apk/repositories
+RUN echo "http://nl.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+RUN echo "http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
+
+RUN apk update && apk upgrade
+RUN apk add rust cargo
+RUN pip install --upgrade pip
+
+RUN pip install pydantic-core==2.18.1
+RUN pip install pydantic==2.7.0

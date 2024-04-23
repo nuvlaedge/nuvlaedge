@@ -177,17 +177,13 @@ class TestClientWrapper(TestCase):
                                                           json={})
             mock_warning.assert_called_once()
 
-    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
-    def test_heartbeat(self, mock_login):
-        self.mock_nuvla.is_authenticated.return_value = False
+    def test_heartbeat(self):
         self.mock_nuvla._cimi_post.return_value = {'nice': 'response'}
 
         self.assertEqual({'nice': 'response'}, self.test_client.heartbeat())
-        mock_login.assert_called_once()
         self.mock_nuvla._cimi_post.assert_called_with(f"{self.mock_uuid}/heartbeat")
 
         with patch('nuvlaedge.agent.nuvla.client_wrapper.logging.Logger.warning') as mock_warning:
-            self.mock_nuvla.is_authenticated.return_value = True
             self.mock_nuvla._cimi_post.side_effect = Exception(ValueError)
             self.test_client.heartbeat()
             mock_warning.assert_called_once()

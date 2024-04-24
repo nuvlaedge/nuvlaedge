@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - 'main'
-      - 'add-nuvlaedge-base-image'
     paths:
       - "Dockerfile.base"
       - ".github/workflows/base-image.yml"

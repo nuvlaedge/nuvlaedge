@@ -18,7 +18,7 @@ class TestClientWrapper(TestCase):
         self.mock_verify = True
         self.host = 'https://mock_host.io'
         self.test_client = NuvlaClientWrapper(host=self.host,
-                                              verify=self.mock_verify,
+                                              insecure=self.mock_verify,
                                               nuvlaedge_uuid=self.mock_uuid)
         self.test_client.nuvlaedge_client = self.mock_nuvla
 

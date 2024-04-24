@@ -95,18 +95,18 @@ class NuvlaClientWrapper:
                                   'vpn-common-name="{nuvlaedge_uuid}" and '
                                   'parent="{vpn_server_id}"')
 
-    def __init__(self, host: str, verify: bool, nuvlaedge_uuid: NuvlaID):
+    def __init__(self, host: str, insecure: bool, nuvlaedge_uuid: NuvlaID):
         """
         Initialize the NuvlaEdgeClient object with the provided parameters.
 
         Args:
             host (str): The host URL of the NuvlaEdge instance.
-            verify (bool): Indicates whether to verify the SSL certificate of the host.
+            insecure (bool): Indicates whether to verify the SSL certificate of the host.
             nuvlaedge_uuid (NuvlaID): The UUID of the NuvlaEdge instance.
 
         """
         self._host: str = format_host(host)
-        self._verify: bool = verify
+        self._verify: bool = insecure
 
         # Dictionary containing the NuvlaEdge resources handled by the client
         # nuvlaedge, nuvlaedge-status, vpn-credential, vpn-server
@@ -114,7 +114,7 @@ class NuvlaClientWrapper:
 
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
         self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
-                                                   insecure=not verify,
+                                                   insecure=insecure,
                                                    reauthenticate=True)
 
         self._headers: dict = {}
@@ -368,7 +368,7 @@ class NuvlaClientWrapper:
             logger.warning(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
             raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
 
-        _client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        _client = cls(host=session.endpoint, insecure=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
 
         if session.credentials is not None:
             _client.nuvlaedge_credentials = session.credentials

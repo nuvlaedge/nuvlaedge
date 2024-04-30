@@ -189,10 +189,12 @@ class TestClientWrapper(TestCase):
             mock_warning.assert_called_once()
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge_status_uuid')
-    def test_telemetry(self, mock_status_uuid):
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.CimiResource')
+    def test_telemetry(self, mock_resource, mock_status_uuid):
         mock_res = Mock(spec=CimiResource)
         mock_res.data = {'jobs': ['job1']}
-        self.mock_nuvla.edit.return_value = mock_res
+        mock_resource.return_value = mock_res
+        self.mock_nuvla._cimi_put.return_value = mock_res
         self.assertEqual({'jobs': ['job1']}, self.test_client.telemetry({}, set()))
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession')
@@ -201,7 +203,6 @@ class TestClientWrapper(TestCase):
         self.test_client.nuvlaedge_credentials = Mock()
         self.test_client.save_current_state_to_file()
         self.assertEqual(3, mock_write.call_count)
-
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession.model_validate')

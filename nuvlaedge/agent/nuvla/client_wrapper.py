@@ -297,9 +297,9 @@ class NuvlaClientWrapper:
         logger.debug(f"Sending telemetry report to Nuvla: \n"
                      f"Changed fields: {new_status}\n"
                      f"Deleted fields: {attributes_to_delete}")
-        response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
-                                                            data=new_status,
-                                                            select=attributes_to_delete)
+        response: CimiResource = CimiResource(self.nuvlaedge_client._cimi_put(self.nuvlaedge_status_uuid,
+                                                                 data=new_status,
+                                                                 params={'select': attributes_to_delete}))
         logger.debug(f"Response received from telemetry report: {response.data}")
         return response.data
 

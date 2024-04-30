@@ -11,23 +11,23 @@ logger: logging.Logger = logging.getLogger()
 
 def _extract_nuvla_configuration() -> tuple[str, bool]:
     _endpoint = 'nuvla.io'
-    _verify = True
+    _insecure = True
 
     nuvla_conf = read_file(LEGACY_FILES.NUVLAEDGE_NUVLA_CONFIGURATION)
     if nuvla_conf is None:
         logger.error("No Nuvla configuration found")
-        return _endpoint, _verify
+        return _endpoint, _insecure
 
     try:
         nuvla_conf = nuvla_conf.split('\n')
         _endpoint = nuvla_conf[0].replace("NUVLA_ENDPOINT=", "")
-        _verify = bool(nuvla_conf[1].replace("NUVLA_ENDPOINT_INSECURE=", "").lower())
+        _insecure = bool(nuvla_conf[1].replace("NUVLA_ENDPOINT_INSECURE=", "").lower())
 
     except Exception as e:
         logger.debug(f"Error reading Nuvla configuration: {e}, returning default values")
         return 'nuvla.io', True
 
-    return _endpoint, _verify
+    return _endpoint, _insecure
 
 
 def _extract_credentials() -> tuple[str, str]:

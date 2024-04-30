@@ -62,7 +62,7 @@ class NuvlaClientWrapper:
          credentials
 
         _host (str): The hostname of the Nuvla API server
-        _verify (bool): Whether to verify the SSL certificate of the Nuvla API server
+        _insecure (bool): Whether to verify the SSL certificate of the Nuvla API server
         _nuvlaedge_uuid (NuvlaID): The ID of the NuvlaEdge resource
 
         _resources (dict[str, any]): A dictionary containing the NuvlaEdge resources handled by the client
@@ -106,7 +106,7 @@ class NuvlaClientWrapper:
 
         """
         self._host: str = format_host(host)
-        self._verify: bool = insecure
+        self._insecure: bool = insecure
 
         # Dictionary containing the NuvlaEdge resources handled by the client
         # nuvlaedge, nuvlaedge-status, vpn-credential, vpn-server
@@ -323,7 +323,7 @@ class NuvlaClientWrapper:
         """
         serial_session = NuvlaEdgeSession(
             endpoint=self._host,
-            verify=self._verify,
+            verify=self._insecure,
             credentials=self.nuvlaedge_credentials,
             nuvlaedge_uuid=self.nuvlaedge_uuid,
             nuvlaedge_status_uuid=self._nuvlaedge_status_uuid

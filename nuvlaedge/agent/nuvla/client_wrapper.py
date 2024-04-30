@@ -323,7 +323,7 @@ class NuvlaClientWrapper:
         """
         serial_session = NuvlaEdgeSession(
             endpoint=self._host,
-            verify=self._insecure,
+            insecure=self._insecure,
             credentials=self.nuvlaedge_credentials,
             nuvlaedge_uuid=self.nuvlaedge_uuid,
             nuvlaedge_status_uuid=self._nuvlaedge_status_uuid
@@ -368,7 +368,7 @@ class NuvlaClientWrapper:
             logger.warning(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
             raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
 
-        _client = cls(host=session.endpoint, insecure=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        _client = cls(host=session.endpoint, insecure=session.insecure, nuvlaedge_uuid=session.nuvlaedge_uuid)
 
         if session.credentials is not None:
             _client.nuvlaedge_credentials = session.credentials

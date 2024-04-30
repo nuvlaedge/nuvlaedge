@@ -41,7 +41,7 @@ def _build_nuvlaedge_session():
     We need to extract the session data from the legacy configuration and build the new session file. The required data
     is:
         - endpoint
-        - verify
+        - insecure
         - credentials
         - nuvlaedge-uuid
 
@@ -49,7 +49,7 @@ def _build_nuvlaedge_session():
         None
     """
     # Nuvla information extracted from .nuvla-configuration
-    endpoint, verify = _extract_nuvla_configuration()
+    endpoint, insecure = _extract_nuvla_configuration()
 
     # Extract credentials
     api_key, secret_key = _extract_credentials()
@@ -61,7 +61,7 @@ def _build_nuvlaedge_session():
 
     # Build the new session file
     session = NuvlaEdgeSession(endpoint=endpoint,
-                               verify=verify,
+                               insecure=insecure,
                                credentials=NuvlaApiKeyTemplate(key=api_key, secret=secret_key),
                                nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid) if nuvlaedge_uuid else None,
                                nuvlabox_status_uuid=NuvlaID(nuvlaedge_status_uuid) if nuvlaedge_status_uuid else None

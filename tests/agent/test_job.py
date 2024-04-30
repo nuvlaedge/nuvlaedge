@@ -19,7 +19,7 @@ class JobTestCase(unittest.TestCase):
 
         self.mock_nuvla_client = mock.Mock()
         self.mock_nuvla_client._host = 'fake.nuvla.io'
-        self.mock_nuvla_client._verify = False
+        self.mock_nuvla_client._insecure = False
 
         with mock.patch('nuvlaedge.agent.job.Job.check_job_is_running') as mock_job_is_running:
             mock_job_is_running.return_value = False
@@ -58,7 +58,7 @@ class JobTestCase(unittest.TestCase):
         self.obj.coe_client.launch_job.assert_called_once_with(self.obj.job_id,
                                                                self.obj.job_id_clean,
                                                                self.obj.nuvla_client._host.removeprefix("https://"),
-                                                               self.obj.nuvla_client._verify,
+                                                               self.obj.nuvla_client._insecure,
                                                                'fake-key',
                                                                'fake-secret',
                                                                self.obj.job_engine_lite_image)

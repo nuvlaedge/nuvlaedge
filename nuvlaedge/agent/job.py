@@ -47,7 +47,7 @@ class Job:
         """
         self.coe_client.launch_job(
             self.job_id, self.job_id_clean, self.nuvla_client._host.removeprefix("https://"),
-            self.nuvla_client._verify,
+            self.nuvla_client._insecure,
             self.nuvla_client.nuvlaedge_credentials.key,
             self.nuvla_client.nuvlaedge_credentials.secret,
             self.job_engine_lite_image)

@@ -291,6 +291,7 @@ class KubernetesClient(COEClient):
         args = f'--api-url https://{nuvla_endpoint} ' \
                f'--api-key {api_key} ' \
                f'--api-secret {api_secret} ' \
+               f'--nuvlaedge-fs {FILE_NAMES.root_fs}' \
                f'--job-id {job_id}'
 
         if nuvla_endpoint_insecure:

@@ -12,6 +12,7 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
@@ -483,10 +484,12 @@ class DockerClient(COEClient):
             }
         }
 
-        command = f'-- /app/job_executor.py --api-url https://{nuvla_endpoint} ' \
-                  f'--api-key {api_key} ' \
-                  f'--api-secret {api_secret} ' \
-                  f'--job-id {job_id}'
+        command = (f'-- /app/job_executor.py '
+                   f'--api-url https://{nuvla_endpoint} '
+                   f'--api-key {api_key} '
+                   f'--api-secret {api_secret} '
+                   f'--nuvlaedge-fs {FILE_NAMES.root_fs} '
+                   f'--job-id {job_id}')
 
         if nuvla_endpoint_insecure:
             command += ' --api-insecure'

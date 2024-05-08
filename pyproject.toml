@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.14.2"
+version = "2.14.1"
 description = "NuvlaEdge source code"
 authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"

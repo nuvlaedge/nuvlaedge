@@ -19,7 +19,7 @@ gpu = "nuvlaedge.peripherals.gpu.__init__:entry"
 security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = "~3.11.0"
 nuvla-api = "^4.0.0"
 nuvla-job-engine = "^4.0.6"
 docker = "7.0.0"

@@ -41,7 +41,7 @@ class KubernetesClient(COEClient):
 
     # FIXME: This needs to be parameterised.
     NE_DB_ROOT_HOSTPATH = '/var/lib/nuvlaedge'
-    NE_DB_CONTAINER_PATH = str(FILE_NAMES.root_fs) + "nuvlaedge-id" + "/data"
+    NE_DB_CONTAINER_PATH = str(FILE_NAMES.root_fs)
 
     DEFAULT_IMAGE_PULL_POLICY = "Always"
 
@@ -570,7 +570,7 @@ class KubernetesClient(COEClient):
         log.info("Binding host path %s to volume %s", host_path, volume_name)
         pod_volume = client.V1Volume(
             name=volume_name,
-            host_path=client.V1HostPathVolumeSource(path=self._ne_db_hostpath()))
+            host_path=client.V1HostPathVolumeSource(path=host_path))
 
         container_volume_mount = client.V1VolumeMount(name=volume_name,
                                                       mount_path=self.NE_DB_CONTAINER_PATH,

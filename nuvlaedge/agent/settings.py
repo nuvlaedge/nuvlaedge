@@ -37,7 +37,7 @@ class NuvlaApiKeyTemplate(BaseModel, frozen=True):
 
 class NuvlaEdgeSession(NuvlaEdgeBaseModel):
     endpoint:               str
-    verify:                 bool
+    insecure:                 bool
 
     credentials:            NuvlaApiKeyTemplate
 

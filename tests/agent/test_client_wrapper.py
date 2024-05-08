@@ -15,10 +15,10 @@ class TestClientWrapper(TestCase):
     def setUp(self):
         self.mock_nuvla = Mock(spec=Api)
         self.mock_uuid = NuvlaID('nuvlabox/0000')
-        self.mock_verify = True
         self.host = 'https://mock_host.io'
+        self.mock_insecure = True
         self.test_client = NuvlaClientWrapper(host=self.host,
-                                              verify=self.mock_verify,
+                                              insecure=self.mock_insecure,
                                               nuvlaedge_uuid=self.mock_uuid)
         self.test_client.nuvlaedge_client = self.mock_nuvla
 

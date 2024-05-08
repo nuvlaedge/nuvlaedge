@@ -15,10 +15,10 @@ class TestClientWrapper(TestCase):
     def setUp(self):
         self.mock_nuvla = Mock(spec=Api)
         self.mock_uuid = NuvlaID('nuvlabox/0000')
-        self.mock_verify = True
         self.host = 'https://mock_host.io'
+        self.mock_insecure = True
         self.test_client = NuvlaClientWrapper(host=self.host,
-                                              verify=self.mock_verify,
+                                              insecure=self.mock_insecure,
                                               nuvlaedge_uuid=self.mock_uuid)
         self.test_client.nuvlaedge_client = self.mock_nuvla
 
@@ -177,17 +177,13 @@ class TestClientWrapper(TestCase):
                                                           json={})
             mock_warning.assert_called_once()
 
-    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
-    def test_heartbeat(self, mock_login):
-        self.mock_nuvla.is_authenticated.return_value = False
+    def test_heartbeat(self):
         self.mock_nuvla._cimi_post.return_value = {'nice': 'response'}
 
         self.assertEqual({'nice': 'response'}, self.test_client.heartbeat())
-        mock_login.assert_called_once()
         self.mock_nuvla._cimi_post.assert_called_with(f"{self.mock_uuid}/heartbeat")
 
         with patch('nuvlaedge.agent.nuvla.client_wrapper.logging.Logger.warning') as mock_warning:
-            self.mock_nuvla.is_authenticated.return_value = True
             self.mock_nuvla._cimi_post.side_effect = Exception(ValueError)
             self.test_client.heartbeat()
             mock_warning.assert_called_once()
@@ -205,7 +201,6 @@ class TestClientWrapper(TestCase):
         self.test_client.nuvlaedge_credentials = Mock()
         self.test_client.save_current_state_to_file()
         self.assertEqual(3, mock_write.call_count)
-
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession.model_validate')

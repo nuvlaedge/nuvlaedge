@@ -1,11 +1,9 @@
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Optional
 
-from nuvla.api.models import CimiResponse, CimiCollection, CimiResource
-from pydantic import BaseModel
+from nuvla.api.models import CimiResource
 from dataclasses import dataclass
 
 from nuvla.api import Api as NuvlaApi
@@ -62,7 +60,7 @@ class NuvlaClientWrapper:
          credentials
 
         _host (str): The hostname of the Nuvla API server
-        _verify (bool): Whether to verify the SSL certificate of the Nuvla API server
+        _insecure (bool): Whether to verify the SSL certificate of the Nuvla API server
         _nuvlaedge_uuid (NuvlaID): The ID of the NuvlaEdge resource
 
         _resources (dict[str, any]): A dictionary containing the NuvlaEdge resources handled by the client
@@ -95,18 +93,18 @@ class NuvlaClientWrapper:
                                   'vpn-common-name="{nuvlaedge_uuid}" and '
                                   'parent="{vpn_server_id}"')
 
-    def __init__(self, host: str, verify: bool, nuvlaedge_uuid: NuvlaID):
+    def __init__(self, host: str, insecure: bool, nuvlaedge_uuid: NuvlaID):
         """
         Initialize the NuvlaEdgeClient object with the provided parameters.
 
         Args:
             host (str): The host URL of the NuvlaEdge instance.
-            verify (bool): Indicates whether to verify the SSL certificate of the host.
+            insecure (bool): Indicates whether to verify the SSL certificate of the host.
             nuvlaedge_uuid (NuvlaID): The UUID of the NuvlaEdge instance.
 
         """
         self._host: str = format_host(host)
-        self._verify: bool = verify
+        self._insecure: bool = insecure
 
         # Dictionary containing the NuvlaEdge resources handled by the client
         # nuvlaedge, nuvlaedge-status, vpn-credential, vpn-server
@@ -114,7 +112,7 @@ class NuvlaClientWrapper:
 
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
         self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
-                                                   insecure=not verify,
+                                                   insecure=insecure,
                                                    reauthenticate=True)
 
         self._headers: dict = {}
@@ -239,7 +237,6 @@ class NuvlaClientWrapper:
         """
         logger.info("Activating NuvlaEdge...")
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
-
         self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
@@ -282,8 +279,6 @@ class NuvlaClientWrapper:
 
         """
         try:
-            if not self.nuvlaedge_client.is_authenticated():
-                self.login_nuvlaedge()
             response: dict = self.nuvlaedge_client._cimi_post(f"{self.nuvlaedge_uuid}/heartbeat")
             return response
         except Exception as e:
@@ -323,7 +318,7 @@ class NuvlaClientWrapper:
         """
         serial_session = NuvlaEdgeSession(
             endpoint=self._host,
-            verify=self._verify,
+            insecure=self._insecure,
             credentials=self.nuvlaedge_credentials,
             nuvlaedge_uuid=self.nuvlaedge_uuid,
             nuvlaedge_status_uuid=self._nuvlaedge_status_uuid
@@ -368,7 +363,7 @@ class NuvlaClientWrapper:
             logger.warning(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
             raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
 
-        _client = cls(host=session.endpoint, verify=session.verify, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        _client = cls(host=session.endpoint, insecure=session.insecure, nuvlaedge_uuid=session.nuvlaedge_uuid)
 
         if session.credentials is not None:
             _client.nuvlaedge_credentials = session.credentials

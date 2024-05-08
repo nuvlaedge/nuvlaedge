@@ -640,13 +640,13 @@ files = [
 
 [[package]]
 name = "nuvla-api"
-version = "4.0.0"
+version = "4.0.1"
 description = "Nuvla APIServer python client library"
 category = "main"
 optional = false
 python-versions = "<3.12,>=3.9"
 files = [
-    {file = "nuvla_api-4.0.0-py3-none-any.whl", hash = "sha256:8c5c329b3bea9b1e2923cdcfb3aa2d9e3b1fccc37ed32d1259383dc1285de77f"},
+    {file = "nuvla_api-4.0.1-py3-none-any.whl", hash = "sha256:e3c5dbec2016e6daa92a085b264f20e5c27cbdef3c48797e662b80eac9fbf20d"},
 ]
 
 [package.dependencies]
@@ -1497,4 +1497,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.0"  # ~ operator behaves: >=3.11.0 <3.12.0
-content-hash = "2f3982c718ecf71df23919043fd274e7d5a38c66d595fea11cf44aec999957eb"
+content-hash = "c05791ad8982e5eb62a083ac9990f4ef046ea19984c8db93bba8149ddc3f422f"

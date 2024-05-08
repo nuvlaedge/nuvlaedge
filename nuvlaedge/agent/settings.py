@@ -136,6 +136,14 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     _nuvlaedge_uuid:                    Optional[NuvlaID] = None
     _stored_session:                    Optional[NuvlaEdgeSession] = None
 
+    @field_validator('nuvlaedge_thread_monitors', mode='after')
+    @classmethod
+    def validate_nuvlaedge_thread_monitors(cls, v):
+        if isinstance(v, bool):
+            return v
+        else:
+            return False
+
     def __init__(self, **values):
         super().__init__(**values)
         self.initialise()

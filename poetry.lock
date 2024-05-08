@@ -655,14 +655,14 @@ requests = ">=2.31.0,<3.0.0"
 
 [[package]]
 name = "nuvla-job-engine"
-version = "4.0.5"
+version = "4.0.6"
 description = "Nuvla Job Engine."
 category = "main"
 optional = false
 python-versions = "<3.12,>=3.11"
 files = [
-    {file = "nuvla_job_engine-4.0.5-py3-none-any.whl", hash = "sha256:63ba50e3d98ba627f537c3c27bb50d44782bfcab0a198d53bce1d1f69b2f393b"},
-    {file = "nuvla_job_engine-4.0.5.tar.gz", hash = "sha256:0368a17a67eb988050469bac08d06324f28276a426f4c4b992950b7c11d075a0"},
+    {file = "nuvla_job_engine-4.0.6-py3-none-any.whl", hash = "sha256:d924f4ac07137d238840f39fc5bb9216d277754c72aa06e22dc39f3578630eb9"},
+    {file = "nuvla_job_engine-4.0.6.tar.gz", hash = "sha256:ed790d7ae1371ffa6c49b1ce1cfdaeab16faa89ea7bd13c574deb5c58c37f4a2"},
 ]
 
 [package.dependencies]
@@ -1496,5 +1496,5 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 
 [metadata]
 lock-version = "2.0"
-python-versions = "~3.11.0"  # ~ operator behaves: >=3.11.0 <3.12.0
-content-hash = "c05791ad8982e5eb62a083ac9990f4ef046ea19984c8db93bba8149ddc3f422f"
+python-versions = "~3.11.0"
+content-hash = "1762163e64187c89a8bb0b5b70bd202d437f848e33419542d4ed2de9bc876f8e"

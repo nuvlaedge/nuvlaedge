@@ -1,11 +1,9 @@
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Optional
 
-from nuvla.api.models import CimiResponse, CimiCollection, CimiResource
-from pydantic import BaseModel
+from nuvla.api.models import CimiResource
 from dataclasses import dataclass
 
 from nuvla.api import Api as NuvlaApi
@@ -239,7 +237,6 @@ class NuvlaClientWrapper:
         """
         logger.info("Activating NuvlaEdge...")
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
-
         self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
                                                          secret=credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
@@ -282,8 +279,6 @@ class NuvlaClientWrapper:
 
         """
         try:
-            if not self.nuvlaedge_client.is_authenticated():
-                self.login_nuvlaedge()
             response: dict = self.nuvlaedge_client._cimi_post(f"{self.nuvlaedge_uuid}/heartbeat")
             return response
         except Exception as e:

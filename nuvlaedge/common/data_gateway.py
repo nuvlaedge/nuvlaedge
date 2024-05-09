@@ -77,7 +77,7 @@ class DataGatewayPub:
             logger.debug("No disk data to send to the data gateway")
             return
         for disk in disks:
-            self._publish("disks", disk)
+            self._publish("disks", json.dumps(disk))
 
     def send_telemetry(self, data: TelemetryPayloadAttributes):
         if not self.is_connected:

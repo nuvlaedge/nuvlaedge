@@ -272,7 +272,7 @@ class TestSecurity(TestCase):
         self.security.local_db_last_update = 15
         with patch('nuvlaedge.security.security.logging.Logger.info') as mock_logger:
             self.assertIsNone(self.security.update_vulscan_db())
-            self.assertEqual(2, mock_logger.call_count)
+            self.assertEqual(4, mock_logger.call_count)
             mock_external_db.assert_not_called()
 
         self.security.local_db_last_update = 5
@@ -408,6 +408,8 @@ class TestSecurity(TestCase):
     @patch.object(Security, 'update_vulscan_db')
     def test_db_needs_update(self, mock_update):
         self.security.nuvla_endpoint = None
+        self.security.nuvlaedge_session = None
+
         self.security.db_needs_update()
         mock_update.assert_not_called()
 
@@ -416,7 +418,8 @@ class TestSecurity(TestCase):
         self.security.db_needs_update()
         mock_update.assert_not_called()
 
-        self.security.nuvla_endpoint = 'nuvla.io'
+        self.security.nuvlaedge_session = Mock()
+        self.security.nuvlaedge_session.endpoint = 'nuvla.io'
         self.security.previous_external_db_update = datetime(1970, 1, 1)
         self.security.db_needs_update()
         mock_update.assert_called_once()

@@ -377,7 +377,7 @@ class Agent:
 
         Returns: None
         """
-        logger.info("Sending telemetry data to MQTT broker on channel: {}")
+        logger.info(f"Sending telemetry data to MQTT broker on channel: {data}")
         data_gateway_client.send_telemetry(data)
 
     def _telemetry(self) -> dict | None:

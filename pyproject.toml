@@ -23,6 +23,7 @@ python = "~3.11.0"
 nuvla-api = "^4.0.0"
 nuvla-job-engine = "^4.0.6"
 docker = "7.0.0"
+paho-mqtt = "^2"
 kubernetes = "26.1.0"
 cffi = "1.15.1"
 # Pydantic version is fixed here and must be synced with the one in the Dockerfile
@@ -53,7 +54,6 @@ xmltodict = "0.13.0"
 # Modbus peripheral Deps
 [tool.poetry.group.modbus.dependencies]
 pymodbus = "3.2.2"
-paho-mqtt = "^2"
 
 # System manager dependencies
 [tool.poetry.group.tests.dependencies]

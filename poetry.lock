@@ -706,7 +706,7 @@ files = [
 name = "paho-mqtt"
 version = "2.1.0"
 description = "MQTT version 5.0/3.1.1 client class"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1498,4 +1498,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.0"
-content-hash = "d1c9bdb1b15c823e3a73604d3c2ffb46925e88af8ac67ae34bd21f97f4ce5f5c"
+content-hash = "6e1c819f0a72341963f33f5051b1419699b82227459778f9bd2f1b41a9c35ad5"

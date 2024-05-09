@@ -49,13 +49,19 @@ class DataGatewayPub:
         return self.client.is_connected()
 
     def _publish(self, topic: str, payload: str) -> mqtt.MQTTMessageInfo:
-        return self.client.publish(topic, payload=payload)
+        r = self.client.publish(topic, payload=payload)
+        logger.info("Waiting for publish...")
+        r.wait_for_publish(1)
+        return r
 
     def _send_full_telemetry(self, data: TelemetryPayloadAttributes):
+        logger.info("Sending full telemetry to mqtt...")
         data = data.model_dump(exclude_none=True, by_alias=True)
         res = self._publish(self.TELEMETRY_TOPIC, payload=json.dumps(data))
+
         if not res.is_published():
-            logger.error(f"Failed to send telemetry to mqtt topic: {self.TELEMETRY_TOPIC}")
+            logger.error(f"Failed to send telemetry to mqtt topic: {self.TELEMETRY_TOPIC} ")
+        logger.info("Sending full telemetry to mqtt... Success")
 
     def _send_cpu_info(self, data: TelemetryPayloadAttributes):
         cpu = data.resources.get('cpu', {}).get('raw-sample')

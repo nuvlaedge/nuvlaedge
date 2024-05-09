@@ -87,7 +87,7 @@ class Security:
                                        db.startswith(cte.ONLINE_VULSCAN_DB_PREFIX)]
 
     @staticmethod
-    def wait_for_nuvlaedge_ready(self):
+    def wait_for_nuvlaedge_ready():
         """ Waits on a loop for the NuvlaEdge bootstrap and activation to be accomplished
 
         :return: nuvla endpoint and nuvla endpoint insecure boolean

@@ -37,9 +37,11 @@ class DataGatewayPub:
         res = self.client.connect(host=self.endpoint,
                                   port=self.port,
                                   keepalive=self.timeout)
+        self.client.loop_start()
         logger.info(f"Connected to the data gateway with result: {res}")
 
     def disconnect(self):
+        self.client.loop_stop()
         self.client.disconnect()
 
     @property

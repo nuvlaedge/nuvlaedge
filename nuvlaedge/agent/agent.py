@@ -369,17 +369,6 @@ class Agent:
             self.heartbeat_period = self._nuvla_client.nuvlaedge.heartbeat_interval
             self.action_handler.edit_period('heartbeat', self.heartbeat_period)
 
-    def _send_mqtt_telemetry(self, data: dict):
-        """
-        Sends telemetry data to the MQTT broker
-        Args:
-            data: The telemetry data to be sent
-
-        Returns: None
-        """
-        logger.info(f"Sending telemetry data to MQTT broker on channel: {data}")
-        data_gateway_client.send_telemetry(data)
-
     def _telemetry(self) -> dict | None:
         """ This method is responsible for executing the telemetry operation.
         It retrieves the telemetry data from the telemetry channel and updates the telemetry payload. If the telemetry
@@ -426,10 +415,10 @@ class Agent:
         write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
         # Send telemetry data to MQTT broker
-        self._send_mqtt_telemetry(data_to_send)
+        logger.info(f"Sending telemetry data to MQTT broker")
+        data_gateway_client.send_telemetry(new_telemetry)
 
         return response
-
 
     def _heartbeat(self) -> dict | None:
         """

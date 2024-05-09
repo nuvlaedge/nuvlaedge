@@ -25,7 +25,7 @@ class DataGatewayPub:
         self.port: int = port
         self.timeout: int = timeout
 
-        self.client: mqtt.Client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        self.client: mqtt.Client = mqtt.Client()
 
         self.SENDERS: list[SenderFunc] = [self._send_full_telemetry,
                                           self._send_cpu_info,

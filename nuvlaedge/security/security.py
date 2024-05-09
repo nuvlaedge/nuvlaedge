@@ -21,7 +21,7 @@ from subprocess import (run,
 
 from xml.etree import ElementTree
 
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaEdgeSession
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.security.settings import SecurityConfig
@@ -64,8 +64,7 @@ class Security:
         self.agent_api_endpoint: str = 'localhost:5080' if not \
             self.config.kubernetes_service_host else f'agent.{self.config.namespace}'
 
-        self.nuvla_endpoint: str = ''
-        self.nuvla_endpoint_insecure: bool = False
+        self.nuvlaedge_session: NuvlaEdgeSession | None = None
 
         self.wait_for_nuvlaedge_ready()
         self.api: NuvlaClientWrapper | None = None
@@ -86,8 +85,7 @@ class Security:
             self.offline_vulscan_db = [db for db in os.listdir(self.config.vulscan_db_dir) if
                                        db.startswith(cte.ONLINE_VULSCAN_DB_PREFIX)]
 
-    @staticmethod
-    def wait_for_nuvlaedge_ready():
+    def wait_for_nuvlaedge_ready(self):
         """ Waits on a loop for the NuvlaEdge bootstrap and activation to be accomplished
 
         :return: nuvla endpoint and nuvla endpoint insecure boolean
@@ -95,8 +93,11 @@ class Security:
         with timeout(cte.TIMEOUT_WAIT_TIME):
             logger.info('Waiting and searching for Nuvla connection parameters '
                         'after NuvlaEdge activation')
-            while not os.path.exists(FILE_NAMES.NUVLAEDGE_SESSION):
+            while not file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION):
                 time.sleep(5)
+
+            _stored_session = read_file(FILE_NAMES.NUVLAEDGE_SESSION, decode_json=True)
+            self.nuvlaedge_session = (NuvlaEdgeSession.model_validate(_stored_session))
 
     @staticmethod
     def execute_cmd(command: list[str]) -> dict | CompletedProcess | None:
@@ -205,12 +206,14 @@ class Security:
                               remove_file_on_error=True, encoding='utf-8')
         if date_read is None:
             return it_date
-        it_date = datetime.strptime(date_read,
-                                        cte.DATE_FORMAT)
+        it_date = datetime.strptime(date_read, cte.DATE_FORMAT)
+        logger.info(f'Last update on external db: {it_date}')
         return it_date
 
     def update_vulscan_db(self):
         """ Updates the local registry of the vulnerabilities data """
+        logger.info(f'Api present: {self.api is None}')
+        logger.info(f'File exists: {file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION)}')
         if self.api is None and file_exists_and_not_empty(FILE_NAMES.NUVLAEDGE_SESSION):
             logger.info("Loading Nuvla session from file to update vulnerabilities DB")
             self.api = NuvlaClientWrapper.from_session_store(FILE_NAMES.NUVLAEDGE_SESSION)
@@ -387,11 +390,13 @@ class Security:
         Returns:
 
         """
-        if not self.config.external_vulnerabilities_db or not self.nuvla_endpoint:
+        if not self.config.external_vulnerabilities_db or self.nuvlaedge_session is None:
             return
+        logger.info(f'External DB link: {self.config.external_vulnerabilities_db}')
+        logger.info(f'Nuvla endpoint: {self.nuvlaedge_session.endpoint}')
         elapsed_time = \
             (datetime.utcnow() - self.previous_external_db_update).total_seconds()
-        logger.debug(f'Elapsed time since last db update: {elapsed_time}')
+        logger.info(f'Elapsed time since last db update: {elapsed_time}')
 
         if elapsed_time > self.config.external_db_update_interval:
             logger.info('Checking for updates on the vulnerability DB')

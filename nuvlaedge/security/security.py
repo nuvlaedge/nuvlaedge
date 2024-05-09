@@ -86,19 +86,15 @@ class Security:
             self.offline_vulscan_db = [db for db in os.listdir(self.config.vulscan_db_dir) if
                                        db.startswith(cte.ONLINE_VULSCAN_DB_PREFIX)]
 
+    @staticmethod
     def wait_for_nuvlaedge_ready(self):
         """ Waits on a loop for the NuvlaEdge bootstrap and activation to be accomplished
 
         :return: nuvla endpoint and nuvla endpoint insecure boolean
         """
         with timeout(cte.TIMEOUT_WAIT_TIME):
-            logger.info('Waiting for NuvlaEdge to bootstrap')
-            while not os.path.exists(cte.APIKEY_FILE):
-                time.sleep(5)
-
             logger.info('Waiting and searching for Nuvla connection parameters '
                         'after NuvlaEdge activation')
-
             while not os.path.exists(FILE_NAMES.NUVLAEDGE_SESSION):
                 time.sleep(5)
 

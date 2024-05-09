@@ -87,7 +87,8 @@ class FileConstants(BaseFileConstants):
     MODBUS_PERIPHERAL = PERIPHERALS_FOLDER + 'modbus'
     GPU_PERIPHERAL = PERIPHERALS_FOLDER + 'gpu'
 
-    # System manager status and status notes report
+    # System manager
+    # Status and status notes report
     STATUS_FILE = '.status'
     STATUS_NOTES = '.status_notes'
 

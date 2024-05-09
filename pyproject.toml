@@ -53,7 +53,7 @@ xmltodict = "0.13.0"
 # Modbus peripheral Deps
 [tool.poetry.group.modbus.dependencies]
 pymodbus = "3.2.2"
-paho-mqtt = "1.6.1"
+paho-mqtt = "^2"
 
 # System manager dependencies
 [tool.poetry.group.tests.dependencies]

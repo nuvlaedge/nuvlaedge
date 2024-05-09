@@ -70,7 +70,7 @@ class DataGatewayPub:
         self._publish('ram', memory)
 
     def _send_disk_info(self, data: TelemetryPayloadAttributes):
-        disks = data.resource.get('disks', [])
+        disks = data.resources.get('disks', [])
         if not disks:
             logger.debug("No disk data to send to the data gateway")
             return
@@ -80,6 +80,9 @@ class DataGatewayPub:
     def send_telemetry(self, data: TelemetryPayloadAttributes):
         if not self.is_connected:
             self.connect()
+            if not self.is_connected:
+                logger.error("Failed to connect to the data gateway")
+                return
 
         logger.info(f"Sending telemetry to mqtt...")
 

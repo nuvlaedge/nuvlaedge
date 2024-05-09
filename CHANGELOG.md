@@ -6,6 +6,7 @@
 
 **Merged pull requests:**
 
+
 - Improved Settings and NuvlaEdge UUID retrival [\#165](https://github.com/nuvlaedge/nuvlaedge/pull/165) ([ignacio-penas](https://github.com/ignacio-penas))
 
 ## [2.14.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.0) (2024-04-03)

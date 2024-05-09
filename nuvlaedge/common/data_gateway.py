@@ -50,32 +50,38 @@ class DataGatewayPub:
 
     def _publish(self, topic: str, payload: str) -> mqtt.MQTTMessageInfo:
         r = self.client.publish(topic, payload=payload)
-        logger.info("Waiting for publish...")
+        logger.debug(f"Waiting for topic {topic} to publish...")
         r.wait_for_publish(1)
         return r
 
     def _send_full_telemetry(self, data: TelemetryPayloadAttributes):
-        logger.info("Sending full telemetry to mqtt...")
+        logger.debug("Sending full telemetry to mqtt...")
         data = data.model_dump(exclude_none=True, by_alias=True)
         res = self._publish(self.TELEMETRY_TOPIC, payload=json.dumps(data))
 
         if not res.is_published():
             logger.error(f"Failed to send telemetry to mqtt topic: {self.TELEMETRY_TOPIC} ")
-        logger.info("Sending full telemetry to mqtt... Success")
+        logger.debug("Sending full telemetry to mqtt... Success")
 
     def _send_cpu_info(self, data: TelemetryPayloadAttributes):
         cpu = data.resources.get('cpu', {}).get('raw-sample')
         if not cpu:
             logger.debug("No CPU data to send to the data gateway")
             return
-        self._publish('cpu', cpu)
+        res = self._publish('cpu', cpu)
+
+        if not res.is_published():
+            logger.error("Failed to send cpu info to mqtt")
 
     def _send_memory_info(self, data: TelemetryPayloadAttributes):
         memory = data.resources.get('memory', {}).get('raw-sample')
         if not memory:
             logger.debug("No memory data to send to the data gateway")
             return
-        self._publish('ram', memory)
+        res = self._publish('ram', memory)
+
+        if not res.is_published():
+            logger.error("Failed to send memory info to mqtt")
 
     def _send_disk_info(self, data: TelemetryPayloadAttributes):
         disks = data.resources.get('disks', [])
@@ -93,7 +99,6 @@ class DataGatewayPub:
                 return
 
         logger.info(f"Sending telemetry to mqtt...")
-
         for sender in self.SENDERS:
             sender(data)
 

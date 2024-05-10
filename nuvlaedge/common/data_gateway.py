@@ -27,17 +27,21 @@ class DataGatewayPub:
 
         self.client: mqtt.Client = mqtt.Client()
 
-        self.SENDERS: list[SenderFunc] = [self._send_full_telemetry,
-                                          self._send_cpu_info,
-                                          self._send_memory_info,
-                                          self._send_disk_info]
+        self.SENDERS: dict[str, SenderFunc] = {"telemetry_info": self._send_full_telemetry,
+                                               "cpu_info": self._send_cpu_info,
+                                               "ram_info": self._send_memory_info,
+                                               "disk_info": self._send_disk_info}
 
     def connect(self):
         logger.info("Connecting to the data gateway...")
-        res = self.client.connect(host=self.endpoint,
-                                  port=self.port,
-                                  keepalive=self.timeout)
-        self.client.loop_start()
+        try:
+            res = self.client.connect(host=self.endpoint,
+                                      port=self.port,
+                                      keepalive=self.timeout)
+            self.client.loop_start()
+        except Exception as e:
+            logger.error(f"Failed to connect to the data gateway: {e}")
+            return
         logger.info(f"Connected to the data gateway with result: {res}")
 
     def disconnect(self):
@@ -99,8 +103,12 @@ class DataGatewayPub:
                 return
 
         logger.info(f"Sending telemetry to mqtt...")
-        for sender in self.SENDERS:
-            sender(data)
+        for name, sender in self.SENDERS.items():
+            try:
+                logger.debug(f"Sending {name} to mqtt...")
+                sender(data)
+            except Exception as e:
+                logger.error(f"Failed to send telemetry ({name}) to mqtt: {e}")
 
 
 data_gateway_client = DataGatewayPub()

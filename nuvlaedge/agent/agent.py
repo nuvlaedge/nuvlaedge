@@ -31,6 +31,8 @@ from queue import Queue
 from threading import Event
 from typing import Optional
 
+import paho.mqtt.client as mqtt
+
 from nuvla.api.models import CimiResponse
 
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
@@ -39,7 +41,8 @@ from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.file_operations import file_exists_and_not_empty, write_file
+from nuvlaedge.common.file_operations import write_file
+from nuvlaedge.common.data_gateway import data_gateway_client
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
 from nuvlaedge.agent.workers.commissioner import Commissioner
@@ -403,11 +406,17 @@ class Agent:
         response: dict = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
         # If telemetry is successful save telemetry
-        if response:
-            logger.info("Executing telemetry... Success")
-            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-            self.telemetry_payload = new_telemetry.model_copy(deep=True)
-            write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
+        if not response:
+            return
+
+        logger.info("Executing telemetry... Success")
+        NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
+        self.telemetry_payload = new_telemetry.model_copy(deep=True)
+        write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
+
+        # Send telemetry data to MQTT broker
+        logger.info("Sending telemetry data to MQTT broker")
+        data_gateway_client.send_telemetry(new_telemetry)
 
         return response
 

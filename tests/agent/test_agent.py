@@ -92,9 +92,10 @@ class TestAgent(TestCase):
         self.assertEqual("OPERATIONAL", mock_telemetry.status)
         self.assertEqual(["RUNNING FINE"], mock_telemetry.status_notes)
 
+    @patch('nuvlaedge.agent.agent.data_gateway_client')
     @patch('nuvlaedge.agent.agent.model_diff')
     @patch('nuvlaedge.agent.agent.Agent._gather_status')
-    def test_telemetry(self, mock_status, mock_model_diff):
+    def test_telemetry(self, mock_status, mock_model_diff, mock_data_gateway):
         mock_channel = Mock()
         mock_payload = Mock(spec=TelemetryPayloadAttributes)
         mock_channel.empty.return_value = True

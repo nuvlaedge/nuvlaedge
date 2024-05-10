@@ -2,12 +2,12 @@
 import unittest
 from mock import Mock, patch, MagicMock
 import docker
+import docker.errors
 import requests
-import nuvlaedge.agent.monitor.components.container_stats
 import tests.agent.utils.fake as fake
 
-from nuvlaedge.agent.monitor.components.container_stats import ContainerStatsMonitor
-from nuvlaedge.agent.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.components.container_stats import ContainerStatsMonitor
+from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestContainerStatsMonitor(unittest.TestCase):
@@ -33,9 +33,9 @@ class TestContainerStatsMonitor(unittest.TestCase):
         mock_telemetry = Mock()
         mock_telemetry.edge_status = EdgeStatus()
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
-        with patch('nuvlaedge.agent.monitor.components.container_stats.'
+        with patch('nuvlaedge.agent.workers.monitor.components.container_stats.'
                    'ContainerStatsMonitor.refresh_container_info') as mock_refresh, \
-                patch('nuvlaedge.agent.monitor.components.container_stats.'
+                patch('nuvlaedge.agent.workers.monitor.components.container_stats.'
                       'ContainerStatsMonitor.update_data') as mock_update:
 
             with self.assertRaises(InterruptedError):
@@ -129,10 +129,10 @@ class TestContainerStatsMonitor(unittest.TestCase):
         all_fields = ["node-id", "orchestrator", "cluster-node-role", "cluster-id",
                       "cluster-join-address", "cluster-managers", "cluster-nodes", "cluster-node-labels"]
         self.assertEqual(sorted(all_fields),
-                         sorted(test_monitor.data.cluster_data.dict(by_alias=True, exclude_none=True).keys()),
+                         sorted(test_monitor.data.cluster_data.model_dump(by_alias=True, exclude_none=True).keys()),
                          'Unable to set cluster status')
 
-    @patch('nuvlaedge.agent.monitor.components.container_stats.execute_cmd')
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.execute_cmd')
     @patch('os.path.exists')
     def test_get_swarm_certificate_expiration_date(self, mock_exists, mock_run):
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
@@ -167,11 +167,11 @@ class TestContainerStatsMonitor(unittest.TestCase):
                          '2022-02-06T05:41:00Z',
                          'Unable to get Swarm node certificate expiration date')
 
-    @patch('nuvlaedge.agent.monitor.components.container_stats.ContainerStatsMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor.'
            'refresh_container_info')
-    @patch('nuvlaedge.agent.monitor.components.container_stats.ContainerStatsMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor.'
            'update_cluster_data')
-    @patch('nuvlaedge.agent.monitor.components.container_stats.ContainerStatsMonitor.'
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor.'
            'get_swarm_certificate_expiration_date')
     def test_update_data(self, mock_cert, mock_update, refresh_container):
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()

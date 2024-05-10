@@ -1,7 +1,6 @@
 """
 Abstract base class for the Container Orchestration Engine (COE) clients.
 """
-
 from abc import ABC, abstractmethod
 
 from nuvlaedge.agent.common import util
@@ -302,4 +301,5 @@ class COEClient(ABC):
 
         :return: The image name in the container running the component service
         """
+
 

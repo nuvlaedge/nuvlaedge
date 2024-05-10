@@ -6,6 +6,8 @@ import contextlib
 import datetime
 import logging
 import math
+from unittest.mock import PropertyMock
+
 import mock
 import subprocess
 import unittest
@@ -20,6 +22,7 @@ import requests
 
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
+from nuvlaedge.agent.orchestrator.docker import logger
 
 
 class COEClientDockerTestCase(unittest.TestCase):
@@ -57,13 +60,13 @@ class COEClientDockerTestCase(unittest.TestCase):
                          'Base class of the COEClient was not properly initialized')
 
     def test_get_node_info(self):
-        self.assertIn('ID', self.obj.get_node_info(),
+        self.assertIn('ID', self.obj.node_info,
                       'Unable to retrieve Docker info')
 
-        self.assertIsInstance(self.obj.get_node_info(), dict,
+        self.assertIsInstance(self.obj.node_info, dict,
                               'Docker info should be returned as a dict')
 
-        self.assertEqual(self.obj.get_node_info().keys(), self.local_docker_client.info().keys(),
+        self.assertEqual(self.obj.node_info.keys(), self.local_docker_client.info().keys(),
                          'Get node info return a different value than the real Docker info')
 
     def test_get_host_os(self):
@@ -74,7 +77,7 @@ class COEClientDockerTestCase(unittest.TestCase):
     def test_get_join_tokens(self, mock_docker):
         # if there are no tokens (Swarm is off), we should get an empty tuple
         mock_docker.return_value = {}
-        self.assertEqual(self.obj.get_join_tokens(), (),
+        self.assertEqual(self.obj.get_join_tokens(), (None, None),
                          'Returned Swarm tokens even though Swarm is NOT enabled')
 
         # otherwise, the tokens should be received
@@ -86,7 +89,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # is there's a Docker error, we should get an empty tuple
         mock_docker.side_effect = docker.errors.APIError("fake", response=requests.Response())
-        self.assertEqual(self.obj.get_join_tokens(), (),
+        self.assertEqual(self.obj.get_join_tokens(), (None, None),
                          'Returned Swarm tokens even though Docker threw an exception')
 
     @mock.patch('docker.models.nodes.NodeCollection.list')
@@ -108,7 +111,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertRaises(docker.errors.APIError, self.obj.list_nodes)
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.list_nodes')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_cluster_info(self, mock_get_node_info, mock_list_nodes):
         # if Swarm is not enabled, we should get an empty dict
         mock_get_node_info.return_value = {'Swarm': {}}
@@ -150,7 +153,7 @@ class COEClientDockerTestCase(unittest.TestCase):
                          'Expecting 1 worker in cluster info, but got something else')
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.find_compute_api_external_port')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_api_ip_port(self, mock_get_nodes_info, mock_get_port):
         # if Swarm info has an address, we should just get that back with port 5000
         node_addr = '1.2.3.4'
@@ -161,11 +164,12 @@ class COEClientDockerTestCase(unittest.TestCase):
         }
         mocked_port = '12345'
         mock_get_port.return_value = mocked_port
-        self.assertEqual(self.obj.get_api_ip_port(), (node_addr, mocked_port),
+        self.assertEqual((node_addr, mocked_port), self.obj.get_api_ip_port(),
                          'Expected default Swarm NodeAddr with port 5000, but got something else instead')
 
         # otherwise, we try to read the machine IP from the disk
         mock_get_nodes_info.return_value = {'Swarm': {}}
+
         # if there's a valid IP in this file, we return it
         tcp_file = '''sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
             6: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 51149 1 ffffffc1c9be2e80 100 0 0 10 0
@@ -192,7 +196,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.cast_dict_to_list')
     @mock.patch('docker.api.swarm.SwarmApiMixin.inspect_node')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_node_labels(self, mock_get_node_info, mock_inspect_node, mock_cast_dict_to_list):
         # errors while inspecting node should cause it to return empty list
         mock_inspect_node.side_effect = KeyError
@@ -328,7 +332,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         # no docker image found, using fallback
         self.obj.job_engine_lite_image = None
         mock_containers_create.return_value = docker.models.containers.Container()
-        with self.assertLogs(level='ERROR'):
+        with self.assertLogs(logger=logger, level='ERROR'):
             self.obj.launch_job(job_id, job_exec_id, nuvla)
         self.assertEqual(mock_containers_create.call_args.kwargs.get('image'), fallback_image)
 
@@ -397,7 +401,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # fail to connect container to bridge network
         mock_net_connect.side_effect = RuntimeError
-        with self.assertLogs(level=logging.WARNING):
+        with self.assertLogs(logger=logger, level=logging.WARNING):
             self.obj.launch_job(job_id, job_exec_id, nuvla)
         mock_container_start.assert_not_called()
 
@@ -477,7 +481,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         # if a mandatory attribute does not exist, then we get 'nan' again, but with an error
         cpu_stat.pop('cpu_stats')
         cpu_stat['online_cpus'] = 2
-        with self.assertLogs(level='WARNING') as log:
+        with self.assertLogs(logger=logger, level='WARNING') as log:
             self.assertTrue(math.isnan(self.obj.collect_container_metrics_cpu(cpu_stat)),
                             "Expecting 'nan' CPU usage due to missing mandatory keys, but got something else")
             self.assertIn('Failed to get CPU', '\n'.join(log.output),
@@ -550,7 +554,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         # if the blk_stats are misformatted or there is any other exception during
         # collection, then we get 0MBs for the corresponding metric, and an error
         blk_stat['blkio_stats']['io_service_bytes_recursive'][0]['value'] = "saasd" # not a number
-        with self.assertLogs(level='WARNING') as log:
+        with self.assertLogs(logger=logger, level='WARNING') as log:
             self.assertEqual(self.obj.collect_container_metrics_block(blk_stat), (2, 0),
                              'Expected 0MBs for blk_in (due to misformatted value, but got something else instead')
             self.assertIn('Failed to get block usage (In)', '\n'.join(log.output),
@@ -719,7 +723,7 @@ class COEClientDockerTestCase(unittest.TestCase):
                          node_info['Swarm']['Cluster']['ID'],
                          'Returned Cluster ID does not match the real one')
 
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_cluster_managers(self, mock_get_node):
         node_info = {
             'Swarm': {
@@ -753,7 +757,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_hostname(node_info), node_info['Name'],
                          'Hostname does not match the real one')
 
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_node_info')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.node_info', new_callable=PropertyMock)
     def test_get_cluster_join_address(self, mock_get_node):
         node_id = 'fake-node-id'
         node_info = {
@@ -851,7 +855,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # exception in infer_if_additional_coe_exists
         mock_other_coe_infra_service.side_effect = Exception
-        with self.assertLogs(level='WARNING'):
+        with self.assertLogs(logger=logger, level='WARNING'):
             self.obj.define_nuvla_infra_service(None)
 
     def test_get_partial_decommission_attributes(self):
@@ -973,7 +977,7 @@ class COEClientDockerTestCase(unittest.TestCase):
     def test_find_compute_api_external_port(self, mock_container_get: MagicMock):
         # Container not found
         mock_container_get.side_effect = docker.errors.NotFound('')
-        with self.assertLogs(level='DEBUG'):
+        with self.assertLogs(logger=logger, level='DEBUG'):
             port = self.obj.find_compute_api_external_port()
             self.assertEqual(port, '')
 
@@ -981,7 +985,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # Container found but port not found
         mock_container_get.return_value = docker.models.containers.Container()
-        with self.assertLogs(level='WARNING'):
+        with self.assertLogs(logger=logger, level='WARNING'):
             port = self.obj.find_compute_api_external_port()
             self.assertEqual(port, '')
 
@@ -1007,7 +1011,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         c1 = docker.models.containers.Container(attrs={'Id': '1234567890abcdef'})
         c2 = docker.models.containers.Container(attrs={'Id': 'abcdefghijklmnop'})
         mock_container_list.return_value = [c1, c2]
-        with self.assertLogs(level='WARNING'):
+        with self.assertLogs(logger=logger, level='WARNING'):
             container = self.obj._get_component_container_by_service_name('test')
             self.assertIs(container, c1)
 

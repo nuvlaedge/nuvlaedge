@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.13.1"
+version = "2.14.2"
 description = "NuvlaEdge source code"
 authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"
@@ -10,7 +10,7 @@ packages = [{include = "nuvlaedge"}]
 # Main components
 system-manager = "nuvlaedge.system_manager.__main__:entry"
 on-stop = "nuvlaedge.on_stop:main"
-agent = "nuvlaedge.agent:entry"
+agent = "nuvlaedge.agent:main"
 # Peripherals
 network = "nuvlaedge.peripherals.network.__init__:entry"
 bluetooth = "nuvlaedge.peripherals.bluetooth.__init__:entry"
@@ -19,17 +19,24 @@ gpu = "nuvlaedge.peripherals.gpu.__init__:entry"
 security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
-python = "^3.11"
-pydantic = "1.10.7"
-requests = "2.27.1"
-nuvla-api = "3.0.9"
-docker = "6.1.1"
+python = "~3.11.0"
+nuvla-api = "^4.0.0"
+nuvla-job-engine = "^4.0.6"
+docker = "7.0.0"
 kubernetes = "26.1.0"
+cffi = "1.15.1"
+# Pydantic version is fixed here and must be synced with the one in the Dockerfile
+pydantic = "2.7.0"
+pydantic-settings = "^2.1.0"
+pydantic-core = "2.18.1"
 
 # Common library deps
 filelock = "3.12.0"
 
 # Agent Dependencies
+strenum = "^0.4.15"
+toml = "^0.10.2"
+
 [tool.poetry.group.agent.dependencies]
 psutil = "5.9.5"
 
@@ -50,23 +57,24 @@ paho-mqtt = "1.6.1"
 
 # System manager dependencies
 [tool.poetry.group.tests.dependencies]
-pytest = "7.3.1"
-pytest-cov = "4.0.0"
-mock = "5.0.2"
+pytest = "^7.4.3"
+pytest-cov = "^4.1.0"
+mock = "^5.0.2"
+coverage = "^7.3.2"
 
 [tool.poetry.group.system-manager.dependencies]
 cryptography = "41.0.3"
 pyopenssl = "^23.1.1"
 
 [tool.poetry.group.gpu.dependencies]
-packaging = "23.1"
+packaging = "23.2"
 six = "1.16.0"
 
 
 [tool.poetry.group.job-engine.dependencies]
 pyyaml = "6.0.1"
 statsd = "4.0.1"
-packaging = "23.1"
+packaging = "23.2"
 
 
 [build-system]

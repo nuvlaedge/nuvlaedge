@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.14.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.1) (2024-04-10)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.0...2.14.1)
+
+**Merged pull requests:**
+
+- Improved Settings and NuvlaEdge UUID retrival [\#165](https://github.com/nuvlaedge/nuvlaedge/pull/165) ([ignacio-penas](https://github.com/ignacio-penas))
+
+## [2.14.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.0) (2024-04-03)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.2...2.14.0)
+
+**Merged pull requests:**
+
+- fix: adds a prebuild version of pydantic from Alpine edge repo. [\#164](https://github.com/nuvlaedge/nuvlaedge/pull/164) ([ignacio-penas](https://github.com/ignacio-penas))
+- Add nuvla-job-engine package to requirements to install job-engine tools [\#158](https://github.com/nuvlaedge/nuvlaedge/pull/158) ([ignacio-penas](https://github.com/ignacio-penas))
+- Refactor nuvlaedge common and agent [\#150](https://github.com/nuvlaedge/nuvlaedge/pull/150) ([ignacio-penas](https://github.com/ignacio-penas))
+
+## [2.13.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.2) (2024-04-02)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.1...2.13.2)
+
+**Merged pull requests:**
+
+- agent telemetry: fix network interfaces not removed [\#163](https://github.com/nuvlaedge/nuvlaedge/pull/163) ([schaubl](https://github.com/schaubl))
+- ci: add local build script [\#162](https://github.com/nuvlaedge/nuvlaedge/pull/162) ([ignacio-penas](https://github.com/ignacio-penas))
+- docs: fix job-engine build workflow link in README.md [\#159](https://github.com/nuvlaedge/nuvlaedge/pull/159) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.13.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.13.1) (2024-02-16)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.13.0...2.13.1)
@@ -299,7 +327,7 @@
 - refactor peripheral managers to ease community contribution [\#7](https://github.com/nuvlaedge/nuvlaedge/issues/7)
 - add discovery of GPU devices [\#6](https://github.com/nuvlaedge/nuvlaedge/issues/6)
 - discovery and categorization of tcp and serial peripherals [\#5](https://github.com/nuvlaedge/nuvlaedge/issues/5)
-- remove "device/sensor discovery" from agent, in NB architecture image [\#4](https://github.com/nuvlaedge/nuvlaedge/issues/4)
+- remove "device/sensor discovery" from nuvlaedge.agent, in NB architecture image [\#4](https://github.com/nuvlaedge/nuvlaedge/issues/4)
 - create peripheral manager for Modbus [\#3](https://github.com/nuvlaedge/nuvlaedge/issues/3)
 - Remove mention of HOSTNAME when starting NuvlaBox-Engine [\#2](https://github.com/nuvlaedge/nuvlaedge/issues/2)
 - create repository nuvlabox-lib [\#1](https://github.com/nuvlaedge/nuvlaedge/issues/1)

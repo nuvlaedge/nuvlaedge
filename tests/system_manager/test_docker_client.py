@@ -6,18 +6,21 @@ import docker.errors
 import logging
 import mock
 import os
+
 import requests
 import unittest
-import nuvlaedge.system_manager.common.coe_client as coe_client
+
+import nuvlaedge.system_manager.orchestrator.docker
+from nuvlaedge.system_manager.orchestrator.docker import Docker, utils
 import tests.system_manager.utils.fake as fake
 
 
 class DockerTestCase(unittest.TestCase):
 
-    @mock.patch('nuvlaedge.system_manager.common.coe_client.Docker.load_data_gateway_network_options')
+    @mock.patch('nuvlaedge.system_manager.orchestrator.docker.Docker.load_data_gateway_network_options')
     def setUp(self, mock_load_data_gateway_network_options) -> None:
         mock_load_data_gateway_network_options.return_value = {}
-        self.obj = coe_client.Docker(logging)
+        self.obj = Docker()
         self.obj.client = mock.MagicMock()
         logging.disable(logging.CRITICAL)
 
@@ -31,24 +34,25 @@ class DockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.my_component_name, "nuvlaedge-system-manager",
                          'Docker client was not properly initialized')
 
-    @mock.patch.object(coe_client.Docker, 'find_network')
-    @mock.patch('nuvlaedge.system_manager.common.coe_client.Path')
+    @mock.patch.object(Docker, 'find_network')
+    @mock.patch('nuvlaedge.system_manager.orchestrator.docker.Path')
     @mock.patch('os.path.exists')
     def test_load_data_gateway_network_options(self, mock_exists, mock_path, mock_find_network):
-        logging_backup = self.obj.logging
-        self.obj.logging = mock.MagicMock()
+
         # if no env and NO previous file, get the default TRUE for encryption
         mock_exists.return_value = False
         self.assertEqual(self.obj.load_data_gateway_network_options(), {"encrypted": "True"},
                          'Failed to set default encryption for Data Gateway network')
-        mock_exists.assert_called_once_with(coe_client.utils.nuvlaedge_shared_net_unencrypted)
+        mock_exists.assert_called_once_with(utils.nuvlaedge_shared_net_unencrypted)
 
         # if no env BUT previous "unencrypt" file, get the FALSE for encryption
         mock_exists.return_value = True
-        self.assertEqual(self.obj.load_data_gateway_network_options(), {},
-                         'Failed to grab persisted config for unencrypted Data Gateway network')
+        with mock.patch('nuvlaedge.system_manager.orchestrator.docker.logger') as mock_logger:
+            self.assertEqual(self.obj.load_data_gateway_network_options(), {},
+                             'Failed to grab persisted config for unencrypted Data Gateway network')
 
-        self.obj.logging.warning.assert_not_called()
+            mock_logger.warning.assert_not_called()
+
         # when env exists
         os.environ.setdefault('DATA_GATEWAY_NETWORK_ENCRYPTION', 'something')
         # if network exists, log and return True, unless explicitly False
@@ -57,25 +61,27 @@ class DockerTestCase(unittest.TestCase):
         path_obj.touch.return_value = None
         mock_path.return_value = path_obj
 
-        self.assertEqual(self.obj.load_data_gateway_network_options(), {"encrypted": "True"},
-                         'Failed to default to encrypted network when provided env is not explicitly False')
-        mock_path.assert_not_called()
-        mock_find_network.assert_called_once_with(coe_client.utils.nuvlaedge_shared_net)
-        self.obj.logging.warning.assert_called_once()
+        with mock.patch('nuvlaedge.system_manager.orchestrator.docker.logger') as mock_logger:
+            self.assertEqual(self.obj.load_data_gateway_network_options(), {"encrypted": "True"},
+                             'Failed to default to encrypted network when provided env is not explicitly False')
+            mock_path.assert_not_called()
+            mock_find_network.assert_called_once_with(utils.nuvlaedge_shared_net)
+            mock_logger.warning.assert_called_once()
 
         # if network does not exist, same output but no logging
-        mock_find_network.side_effect = docker.errors.NotFound('', requests.Response())
-        self.assertEqual(self.obj.load_data_gateway_network_options(), {"encrypted": "True"},
-                         'Failed to default to encrypted network when data gateway network does not exist')
-        mock_path.assert_not_called()
-        self.obj.logging.warning.assert_called_once()
+        with mock.patch('nuvlaedge.system_manager.orchestrator.docker.logger') as mock_logger:
+            mock_find_network.side_effect = docker.errors.NotFound('', requests.Response())
+            self.assertEqual(self.obj.load_data_gateway_network_options(), {"encrypted": "True"},
+                             'Failed to default to encrypted network when data gateway network does not exist')
+            mock_path.assert_not_called()
+            mock_logger.warning.assert_not_called()
 
         # when env var is False, get False and touch file
         os.environ['DATA_GATEWAY_NETWORK_ENCRYPTION'] = 'FaLsE'
         self.assertEqual(self.obj.load_data_gateway_network_options(), {},
                          'Failed to catch request for unencrypted network from env var')
-        mock_path.assert_called_once_with(coe_client.utils.nuvlaedge_shared_net_unencrypted)
-        self.obj.logging = logging_backup
+        mock_path.assert_called_once_with(utils.nuvlaedge_shared_net_unencrypted)
+
         os.environ.pop('DATA_GATEWAY_NETWORK_ENCRYPTION')
 
     def test_find_network(self):
@@ -85,7 +91,7 @@ class DockerTestCase(unittest.TestCase):
                          'Failed to get Docker network')
 
     def test_list_internal_components(self):
-        self.assertIsNotNone(coe_client.utils.base_label,
+        self.assertIsNotNone(utils.base_label,
                              'Failed to inherit utility variables from utils')
 
         self.obj.client.containers.list.return_value = [True]
@@ -124,7 +130,7 @@ class DockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_node_info(), {'foo': 'bar'},
                          'Failed to lookup node information')
 
-    @mock.patch.object(coe_client.Docker, 'get_node_info')
+    @mock.patch.object(Docker, 'get_node_info')
     def test_get_ram_capacity(self, mock_get_node_info):
         mock_get_node_info.return_value = {'MemTotal': 1}
 
@@ -132,7 +138,7 @@ class DockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_ram_capacity(), 1/1024/1024,
                          'Failed to get RAM capacity')
 
-    @mock.patch.object(coe_client.Docker, 'get_version')
+    @mock.patch.object(Docker, 'get_version')
     def test_is_version_compatible(self, mock_get_version):
         # for old versions, False
         mock_get_version.return_value = 1
@@ -194,7 +200,7 @@ class DockerTestCase(unittest.TestCase):
                          'Unable to infer on-stop image')
 
     @mock.patch('socket.gethostname')
-    @mock.patch.object(coe_client.Docker, 'infer_on_stop_docker_image')
+    @mock.patch.object(Docker, 'infer_on_stop_docker_image')
     def test_launch_nuvlaedge_on_stop(self, mock_infer_on_stop_docker_image, mock_gethostname):
         # if on-stop image is not given, need to infer, and returns None if cannot be inferred
         mock_infer_on_stop_docker_image.return_value = None
@@ -219,7 +225,7 @@ class DockerTestCase(unittest.TestCase):
         self.assertEqual(mock_gethostname.call_count, 2,
                          'Failed to find "self" container')
 
-    @mock.patch.object(coe_client.Docker, 'get_node_info')
+    @mock.patch.object(Docker, 'get_node_info')
     def test_get_node_id(self, mock_get_node_info):
         mock_get_node_info.return_value = {'Swarm': {'NodeID': 'id'}}
         # lookup
@@ -232,7 +238,7 @@ class DockerTestCase(unittest.TestCase):
                          'Failed to list nodes')
         self.obj.client.nodes.list.assert_called_once_with(filters={'filter': 'foo'})
 
-    @mock.patch.object(coe_client.Docker, 'get_node_info')
+    @mock.patch.object(Docker, 'get_node_info')
     def test_get_cluster_managers(self, mock_get_node_info):
         # if RemoteManagers is invalid, get []
         mock_get_node_info.return_value = {}
@@ -266,9 +272,9 @@ class DockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.read_system_issues(node_info), (['error'], ['warn1', 'warn2']),
                          'Failed to read system errors and warnings')
 
-    @mock.patch.object(coe_client.Docker, 'read_system_issues')
-    @mock.patch.object(coe_client.Docker, 'get_node_info')
-    @mock.patch.object(coe_client.Docker, 'get_node_id')
+    @mock.patch.object(Docker, 'read_system_issues')
+    @mock.patch.object(Docker, 'get_node_info')
+    @mock.patch.object(Docker, 'get_node_id')
     def test_set_nuvlaedge_node_label(self, mock_get_node_id, mock_get_node_info, mock_read_system_issues):
         # handle Docker errors
         self.obj.client.nodes.get.side_effect = docker.errors.APIError('', requests.Response())
@@ -300,7 +306,7 @@ class DockerTestCase(unittest.TestCase):
                         'Got the wrong error message while failing to set node label due to invalid Node')
 
         # otherwise, get its labels. update only if label is missing
-        node.attrs = {'Spec': {'Labels': {coe_client.utils.node_label_key: 'foo'}}}   # already labeled
+        node.attrs = {'Spec': {'Labels': {utils.node_label_key: 'foo'}}}   # already labeled
         self.obj.client.nodes.get.return_value = node
         self.assertEqual(self.obj.set_nuvlaedge_node_label('id'), (True, None),
                          'Failed to set node label when label is already set')
@@ -310,7 +316,7 @@ class DockerTestCase(unittest.TestCase):
         self.obj.client.nodes.get.return_value = node
         self.assertEqual(self.obj.set_nuvlaedge_node_label('id'), (True, None),
                          'Failed to update node label')
-        node.update.assert_called_once_with({'Labels': {coe_client.utils.node_label_key: 'True'}})
+        node.update.assert_called_once_with({'Labels': {utils.node_label_key: 'True'}})
 
         # and if Node id is not provided, infer it
         mock_get_node_id.assert_not_called()
@@ -333,7 +339,7 @@ class DockerTestCase(unittest.TestCase):
         self.obj.client.api.restart.side_effect = docker.errors.APIError('', requests.Response())
         self.assertRaises(docker.errors.APIError, self.obj.restart_credentials_manager)
 
-    @mock.patch.object(coe_client.Docker, 'get_current_container')
+    @mock.patch.object(Docker, 'get_current_container')
     def test_find_nuvlaedge_agent_container(self, mock_current_container):
         labels = mock.MagicMock()
         labels.labels = {'com.docker.compose.project': 'nuvlaedge'}
@@ -355,7 +361,7 @@ class DockerTestCase(unittest.TestCase):
                          'Failed to list all containers')
         self.obj.client.containers.list.assert_called_once_with(all=True)
 
-    @mock.patch.object(coe_client.Docker, 'get_node_info')
+    @mock.patch.object(Docker, 'get_node_info')
     def test_count_images_in_this_host(self, mock_get_node_info):
         # lookup
         mock_get_node_info.return_value = {'Images': 123}

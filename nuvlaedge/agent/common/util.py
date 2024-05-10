@@ -6,11 +6,16 @@ import os
 import logging
 import signal
 import tempfile
+from pathlib import Path
+
 import pkg_resources
 
 from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
+
+from nuvlaedge.common.constants import CTE
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
 base_label = 'nuvlaedge.component=True'
@@ -20,11 +25,12 @@ compute_api_service_name = 'compute-api'
 compute_api = compose_project_name + '-' + compute_api_service_name
 job_engine_service_name = 'job-engine-lite'
 vpn_client_service_name = 'vpn-client'
-fallback_image = 'sixsq/nuvlaedge:latest'
+fallback_image = CTE.FALLBACK_IMAGE
 
 COMPUTE_API_INTERNAL_PORT = 5000
 
-logger: logging.Logger = logging.getLogger(__name__)
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 def extract_nuvlaedge_version(image_name: str) -> str:
@@ -46,12 +52,16 @@ def str_if_value_or_none(value):
 
 
 def execute_cmd(command: list[str], method_flag: bool = True) -> dict | CompletedProcess | None:
-    """ Shell wrapper to execute a command
-
-    @param command: command to execute
-    @param method_flag: flag to witch between run and Popen command exection
-    @return: all outputs
     """
+    Shell wrapper to execute a command
+    Args:
+        command: command to execute
+        method_flag: flag to switch between run and Popen command execution
+
+    Returns: all outputs
+
+    """
+
     try:
         if method_flag:
             return run(command, stdout=PIPE, stderr=STDOUT, encoding='UTF-8')
@@ -63,51 +73,19 @@ def execute_cmd(command: list[str], method_flag: bool = True) -> dict | Complete
                     'stderr': stderr,
                     'returncode': shell_pipe.returncode}
 
-    except OSError as ex:
-        logging.error(f"Trying to execute non existent file: {ex}")
-
     except ValueError as ex:
-        logging.error(f"Invalid arguments executed: {ex}")
+        logger.error(f"Invalid arguments executed: {ex}")
 
     except TimeoutExpired as ex:
-        logging.error(f"Timeout {ex} expired waiting for command: {command}")
+        logger.error(f"Timeout {ex} expired waiting for command: {command}")
 
     except SubprocessError as ex:
-        logging.error(f"Exception not identified: {ex}")
+        logger.error(f"Exception not identified: {ex}")
+
+    except OSError as ex:
+        logger.error(f"Trying to execute non existent file: {ex}")
 
     return None
-
-
-@contextmanager
-def atomic_writer(file, **kwargs):
-    """ Context manager to write to a file atomically
-
-    :param file: path of file
-    :param kwargs: kwargs passed to tempfile.NamedTemporaryFile()
-    """
-    path, prefix = os.path.split(file)
-    kwargs_ = dict(mode='w+', dir=path, prefix=f'tmp_{prefix}_')
-    kwargs_.update(kwargs)
-
-    with tempfile.NamedTemporaryFile(delete=False, **kwargs_) as tmpfile:
-        yield tmpfile
-    os.replace(tmpfile.name, file)
-
-
-def atomic_write(file, data, **kwargs):
-    """ Write data to a file atomically
-
-    :param file: path of file
-    :param data: data to write to the file
-    :param kwargs: kwargs passed to tempfile.NamedTemporaryFile
-    """
-    with atomic_writer(file, **kwargs) as f:
-        return f.write(data)
-
-
-def file_exists_and_not_empty(filename):
-    return (os.path.exists(filename)
-            and os.path.getsize(filename) > 0)
 
 
 def raise_timeout(signum, frame):
@@ -127,3 +105,53 @@ def timeout(time):
         # Unregister the signal so it won't be triggered
         # if the timeout is not reached.
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+
+# pragma: no cover
+VPN_CONFIG_TEMPLATE: str = """client
+
+dev ${vpn_interface_name}
+dev-type tun
+nobind
+
+# Certificate Configuration
+# CA certificate
+<ca>
+${vpn_ca_certificate}
+${vpn_intermediate_ca_is}
+${vpn_intermediate_ca}
+</ca>
+
+# Client Certificate
+<cert>
+${vpn_certificate}
+</cert>
+
+# Client Key
+<key>
+${nuvlaedge_vpn_key}
+</key>
+
+# Shared key
+<tls-crypt>
+${vpn_shared_key}
+</tls-crypt>
+
+remote-cert-tls server
+
+verify-x509-name "${vpn_common_name_prefix}" name-prefix
+
+script-security 2
+up /opt/nuvlaedge/scripts/vpn-client/get_ip.sh
+
+auth-nocache
+auth-retry nointeract
+
+ping 60
+ping-restart 120
+compress lz4
+
+${vpn_endpoints_mapped}
+
+${vpn_extra_config}
+"""

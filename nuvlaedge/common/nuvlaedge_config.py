@@ -9,8 +9,7 @@ import sys
 
 from argparse import ArgumentParser
 
-LOGGING_BASIC_FORMAT: str = '[%(asctime)s - %(name)s/%(funcName)s - ' \
-                            '%(levelname)s]: %(message)s'
+LOGGING_BASIC_FORMAT: str = '[%(asctime)s - %(levelname)s - %(name)s/%(funcName)s]: %(message)s'
 LOGGING_DEFAULT_LEVEL = 'INFO'
 
 
@@ -28,6 +27,7 @@ def initialize_logging(log_level: str = '', config_file: str = ''):
     # Load configuration from file if present, else apply default configuration
     if config_file:
         logging.config.fileConfig(config_file, disable_existing_loggers=False)
+
     else:
         logging.basicConfig(format=LOGGING_BASIC_FORMAT, level=logging.INFO)
 

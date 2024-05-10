@@ -1,6 +1,10 @@
 import logging
 from threading import Thread
-logger: logging.Logger = logging.getLogger(__name__)
+
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
+
+logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
 def log(level, message, *args, **kwargs):

@@ -39,4 +39,5 @@ class Constants:
     DATA_GATEWAY_PORT: int = 1883
     DATA_GATEWAY_TIMEOUT: int = 90
 
+
 CTE: Constants = Constants()

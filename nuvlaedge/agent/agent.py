@@ -415,7 +415,7 @@ class Agent:
         write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
         # Send telemetry data to MQTT broker
-        logger.info(f"Sending telemetry data to MQTT broker")
+        logger.info("Sending telemetry data to MQTT broker")
         data_gateway_client.send_telemetry(new_telemetry)
 
         return response

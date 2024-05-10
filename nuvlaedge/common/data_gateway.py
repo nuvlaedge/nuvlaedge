@@ -102,7 +102,7 @@ class DataGatewayPub:
                 logger.error("Failed to connect to the data gateway")
                 return
 
-        logger.info(f"Sending telemetry to mqtt...")
+        logger.info("Sending telemetry to mqtt...")
         for name, sender in self.SENDERS.items():
             try:
                 logger.debug(f"Sending {name} to mqtt...")

@@ -20,7 +20,7 @@ class DataGatewayPub:
     def __init__(self,
                  endpoint: str = CTE.DATA_GATEWAY_ENDPOINT,
                  port: int = CTE.DATA_GATEWAY_PORT,
-                 timeout: int = CTE.DATA_GATEWAY_TIMEOUT):
+                 timeout: int = CTE.MQTT_PING_INTERVAL):
         self.endpoint: str = endpoint
         self.port: int = port
         self.timeout: int = timeout

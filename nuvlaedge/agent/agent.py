@@ -29,9 +29,6 @@ import sys
 import time
 from queue import Queue
 from threading import Event
-from typing import Optional
-
-import paho.mqtt.client as mqtt
 
 from nuvla.api.models import CimiResponse
 
@@ -39,7 +36,7 @@ from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, Status
 from nuvlaedge.agent.job import Job
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
-from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 from nuvlaedge.common.file_operations import write_file
 from nuvlaedge.common.data_gateway import data_gateway_client
@@ -49,9 +46,9 @@ from nuvlaedge.agent.workers.commissioner import Commissioner
 from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes, Telemetry
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.nuvla.resources import State
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.manager import WorkerManager
-from nuvlaedge.agent.settings import (AgentSettings, InsufficientSettingsProvided)
+from nuvlaedge.agent.settings import (AgentSettings)
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.models import model_diff
@@ -416,7 +413,13 @@ class Agent:
 
         # Send telemetry data to MQTT broker
         logger.info("Sending telemetry data to MQTT broker")
-        data_gateway_client.send_telemetry(new_telemetry)
+        try:
+            data_gateway_client.send_telemetry(new_telemetry)
+        except Exception as e:
+            logger.error(f"Failed to send telemetry data to MQTT broker: {e}")
+            NuvlaEdgeStatusHandler.failing(self.status_channel,
+                                           _status_module_name,
+                                           "Failed to send telemetry data to MQTT broker")
 
         return response
 

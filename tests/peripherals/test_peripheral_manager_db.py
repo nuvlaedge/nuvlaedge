@@ -6,6 +6,7 @@ from unittest import TestCase
 import mock
 
 import nuvlaedge.peripherals.peripheral_manager_db
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.peripherals.peripheral_manager_db import PeripheralData, PeripheralsDBManager
 from nuvlaedge.models.nuvla_resources import NuvlaBoxPeripheralResource as PeripheralResource
 
@@ -54,14 +55,16 @@ class TestPeripheralsDBManager(TestCase):
         # Test remote found
         mock_collection.count = 1
         mock_data = mock.Mock
-        mock_data.updated = 100
+        t = datetime.now()
+        t_str = t.strftime(CTE.NUVLA_TIMESTAMP_FORMAT)
+        mock_data.updated = t_str
         test_peripheral = {
             'id': mock_data
         }
 
         mock_decode.return_value = test_peripheral
         self.test_db.synchronize()
-        self.assertEqual(self.test_db._latest_update, {'id': 100})
+        self.assertEqual(self.test_db._latest_update, {'id': datetime.strptime(t_str, CTE.NUVLA_TIMESTAMP_FORMAT)})
         mock_storage.assert_called_once()
 
         # Test remove update from local registry

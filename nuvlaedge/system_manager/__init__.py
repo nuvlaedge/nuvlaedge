@@ -109,8 +109,7 @@ def main():
 
             # the Data Gateway comes out of the box for k8s installations
             supervisor.manage_docker_data_gateway()
-            if supervisor.data_gateway_enabled:
-                supervisor.save_data_gateway_config()
+            supervisor.save_data_gateway_config()
 
             # in k8s everything runs as part of a Dep (restart policies are in place),
             # so there's nothing to fix

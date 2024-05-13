@@ -58,6 +58,7 @@ class Supervise:
         self.data_gateway_name = os.getenv('NUVLAEDGE_DATA_GATEWAY_NAME',
                                            os.getenv('NUVLABOX_DATA_GATEWAY_NAME',
                                                      'data-gateway'))
+        self.data_gateway_config = None
         self.i_am_manager = self.is_cluster_enabled = self.node = None
         self.operational_status = []
         self.agent_dg_failed_connection = 0
@@ -236,11 +237,19 @@ class Supervise:
             self.log.error(f'Cannot add network {target_network.name} to DG {self.data_gateway_object.name}: {str(e)}')
 
     def save_data_gateway_config(self):
+        if not self.data_gateway_enabled:
+            return
+
         dw_config = DataGatewayConfig(
             endpoint=self.data_gateway_name,
             enabled=self.data_gateway_enabled,
         )
+
+        if dw_config == self.data_gateway_config:
+            return
+
         write_file(dw_config, FILE_NAMES.DATA_GATEWAY_CONFIG_FILE)
+        self.data_gateway_config = dw_config
 
     def manage_docker_data_gateway_network(self, data_gateway_networks: list) \
             -> docker.models.networks.Network | None:

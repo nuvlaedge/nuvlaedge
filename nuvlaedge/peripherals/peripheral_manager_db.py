@@ -227,9 +227,11 @@ class PeripheralsDBManager:
         :return:
         """
         now = datetime.now().timestamp()
-        then = self._latest_update.get(peripheral_id).timestamp()
+        per = self._latest_update.get(peripheral_id)
+        if not per or not isinstance(per, datetime):
+            return True
 
-        return (now - then) > self.EXPIRATION_TIME
+        return (now - per.timestamp()) > self.EXPIRATION_TIME
 
     def remove(self, peripherals: Set):
         """

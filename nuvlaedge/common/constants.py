@@ -5,7 +5,7 @@ from dataclasses import dataclass
 class Constants:
     # FORMATS
     DATETIME_FORMAT: str = "%m%d%Y%H%M%S"
-    NUVLA_TIMESTAMP_FORMAT: str = "%Y-%m-%dT%H:%M:%SZ"
+    NUVLA_TIMESTAMP_FORMAT: str = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     # Timeouts
     NETWORK_TIMEOUT: int = 10

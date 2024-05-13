@@ -62,7 +62,11 @@ class DataGatewayPub:
 
     def is_dw_available(self) -> bool:
         if file_exists_and_not_empty(self.dw_config_file) and self.has_config_changed:
-            self._read_config()
+            try:
+                self._read_config()
+            except Exception as e:
+                logger.error(f"Failed to read data gateway configuration: {e}")
+                return False
 
         if not self.data_gateway_config.enabled:
             logger.info("Data gateway is not yet enabled")
@@ -71,12 +75,10 @@ class DataGatewayPub:
         if not self.is_connected:
             logger.info("Connecting to data gateway...")
             self.connect()
-            if self.is_connected:
-                logger.info("Connecting to data gateway... Success")
-                return True
-            logger.info("Connecting to data gateway... Failed")
+            return self.is_connected
 
-        return False
+        else:
+            return True
 
     def connect(self):
         logger.info("Connecting to the data gateway...")

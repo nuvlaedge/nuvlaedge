@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
-from mock import mock, patch
+from mock import mock, patch, PropertyMock
 
 
 from nuvlaedge.common.data_gateway import DataGatewayPub, DataGatewayConfig
@@ -38,6 +38,56 @@ class TestDataGatewayPub(TestCase):
         self.mock_data_gateway.connect()
         mock_logger.error.assert_called_once()
         mock_logger.info.assert_called_once()
+
+    @patch('nuvlaedge.common.data_gateway.logger')
+    @patch('nuvlaedge.common.data_gateway.file_exists_and_not_empty')
+    @patch('nuvlaedge.common.data_gateway.DataGatewayPub.has_config_changed')
+    @patch('nuvlaedge.common.data_gateway.DataGatewayPub._read_config')
+    @patch('nuvlaedge.common.data_gateway.DataGatewayPub.is_connected', new_callable=PropertyMock)
+    @patch('nuvlaedge.common.data_gateway.DataGatewayPub.connect')
+    def test_is_dw_available(self,
+                             mock_connect, mock_is_connected,
+                             mock_read_config, mock_conf_change,
+                             mock_file_exists, mock_logger):
+        mock_file_exists.return_value = True
+        mock_conf_change.return_value = True
+
+        self.assertFalse(self.mock_data_gateway.is_dw_available())
+        mock_read_config.assert_called_once()
+        mock_logger.info.assert_called_once_with('Data gateway is not yet enabled')
+
+        mock_logger.reset_mock()
+
+        self.mock_data_gateway.data_gateway_config = self.dw_conf
+        mock_is_connected.side_effect = [False, False]
+        self.assertFalse(self.mock_data_gateway.is_dw_available())
+        mock_logger.info.assert_called_once_with('Connecting to data gateway...')
+        mock_connect.assert_called_once()
+
+        mock_is_connected.side_effect = [False, True]
+        self.assertTrue(self.mock_data_gateway.is_dw_available())
+
+        mock_is_connected.side_effect = [True, True]
+        self.assertTrue(self.mock_data_gateway.is_dw_available())
+
+        mock_logger.reset_mock()
+        mock_read_config.side_effect = Exception('mock_exception')
+        self.assertFalse(self.mock_data_gateway.is_dw_available())
+        mock_logger.error.assert_called_once()
+
+    @patch('nuvlaedge.common.data_gateway.Path.stat')
+    def test_has_config_changed(self, mock_stat):
+        self.mock_data_gateway.config_edit_time = 0.0
+        self.assertTrue(self.mock_data_gateway.has_config_changed)
+
+        mock_data = mock.Mock()
+        mock_data.st_mtime = 100
+        mock_stat.return_value = mock_data
+        self.mock_data_gateway.config_edit_time = 100
+        self.assertFalse(self.mock_data_gateway.has_config_changed)
+
+        mock_data.st_mtime = 101
+        self.assertTrue(self.mock_data_gateway.has_config_changed)
 
     def test_disconnect(self):
         self.mock_data_gateway.disconnect()

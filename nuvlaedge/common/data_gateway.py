@@ -44,7 +44,7 @@ class DataGatewayPub:
 
     @property
     def has_config_changed(self) -> bool:
-        if self.config_edit_time == 0.0:
+        if self.config_edit_time <= 0:
             return True
 
         if self.dw_config_file.stat().st_mtime > self.config_edit_time:

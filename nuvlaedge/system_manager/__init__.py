@@ -15,8 +15,9 @@ import sys
 import time
 
 from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.common.file_operations import file_exists
+from nuvlaedge.common.file_operations import file_exists, write_file
 from nuvlaedge.common.nuvlaedge_config import parse_arguments_and_initialize_logging
+from nuvlaedge.common.data_gateway import DataGatewayConfig
 import nuvlaedge.system_manager.requirements as MinReq
 from nuvlaedge.system_manager.common import utils
 from nuvlaedge.system_manager.supervise import Supervise
@@ -108,10 +109,19 @@ def main():
 
             # the Data Gateway comes out of the box for k8s installations
             supervisor.manage_docker_data_gateway()
+            if supervisor.data_gateway_enabled:
+                supervisor.save_data_gateway_config()
 
             # in k8s everything runs as part of a Dep (restart policies are in place),
             # so there's nothing to fix
             supervisor.docker_container_healer()
+        else:
+            # Agent waits for the file dw_config.json to be present for both k8s and docker so we need to
+            # create it, even if for k8s is constant
+            if not file_exists(FILE_NAMES.DATA_GATEWAY_CONFIG_FILE):
+                write_file(
+                    DataGatewayConfig(endpoint='data-gateway', enabled=True),
+                    FILE_NAMES.DATA_GATEWAY_CONFIG_FILE)
 
         logger.debug(f'Operational status checks: {supervisor.operational_status}')
 

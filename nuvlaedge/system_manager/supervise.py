@@ -14,8 +14,9 @@ import docker.errors
 import OpenSSL
 
 from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.data_gateway import DataGatewayConfig
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.common.file_operations import read_file
+from nuvlaedge.common.file_operations import read_file, write_file
 from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
 
 
@@ -233,6 +234,13 @@ class Supervise:
                     target_network.connect(self.data_gateway_object.name)
         except Exception as e:
             self.log.error(f'Cannot add network {target_network.name} to DG {self.data_gateway_object.name}: {str(e)}')
+
+    def save_data_gateway_config(self):
+        dw_config = DataGatewayConfig(
+            endpoint=self.data_gateway_name,
+            enabled=self.data_gateway_enabled,
+        )
+        write_file(dw_config, FILE_NAMES.DATA_GATEWAY_CONFIG_FILE)
 
     def manage_docker_data_gateway_network(self, data_gateway_networks: list) \
             -> docker.models.networks.Network | None:

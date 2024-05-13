@@ -1,20 +1,25 @@
+from pathlib import Path
 from unittest import TestCase
 from mock import mock, patch
 
 
-from nuvlaedge.common.data_gateway import DataGatewayPub
+from nuvlaedge.common.data_gateway import DataGatewayPub, DataGatewayConfig
 
 
 class TestDataGatewayPub(TestCase):
     def setUp(self):
         self.mock_mqtt_client = mock.MagicMock()
-        self.mock_endpoint = 'mock_endpoint'
-        self.mock_port = 1234
-        self.mock_timeout = 10
-
-        self.mock_data_gateway = DataGatewayPub(endpoint=self.mock_endpoint,
-                                           port=self.mock_port,
-                                           timeout=self.mock_timeout)
+        self.mock_endpoint = 'data-gateway'
+        self.mock_port = 1883
+        self.mock_timeout = 90
+        self.dw_conf = DataGatewayConfig(
+            enabled=True,
+            endpoint=self.mock_endpoint,
+            port=self.mock_port,
+            ping_interval=self.mock_timeout
+        )
+        self.conf_path = Path('/tmp/dw_config.json')
+        self.mock_data_gateway = DataGatewayPub(config_file=self.conf_path)
 
         self.mock_data_gateway.client = self.mock_mqtt_client
 
@@ -147,31 +152,25 @@ class TestDataGatewayPub(TestCase):
         mock_logger.debug.assert_called_once()
 
     @patch('nuvlaedge.common.data_gateway.logger')
-    @patch('nuvlaedge.common.data_gateway.DataGatewayPub.is_connected', new_callable=mock.PropertyMock)
-    @patch('nuvlaedge.common.data_gateway.DataGatewayPub.connect')
-    def test_sent_telemetry(self, mock_connect, mock_is_connected, mock_logger):
+    @patch('nuvlaedge.common.data_gateway.DataGatewayPub.is_dw_available')
+    def test_send_telemetry(self, mock_available, mock_logger):
         mock_data = mock.MagicMock()
 
         mock_sender = mock.MagicMock()
         self.mock_data_gateway.SENDERS = {'mock_sender': mock_sender}
 
-        mock_is_connected.side_effect = [False, False]
+        mock_available.return_value = False
         self.mock_data_gateway.send_telemetry(mock_data)
-        mock_connect.assert_called_once()
-        mock_logger.error.assert_called_once()
+        mock_logger.info.assert_called_once_with('Data gateway is not available, might be disabled or starting...')
 
         mock_logger.reset_mock()
-        mock_connect.reset_mock()
-        mock_is_connected.side_effect = [False, True]
+        mock_available.return_value = True
 
         self.mock_data_gateway.send_telemetry(mock_data)
-        mock_connect.assert_called_once()
         mock_sender.assert_called_once()
 
         mock_logger.reset_mock()
-        mock_is_connected.reset_mock()
 
-        mock_is_connected.side_effect = [True, True]
         mock_sender.side_effect = Exception('mock_exception')
         self.mock_data_gateway.send_telemetry(mock_data)
         mock_logger.error.assert_called_once()

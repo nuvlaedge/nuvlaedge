@@ -14,7 +14,7 @@ from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.common.util import execute_cmd
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-
+from nuvlaedge.common.utils import format_datetime_for_nuvla
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -32,7 +32,6 @@ class ContainerStatsMonitor(Monitor):
 
         self.nuvlaedge_id: str = telemetry.nuvlaedge_uuid
         self.swarm_node_cert_path: str = CTE.SWARM_NODE_CERTIFICATE
-        self.nuvla_timestamp_format: str = CTE.NUVLA_TIMESTAMP_FORMAT
 
         self.data.containers = {}
 
@@ -145,8 +144,7 @@ class ContainerStatsMonitor(Monitor):
         expiry_date_raw = cert_check.stdout.strip().split('=')[-1]
         raw_format = '%b %d %H:%M:%S %Y %Z'
 
-        return datetime.datetime.strptime(expiry_date_raw, raw_format).strftime(
-            self.nuvla_timestamp_format)
+        return format_datetime_for_nuvla(datetime.datetime.strptime(expiry_date_raw, raw_format))
 
     def update_data(self):
         self.refresh_container_info()

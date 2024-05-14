@@ -4,8 +4,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Constants:
     # FORMATS
-    DATETIME_FORMAT: str = "%m%d%Y%H%M%S"
-    NUVLA_TIMESTAMP_FORMAT: str = "%Y-%m-%dT%H:%M:%S.%fZ"
+    DATETIME_FORMAT: str = "%m%d%Y%H%M%S"  # Used for file names in the broker
 
     # Timeouts
     NETWORK_TIMEOUT: int = 10

@@ -61,7 +61,6 @@ class TestDataGatewayPub(TestCase):
         self.mock_data_gateway.data_gateway_config = self.dw_conf
         mock_is_connected.side_effect = [False, False]
         self.assertFalse(self.mock_data_gateway.is_dw_available())
-        mock_logger.info.assert_called_once_with('Connecting to data gateway...')
         mock_connect.assert_called_once()
 
         mock_is_connected.side_effect = [False, True]
@@ -211,7 +210,7 @@ class TestDataGatewayPub(TestCase):
 
         mock_available.return_value = False
         self.mock_data_gateway.send_telemetry(mock_data)
-        mock_logger.info.assert_called_once_with('Data gateway is not available, might be disabled or starting...')
+        mock_available.assert_called_once()
 
         mock_logger.reset_mock()
         mock_available.return_value = True

@@ -73,7 +73,6 @@ class DataGatewayPub:
             return False
 
         if not self.is_connected:
-            logger.info("Connecting to data gateway...")
             self.connect()
             return self.is_connected
 
@@ -90,7 +89,7 @@ class DataGatewayPub:
         except Exception as e:
             logger.error(f"Failed to connect to the data gateway: {e}")
             return
-        logger.info(f"Connected to the data gateway with result: {res}")
+        logger.info("Connecting to the data gateway... Success")
 
     def disconnect(self):
         self.client.loop_stop()
@@ -145,7 +144,6 @@ class DataGatewayPub:
 
     def send_telemetry(self, data: TelemetryPayloadAttributes):
         if not self.is_dw_available():
-            logger.info("Data gateway is not available, might be disabled or starting...")
             return
 
         logger.info("Sending telemetry to mqtt...")

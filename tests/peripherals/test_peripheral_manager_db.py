@@ -7,6 +7,7 @@ import mock
 
 import nuvlaedge.peripherals.peripheral_manager_db
 from nuvlaedge.common.constants import CTE
+from nuvlaedge.common.utils import format_datetime_for_nuvla
 from nuvlaedge.peripherals.peripheral_manager_db import PeripheralData, PeripheralsDBManager
 from nuvlaedge.models.nuvla_resources import NuvlaBoxPeripheralResource as PeripheralResource
 
@@ -56,7 +57,7 @@ class TestPeripheralsDBManager(TestCase):
         mock_collection.count = 1
         mock_data = mock.Mock
         t = datetime.now()
-        t_str = t.strftime(CTE.NUVLA_TIMESTAMP_FORMAT)
+        t_str = format_datetime_for_nuvla(t)
         mock_data.updated = t_str
         test_peripheral = {
             'id': mock_data
@@ -64,7 +65,7 @@ class TestPeripheralsDBManager(TestCase):
 
         mock_decode.return_value = test_peripheral
         self.test_db.synchronize()
-        self.assertEqual(self.test_db._latest_update, {'id': datetime.strptime(t_str, CTE.NUVLA_TIMESTAMP_FORMAT)})
+        self.assertEqual(self.test_db._latest_update, {'id': datetime.fromisoformat(t_str)})
         mock_storage.assert_called_once()
 
         # Test remove update from local registry

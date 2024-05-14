@@ -160,11 +160,10 @@ class TestContainerStatsMonitor(unittest.TestCase):
         # otherwise, get the expiration date
         mock_run.return_value.returncode = 0
         exp_date = 'Feb  6 05:41:00 2022 GMT'
-        test_monitor.nuvla_timestamp_format = "%Y-%m-%dT%H:%M:%SZ"
         mock_run.return_value.stdout = f'notAfter={exp_date}\n'
 
         self.assertEqual(test_monitor.get_swarm_certificate_expiration_date(),
-                         '2022-02-06T05:41:00Z',
+                         '2022-02-06T05:41:00.000Z',
                          'Unable to get Swarm node certificate expiration date')
 
     @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor.'

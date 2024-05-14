@@ -1,9 +1,10 @@
 import threading
+from datetime import datetime
 
 from unittest import TestCase
 import mock
 
-from nuvlaedge.common.utils import timed_event, dump_dict_to_str
+from nuvlaedge.common.utils import timed_event, dump_dict_to_str, format_datetime_for_nuvla
 
 
 class TestUtils(TestCase):
@@ -18,6 +19,11 @@ class TestUtils(TestCase):
                 mock_cancel.assert_not_called()
 
             mock_cancel.assert_called_once()
+
+    def test_format_datetime_for_nuvla(self):
+        input_datetime = datetime(2022, 1, 1, 12, 0, 0, 123456)
+        expected_output = "2022-01-01T12:00:00.123Z"
+        self.assertEqual(format_datetime_for_nuvla(input_datetime), expected_output)
 
 
 def test_dump_dict_to_str():

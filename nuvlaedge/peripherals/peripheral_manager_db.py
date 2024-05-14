@@ -77,7 +77,8 @@ class PeripheralsDBManager:
         for i in set(self._local_db.keys()) - set(self._latest_update.keys()):
             if self._local_db.get(i).updated and self._local_db.get(i).updated != "":
                 try:
-                    self._latest_update[i] = datetime.strptime(self._local_db.get(i).updated, CTE.NUVLA_TIMESTAMP_FORMAT)
+                    self._latest_update[i] = datetime.fromisoformat(self._local_db.get(i).updated)
+
                 except Exception as e:
                     self.logger.warning(f'Error retrieving peripheral data for deletion: {e}')
 

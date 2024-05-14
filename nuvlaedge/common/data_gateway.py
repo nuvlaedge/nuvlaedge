@@ -82,9 +82,9 @@ class DataGatewayPub:
     def connect(self):
         logger.info("Connecting to the data gateway...")
         try:
-            res = self.client.connect(host=self.data_gateway_config.endpoint,
-                                      port=self.data_gateway_config.port,
-                                      keepalive=self.data_gateway_config.ping_interval)
+            self.client.connect(host=self.data_gateway_config.endpoint,
+                                port=self.data_gateway_config.port,
+                                keepalive=self.data_gateway_config.ping_interval)
             self.client.loop_start()
         except Exception as e:
             logger.error(f"Failed to connect to the data gateway: {e}")

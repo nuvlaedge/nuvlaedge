@@ -1,10 +1,15 @@
 import json
+from functools import wraps
 import logging
+from pathlib import Path
 from typing import Callable
 
 import paho.mqtt.client as mqtt
+from pydantic import BaseModel
 
 from nuvlaedge.common.constants import CTE
+from .constant_files import FILE_NAMES
+from .file_operations import file_exists_and_not_empty, read_file
 from .nuvlaedge_logging import get_nuvlaedge_logger
 from ..agent.workers.telemetry import TelemetryPayloadAttributes
 
@@ -14,35 +19,77 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 SenderFunc = Callable[[TelemetryPayloadAttributes], None]
 
 
+class DataGatewayConfig(BaseModel):
+    endpoint: str = CTE.DATA_GATEWAY_ENDPOINT
+    port: int = CTE.DATA_GATEWAY_PORT
+    ping_interval: int = CTE.DATA_GATEWAY_PING_INTERVAL
+    enabled: bool = False
+
+
 class DataGatewayPub:
     TELEMETRY_TOPIC = 'nuvlaedge-status'
 
-    def __init__(self,
-                 endpoint: str = CTE.DATA_GATEWAY_ENDPOINT,
-                 port: int = CTE.DATA_GATEWAY_PORT,
-                 timeout: int = CTE.DATA_GATEWAY_TIMEOUT):
-        self.endpoint: str = endpoint
-        self.port: int = port
-        self.timeout: int = timeout
+    def __init__(self, config_file: Path = FILE_NAMES.DATA_GATEWAY_CONFIG_FILE):
 
-        self.client: mqtt.Client = mqtt.Client()
+        self.dw_config_file: Path = config_file
+        self.client: mqtt.Client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 
+        # Initialise the data gateway configuration, should always have enabled as default
+        self.data_gateway_config: DataGatewayConfig = DataGatewayConfig()
+        self.config_edit_time: float = 0.0
         self.SENDERS: dict[str, SenderFunc] = {"telemetry_info": self._send_full_telemetry,
                                                "cpu_info": self._send_cpu_info,
                                                "ram_info": self._send_memory_info,
                                                "disk_info": self._send_disk_info}
 
+    @property
+    def has_config_changed(self) -> bool:
+        if self.config_edit_time <= 0:
+            return True
+
+        if self.dw_config_file.stat().st_mtime > self.config_edit_time:
+            return True
+
+        return False
+
+    def _read_config(self):
+        logger.info(f"Loading data gateway configuration from file {self.dw_config_file}...")
+        conf: str = read_file(self.dw_config_file)
+        self.data_gateway_config = DataGatewayConfig.model_validate_json(conf)
+        self.config_edit_time = self.dw_config_file.stat().st_mtime
+        logger.info(f"Data gateway loaded from file edited on {self.config_edit_time}")
+        logger.info(f"Data gateway configuration: {self.data_gateway_config.model_dump_json(indent=4)}")
+
+    def is_dw_available(self) -> bool:
+        if file_exists_and_not_empty(self.dw_config_file) and self.has_config_changed:
+            try:
+                self._read_config()
+            except Exception as e:
+                logger.error(f"Failed to read data gateway configuration: {e}")
+                return False
+
+        if not self.data_gateway_config.enabled:
+            logger.info("Data gateway is not yet enabled")
+            return False
+
+        if not self.is_connected:
+            self.connect()
+            return self.is_connected
+
+        else:
+            return True
+
     def connect(self):
         logger.info("Connecting to the data gateway...")
         try:
-            res = self.client.connect(host=self.endpoint,
-                                      port=self.port,
-                                      keepalive=self.timeout)
+            self.client.connect(host=self.data_gateway_config.endpoint,
+                                port=self.data_gateway_config.port,
+                                keepalive=self.data_gateway_config.ping_interval)
             self.client.loop_start()
         except Exception as e:
             logger.error(f"Failed to connect to the data gateway: {e}")
             return
-        logger.info(f"Connected to the data gateway with result: {res}")
+        logger.info("Connecting to the data gateway... Success")
 
     def disconnect(self):
         self.client.loop_stop()
@@ -96,11 +143,8 @@ class DataGatewayPub:
             self._publish("disks", json.dumps(disk))
 
     def send_telemetry(self, data: TelemetryPayloadAttributes):
-        if not self.is_connected:
-            self.connect()
-            if not self.is_connected:
-                logger.error("Failed to connect to the data gateway")
-                return
+        if not self.is_dw_available():
+            return
 
         logger.info("Sending telemetry to mqtt...")
         for name, sender in self.SENDERS.items():

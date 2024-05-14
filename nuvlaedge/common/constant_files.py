@@ -92,6 +92,8 @@ class FileConstants(BaseFileConstants):
     STATUS_FILE = '.status'
     STATUS_NOTES = '.status_notes'
 
+    DATA_GATEWAY_CONFIG_FILE = 'dw_config.json'
+
 
 # Nuvlaedge configuration
 FILE_NAMES = FileConstants(os.getenv('SHARED_DATA_VOLUME', '/var/lib/nuvlaedge/'))

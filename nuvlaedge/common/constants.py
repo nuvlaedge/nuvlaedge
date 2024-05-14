@@ -36,7 +36,7 @@ class Constants:
 
     DATA_GATEWAY_ENDPOINT = 'data-gateway'
     DATA_GATEWAY_PORT: int = 1883
-    DATA_GATEWAY_TIMEOUT: int = 90
+    DATA_GATEWAY_PING_INTERVAL: int = 90
 
 
 CTE: Constants = Constants()

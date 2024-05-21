@@ -39,7 +39,7 @@ COMMON_HANDLER: logging.StreamHandler | None = None
 class LoggingSettings(BaseSettings):
     nuvlaedge_debug: bool = False
     nuvlaedge_log_level: str = 'INFO'
-    nuvlaedge_logging_directory: str = '/var/log/nuvlaedge'
+    nuvlaedge_logging_directory: str | None = None
     disable_file_logging: bool = False
 
 

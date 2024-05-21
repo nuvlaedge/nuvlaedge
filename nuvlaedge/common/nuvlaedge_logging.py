@@ -19,7 +19,6 @@ from pydantic_settings import BaseSettings
 _DEBUG: bool = False
 _LOG_LEVEL: int = logging.INFO
 _DISABLE_FILE_LOGGING: bool = False
-print(f"\n\n\nInitial logging configuration : debug: {_DEBUG}, log level: {logging.getLevelName(_LOG_LEVEL)}, ")
 
 logger: logging.Logger | None = None
 

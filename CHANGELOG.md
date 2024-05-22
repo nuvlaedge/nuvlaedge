@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.14.3](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.3) (2024-05-15)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.2...2.14.3)
+
+**Merged pull requests:**
+
+- Fix bugs from v2.14.1 [\#174](https://github.com/nuvlaedge/nuvlaedge/pull/174) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.14.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.2) (2024-05-08)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.1...2.14.2)

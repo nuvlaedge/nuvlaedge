@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
 
-  run-validation:
+  run:
     needs: setup-matrix
     strategy:
       matrix:

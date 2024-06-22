@@ -1144,8 +1144,9 @@ class DockerClient(COEClient):
         except (docker.errors.ImageNotFound,
                 docker.errors.ContainerError,
                 docker.errors.APIError) as ex:
+            message = getattr(ex, 'explanation', getattr(ex, 'stderr'))
             logger.error("Failed running container '%s' from '%s': %s",
-                         name, image, ex.explanation)
+                         name, image, message)
 
     def container_remove(self, name: str, **kwargs):
         try:

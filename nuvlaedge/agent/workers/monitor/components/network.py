@@ -13,14 +13,13 @@ import time
 
 import requests
 
-from nuvlaedge.common import utils
 from nuvlaedge.common.constants import CTE
 from ..components import monitor
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.data.network_data import (NetworkingData,
-                                                       NetworkInterface,
-                                                       IP)
+                                                               NetworkInterface,
+                                                               IP)
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
@@ -138,14 +137,25 @@ class NetworkMonitor(Monitor):
         Returns:
             str as the output of the command (can be empty).
         """
-        self.coe_client.container_remove(self.iproute_container_name)
-        self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
-        return self.coe_client.container_run_command(
-            image=self._ip_route_image,
-            name=self.iproute_container_name,
-            args=self._IP_COMMAND_ARGS,
-            entrypoint=self._IPROUTE_ENTRYPOINT,
-            network='host')
+        network_mode = os.environ.get('NUVLAEDGE_AGENT_NET_MODE', '')
+        if network_mode and network_mode == 'host':
+            command = [self._IPROUTE_ENTRYPOINT]
+            command.extend(self._IP_COMMAND_ARGS.split(' '))
+            self.logger.debug(f'Scanning local IP with command: {command}')
+            result = util.execute_cmd(command, method_flag=False)
+            if result.get('returncode', -1) != 0:
+                self.logger.error(f'Failed to get local IP route: {result.get("stderr")}')
+                return ''
+            return result.get('stdout')
+        else:
+            self.coe_client.container_remove(self.iproute_container_name)
+            self.logger.debug(f'Scanning local IP with IP route image {self._ip_route_image}')
+            return self.coe_client.container_run_command(
+                image=self._ip_route_image,
+                name=self.iproute_container_name,
+                args=self._IP_COMMAND_ARGS,
+                entrypoint=self._IPROUTE_ENTRYPOINT,
+                network='host')
 
     def read_traffic_data(self) -> list:
         """ Gets the list of net ifaces and corresponding rxbytes and txbytes

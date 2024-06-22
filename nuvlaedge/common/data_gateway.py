@@ -1,4 +1,5 @@
 import json
+import os
 from functools import wraps
 import logging
 from pathlib import Path
@@ -41,6 +42,10 @@ class DataGatewayPub:
                                                "cpu_info": self._send_cpu_info,
                                                "ram_info": self._send_memory_info,
                                                "disk_info": self._send_disk_info}
+
+        nuvlaedge_data_gateway_enable = os.environ.get('NUVLAEDGE_DATA_GATEWAY_ENABLE')
+        if nuvlaedge_data_gateway_enable and nuvlaedge_data_gateway_enable == '1':
+            self.data_gateway_config.enabled = True
 
     @property
     def has_config_changed(self) -> bool:

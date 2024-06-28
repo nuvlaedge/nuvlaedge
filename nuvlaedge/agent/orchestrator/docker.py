@@ -555,20 +555,28 @@ class DockerClient(COEClient):
 
         """
         cs = container_stats
-        cpu_total_usage = float('nan')
+        cpu_percent = float('nan')
         online_cpus = 0
 
         try:
-            cpu_total_usage = float(cs["cpu_stats"]["cpu_usage"]["total_usage"])
 
             online_cpus_alt = len(cs["cpu_stats"]["cpu_usage"].get("percpu_usage", []))
             online_cpus = cs["cpu_stats"].get('online_cpus', online_cpus_alt)
 
+            cpu_delta = \
+                float(cs["cpu_stats"]["cpu_usage"]["total_usage"]) - \
+                float(cs["precpu_stats"]["cpu_usage"]["total_usage"])
+            system_delta = \
+                float(cs["cpu_stats"]["system_cpu_usage"]) - \
+                float(cs["precpu_stats"]["system_cpu_usage"])
+
+            if system_delta > 0.0 :
+                cpu_percent = (cpu_delta / system_delta) * 100.0
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
             logger.warning('Failed to get CPU usage for container '
                            f'{cs.get("id","?")[:12]} ({cs.get("name")}): {e}')
 
-        return cpu_total_usage, online_cpus
+        return cpu_percent, online_cpus
 
     @staticmethod
     def collect_container_metrics_mem(cstats: dict) -> tuple:
@@ -722,7 +730,7 @@ class DockerClient(COEClient):
 
         for container, stats in self.get_containers_stats():
             # CPU
-            cpu_total, online_cpus = \
+            cpu_percent, online_cpus = \
                 self.collect_container_metrics_cpu(stats)
             # RAM
             mem_usage, mem_limit = \
@@ -738,7 +746,7 @@ class DockerClient(COEClient):
                 'id': container.id,
                 'name': container.name,
                 'status': container.status,
-                'cpu-usage': cpu_total,
+                'cpu-usage': cpu_percent,
                 'cpu-capacity': online_cpus,
                 'mem-usage': mem_usage,
                 'mem-limit': mem_limit,

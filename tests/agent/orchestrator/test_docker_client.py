@@ -467,11 +467,12 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # if all is well, we should expect a float value bigger than 0
         self.assertIsInstance(self.obj.collect_container_metrics_cpu(cpu_stat),
-                              float,
+                              (float, int),
                               "Received unexpected type of CPU usage percentage for container")
         with self.assertNoLogs(level='WARNING') as log:
-            self.assertEqual(self.obj.collect_container_metrics_cpu(cpu_stat), 20.0,
-                             "The provided default should return a CPU usage of 20%, but that was not the case")
+            self.assertEqual(self.obj.collect_container_metrics_cpu(cpu_stat), (20.0, 2),
+                             "The provided default should return a CPU usage of 20% and cpu capacity of 2"
+                             ", but that was not the case")
 
         # if online_cpus is not reported, then we get 'nan' usage
         cpu_stat['cpu_stats'].pop('online_cpus')
@@ -586,8 +587,8 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # otherwise...
         mock_containers_list.return_value = [fake.MockContainer()]
-        mock_get_mem.return_value = (1, 2 ,3)
-        mock_get_cpu.return_value = 50
+        mock_get_mem.return_value = (1, 2)
+        mock_get_cpu.return_value = (50,2)
         mock_get_net.return_value = (1, 2)
         mock_get_block.return_value = (1, 2)
         # if one container has malformed CPU stats, the "old_cpu" variable should be set to (0,0) when collecting CPU
@@ -615,9 +616,10 @@ class COEClientDockerTestCase(unittest.TestCase):
         mock_get_cpu.reset_mock()
         stats[0] = stats[1]
         mock_container_stats.return_value = stats[1]
-        expected_fields = ['id', 'name', 'container-status',
-                           'cpu-percent', 'mem-usage-limit', 'mem-percent',
-                           'net-in-out', 'blk-in-out', 'restart-count']
+        expected_fields = ['id', 'name', 'cpu-capacity',
+                           'cpu-usage', 'mem-usage', 'mem-limit',
+                           'net-in', 'net-out', 'disk-in', 'disk-out',
+                           'restart-count', 'state', 'image', 'created-at']
         self.assertTrue(set(expected_fields).issubset(list(self.obj.collect_container_metrics()[0].keys())),
                         'Received malformed container stats from the statistics collection mechanism')
         mock_get_cpu.assert_called_once_with(stats[1])

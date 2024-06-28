@@ -739,7 +739,7 @@ class DockerClient(COEClient):
             net_in, net_out = \
                 self.collect_container_metrics_net(stats)
             # DISK
-            blk_out, blk_in = \
+            disk_out, disk_in = \
                 self.collect_container_metrics_block(stats)
 
             containers_metrics.append({
@@ -752,8 +752,8 @@ class DockerClient(COEClient):
                 'mem-limit': mem_limit,
                 'net-in': net_in,
                 'net-out': net_out,
-                'blk-in': blk_in,
-                'blk-out': blk_out,
+                'disk-in': disk_in,
+                'disk-out': disk_out,
                 'restart-count': (int(container.attrs["RestartCount"])
                                   if "RestartCount" in container.attrs else 0),
                 'state': container.attrs["State"]["Status"],

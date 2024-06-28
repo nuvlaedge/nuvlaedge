@@ -33,7 +33,7 @@ def mock_kubernetes_endpoint(name: str):
     return json.loads(json.dumps(endpoint), object_hook=lambda d: SimpleNamespace(**d))
 
 
-def base_pod(name: str=None, phase: str='running'):
+def base_pod(name: str = None, phase: str = 'running'):
     pod = {
         'metadata': {
             'namespace': 'namespace',
@@ -61,7 +61,7 @@ def base_pod(name: str=None, phase: str='running'):
     return pod
 
 
-def mock_kubernetes_pod(name: str=None, phase: str='running'):
+def mock_kubernetes_pod(name: str = None, phase: str = 'running'):
     pod = json.loads(json.dumps(base_pod(name, phase)), object_hook=lambda d: SimpleNamespace(**d))
     # add 'state' after serialization cause k8s obj is not serializable
     for x in pod.status.container_statuses:
@@ -69,7 +69,7 @@ def mock_kubernetes_pod(name: str=None, phase: str='running'):
     return pod
 
 
-def mock_kubernetes_pod_metrics(name: str=None, phase: str='running'):
+def mock_kubernetes_pod_metrics(name: str = None, phase: str = 'running'):
     pod = base_pod(name, phase)
     pod['containers'] = [
         {
@@ -107,7 +107,7 @@ def mock_kubernetes_deployment():
     return json.loads(json.dumps(depl), object_hook=lambda d: SimpleNamespace(**d))
 
 
-def mock_kubernetes_node(uid: str=None, ready: bool=True):
+def mock_kubernetes_node(uid: str = None, ready: bool = True):
     node = {
         'status': {
             'node_info': {
@@ -154,6 +154,11 @@ class Fake(object):
         return cls
 
 
+class MockImage(object):
+    def __init__(self, tag='fake'):
+        self.tag = tag
+
+
 class MockContainer(object):
     def __init__(self, status='paused', myid=None):
         self.status = status
@@ -165,6 +170,7 @@ class MockContainer(object):
             'com.docker.compose.project.config_files': 'a.yml,b.yml',
             'com.docker.compose.project': 'nuvlaedge'
         }
+        self.image = MockImage()
         self.attrs = {
             'Config': {
                 'Image': 'fake-image'
@@ -174,7 +180,11 @@ class MockContainer(object):
                     'fake-network': {}
                 }
             },
-            'RestartCount': 1
+            'RestartCount': 1,
+            'State': {
+                'Status': status,
+                'StartedAt': '2021-01-01T00:00:00Z',
+            }
         }
 
     def start(self):
@@ -193,7 +203,7 @@ class MockContainer(object):
 
 
 class MockDockerNode(object):
-    def __init__(self, state: str='ready'):
+    def __init__(self, state: str = 'ready'):
         self.attrs = {
             'Status': {
                 'State': state
@@ -213,6 +223,7 @@ class FakeRequestsResponse(object):
 
 class FakeNuvlaApi(object):
     """ Fake the nuvla.api module """
+
     def __init__(self, reference_api_keys, **kwargs):
         self.api_keys = reference_api_keys
         self.kwargs = kwargs

@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-import json
+import os
 import time
 import unittest
 from random import SystemRandom
 from typing import List, Dict, Any
-from pathlib import Path
 
 import requests
 from mock import Mock, mock_open, patch, MagicMock
@@ -98,13 +97,30 @@ class TestNetworkMonitor(unittest.TestCase):
         self.assertIsNone(test_ip_monitor.parse_host_ip_json(test_attribute))
 
     def test_gather_host_route(self):
-        it_1 = Mock()
         m = Mock()
         m.return_value = ''
+
+        it_1 = Mock()
         it_1.coe_client.container_run_command = m
+
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", it_1, True)
+
         self.assertEqual('', test_ip_monitor._gather_host_ip_route())
+
+        # network mode host
+        with patch('nuvlaedge.agent.common.util.execute_cmd') as patch_exec_cmd:
+            patch_exec_cmd.return_value = {'stdout': 'output',
+                                           'stderr': 'error',
+                                           'returncode': 0}
+            with patch.dict(os.environ, {'NUVLAEDGE_AGENT_NET_MODE': 'host'}):
+                self.assertEqual('output', test_ip_monitor._gather_host_ip_route())
+                patch_exec_cmd.assert_called_once()
+                patch_exec_cmd.return_value['returncode'] = 1
+                with self.assertLogs(level="ERROR") as l:
+                    self.assertEqual('', test_ip_monitor._gather_host_ip_route())
+                    self.assertTrue(any([('error' in i) for i in l.output]))
+
 
     def test_set_local_data(self):
         # Test no available route IP's

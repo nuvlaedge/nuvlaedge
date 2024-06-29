@@ -66,7 +66,7 @@ class TestUtils(unittest.TestCase):
         self.assertEqual('nuvlaedge', extract_nuvlaedge_version('nuvlaedge'))
 
         # Test with incorrect image name and pkg_resources error
-        with patch('nuvlaedge.agent.common.util.pkg_resources.get_distribution') as mock_pkg:
+        with patch('pkg_resources.get_distribution') as mock_pkg:
             with patch('nuvlaedge.agent.common.util.logging.Logger.warning') as mock_warning:
                 mock_pkg.side_effect = Exception('mock_exception')
                 self.assertEqual('', extract_nuvlaedge_version([None]))

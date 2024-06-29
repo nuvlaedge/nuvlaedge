@@ -291,6 +291,7 @@ class KubernetesClient(COEClient):
         args = f'--api-url https://{nuvla_endpoint} ' \
                f'--api-key {api_key} ' \
                f'--api-secret {api_secret} ' \
+               f'--nuvlaedge-fs {FILE_NAMES.root_fs} ' \
                f'--job-id {job_id}'
 
         if nuvla_endpoint_insecure:
@@ -560,14 +561,16 @@ class KubernetesClient(COEClient):
 
     def _ne_db_hostpath(self):
         return os.path.join(self.NE_DB_ROOT_HOSTPATH,
-                            self.get_nuvlaedge_project_name(util.default_project_name))
+                            self.get_nuvlaedge_project_name(util.default_project_name),
+                            'data')
 
     def _volume_mount_ne_db(self) -> (client.V1Volume, client.V1VolumeMount):
         volume_name = 'ne-db'
-
+        host_path = self._ne_db_hostpath()
+        log.info("Binding host path %s to volume %s", host_path, volume_name)
         pod_volume = client.V1Volume(
             name=volume_name,
-            host_path=client.V1HostPathVolumeSource(path=self._ne_db_hostpath()))
+            host_path=client.V1HostPathVolumeSource(path=host_path))
 
         container_volume_mount = client.V1VolumeMount(name=volume_name,
                                                       mount_path=self.NE_DB_CONTAINER_PATH,

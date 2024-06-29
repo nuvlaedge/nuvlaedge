@@ -1,8 +1,41 @@
 # Changelog
 
+## [2.14.3](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.3) (2024-05-15)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.2...2.14.3)
+
+**Merged pull requests:**
+
+- Fix bugs from v2.14.1 [\#174](https://github.com/nuvlaedge/nuvlaedge/pull/174) ([ignacio-penas](https://github.com/ignacio-penas))
+
+## [2.14.2](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.2) (2024-05-08)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.1...2.14.2)
+
+**Fixed bugs:**
+
+- fix(Dockerfile): pydantic version specification
+
+**Merged pull requests:**
+
+- fix: fix bugs introduced in k8s NuvlaEdge (#172)
+- fix: remove authenticated check in heartbeat loop. (#169)
+- Fix insecure flag bug (#170)
+- deps: rename frozen session data structure verify into session (#171)
+- fix: error on building pydantic for ARM32Add. adds nuvlaedge base image as a GH package (#168)
+- Fixed HOST_HOME and add settings unittests (#166)
+
 ## [2.14.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.1) (2024-04-10)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.0...2.14.1)
+
+**Implemented enhancements:**
+
+- Update job-engine to 4.0.4
+
+**Fixed bugs:**
+
+- fix(agent): fix NUVLAEDGE_IMMUTABLE_SSH_PUB_KEY env var name
 
 **Merged pull requests:**
 

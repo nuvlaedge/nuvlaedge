@@ -4,8 +4,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Constants:
     # FORMATS
-    DATETIME_FORMAT: str = "%m%d%Y%H%M%S"
-    NUVLA_TIMESTAMP_FORMAT: str = "%Y-%m-%dT%H:%M:%SZ"
+    DATETIME_FORMAT: str = "%m%d%Y%H%M%S"  # Used for file names in the broker
 
     # Timeouts
     NETWORK_TIMEOUT: int = 10
@@ -34,6 +33,10 @@ class Constants:
 
     # COE Constants
     DOCKER_SOCKET_FILE_DEFAULT = '/var/run/docker.sock'
+
+    DATA_GATEWAY_ENDPOINT = 'data-gateway'
+    DATA_GATEWAY_PORT: int = 1883
+    DATA_GATEWAY_PING_INTERVAL: int = 90
 
 
 CTE: Constants = Constants()

@@ -8,15 +8,17 @@ import inspect
 import logging
 import os
 import sys
+import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
+from pydantic_settings import BaseSettings
 
 # Global logging settings. They should only be modified from set_logging_configuration.
 # This settings won't affect already existing loggers
 _DEBUG: bool = False
 _LOG_LEVEL: int = logging.INFO
 _DISABLE_FILE_LOGGING: bool = False
-
 
 logger: logging.Logger | None = None
 
@@ -31,6 +33,13 @@ COMMON_LOG_FILE: Path = _LOG_PATH / 'nuvlaedge.log'
 COMMON_LOG_FORMATTER: logging.Formatter = \
     logging.Formatter('[%(asctime)s - %(levelname)s - %(name)s/%(funcName)s]: %(message)s')
 COMMON_HANDLER: logging.StreamHandler | None = None
+
+
+class LoggingSettings(BaseSettings):
+    nuvlaedge_debug: bool = False
+    nuvlaedge_log_level: str = 'INFO'
+    nuvlaedge_logging_directory: str | None = None
+    disable_file_logging: bool = False
 
 
 def set_logging_configuration(debug: bool,
@@ -117,6 +126,7 @@ def __get_common_handler() -> logging.StreamHandler:
     _level = _LOG_LEVEL
     if _DEBUG:
         _level = logging.DEBUG
+
     stream_handler.setLevel(_level)
 
     return stream_handler
@@ -167,7 +177,8 @@ def get_nuvlaedge_logger(name: str | None = None) -> logging.Logger:
     _level = _LOG_LEVEL
     if _DEBUG:
         _level = logging.DEBUG
-    sub_logger.level = _level
+
+    sub_logger.setLevel(_level)
     sub_logger.addHandler(__get_common_handler())
 
     if not _DISABLE_FILE_LOGGING:

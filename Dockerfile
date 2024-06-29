@@ -344,6 +344,10 @@ COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoi
 COPY scripts/compute-api/api.sh /usr/bin/api
 
 
+# Docker auto cleanup
+COPY scripts/docker-auto-cleanup/docker-prune.sh /usr/bin/docker-prune
+
+
 # VPN Client
 COPY --link scripts/vpn-client/* /opt/nuvlaedge/scripts/vpn-client/
 RUN mv /opt/nuvlaedge/scripts/vpn-client/openvpn-client.sh /usr/bin/openvpn-client && \
@@ -363,6 +367,8 @@ RUN chmod +x \
     /usr/bin/security-entrypoint \
     # Compute API
     /usr/bin/api \
+    # Docker auto cleanup
+    /usr/bin/docker-prune \
     # VPN client
     /usr/bin/openvpn-client \
     /opt/nuvlaedge/scripts/vpn-client/get_ip.sh \

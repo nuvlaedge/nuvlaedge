@@ -87,11 +87,14 @@ class FileConstants(BaseFileConstants):
     MODBUS_PERIPHERAL = PERIPHERALS_FOLDER + 'modbus'
     GPU_PERIPHERAL = PERIPHERALS_FOLDER + 'gpu'
 
-    # System manager status and status notes report
+    # System manager
+    # Status and status notes report
     STATUS_FILE = '.status'
     STATUS_NOTES = '.status_notes'
+
+    DATA_GATEWAY_CONFIG_FILE = 'dw_config.json'
 
 
 # Nuvlaedge configuration
 FILE_NAMES = FileConstants(os.getenv('SHARED_DATA_VOLUME', '/var/lib/nuvlaedge/'))
-LEGACY_FILES = LegacyFileConstants(os.getenv('SHARED_DATA_VOLUME', '/srv/nuvlaedge/shared/'))
+LEGACY_FILES = LegacyFileConstants(os.getenv('OLD_SHARED_DATA_VOLUME', '/srv/nuvlaedge/shared/'))

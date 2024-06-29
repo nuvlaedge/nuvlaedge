@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.14.2"
+version = "2.14.4"
 description = "NuvlaEdge source code"
 authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"
@@ -19,10 +19,12 @@ gpu = "nuvlaedge.peripherals.gpu.__init__:entry"
 security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
-python = "~3.11.0"  # ~ operator behaves: >=3.11.0 <3.12.0
-nuvla-api = "^4.0.1"
-nuvla-job-engine = "^4.0.5"
+python = "~3.11.0"
+nuvla-api = "^4.0.0"
+nuvla-job-engine = "^4.0.9"
+requests="2.31.0"
 docker = "7.0.0"
+paho-mqtt = "^2"
 kubernetes = "26.1.0"
 cffi = "1.15.1"
 # Pydantic version is fixed here and must be synced with the one in the Dockerfile
@@ -53,7 +55,6 @@ xmltodict = "0.13.0"
 # Modbus peripheral Deps
 [tool.poetry.group.modbus.dependencies]
 pymodbus = "3.2.2"
-paho-mqtt = "1.6.1"
 
 # System manager dependencies
 [tool.poetry.group.tests.dependencies]

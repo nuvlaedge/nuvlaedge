@@ -113,7 +113,8 @@ class NuvlaClientWrapper:
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
         self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
                                                    insecure=insecure,
-                                                   reauthenticate=True)
+                                                   reauthenticate=True,
+                                                   compress=True)
 
         self._headers: dict = {}
         self.nuvlaedge_credentials: NuvlaApiKeyTemplate | None = None

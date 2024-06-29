@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
 
-  run-validation:
+  run:
     needs: setup-matrix
     strategy:
       matrix:
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - name: Setup Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -114,16 +114,17 @@ jobs:
           --nuvlaedge_branch ${{ env.BRANCH_NAME }}
           --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version || 'latest' }} 
           --deployment_branch ${{ github.event.inputs.deployment_branch || 'None' }}
+          --log_level ${{ github.event.inputs.log_level || 'INFO' }}
 
       - name: Save logs as artifacts if requested or failed
         if: ${{ github.event.inputs.retrieve_logs }} || ${{ steps.validate.outcome }} != 'success'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: 'nuvlaedge_logs_${{ matrix.board-config }}-${{ matrix.validation-type }}'
           path: /tmp/nuvlaedge_validator/
 
       - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action/composite@v2
+        uses: EnricoMi/publish-unit-test-result-action/linux@v2
         if: always()
         with:
           check_name: "| ${{ matrix.board-config }} --- ${{ matrix.validation-type }} |"

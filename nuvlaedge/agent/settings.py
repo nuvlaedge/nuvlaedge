@@ -3,14 +3,13 @@ from argparse import ArgumentParser, Namespace
 import logging
 from typing import Optional
 
-from pydantic import Field, field_validator, BaseModel, AliasChoices
+from pydantic import Field, field_validator, BaseModel, AliasChoices, model_validator
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 from nuvlaedge.common.file_operations import file_exists_and_not_empty, read_file
 from nuvlaedge.common.constant_files import FILE_NAMES
-
 
 DEFAULT_AGENT_SETTINGS_FILE = 'nuvlaedge'
 
@@ -36,13 +35,29 @@ class NuvlaApiKeyTemplate(BaseModel, frozen=True):
 
 
 class NuvlaEdgeSession(NuvlaEdgeBaseModel):
-    endpoint:               str
-    insecure:                 bool
+    endpoint: str = "https://nuvla.io"
+    insecure: bool | None = None
+    # To support updates from 2.14.1 to >=2.14.2
+    verify: bool | None = None
 
-    credentials:            NuvlaApiKeyTemplate
+    credentials: NuvlaApiKeyTemplate | None = None
 
-    nuvlaedge_uuid:         NuvlaID | None = None
-    nuvlaedge_status_uuid:  NuvlaID | None = None
+    nuvlaedge_uuid: NuvlaID | None = None
+    nuvlaedge_status_uuid: NuvlaID | None = None
+
+    @model_validator(mode='after')
+    @classmethod
+    def validate_fields(cls, v):
+        if v.insecure is None and v.verify is None:
+            # Default to secure connection
+            v.insecure = False
+
+        if v.insecure is None and v.verify is not None:
+            # This should be v.insecure = not v.verify, however, due to a bug in version 2.14.1, verify is set
+            # to the opposite of what it should be. This is fixed in version 2.14.2.
+            v.insecure = v.verify
+
+        return v
 
 
 class AgentSettings(NuvlaEdgeBaseSettings):
@@ -87,54 +102,62 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     """
 
     # Required
-    nuvlaedge_uuid_env:                Optional[NuvlaID] = Field(None,
-                                                                 validation_alias=AliasChoices(
-                                                                     'NUVLAEDGE_UUID',
-                                                                     'NUVLABOX_UUID'))
-    host_home:                          str = ""
+    nuvlaedge_uuid_env: Optional[NuvlaID] = Field(None,
+                                                  validation_alias=AliasChoices(
+                                                      'NUVLAEDGE_UUID',
+                                                      'NUVLABOX_UUID'))
+    host_home: str = ""
 
     # Required with default values
-    compose_project_name:               str = "nuvlaedge"
-    nuvlaedge_log_level:                str = "INFO"
-    vpn_interface_name:                 str = 'vpn'
-    nuvla_endpoint:                     str = 'nuvla.io'
-    nuvla_endpoint_insecure:            bool = False
-    shared_data_volume:                 str = "/var/lib/nuvlaedge/"
+    compose_project_name: str = "nuvlaedge"
+    nuvlaedge_log_level: str = "INFO"
+    vpn_interface_name: str = 'vpn'
+    nuvla_endpoint: str = 'nuvla.io'
+    nuvla_endpoint_insecure: bool = False
+    shared_data_volume: str = "/var/lib/nuvlaedge/"
 
     # Optional
-    nuvlaedge_thread_monitors:          Optional[bool] = False
-    nuvlaedge_api_key:                  Optional[str] = None
-    nuvlaedge_api_secret:               Optional[str] = None
-    nuvlaedge_excluded_monitors:        Optional[str] = None
-    nuvlaedge_immutable_ssh_pub_key:    Optional[str] = None
-    vpn_config_extra:                   Optional[str] = None
+    nuvlaedge_thread_monitors: Optional[bool] = False
+    nuvlaedge_api_key: Optional[str] = None
+    nuvlaedge_api_secret: Optional[str] = None
+    nuvlaedge_excluded_monitors: Optional[str] = None
+    nuvlaedge_immutable_ssh_pub_key: Optional[str] = None
+    vpn_config_extra: Optional[str] = None
 
     # Dev configuration
-    nuvlaedge_job_engine_lite_image:    Optional[str] = None
-    ne_image_registry:                  Optional[str] = None
-    ne_image_organization:              Optional[str] = None
-    ne_image_repository:                Optional[str] = None
-    ne_image_installer:                 Optional[str] = None
-    ne_image_tag:                       Optional[str] = None  # Default value provided by compose
+    nuvlaedge_job_engine_lite_image: Optional[str] = None
+    ne_image_registry: Optional[str] = None
+    ne_image_organization: Optional[str] = None
+    ne_image_repository: Optional[str] = None
+    ne_image_installer: Optional[str] = None
+    ne_image_tag: Optional[str] = None  # Default value provided by compose
 
     # Below variables are not directly used by agent but are here
     # to be sent to Nuvla, so they are not lost when updating NE
-    nuvlaedge_compute_api_enable:       Optional[int] = None
-    nuvlaedge_vpn_client_enable:        Optional[int] = None
-    nuvlaedge_job_enable:               Optional[int] = None
-    compute_api_port:                   Optional[int] = None
+    nuvlaedge_compute_api_enable: Optional[int] = None
+    nuvlaedge_vpn_client_enable: Optional[int] = None
+    nuvlaedge_job_enable: Optional[int] = None
+    compute_api_port: Optional[int] = None
 
     # New
-    nuvlaedge_logging_directory:        Optional[str] = None
-    nuvlaedge_debug:                    bool = False
-    disable_file_logging:               bool = False
+    nuvlaedge_logging_directory: Optional[str] = None
+    nuvlaedge_debug: bool = False
+    disable_file_logging: bool = False
 
     _nuvla_client = None
     _status_handler = None
     _status_report_type = None
 
-    _nuvlaedge_uuid:                    Optional[NuvlaID] = None
-    _stored_session:                    Optional[NuvlaEdgeSession] = None
+    _nuvlaedge_uuid: Optional[NuvlaID] = None
+    _stored_session: Optional[NuvlaEdgeSession] = None
+
+    @field_validator('nuvlaedge_thread_monitors', mode='after')
+    @classmethod
+    def validate_nuvlaedge_thread_monitors(cls, v):
+        if isinstance(v, bool):
+            return v
+        else:
+            return False
 
     def __init__(self, **values):
         super().__init__(**values)
@@ -288,7 +311,6 @@ __agent_settings: AgentSettings | None = None
 
 
 def parse_cmd_line_args() -> Namespace | None:
-
     parser: ArgumentParser = ArgumentParser(description="NuvlaEdge agent",
                                             exit_on_error=False)
     parser.add_argument('-l', '--log-level', dest='log_level',

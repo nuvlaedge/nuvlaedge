@@ -6,7 +6,6 @@ Relays pull-mode jobs to local job-engine-lite
 """
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
-
 from nuvlaedge.agent.orchestrator import COEClient
 
 
@@ -26,7 +25,7 @@ class Job:
                  job_id,
                  job_engine_lite_image):
         """
-        Constructs an Job object
+        Constructs a Job object
         """
         self.coe_client: COEClient = coe_client
         self.nuvla_client: NuvlaClientWrapper = client_wrapper

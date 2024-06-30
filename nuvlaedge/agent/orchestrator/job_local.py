@@ -1,19 +1,12 @@
-import base64
+
 import logging
 import os
-import socket
-import time
-from subprocess import run, PIPE, TimeoutExpired
-from typing import List, Optional
-import requests
-import yaml
 
-from nuvla.job_engine.job.base import main
-from nuvla.job_engine.job.executor.executor import Executor
+from nuvla.job_engine.job.executor.executor import Executor, LocalOneJobQueue
+from nuvla.job_engine.job.job import Job
 
-from nuvlaedge.common.constants import CTE
-from nuvlaedge.agent.common import util
-from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.constant_files import FILE_NAMES
+# from nuvlaedge.common.utils import replace_env
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 
@@ -25,55 +18,75 @@ class JobLocal:
     Execute jobs directly in the agent
     """
 
-    def __init__(self):
+    def __init__(self, api):
         super().__init__()
-
+        self.api = api
+        self.environment = {k: v for k, v in os.environ.items()
+                            if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
 
     def is_nuvla_job_running(self, job_id, job_execution_id):
         return False
 
-    def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
-                   nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
-                   docker_image=None):
-        """
-        Launches a job on the local node using the specified Docker image. Takes into account
-        various parameters to configure the Docker container. It also handles errors during
-        the container creation and starting process.
+    def launch_job(self, job_id, job_execution_id, *args, **kwargs):
 
-        Args:
-            job_id (str): Unique identifier of the job to be launched.
-            job_execution_id (str): Unique identifier of the job execution.
-            nuvla_endpoint (str): Endpoint for the Nuvla API.
-            nuvla_endpoint_insecure (bool, optional): If true, the Nuvla endpoint is insecure. Defaults to False.
-            api_key (str, optional): API Key for the Nuvla API. Defaults to None.
-            api_secret (str, optional): API Secret for the Nuvla API. Defaults to None.
-            docker_image (str, optional): Docker image to be used for the job. Defaults to None.
+        job = Job(self.api, LocalOneJobQueue(job_id), FILE_NAMES.root_fs)
 
-        Raises:
-            Exception: If there's an error during the container creation or starting process.
+        #with replace_env(self.environment):
+        Executor.process_job(job)
 
-        Returns:
-            None
-        """
 
-        command = f'-- /app/job_executor.py --api-url https://{nuvla_endpoint} ' \
-                  f'--api-key {api_key} ' \
-                  f'--api-secret {api_secret} ' \
-                  f'--job-id {job_id}'
+# TODO: remove the content below when next version of job-engine is released
 
-        if nuvla_endpoint_insecure:
-            command += ' --api-insecure'
+from nuvla.job_engine.job.actions import get_action, ActionNotImplemented
+from nuvla.job_engine.job.actions.utils.bulk_action import BulkAction
+from nuvla.job_engine.job.job import JobUpdateError, \
+    JOB_FAILED, JOB_SUCCESS, JOB_QUEUED, JOB_RUNNING
+from nuvla.job_engine.job.util import retry_kazoo_queue_op, status_message_from_exception
 
-        environment = {k: v for k, v in os.environ.items()
-                       if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
+@classmethod
+def process_job(cls, job):
+    try:
 
-        logger.info(f'Starting job "{job_id}" with  command: "{command}"')
+        if 'action' not in job:
+            raise ValueError('Invalid job: {}.'.format(job))
+        action_name = job.get('action')
+        action = get_action(action_name)
+        if not action:
+            raise ActionNotImplemented(action_name)
+        action_instance = action(None, job)
 
-        create_kwargs = dict(
-            command=command,
-            name=job_execution_id,
-            hostname=job_execution_id,
-            environment=environment
-        )
+        job.set_state(JOB_RUNNING)
+        return_code = action_instance.do_work()
+    except ActionNotImplemented as e:
+        logging.error('Action "{}" not implemented'.format(str(e)))
+        # Consume not implemented action to avoid queue
+        # to be filled with not implemented actions
+        msg = f'Not implemented action {job.id}'
+        status_message = '{}: {}'.format(msg, str(e))
+        job.update_job(state=JOB_FAILED, status_message=status_message)
+    except JobUpdateError as e:
+        logging.error('{} update error: {}'.format(job.id, str(e)))
+    except Exception:
+        status_message = status_message_from_exception()
+        if job.get('execution-mode', '').lower() == 'mixed':
+            status_message = 'Re-running job in pull mode after failed first attempt: ' \
+                             f'{status_message}'
+            job._edit_job_multi({'state': JOB_QUEUED,
+                                 'status-message': status_message,
+                                 'execution-mode': 'pull'})
+            retry_kazoo_queue_op(job.queue, 'consume')
+        else:
+            job.update_job(state=JOB_FAILED, status_message=status_message, return_code=1)
+        logging.error(f'Failed to process {job.id}, with error: {status_message}')
+    else:
+        if isinstance(action_instance, BulkAction):
+            retry_kazoo_queue_op(job.queue, 'consume')
+            logging.info(f'Bulk job removed from queue {job.id}.')
+        else:
+            state = JOB_SUCCESS if return_code == 0 else JOB_FAILED
+            job.update_job(state=state, return_code=return_code)
+            logging.info('Finished {} with return_code {}.'.format(job.id, return_code))
 
+
+Executor.process_job = process_job
 

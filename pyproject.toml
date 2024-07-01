@@ -21,7 +21,7 @@ security = "nuvlaedge.security:main"
 [tool.poetry.dependencies]
 python = "~3.11.0"
 nuvla-api = "^4.0.0"
-nuvla-job-engine = "^4.0.9"
+nuvla-job-engine = "^4.1.1"
 requests="2.31.0"
 docker = "7.0.0"
 paho-mqtt = "^2"

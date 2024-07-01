@@ -480,7 +480,6 @@ class Agent:
             None
         """
 
-        # NUVLAEDGE_EXEC_JOB_IN_AGENT
         if self.settings.nuvlaedge_exec_jobs_in_agent:
             coe_engine = self.job_local
         else:

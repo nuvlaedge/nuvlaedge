@@ -1,6 +1,5 @@
 
 import logging
-import os
 
 from nuvla.job_engine.job.executor.executor import Executor, LocalOneJobQueue
 from nuvla.job_engine.job.job import Job
@@ -24,6 +23,6 @@ class JobLocal:
     def is_nuvla_job_running(self, job_id, job_execution_id):
         return False
 
-    def launch_job(self, job_id, job_execution_id, *args, **kwargs):
-        job = Job(self.api, LocalOneJobQueue(job_id), FILE_NAMES.root_fs)
-        Executor.process_job(job)
+    def launch_job(self, job_id, *args, **kwargs):
+        _job = Job(self.api, LocalOneJobQueue(job_id), FILE_NAMES.root_fs)
+        Executor.process_job(_job)

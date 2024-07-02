@@ -1,3 +1,5 @@
+import os
+
 from pathlib import Path
 from unittest import TestCase
 from mock import mock, patch, PropertyMock
@@ -22,6 +24,14 @@ class TestDataGatewayPub(TestCase):
         self.mock_data_gateway = DataGatewayPub(config_file=self.conf_path)
 
         self.mock_data_gateway.client = self.mock_mqtt_client
+
+    def test_nuvlaedge_data_gateway_enable(self):
+        data_gateway = DataGatewayPub()
+        self.assertFalse(data_gateway.data_gateway_config.enabled)
+
+        with patch.dict(os.environ, {'NUVLAEDGE_DATA_GATEWAY_ENABLE': '1'}):
+            data_gateway = DataGatewayPub()
+            self.assertTrue(data_gateway.data_gateway_config.enabled)
 
     @patch('nuvlaedge.common.data_gateway.logger')
     def test_connect(self, mock_logger):

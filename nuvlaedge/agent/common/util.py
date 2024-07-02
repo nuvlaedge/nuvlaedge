@@ -5,8 +5,6 @@ This file gathers general utilities demanded by most of the classes such as a co
 import os
 import logging
 import signal
-import tempfile
-from pathlib import Path
 
 from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,

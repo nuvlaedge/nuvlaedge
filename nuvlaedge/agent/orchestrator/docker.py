@@ -299,7 +299,7 @@ class DockerClient(COEClient):
 
         return True
 
-    def is_nuvla_job_running(self, job_id, job_execution_id):
+    def is_nuvla_job_running(self, job_id, job_execution_id) -> bool:
         """
         Checks if a specified Nuvla job is currently running.
 

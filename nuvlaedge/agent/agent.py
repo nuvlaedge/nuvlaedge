@@ -34,7 +34,7 @@ from threading import Event
 from nuvla.api.models import CimiResponse
 
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
-from nuvlaedge.agent.job import Job
+from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -479,11 +479,10 @@ class Agent:
         Returns:
             None
         """
-
         if self.settings.nuvlaedge_exec_jobs_in_agent:
-            coe_engine = self.job_local
+            coe_engine: JobLauncher = self.job_local
         else:
-            coe_engine = self._coe_engine
+            coe_engine: JobLauncher = self._coe_engine
 
         for i in jobs:
             logger.info(f"Creating job {i}")

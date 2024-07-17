@@ -576,6 +576,7 @@ class DockerClient(COEClient):
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
             logger.warning('Failed to get CPU usage for container '
                            f'{cs.get("id", "?")[:12]} ({cs.get("name")}): {e}')
+            return
 
         if old_version:
             metrics['cpu-usage'] = cpu_percent
@@ -676,12 +677,12 @@ class DockerClient(COEClient):
         if io_bytes_recursive:
             try:
                 blk_in = float(io_bytes_recursive[0]["value"])
-            except (IndexError, KeyError, TypeError) as e:
+            except (IndexError, KeyError, TypeError, ValueError) as e:
                 logger.warning('Failed to get block usage (In) for container '
                                f'{cstats.get("id", "?")[:12]} ({cstats.get("name")}): {e}')
             try:
                 blk_out = float(io_bytes_recursive[1]["value"])
-            except (IndexError, KeyError, TypeError) as e:
+            except (IndexError, KeyError, TypeError, ValueError) as e:
                 logger.warning('Failed to get block usage (Out) for container '
                                f'{cstats.get("id", "?")[:12]} ({cstats.get("name")}): {e}')
 
@@ -689,8 +690,8 @@ class DockerClient(COEClient):
             metrics['blk-in-out'] = (f'{round(blk_in / 1000 / 1000, 1)}MB / '
                                      f'{round(blk_out / 1000 / 1000, 1)}MB')
         else:
-            metrics['blk-in'] = blk_in
-            metrics['blk-out'] = blk_out
+            metrics['disk-in'] = blk_in
+            metrics['disk-out'] = blk_out
 
     def list_containers(self, *args, **kwargs):
         """

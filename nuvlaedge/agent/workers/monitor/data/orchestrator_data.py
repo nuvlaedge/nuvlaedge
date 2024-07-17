@@ -20,15 +20,16 @@ class ContainerStatsDataOld(BaseDataStructure):
     restart_count: int | None = None
 
 
-class ContainerStatsDataNew(BaseDataStructure):
+class ContainerStatsData(BaseDataStructure):
     id: str | None = None
     name: str | None = None
     image: str | None = None
-    container_status: str | None = None
-    container_state: str | None = None
+    status: str | None = None
+    state: str | None = None
     created_at: str | None = None
     restart_count: int | None = None
-    cpu_percent: float | None = None
+    cpu_usage: float | None = None
+    cpu_limit: float | None = None
     mem_usage: int | None = None
     mem_limit: int | None = None
     disk_in: int | None = None
@@ -57,7 +58,7 @@ class ClusterStatusData(NuvlaEdgeBaseModel):
 class DeploymentData(BaseDataStructure):
     """ Data structure to gather the container stats together """
     # Container information
-    containers: dict[str, Union[ContainerStatsDataNew, ContainerStatsDataOld]] | None = None
+    containers: dict[str, Union[ContainerStatsData, ContainerStatsDataOld]] | None = None
 
     # Cluster data
     cluster_data: ClusterStatusData | None = None

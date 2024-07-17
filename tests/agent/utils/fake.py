@@ -154,11 +154,6 @@ class Fake(object):
         return cls
 
 
-class MockImage(object):
-    def __init__(self, tag='fake'):
-        self.tag = tag
-
-
 class MockContainer(object):
     def __init__(self, status='paused', myid=None):
         self.status = status
@@ -170,7 +165,6 @@ class MockContainer(object):
             'com.docker.compose.project.config_files': 'a.yml,b.yml',
             'com.docker.compose.project': 'nuvlaedge'
         }
-        self.image = MockImage()
         self.attrs = {
             'Config': {
                 'Image': 'fake-image'

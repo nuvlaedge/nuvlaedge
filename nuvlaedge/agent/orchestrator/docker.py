@@ -579,10 +579,9 @@ class DockerClient(COEClient):
             return
 
         if old_version:
-            metrics['cpu-usage'] = cpu_percent
+            metrics['cpu-percent'] = cpu_percent
         else:
             metrics['cpu-usage'] = cpu_percent
-            metrics['cpu-capacity'] = online_cpus
 
     @staticmethod
     def collect_container_metrics_mem(cstats: dict, metrics: dict, old_version=False):
@@ -765,11 +764,16 @@ class DockerClient(COEClient):
                 'restart-count': (int(container.attrs["RestartCount"])
                                   if "RestartCount" in container.attrs else 0),
             }
-            if not old_version:
+            if old_version:
+                container_metric['container-status'] = container.attrs["State"]["Status"]
+            else:
                 container_metric['state'] = container.attrs["State"]["Status"]
                 container_metric['created-at'] = container.attrs["State"]["StartedAt"]
-                container_metric['image'] = container.image.tag
+                container_metric['image'] = container.attrs['Config']['Image']
                 container_metric['status'] = container.status
+                nano_cpus = container.attrs.get('HostConfig', {}).get('NanoCpus', 0)
+                container_metric['cpu-limit'] = (nano_cpus / 1000000000) or None
+
             # CPU
             self.collect_container_metrics_cpu(stats, container_metric, old_version)
             # RAM

@@ -10,7 +10,7 @@ from docker import errors as docker_err
 from nuvlaedge.common.constants import CTE
 
 from nuvlaedge.agent.workers.monitor.data.orchestrator_data import (DeploymentData, ClusterStatusData,
-                                                                    ContainerStatsDataOld, ContainerStatsDataNew)
+                                                                    ContainerStatsDataOld, ContainerStatsData)
 from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.orchestrator import COEClient
@@ -67,7 +67,7 @@ class ContainerStatsMonitor(Monitor):
                 it_cont: ContainerStatsDataOld = ContainerStatsDataOld.model_validate(i)
                 self.data.containers[it_cont.id] = it_cont
             else:
-                it_cont: ContainerStatsDataNew = ContainerStatsDataNew.model_validate(i)
+                it_cont: ContainerStatsData = ContainerStatsData.model_validate(i)
                 self.data.containers[it_cont.id] = it_cont
 
     def get_cluster_manager_attrs(self, managers: list, node_id: str) -> tuple:

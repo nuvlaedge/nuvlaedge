@@ -512,7 +512,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.obj.collect_container_metrics_mem(mem_stat, metrics, True)
         self.assertEqual(metrics['mem-usage-limit'], '1.0MiB / 2.0MiB',
                          "Expecting a memory usage limit of 1 MB/ 2MB, but got something else instead")
-        self.assertEqual(metrics['mem-percent'], 50.0,
+        self.assertEqual(metrics['mem-percent'], '50.0',
                          "Expecting a memory usage of 50%, but got something else instead")
         self.assertEqual(len(err), 0,
                          "There should not have been any Memory collection errors")

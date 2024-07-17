@@ -614,7 +614,7 @@ class DockerClient(COEClient):
         if old_version:
             metrics['mem-usage-limit'] = (f'{round(mem_usage / 1024 / 1024, 1)}MiB / '
                                           f'{round(mem_limit / 1024 / 1024, 1)}MiB')
-            metrics['mem-percent'] = round(mem_usage / mem_limit * 100, 2) if mem_limit > 0 else 0.0
+            metrics['mem-percent'] = str(round(mem_usage / mem_limit * 100, 2)) if mem_limit > 0 else 0.0
         else:
             metrics['mem-usage'] = mem_usage
             metrics['mem-limit'] = mem_limit

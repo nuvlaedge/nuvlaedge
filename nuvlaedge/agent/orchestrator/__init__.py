@@ -126,7 +126,7 @@ class COEClient(ABC):
         """
 
     @abstractmethod
-    def collect_container_metrics(self):
+    def collect_container_metrics(self, old_version=False):
         """
         Scans all visible containers and reports their resource consumption
         :return:

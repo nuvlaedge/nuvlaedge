@@ -18,7 +18,6 @@ from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
-
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 docker_socket_file_default = CTE.DOCKER_SOCKET_FILE_DEFAULT
@@ -51,7 +50,7 @@ class DockerClient(COEClient):
 
         self.last_node_info: float = 0.0
         self._node_info: dict = {}
-    
+
     @property
     def node_info(self):
         """
@@ -71,7 +70,7 @@ class DockerClient(COEClient):
             self._node_info = self.client.info()
             self.last_node_info = time.time()
         return self._node_info
-    
+
     def get_client_version(self) -> str:
         """
         Returns the version of the client.
@@ -114,7 +113,7 @@ class DockerClient(COEClient):
         try:
             if self.client.swarm.attrs:
                 return self.client.swarm.attrs['JoinTokens']['Manager'], \
-                       self.client.swarm.attrs['JoinTokens']['Worker']
+                    self.client.swarm.attrs['JoinTokens']['Worker']
         except docker.errors.APIError as e:
             if self.lost_quorum_hint in str(e):
                 # quorum is lost
@@ -216,10 +215,10 @@ class DockerClient(COEClient):
                         if cols[1].startswith('00000000') or cols[2].startswith('00000000'):
                             continue
                         hex_ip = cols[1].split(':')[0]
-                        ip = f'{int(hex_ip[len(hex_ip)-2:],16)}.' \
-                             f'{int(hex_ip[len(hex_ip)-4:len(hex_ip)-2],16)}.' \
-                             f'{int(hex_ip[len(hex_ip)-6:len(hex_ip)-4],16)}.' \
-                             f'{int(hex_ip[len(hex_ip)-8:len(hex_ip)-6],16)}'
+                        ip = f'{int(hex_ip[len(hex_ip) - 2:], 16)}.' \
+                             f'{int(hex_ip[len(hex_ip) - 4:len(hex_ip) - 2], 16)}.' \
+                             f'{int(hex_ip[len(hex_ip) - 6:len(hex_ip) - 4], 16)}.' \
+                             f'{int(hex_ip[len(hex_ip) - 8:len(hex_ip) - 6], 16)}'
                         break
                 if not ip:
                     raise InferIPError('Cannot infer IP')
@@ -417,7 +416,7 @@ class DockerClient(COEClient):
             return self.client.containers.get(container_name)
         except (docker.errors.NotFound, docker.errors.APIError) as e:
             logger.debug(f'Failed to find {service_name} container by name ({container_name}). '
-                          f'Trying by project and service name: {e}')
+                         f'Trying by project and service name: {e}')
 
         try:
             return self._get_component_container_by_service_name(service_name)
@@ -526,7 +525,8 @@ class DockerClient(COEClient):
             try:
                 self.client.api.remove_container(job_execution_id, force=True)
             except Exception as ex:
-                logger.debug(f'Failed to remove container {job_execution_id} which might have been partially created: {ex}')
+                logger.debug(
+                    f'Failed to remove container {job_execution_id} which might have been partially created: {ex}')
             raise
 
         try:
@@ -545,13 +545,14 @@ class DockerClient(COEClient):
             raise
 
     @staticmethod
-    def collect_container_metrics_cpu(container_stats: dict) -> (float, int):
+    def collect_container_metrics_cpu(container_stats: dict, metrics: dict, old_version=False):
         """
         Args:
             container_stats (dict): A dictionary containing container statistics.
-
-        Returns:
-            float: The CPU usage percentage of the container.
+            old_version (bool, optional): If True, only the CPU usage percentage is added.
+                If False, a tuple containing the CPU usage percentage and the number of online CPUs is added.
+                Defaults to False.
+            metrics (dict): A dictionary containing the metrics data which needs to be populated
 
         """
         cs = container_stats
@@ -570,21 +571,28 @@ class DockerClient(COEClient):
                 float(cs["cpu_stats"]["system_cpu_usage"]) - \
                 float(cs["precpu_stats"]["system_cpu_usage"])
 
-            if system_delta > 0.0 :
+            if system_delta > 0.0:
                 cpu_percent = (cpu_delta / system_delta) * 100.0
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
             logger.warning('Failed to get CPU usage for container '
-                           f'{cs.get("id","?")[:12]} ({cs.get("name")}): {e}')
+                           f'{cs.get("id", "?")[:12]} ({cs.get("name")}): {e}')
 
-        return cpu_percent, online_cpus
+        if old_version:
+            metrics['cpu-usage'] = cpu_percent
+        else:
+            metrics['cpu-usage'] = cpu_percent
+            metrics['cpu-capacity'] = online_cpus
 
     @staticmethod
-    def collect_container_metrics_mem(cstats: dict) -> tuple:
+    def collect_container_metrics_mem(cstats: dict, metrics: dict, old_version=False):
         """
         Calculates the Memory consumption for a give container
 
         Args:
             cstats: A dictionary containing container metrics data.
+            metrics: A dictionary containing the metrics data which needs to be populated.
+            old_version: If True, memory percent is added along with mem-usage-limit.
+            If False, memory usage and memory limit are added in terms of bytes.
 
         Returns:
             A tuple with the memory percentage, memory usage, and memory limit of the container.
@@ -601,17 +609,25 @@ class DockerClient(COEClient):
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
             mem_usage = mem_limit = 0.00
             logger.warning('Failed to get Memory consumption for container '
-                           f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
-
-        return mem_usage, mem_limit
+                           f'{cstats.get("id", "?")[:12]} ({cstats.get("name")}): {e}')
+        if old_version:
+            metrics['mem-usage-limit'] = (f'{round(mem_usage / 1024 / 1024, 1)}MiB / '
+                                          f'{round(mem_limit / 1024 / 1024, 1)}MiB')
+            metrics['mem-percent'] = round(mem_usage / mem_limit * 100, 2) if mem_limit > 0 else 0.0
+        else:
+            metrics['mem-usage'] = mem_usage
+            metrics['mem-limit'] = mem_limit
 
     @staticmethod
-    def collect_container_metrics_net(cstats: dict) -> tuple:
+    def collect_container_metrics_net(cstats: dict, metrics: dict, old_version=False):
         """
         Collects network metrics for a container.
 
         Args:
             cstats (dict): A dictionary containing container statistics.
+            metrics (dict): A dictionary containing the metrics data which needs to be populated.
+            old_version (bool, optional): If True, only the network input and output are added in MB.
+            If False, the network input and output are added separately in bytes. Defaults to False.
 
         Returns:
             tuple: A tuple containing the network input and network output in MB.
@@ -626,17 +642,25 @@ class DockerClient(COEClient):
                               for iface in cstats["networks"])
         except (IndexError, KeyError, ValueError) as e:
             logger.warning('Failed to get Network consumption for container '
-                           f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                           f'{cstats.get("id", "?")[:12]} ({cstats.get("name")}): {e}')
 
-        return net_in, net_out
+        if old_version:
+            metrics['net-in-out'] = (f'{round(net_in / 1000 / 1000, 1)}MB / '
+                                     f'{round(net_out / 1000 / 1000, 1)}MB')
+        else:
+            metrics['net-in'] = net_in
+            metrics['net-out'] = net_out
 
     @staticmethod
-    def collect_container_metrics_block(cstats: dict) -> tuple:
+    def collect_container_metrics_block(cstats: dict, metrics: dict, old_version=False):
         """
         Calculates the block consumption for a give container
 
         Args:
             cstats (dict): Dictionary containing container statistics.
+            metrics (dict): Dictionary containing the metrics data which needs to be populated.
+            old_version (bool, optional): If True, only the block usage (In) and block usage (Out) are added in MB.
+            If False, the block usage (In) and block usage (Out) are added separately in bytes. Defaults to False.
 
         Returns:
             tuple: Tuple containing the block usage (Out) and block usage (In) for the container.
@@ -654,14 +678,19 @@ class DockerClient(COEClient):
                 blk_in = float(io_bytes_recursive[0]["value"])
             except (IndexError, KeyError, TypeError) as e:
                 logger.warning('Failed to get block usage (In) for container '
-                               f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                               f'{cstats.get("id", "?")[:12]} ({cstats.get("name")}): {e}')
             try:
                 blk_out = float(io_bytes_recursive[1]["value"])
             except (IndexError, KeyError, TypeError) as e:
                 logger.warning('Failed to get block usage (Out) for container '
-                               f'{cstats.get("id","?")[:12]} ({cstats.get("name")}): {e}')
+                               f'{cstats.get("id", "?")[:12]} ({cstats.get("name")}): {e}')
 
-        return blk_out, blk_in
+        if old_version:
+            metrics['blk-in-out'] = (f'{round(blk_in / 1000 / 1000, 1)}MB / '
+                                     f'{round(blk_out / 1000 / 1000, 1)}MB')
+        else:
+            metrics['blk-in'] = blk_in
+            metrics['blk-out'] = blk_out
 
     def list_containers(self, *args, **kwargs):
         """
@@ -707,7 +736,7 @@ class DockerClient(COEClient):
                                f'{container.short_id} ({container.name}): {e}')
         return containers_stats
 
-    def collect_container_metrics(self):
+    def collect_container_metrics(self, old_version=False):
         """
 
         Collects metrics for each container in the system.
@@ -729,37 +758,27 @@ class DockerClient(COEClient):
         containers_metrics = []
 
         for container, stats in self.get_containers_stats():
-            # CPU
-            cpu_percent, online_cpus = \
-                self.collect_container_metrics_cpu(stats)
-            # RAM
-            mem_usage, mem_limit = \
-                self.collect_container_metrics_mem(stats)
-            # NET
-            net_in, net_out = \
-                self.collect_container_metrics_net(stats)
-            # DISK
-            disk_out, disk_in = \
-                self.collect_container_metrics_block(stats)
-
-            containers_metrics.append({
+            container_metric = {
                 'id': container.id,
                 'name': container.name,
-                'status': container.status,
-                'cpu-usage': cpu_percent,
-                'cpu-capacity': online_cpus,
-                'mem-usage': mem_usage,
-                'mem-limit': mem_limit,
-                'net-in': net_in,
-                'net-out': net_out,
-                'disk-in': disk_in,
-                'disk-out': disk_out,
                 'restart-count': (int(container.attrs["RestartCount"])
                                   if "RestartCount" in container.attrs else 0),
-                'state': container.attrs["State"]["Status"],
-                'created-at': container.attrs["State"]["StartedAt"],
-                'image': container.image.tag
-            })
+            }
+            if not old_version:
+                container_metric['state'] = container.attrs["State"]["Status"]
+                container_metric['created-at'] = container.attrs["State"]["StartedAt"]
+                container_metric['image'] = container.image.tag
+                container_metric['status'] = container.status
+            # CPU
+            self.collect_container_metrics_cpu(stats, container_metric, old_version)
+            # RAM
+            self.collect_container_metrics_mem(stats, container_metric, old_version)
+            # NET
+            self.collect_container_metrics_net(stats, container_metric, old_version)
+            # DISK
+            self.collect_container_metrics_block(stats, container_metric, old_version)
+
+            containers_metrics.append(container_metric)
 
         return containers_metrics
 
@@ -1192,11 +1211,11 @@ class DockerClient(COEClient):
 
     @staticmethod
     def get_current_image_from_env():
-        registry =     os.getenv('NE_IMAGE_REGISTRY', '')
+        registry = os.getenv('NE_IMAGE_REGISTRY', '')
         organization = os.getenv('NE_IMAGE_ORGANIZATION', 'sixsq')
-        repository =   os.getenv('NE_IMAGE_REPOSITORY',   'nuvlaedge')
-        tag =          os.getenv('NE_IMAGE_TAG',          'latest')
-        name =         os.getenv('NE_IMAGE_NAME', f'{organization}/{repository}')
+        repository = os.getenv('NE_IMAGE_REPOSITORY', 'nuvlaedge')
+        tag = os.getenv('NE_IMAGE_TAG', 'latest')
+        name = os.getenv('NE_IMAGE_NAME', f'{organization}/{repository}')
         return f'{registry}{name}:{tag}'
 
     @property

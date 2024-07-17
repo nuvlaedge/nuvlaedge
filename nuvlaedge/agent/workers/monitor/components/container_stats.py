@@ -2,13 +2,15 @@
 import logging
 import os
 import datetime
+import requests
 from subprocess import CompletedProcess
 
 from docker import errors as docker_err
 
 from nuvlaedge.common.constants import CTE
 
-from nuvlaedge.agent.workers.monitor.data.orchestrator_data import (DeploymentData, ContainerStatsData, ClusterStatusData)
+from nuvlaedge.agent.workers.monitor.data.orchestrator_data import (DeploymentData, ClusterStatusData,
+                                                                    ContainerStatsDataOld, ContainerStatsDataNew)
 from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.orchestrator import COEClient
@@ -32,22 +34,41 @@ class ContainerStatsMonitor(Monitor):
 
         self.nuvlaedge_id: str = telemetry.nuvlaedge_uuid
         self.swarm_node_cert_path: str = CTE.SWARM_NODE_CERTIFICATE
+        self.nuvla_endpoint = telemetry.nuvla_endpoint
 
         self.data.containers = {}
 
         if not telemetry.edge_status.container_stats:
             telemetry.edge_status.container_stats = self.data
 
+        self._old_container_stats_version = not self._check_support_container_stats_new()
+
+    def _check_support_container_stats_new(self):
+        """
+        Checks if the orchestrator supports the new container stats API
+
+        """
+        response = requests.get(f'{self.nuvla_endpoint}/api/resource-metadata/nuvlabox-status-2', timeout=10)
+        if response.status_code >= 400:
+            return True
+
+        status = response.text
+        return status.__contains__('cpu-usage')
+
     def refresh_container_info(self) -> None:
         """
             Gathers container statistics from the orchestrator and stores it into
             local data variable
         """
-        it_containers: list = self.coe_client.collect_container_metrics()
+        it_containers: list = self.coe_client.collect_container_metrics(self._old_container_stats_version)
         self.data.containers = {}
         for i in it_containers:
-            it_cont: ContainerStatsData = ContainerStatsData.model_validate(i)
-            self.data.containers[it_cont.id] = it_cont
+            if self._old_container_stats_version:
+                it_cont: ContainerStatsDataOld = ContainerStatsDataOld.model_validate(i)
+                self.data.containers[it_cont.id] = it_cont
+            else:
+                it_cont: ContainerStatsDataNew = ContainerStatsDataNew.model_validate(i)
+                self.data.containers[it_cont.id] = it_cont
 
     def get_cluster_manager_attrs(self, managers: list, node_id: str) -> tuple:
         """

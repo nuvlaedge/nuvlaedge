@@ -5,7 +5,6 @@ import base64
 import contextlib
 import datetime
 import logging
-import math
 from unittest.mock import PropertyMock
 
 import mock
@@ -23,6 +22,7 @@ import requests
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.orchestrator.docker import logger
+from nuvlaedge.common.utils import format_datetime_for_nuvla
 
 
 class COEClientDockerTestCase(unittest.TestCase):
@@ -464,7 +464,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         metrics = {}
         with self.assertNoLogs(level='WARNING') as log:
             self.obj.collect_container_metrics_cpu(cpu_stat, metrics, True)
-            self.assertEqual(metrics.get('cpu-percent'), 10.0,
+            self.assertEqual(metrics.get('cpu-percent'), '10.00',
                              "Expecting a CPU usage of 10%, but got something else instead")
             self.assertNotIn('cpu-capacity', metrics, "Expecting no CPU capacity")
             metrics.clear()
@@ -644,7 +644,8 @@ class COEClientDockerTestCase(unittest.TestCase):
             'status': fake_container.status,
             'image': fake_container.attrs['Config']['Image'],
             'cpu-limit': None,
-            'created-at': fake_container.attrs['State']['StartedAt'],
+            'created-at': format_datetime_for_nuvla(
+                datetime.datetime.fromisoformat(fake_container.attrs['Created'])),
         }, False)
 
         mock_get_cpu.reset_mock()
@@ -674,7 +675,8 @@ class COEClientDockerTestCase(unittest.TestCase):
             'state': fake_container.attrs['State']['Status'],
             'status': fake_container.status,
             'image': fake_container.attrs['Config']['Image'],
-            'created-at': fake_container.attrs['State']['StartedAt'],
+            'created-at': format_datetime_for_nuvla(
+                datetime.datetime.fromisoformat(fake_container.attrs['Created'])),
             'cpu-limit': None,
         }, False)
         self.assertTrue(set(expected_fields_old).issubset(list(self.obj.collect_container_metrics()[0].keys())),

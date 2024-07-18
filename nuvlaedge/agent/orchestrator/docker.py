@@ -1,4 +1,5 @@
 import base64
+import datetime
 import logging
 import os
 import socket
@@ -13,11 +14,12 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 
-from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.utils import format_datetime_for_nuvla
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -580,7 +582,7 @@ class DockerClient(COEClient):
             return
 
         if old_version:
-            metrics['cpu-percent'] = cpu_percent
+            metrics['cpu-percent'] = f'{round(cpu_percent):.2f}'
         else:
             metrics['cpu-usage'] = cpu_percent
 
@@ -769,7 +771,8 @@ class DockerClient(COEClient):
                 container_metric['container-status'] = container.attrs["State"]["Status"]
             else:
                 container_metric['state'] = container.attrs["State"]["Status"]
-                container_metric['created-at'] = container.attrs["State"]["StartedAt"]
+                created = datetime.datetime.fromisoformat(container.attrs["Created"])
+                container_metric['created-at'] = format_datetime_for_nuvla(created)
                 container_metric['image'] = container.attrs['Config']['Image']
                 container_metric['status'] = container.status
                 nano_cpus = container.attrs.get('HostConfig', {}).get('NanoCpus', 0)

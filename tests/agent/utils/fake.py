@@ -178,7 +178,8 @@ class MockContainer(object):
             'State': {
                 'Status': status,
                 'StartedAt': '2021-01-01T00:00:00Z',
-            }
+            },
+            'Created': '2020-07-18T23:48:13.591954299Z'
         }
 
     def start(self):

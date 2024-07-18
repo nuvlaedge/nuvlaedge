@@ -5,10 +5,6 @@ This file gathers general utilities demanded by most of the classes such as a co
 import os
 import logging
 import signal
-import tempfile
-from pathlib import Path
-
-import pkg_resources
 
 from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
@@ -41,6 +37,7 @@ def extract_nuvlaedge_version(image_name: str) -> str:
         logger.info(f'Cannot extract nuvlaedge version from image {image_name}', exc_info=ex)
 
     try:
+        import pkg_resources
         return pkg_resources.get_distribution("nuvlaedge").version
     except Exception as ex:
         logger.warning('Cannot retrieve NuvlaEdge version', exc_info=ex)

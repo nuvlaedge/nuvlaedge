@@ -4,10 +4,24 @@
 
 Relays pull-mode jobs to local job-engine-lite
 """
+from typing import Protocol, Any
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 
-from nuvlaedge.agent.orchestrator import COEClient
+
+class JobLauncher(Protocol):
+    def launch_job(self,
+                   job_id: Any,
+                   job_execution_id: Any,
+                   nuvla_endpoint: Any,
+                   nuvla_endpoint_insecure: bool = False,
+                   api_key: Any = None,
+                   api_secret: Any = None,
+                   docker_image: Any = None) -> Any:
+        """ An object capable of running jobs from JobId """
+
+    def is_nuvla_job_running(self, job_id: Any, job_id_clean: Any) -> bool:
+        """ A JobLauncher can assert if a job is already running """
 
 
 class Job:
@@ -15,20 +29,19 @@ class Job:
     properties necessary to handle pull mode jobs
 
     Attributes:
-        data_volume: path to shared NuvlaEdge data
         job_id: Nuvla UUID of the job
         job_engine_lite_image: Docker image for Job Engine lite
     """
 
     def __init__(self, 
-                 coe_client: COEClient,
+                 coe_client: JobLauncher,
                  client_wrapper: NuvlaClientWrapper,
                  job_id,
                  job_engine_lite_image):
         """
-        Constructs an Job object
+        Constructs a Job object
         """
-        self.coe_client: COEClient = coe_client
+        self.coe_client: JobLauncher = coe_client
         self.nuvla_client: NuvlaClientWrapper = client_wrapper
 
         self.job_id = job_id

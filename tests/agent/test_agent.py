@@ -165,6 +165,17 @@ class TestAgent(TestCase):
         mock_job.return_value = mocked_instance
         self.mock_coe_client.job_engine_lite_image = 'image'
         jobs = [NuvlaID('job/1')]
+        self.agent.settings = Mock()
+        self.agent._nuvla_client.nuvlaedge_client = Mock()
+
+        self.agent.settings.nuvlaedge_exec_jobs_in_agent = True
+
+        self.agent._process_jobs(jobs)
+        mock_job.assert_called_once()
+        mocked_instance.assert_not_called()
+
+        mock_job.reset_mock()
+        self.agent.settings.nuvlaedge_exec_jobs_in_agent = False
 
         self.agent._process_jobs(jobs)
         mock_job.assert_called_once()

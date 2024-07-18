@@ -27,13 +27,14 @@ import json
 import logging
 import sys
 import time
+from functools import cached_property
 from queue import Queue
 from threading import Event
 
 from nuvla.api.models import CimiResponse
 
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
-from nuvlaedge.agent.job import Job
+from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.timed_actions import ActionHandler, TimedAction
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -48,9 +49,10 @@ from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.nuvla.resources import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.manager import WorkerManager
-from nuvlaedge.agent.settings import (AgentSettings)
-from nuvlaedge.agent.orchestrator.factory import get_coe_client
+from nuvlaedge.agent.settings import AgentSettings
 from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.agent.orchestrator.factory import get_coe_client
+from nuvlaedge.agent.orchestrator.job_local import JobLocal
 from nuvlaedge.models import model_diff
 
 
@@ -464,6 +466,10 @@ class Agent:
             self._process_jobs([NuvlaID(j) for j in jobs])
             logger.info(f"Jobs Response process finished in {time.perf_counter() - start_time}")
 
+    @cached_property
+    def job_local(self):
+        return JobLocal(self._nuvla_client.nuvlaedge_client)
+
     def _process_jobs(self, jobs: list[NuvlaID]):
         """
         Process a list of jobs.
@@ -474,9 +480,14 @@ class Agent:
         Returns:
             None
         """
+        if self.settings.nuvlaedge_exec_jobs_in_agent:
+            coe_engine: JobLauncher = self.job_local
+        else:
+            coe_engine: JobLauncher = self._coe_engine
+
         for i in jobs:
             logger.info(f"Creating job {i}")
-            job = Job(self._coe_engine,
+            job = Job(coe_engine,
                       self._nuvla_client,
                       i,
                       self._coe_engine.job_engine_lite_image)

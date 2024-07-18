@@ -6,6 +6,7 @@ import time
 from subprocess import run, PIPE, TimeoutExpired
 from typing import List, Optional
 import requests
+import re
 import yaml
 
 import docker
@@ -298,7 +299,7 @@ class DockerClient(COEClient):
 
         return True
 
-    def is_nuvla_job_running(self, job_id, job_execution_id):
+    def is_nuvla_job_running(self, job_id, job_execution_id) -> bool:
         """
         Checks if a specified Nuvla job is currently running.
 
@@ -818,6 +819,21 @@ class DockerClient(COEClient):
             logger.debug(f'Failed to get container id from cpuset: {e}')
 
     @staticmethod
+    def _get_container_id_from_mountinfo():
+        """
+        Get the container ID from the mountinfo file.
+
+        Returns:
+            str: The container ID.
+
+        """
+        try:
+            with open('/proc/self/mountinfo', 'r') as f:
+                return re.findall(r'containers/[^/]+', f.read())[0].split('/')[1]
+        except Exception as e:
+            logger.debug(f'Failed to get container id from mountinfo: {e}')
+
+    @staticmethod
     def _get_container_id_from_hostname():
         """
         Get the container ID from the hostname.
@@ -833,6 +849,13 @@ class DockerClient(COEClient):
         except Exception as e:
             logger.debug(f'Failed to get container id from hostname: {e}')
 
+    @staticmethod
+    def _get_container_name_from_env():
+        try:
+            return os.environ['COMPOSE_PROJECT_NAME'] + '-agent'
+        except Exception as e:
+            logger.debug(f'Failed to get container name from environment: {e}')
+
     def get_current_container(self):
         """
         Get the current container.
@@ -846,7 +869,9 @@ class DockerClient(COEClient):
         """
         get_id_functions = [self._get_container_id_from_hostname,
                             self._get_container_id_from_cpuset,
-                            self._get_container_id_from_cgroup]
+                            self._get_container_id_from_cgroup,
+                            self._get_container_id_from_mountinfo,
+                            self._get_container_name_from_env]
         for get_id_function in get_id_functions:
             container_id = get_id_function()
             if container_id:
@@ -1171,8 +1196,9 @@ class DockerClient(COEClient):
         except (docker.errors.ImageNotFound,
                 docker.errors.ContainerError,
                 docker.errors.APIError) as ex:
+            message = getattr(ex, 'explanation', getattr(ex, 'stderr'))
             logger.error("Failed running container '%s' from '%s': %s",
-                         name, image, ex.explanation)
+                         name, image, message)
 
     def container_remove(self, name: str, **kwargs):
         try:

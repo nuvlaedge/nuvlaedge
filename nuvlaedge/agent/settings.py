@@ -81,6 +81,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         nuvlaedge_api_secret (Optional[str]): The API secret for NuvlaEdge.
         nuvlaedge_excluded_monitors (Optional[str]): The excluded monitors for NuvlaEdge.
         nuvlaedge_immutable_ssh_pub_key (Optional[str]): The immutable SSH public key for NuvlaEdge.
+        nuvlaedge_exec_jobs_in_agent (Optional[bool]): Execute jobs in agent instead of in a new container.
         vpn_config_extra (Optional[str]): Extra VPN configuration for NuvlaEdge.
 
         nuvlaedge_job_engine_lite_image (Optional[str]): The image for the NuvlaEdge job engine lite.
@@ -122,6 +123,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_api_secret: Optional[str] = None
     nuvlaedge_excluded_monitors: Optional[str] = None
     nuvlaedge_immutable_ssh_pub_key: Optional[str] = None
+    nuvlaedge_exec_jobs_in_agent: Optional[bool] = False
     vpn_config_extra: Optional[str] = None
 
     # Dev configuration

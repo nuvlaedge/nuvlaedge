@@ -18,9 +18,12 @@ class TestContainerStatsMonitor(unittest.TestCase):
         mock_telemetry.edge_status = EdgeStatus()
         return ContainerStatsMonitor('test_monitor', Mock(), True)
 
-    def test_refresh_container_info(self):
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+           '._check_support_container_stats_new')
+    def test_refresh_container_info(self, mock_check_support):
         mock_telemetry = Mock()
         mock_telemetry.edge_status = EdgeStatus()
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
 
         test_monitor.coe_client.collect_container_metrics.return_value = []
@@ -28,10 +31,13 @@ class TestContainerStatsMonitor(unittest.TestCase):
         test_monitor.refresh_container_info()
         self.assertFalse(test_monitor.data.containers)
 
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+           '._check_support_container_stats_new')
     @patch('time.sleep', side_effect=InterruptedError)
-    def test_run(self, mock_sleep):
+    def test_run(self, mock_sleep, mock_check_support):
         mock_telemetry = Mock()
         mock_telemetry.edge_status = EdgeStatus()
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         with patch('nuvlaedge.agent.workers.monitor.components.container_stats.'
                    'ContainerStatsMonitor.refresh_container_info') as mock_refresh, \
@@ -44,7 +50,10 @@ class TestContainerStatsMonitor(unittest.TestCase):
                 mock_update.assert_called_once()
                 mock_refresh.assert_called_once()
 
-    def test_get_cluster_manager_attrs(self):
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+           '._check_support_container_stats_new')
+    def test_get_cluster_manager_attrs(self, mock_check_support):
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         self.assertEqual(test_monitor.get_cluster_manager_attrs([], 'node-id'),
                          (False, []),
@@ -75,8 +84,11 @@ class TestContainerStatsMonitor(unittest.TestCase):
                          'Failed to get cluster manager attributes when no nodes '
                          'are active')
 
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+           '._check_support_container_stats_new')
     @patch.object(ContainerStatsMonitor, 'get_cluster_manager_attrs')
-    def test_update_cluster_data(self, mock_get_cluster_manager_attrs):
+    def test_update_cluster_data(self, mock_get_cluster_manager_attrs, mock_check_support):
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         mock_get_cluster_manager_attrs.return_value = (False, [])
         test_monitor.coe_client.get_cluster_join_address.return_value = None
@@ -134,7 +146,10 @@ class TestContainerStatsMonitor(unittest.TestCase):
 
     @patch('nuvlaedge.agent.workers.monitor.components.container_stats.execute_cmd')
     @patch('os.path.exists')
-    def test_get_swarm_certificate_expiration_date(self, mock_exists, mock_run):
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+           '._check_support_container_stats_new')
+    def test_get_swarm_certificate_expiration_date(self, mock_check_support, mock_exists, mock_run):
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         # if swarm cert does not exist, get None
         mock_exists.return_value = False
@@ -172,7 +187,10 @@ class TestContainerStatsMonitor(unittest.TestCase):
            'update_cluster_data')
     @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor.'
            'get_swarm_certificate_expiration_date')
-    def test_update_data(self, mock_cert, mock_update, refresh_container):
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+           '._check_support_container_stats_new')
+    def test_update_data(self, mock_check_support, mock_cert, mock_update, refresh_container):
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         mock_update.return_value = None
         mock_cert.return_value = None
@@ -196,8 +214,11 @@ class TestContainerStatsMonitor(unittest.TestCase):
         test_monitor.update_data()
         self.assertEqual(test_monitor.data.swarm_node_cert_expiry_date, "Expired")
 
-    def test_populate_nb_report(self):
+    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.ContainerStatsMonitor'
+            '._check_support_container_stats_new')
+    def test_populate_nb_report(self, mock_check_support):
         nb_report: dict = {}
+        mock_check_support.return_value = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         test_monitor.data = Mock()
         test_monitor.data.containers = {}

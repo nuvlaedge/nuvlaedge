@@ -1,11 +1,13 @@
 """
     NuvlaEdge data structure for container stats
 """
+from typing import Union
+
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
-class ContainerStatsData(BaseDataStructure):
+class ContainerStatsDataOld(BaseDataStructure):
     """ Data structure for docker information report """
     id: str | None = None
     name: str | None = None
@@ -16,6 +18,26 @@ class ContainerStatsData(BaseDataStructure):
     net_in_out: str | None = None
     blk_in_out: str | None = None
     restart_count: int | None = None
+
+
+class ContainerStatsData(BaseDataStructure):
+    id: str | None = None
+    name: str | None = None
+    image: str | None = None
+    status: str | None = None
+    state: str | None = None
+    created_at: str | None = None
+    started_at: str | None = None
+    restart_count: int | None = None
+    cpu_usage: float | None = None
+    cpu_limit: float | None = None
+    cpu_capacity: int | None = None
+    mem_usage: int | None = None
+    mem_limit: int | None = None
+    disk_in: int | None = None
+    disk_out: int | None = None
+    net_in: int | None = None
+    net_out: int | None = None
 
 
 class ClusterStatusData(NuvlaEdgeBaseModel):
@@ -38,7 +60,7 @@ class ClusterStatusData(NuvlaEdgeBaseModel):
 class DeploymentData(BaseDataStructure):
     """ Data structure to gather the container stats together """
     # Container information
-    containers: dict[str, ContainerStatsData] | None = None
+    containers: dict[str, Union[ContainerStatsData, ContainerStatsDataOld]] | None = None
 
     # Cluster data
     cluster_data: ClusterStatusData | None = None

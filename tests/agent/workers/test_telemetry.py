@@ -16,12 +16,14 @@ class TestTelemetry(TestCase):
         self.mock_status_channel = Mock(spec=Queue)
         self.uuid = NuvlaID('nuvlabox/uuid')
         self.excluded_monitors = []
+        self.endpoint = 'https://nuvla.io'
         with patch('nuvlaedge.agent.workers.telemetry.Telemetry._initialize_monitors') as mock_init_monitors:
             self.test_telemetry = Telemetry(self.mock_coe_client,
                                             self.mock_report_channel,
                                             self.mock_status_channel,
                                             self.uuid,
-                                            self.excluded_monitors)
+                                            self.excluded_monitors,
+                                            self.endpoint)
 
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
     @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')

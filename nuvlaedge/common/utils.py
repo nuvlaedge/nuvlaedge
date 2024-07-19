@@ -44,5 +44,5 @@ def format_datetime_for_nuvla(t: datetime) -> str:
     :param t: datetime object
     :return: string formatted datetime
     """
-    str_time = t.isoformat(timespec='milliseconds')
+    str_time = t.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
     return str_time if str_time.endswith('Z') else str_time + 'Z'

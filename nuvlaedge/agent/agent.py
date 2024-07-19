@@ -197,7 +197,8 @@ class Agent:
                               'status_channel': self.status_channel,
                               'report_channel': self.telemetry_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
-                              'excluded_monitors': self.settings.nuvlaedge_excluded_monitors
+                              'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
+                              'nuvla_endpoint': self.settings.nuvla_endpoint,
                               }),
             actions=['run'],
             initial_delay=8

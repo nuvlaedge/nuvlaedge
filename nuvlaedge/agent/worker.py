@@ -22,7 +22,7 @@ class Worker:
         - init_params: tuple, the parameters to initialize the worker class
         - actions: list, the list of actions to run in the worker class
 
-    The worker is a wrapper that will run the actions of the worker type class in a thead. The period of execution is
+    The worker is a wrapper that will run the actions of the worker type class in a thread. The period of execution is
     defined by the period parameter. The worker will run the actions every period seconds.
     """
     def __init__(self,

@@ -1,5 +1,4 @@
 import logging
-import pprint
 from typing import Type
 
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger

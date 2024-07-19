@@ -471,14 +471,14 @@ class COEClientDockerTestCase(unittest.TestCase):
             self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
             self.assertEqual(metrics['cpu-usage'], 10.0,
                              "Expecting a CPU usage of 10%, but got something else instead")
-            # self.assertEqual(metrics['cpu-capacity'], 2,
-            #                  "Expecting a CPU capacity of 2, but got something else instead")
+            self.assertEqual(metrics['cpu-capacity'], 2,
+                             "Expecting a CPU capacity of 2, but got something else instead")
 
         # if online_cpus is not reported, then we get 'nan' usage
         cpu_stat['cpu_stats'].pop('online_cpus')
         metrics.clear()
         self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
-        # self.assertEqual(metrics['cpu-capacity'], 0, "Expecting zero CPU capacity, but got something else instead")
+        self.assertEqual(metrics['cpu-capacity'], 0, "Expecting zero CPU capacity, but got something else instead")
 
         # if a mandatory attribute does not exist, then we get 'nan' again, but with an error
         cpu_stat.pop('cpu_stats')
@@ -646,6 +646,8 @@ class COEClientDockerTestCase(unittest.TestCase):
             'cpu-limit': None,
             'created-at': format_datetime_for_nuvla(
                 datetime.datetime.fromisoformat(fake_container.attrs['Created'])),
+            'started-at': format_datetime_for_nuvla(
+                datetime.datetime.fromisoformat(fake_container.attrs["State"]["StartedAt"])),
         }, False)
 
         mock_get_cpu.reset_mock()
@@ -663,7 +665,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         mock_get_cpu.reset_mock()
         stats[0] = stats[1]
         mock_container_stats.return_value = stats[1]
-        expected_fields_new = ['id', 'name', 'restart-count', 'state', 'image', 'created-at', 'status']
+        expected_fields_new = ['id', 'name', 'restart-count', 'state', 'image', 'created-at', 'started-at', 'status']
         expected_fields_old = ['id', 'name', 'restart-count']
         mock_get_cpu.reset_mock()
         self.assertTrue(set(expected_fields_new).issubset(list(self.obj.collect_container_metrics()[0].keys())),
@@ -677,6 +679,8 @@ class COEClientDockerTestCase(unittest.TestCase):
             'image': fake_container.attrs['Config']['Image'],
             'created-at': format_datetime_for_nuvla(
                 datetime.datetime.fromisoformat(fake_container.attrs['Created'])),
+            'started-at': format_datetime_for_nuvla(
+                datetime.datetime.fromisoformat(fake_container.attrs["State"]["StartedAt"])),
             'cpu-limit': None,
         }, False)
         self.assertTrue(set(expected_fields_old).issubset(list(self.obj.collect_container_metrics()[0].keys())),

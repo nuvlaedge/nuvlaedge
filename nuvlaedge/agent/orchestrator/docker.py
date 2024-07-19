@@ -585,6 +585,7 @@ class DockerClient(COEClient):
             metrics['cpu-percent'] = f'{round(cpu_percent):.2f}'
         else:
             metrics['cpu-usage'] = cpu_percent
+            metrics['cpu-capacity'] = online_cpus
 
     @staticmethod
     def collect_container_metrics_mem(cstats: dict, metrics: dict, old_version=False):
@@ -773,6 +774,8 @@ class DockerClient(COEClient):
                 container_metric['state'] = container.attrs["State"]["Status"]
                 created = datetime.datetime.fromisoformat(container.attrs["Created"])
                 container_metric['created-at'] = format_datetime_for_nuvla(created)
+                started = datetime.datetime.fromisoformat(container.attrs["State"]["StartedAt"])
+                container_metric['started-at'] = format_datetime_for_nuvla(started)
                 container_metric['image'] = container.attrs['Config']['Image']
                 container_metric['status'] = container.status
                 nano_cpus = container.attrs.get('HostConfig', {}).get('NanoCpus', 0)

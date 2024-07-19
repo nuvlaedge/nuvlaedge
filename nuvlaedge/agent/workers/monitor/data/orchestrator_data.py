@@ -27,9 +27,11 @@ class ContainerStatsData(BaseDataStructure):
     status: str | None = None
     state: str | None = None
     created_at: str | None = None
+    started_at: str | None = None
     restart_count: int | None = None
     cpu_usage: float | None = None
     cpu_limit: float | None = None
+    cpu_capacity: int | None = None
     mem_usage: int | None = None
     mem_limit: int | None = None
     disk_in: int | None = None

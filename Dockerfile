@@ -164,8 +164,14 @@ ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Docker and docker compose CLIs
 COPY --from=docker /usr/local/bin/docker /usr/bin/docker
-COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
-                   /usr/local/libexec/docker/cli-plugins/docker-compose
+#COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
+#                   /usr/local/libexec/docker/cli-plugins/docker-compose
+# Docker Compose
+RUN set -eux; \
+    apkArch="$(apk --print-arch)"; \
+    curl -LO -o /usr/local/libexec/docker/cli-plugins/docker-compose \
+         https://github.com/SixSq/docker-compose/releases/download/v2.29.0-sixsq/docker-compose-linux-${apkArch} && \
+    chmod +x /usr/local/libexec/docker/cli-plugins/docker-compose
 
 # Kubectl CLI
 RUN set -eux; \

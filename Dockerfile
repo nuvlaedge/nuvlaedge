@@ -169,7 +169,7 @@ COPY --from=docker /usr/local/bin/docker /usr/bin/docker
 # Docker Compose
 RUN set -eux; \
     apkArch="$(apk --print-arch)"; \
-    curl -L -o /usr/local/libexec/docker/cli-plugins/docker-compose \
+    curl -L -o /usr/local/libexec/docker/cli-plugins/docker-compose --create-dirs \
          https://github.com/SixSq/docker-compose/releases/download/v2.29.0-sixsq/docker-compose-linux-${apkArch} && \
     chmod +x /usr/local/libexec/docker/cli-plugins/docker-compose
 

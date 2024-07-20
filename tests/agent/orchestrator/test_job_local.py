@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import mock
+import time
 import unittest
 
 from mock import MagicMock
@@ -37,4 +38,6 @@ class JobLocalTestCase(unittest.TestCase):
             docker_image=docker_image)
 
         self.assertIsNone(ret)
+
+        time.sleep(0.001)
         mock_process_job.assert_called_once()

@@ -123,7 +123,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     nuvlaedge_api_secret: Optional[str] = None
     nuvlaedge_excluded_monitors: Optional[str] = None
     nuvlaedge_immutable_ssh_pub_key: Optional[str] = None
-    nuvlaedge_exec_jobs_in_agent: Optional[bool] = False
+    nuvlaedge_exec_jobs_in_agent: Optional[bool] = True
     vpn_config_extra: Optional[str] = None
 
     # Dev configuration

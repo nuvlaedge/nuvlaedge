@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.14.4](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.4) (2024-05-27)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.3...2.14.4)
+
+**Merged pull requests:**
+
+- actions: update actions dependencies [\#184](https://github.com/nuvlaedge/nuvlaedge/pull/184) ([schaubl](https://github.com/schaubl))
+- fix: Fix requests dependency to 2.31.0 since 2.32.X causes incompatibility issues with docker library [\#183](https://github.com/nuvlaedge/nuvlaedge/pull/183) ([ignacio-penas](https://github.com/ignacio-penas))
+- fix: Agent logging env configuration [\#182](https://github.com/nuvlaedge/nuvlaedge/pull/182) ([ignacio-penas](https://github.com/ignacio-penas))
+- feat: add script docker-prune allowing to periodically cleanup docker resources [\#181](https://github.com/nuvlaedge/nuvlaedge/pull/181) ([schaubl](https://github.com/schaubl))
+- fix\(client\_wrapper.py\): Re-enable compression of data sent to Nuvla [\#180](https://github.com/nuvlaedge/nuvlaedge/pull/180) ([schaubl](https://github.com/schaubl))
+
 ## [2.14.3](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.3) (2024-05-15)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.2...2.14.3)

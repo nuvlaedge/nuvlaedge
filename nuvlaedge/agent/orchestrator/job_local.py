@@ -5,7 +5,7 @@ from collections import deque
 from threading import Thread, Semaphore
 
 from nuvla.job_engine.job.executor.executor import Executor, LocalOneJobQueue
-from nuvla.job_engine.job.job import Job
+from nuvla.job_engine.job.job import Job, JOB_RUNNING, JOB_FAILED
 
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -64,8 +64,11 @@ class JobLocal:
             job_id = self.job_queue.get()
             self.running_job = job_id
             self.log_state()
-            logger.debug(f'Running job {job_id} locally')
             _job = Job(self.api, LocalOneJobQueue(job_id), FILE_NAMES.root_fs)
+            if _job.get('state') == JOB_RUNNING:
+                logger.info(f'Job {job_id} already in running state. Do nothing.')
+                continue
+            logger.debug(f'Running job {job_id} locally')
             Executor.process_job(_job)
             self.previous_jobs.append(job_id)
             self.running_job = ''

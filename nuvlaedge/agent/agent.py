@@ -470,29 +470,32 @@ class Agent:
     def job_local(self):
         return JobLocal(self._nuvla_client.nuvlaedge_client)
 
+    def get_job_launcher(self, job_href) -> JobLauncher:
+        if self.settings.nuvlaedge_exec_jobs_in_agent and not self.is_update_job(job_href):
+            return self.job_local
+        else:
+            return self._coe_engine
+
+    def is_update_job(self, job_href):
+        action = self._nuvla_client.nuvlaedge_client.get(job_href).data.get('action')
+        return action and (action == 'nuvlabox_update' or action == 'nuvlaedge_update')
+
     def _process_jobs(self, jobs: list[NuvlaID]):
         """
         Process a list of jobs.
 
         Args:
             jobs: A list of NuvlaID objects representing the jobs to be processed.
-
-        Returns:
-            None
         """
-        if self.settings.nuvlaedge_exec_jobs_in_agent:
-            coe_engine: JobLauncher = self.job_local
-        else:
-            coe_engine: JobLauncher = self._coe_engine
 
-        for i in jobs:
-            logger.info(f"Creating job {i}")
-            job = Job(coe_engine,
+        for job_href in jobs:
+            logger.info(f"Creating job {job_href}")
+            job = Job(self.get_job_launcher(job_href),
                       self._nuvla_client,
-                      i,
+                      job_href,
                       self._coe_engine.job_engine_lite_image)
             if not job.do_nothing:
-                logger.info(f"Starting job {i}")
+                logger.info(f"Starting job {job_href}")
                 job.launch()
             else:
                 logger.debug(f"Job {job.job_id} already running, do nothing")

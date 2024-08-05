@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.15.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.15.0) (2024-07-21)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.4...2.15.0)
+
+**Merged pull requests:**
+
+- deps: get docker compose from our own build [\#192](https://github.com/nuvlaedge/nuvlaedge/pull/192) ([schaubl](https://github.com/schaubl))
+- refactor\(agent\): improve jobs execution in agent … [\#191](https://github.com/nuvlaedge/nuvlaedge/pull/191) ([schaubl](https://github.com/schaubl))
+- Container stats [\#189](https://github.com/nuvlaedge/nuvlaedge/pull/189) ([amitbhanja](https://github.com/amitbhanja))
+- Job execution in agent [\#187](https://github.com/nuvlaedge/nuvlaedge/pull/187) ([schaubl](https://github.com/schaubl))
+- agent: get IPs with network\_mode=host and allow data-gateway without system-manager [\#186](https://github.com/nuvlaedge/nuvlaedge/pull/186) ([schaubl](https://github.com/schaubl))
+- fix: Add thread tracer on signal SIGUSR1 [\#185](https://github.com/nuvlaedge/nuvlaedge/pull/185) ([ignacio-penas](https://github.com/ignacio-penas))
+
 ## [2.14.4](https://github.com/nuvlaedge/nuvlaedge/tree/2.14.4) (2024-05-27)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.3...2.14.4)

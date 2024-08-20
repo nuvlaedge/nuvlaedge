@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
+from agent import NuvlaClientWrapper
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
@@ -152,3 +153,26 @@ ${vpn_endpoints_mapped}
 
 ${vpn_extra_config}
 """
+
+
+def nuvla_support_new_container_stats(nuvla_client: NuvlaClientWrapper):
+
+    def get_attrs(data, prefix=''):
+        keys = []
+        for d in data:
+            name = d.get('name', '?')
+            if prefix:
+                name = prefix + '.' + name
+            keys.append(name)
+            ct = d.get('child-types')
+            if ct:
+                keys += get_attrs(ct, name)
+        return keys
+
+    try:
+        resp = nuvla_client.nuvlaedge_client.get('resource-metadata/nuvlabox-status-2')
+        attrs = get_attrs(resp.data['attributes'])
+        return 'resources.container-stats.item.cpu-usage' in attrs
+    except Exception as e:
+        logger.error(f'Failed to find if Nuvla support new container stats. Defaulting to False: {e}')
+        return False

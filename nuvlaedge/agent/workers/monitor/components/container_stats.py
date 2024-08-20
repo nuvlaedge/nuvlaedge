@@ -34,26 +34,13 @@ class ContainerStatsMonitor(Monitor):
 
         self.nuvlaedge_id: str = telemetry.nuvlaedge_uuid
         self.swarm_node_cert_path: str = CTE.SWARM_NODE_CERTIFICATE
-        self.nuvla_endpoint = telemetry.nuvla_endpoint
 
         self.data.containers = {}
 
         if not telemetry.edge_status.container_stats:
             telemetry.edge_status.container_stats = self.data
 
-        self._old_container_stats_version = not self._check_support_container_stats_new()
-
-    def _check_support_container_stats_new(self):
-        """
-        Checks if the orchestrator supports the new container stats API
-
-        """
-        response = requests.get(f'{self.nuvla_endpoint}/api/resource-metadata/nuvlabox-status-2', timeout=10)
-        if response.status_code >= 400:
-            return True
-
-        status = response.text
-        return status.__contains__('cpu-usage')
+        self._old_container_stats_version = not telemetry.new_container_stats_supported
 
     def refresh_container_info(self) -> None:
         """

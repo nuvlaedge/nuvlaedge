@@ -33,7 +33,7 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
-from agent.common.util import nuvla_support_new_container_stats
+from nuvlaedge.agent.common.util import nuvla_support_new_container_stats
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE

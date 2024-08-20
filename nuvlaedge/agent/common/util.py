@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
-from agent import NuvlaClientWrapper
+from nuvlaedge.agent import NuvlaClientWrapper
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 

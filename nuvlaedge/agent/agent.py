@@ -33,6 +33,7 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
+from nuvlaedge.agent.common.util import nuvla_support_new_container_stats
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
@@ -198,7 +199,7 @@ class Agent:
                               'report_channel': self.telemetry_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
-                              'nuvla_endpoint': self.settings.nuvla_endpoint,
+                              'new_container_stats_supported': nuvla_support_new_container_stats(self._nuvla_client),
                               }),
             actions=['run'],
             initial_delay=8

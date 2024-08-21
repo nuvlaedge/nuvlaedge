@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.15.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.15.1) (2024-08-05)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.15.0...2.15.1)
+
+**Merged pull requests:**
+
+- fix\(job\_local\): fix issues when running job in agent [\#193](https://github.com/nuvlaedge/nuvlaedge/pull/193) ([schaubl](https://github.com/schaubl))
+
 ## [2.15.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.15.0) (2024-07-21)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.14.4...2.15.0)

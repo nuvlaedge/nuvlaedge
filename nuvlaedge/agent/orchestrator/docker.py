@@ -835,7 +835,9 @@ class DockerClient(COEClient):
         """
         try:
             with open('/proc/self/mountinfo', 'r') as f:
-                return re.findall(r'containers/[^/]+', f.read())[0].split('/')[1]
+                results = re.findall(r'.*containers/[^/]+', f.read())
+                results = [r for r in results if '/rootfs/' not in r]
+                return results[0].split('/')[-1]
         except Exception as e:
             logger.debug(f'Failed to get container id from mountinfo: {e}')
 

@@ -40,6 +40,7 @@ strenum = "^0.4.15"
 toml = "^0.10.2"
 
 [tool.poetry.group.agent.dependencies]
+jsonpatch = "^1.33"
 psutil = "5.9.5"
 
 [tool.poetry.group.bluetooth.dependencies]

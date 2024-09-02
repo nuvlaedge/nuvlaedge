@@ -27,6 +27,33 @@ from nuvlaedge.common.file_operations import read_file, write_file
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
+def _cimi_patch(self, resource_id=None, resource_type=None, params=None, json=None, data=None, headers=None):
+    uri = self._cimi_get_uri(resource_id, resource_type)
+    return self._cimi_request('PATCH', uri, params=params, json=json, data=data, headers=headers)
+
+
+from nuvla.api.models import CimiResponse
+
+
+def patch(self, resource_id, data, **kwargs) -> CimiResponse:
+    """ Patching a CIMI resource by it's resource id with JSON Patch format (RFC 6902)
+
+    :param      resource_id: The id of the resource to edit
+    :type       resource_id: str
+
+    :param      data: JSON Patch data to serialize into JSON
+    :type       data: dict
+
+    :return:    A CimiResponse object
+    :rtype:     CimiResponse
+    """
+    return CimiResponse(self._cimi_patch(resource_id=resource_id, json=data, params=kwargs,
+                                         headers={'content-type': 'application/json-patch+json'}))
+
+
+NuvlaApi._cimi_patch = _cimi_patch
+NuvlaApi.patch = patch
+
 class SessionValidationError(Exception):
     """ An exception raised when the session structure is not as expected. """
     ...
@@ -292,15 +319,30 @@ class NuvlaClientWrapper:
             new_status: metrics that have changed from the last telemetry
             attributes_to_delete: attributes no longer present in the metrics
 
-        Returns: a CimiResponse instance with the response of the server including jobs queued for this NuvlaEdge
+        Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
 
         """
-        logger.debug(f"Sending telemetry report to Nuvla: \n"
+        logger.debug(f"Sending telemetry data to Nuvla: \n"
                      f"Changed fields: {new_status}\n"
                      f"Deleted fields: {attributes_to_delete}")
         response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)
+        logger.debug(f"Response received from telemetry report: {response.data}")
+        return response.data
+
+    def telemetry_patch(self, telemetry_jsonpatch: list) -> dict:
+        """ Sends telemetry metrics to the nuvlaedge-status resource using edit(put) operation
+
+        Args:
+            telemetry_jsonpatch: telemetry data in JSON Patch format
+
+        Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
+
+        """
+        logger.debug(f"Sending telemetry patch data to Nuvla: \n {telemetry_jsonpatch}")
+        response: CimiResponse = self.nuvlaedge_client.patch(self.nuvlaedge_status_uuid,
+                                                             data=telemetry_jsonpatch)
         logger.debug(f"Response received from telemetry report: {response.data}")
         return response.data
 

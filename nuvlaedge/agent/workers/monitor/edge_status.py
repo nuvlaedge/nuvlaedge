@@ -6,6 +6,7 @@ from typing import Optional
 
 import pydantic
 
+from nuvlaedge.agent.workers.monitor.data.coe_resources_data import COEResourcesData
 from nuvlaedge.agent.workers.monitor.data.geolocation_data import GeoLocationData
 from nuvlaedge.agent.workers.monitor.data.network_data import NetworkingData
 from nuvlaedge.agent.workers.monitor.data.nuvlaedge_data import NuvlaEdgeData
@@ -50,3 +51,6 @@ class EdgeStatus(pydantic.BaseModel):
 
     # Modification time controlled by Telemetry
     current_time:       Optional[str] = None
+
+    # COE raw resources
+    coe_resources:      Optional[COEResourcesData] = None

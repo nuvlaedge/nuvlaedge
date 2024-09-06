@@ -62,6 +62,9 @@ class KubernetesClient(COEClient):
         self.job_image_pull_policy = os.getenv('JOB_IMAGE_PULL_POLICY', DEFAULT_IMAGE_PULL_POLICY)
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
+    def list_raw_resources(self, resource_type) -> list[dict]:
+        ...
+
     @staticmethod
     def get_image_pull_policy(image_pull_policy):
         """

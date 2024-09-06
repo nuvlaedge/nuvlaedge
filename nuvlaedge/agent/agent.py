@@ -407,7 +407,7 @@ class Agent:
             previous_data = self.telemetry_payload.model_dump(exclude_none=True, by_alias=True)
             telemetry_patch = jsonpatch.make_patch(previous_data, data_to_send)
             logger.debug(f"Sending telemetry patch data to Nuvla \n {telemetry_patch}")
-            response = self._nuvla_client.telemetry_patch(list(telemetry_patch))
+            response = self._nuvla_client.telemetry_patch(list(telemetry_patch), attributes_to_delete=list(to_delete))
         except Exception as e:
             logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True, stack_info=True)
             # Send telemetry via NuvlaClientWrapper

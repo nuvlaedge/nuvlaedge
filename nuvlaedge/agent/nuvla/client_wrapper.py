@@ -27,33 +27,6 @@ from nuvlaedge.common.file_operations import read_file, write_file
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
 
-def _cimi_put(self, resource_id=None, resource_type=None, params=None, json=None, data=None, headers=None):
-    uri = self._cimi_get_uri(resource_id, resource_type)
-    return self._cimi_request('PUT', uri, params=params, json=json, data=data, headers=headers)
-
-
-from nuvla.api.models import CimiResponse
-
-
-def edit_patch(self, resource_id, data, **kwargs) -> CimiResponse:
-    """ Patching a CIMI resource by it's resource id with JSON Patch format (RFC 6902)
-
-    :param      resource_id: The id of the resource to edit
-    :type       resource_id: str
-
-    :param      data: JSON Patch data to serialize into JSON
-    :type       data: dict | list
-
-    :return:    A CimiResponse object
-    :rtype:     CimiResponse
-    """
-    return CimiResponse(self._cimi_put(resource_id=resource_id, json=data, params=kwargs,
-                                       headers={'content-type': 'application/json-patch+json'}))
-
-
-NuvlaApi._cimi_put = _cimi_put
-NuvlaApi.edit_patch = edit_patch
-
 class SessionValidationError(Exception):
     """ An exception raised when the session structure is not as expected. """
     ...
@@ -331,19 +304,21 @@ class NuvlaClientWrapper:
         logger.debug(f"Response received from telemetry report: {response.data}")
         return response.data
 
-    def telemetry_patch(self, telemetry_jsonpatch: list) -> dict:
+    def telemetry_patch(self, telemetry_jsonpatch: list, attributes_to_delete: list[str]) -> dict:
         """ Sends telemetry metrics to the nuvlaedge-status resource using edit(put) operation
 
         Args:
             telemetry_jsonpatch: telemetry data in JSON Patch format
+            attributes_to_delete: attributes no longer present in the metrics
 
         Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
 
         """
         logger.debug(f"Sending telemetry patch data to Nuvla: \n {telemetry_jsonpatch}")
-        response: CimiResponse = self.nuvlaedge_client.edit_patch(self.nuvlaedge_status_uuid,
-                                                                  data=telemetry_jsonpatch)
-        logger.debug(f"Response received from telemetry report: {response.data}")
+        response: CimiResource = self.nuvlaedge_client.edit_patch(self.nuvlaedge_status_uuid,
+                                                                  data=telemetry_jsonpatch,
+                                                                  select=attributes_to_delete)
+        logger.debug(f"Response received from telemetry patch report: {response.data}")
         return response.data
 
     def save_current_state_to_file(self):

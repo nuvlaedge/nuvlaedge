@@ -195,12 +195,29 @@ class TestClientWrapper(TestCase):
         self.mock_nuvla.edit.return_value = mock_res
         self.assertEqual({'jobs': ['job1']}, self.test_client.telemetry({}, set()))
 
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge_status_uuid')
+    def test_telemetry_patch(self, mock_status_uuid):
+        mock_res = Mock(spec=CimiResource)
+        mock_res.data = {'jobs': ['job1']}
+        self.mock_nuvla.edit_patch.return_value = mock_res
+        self.assertEqual({'jobs': ['job1']}, self.test_client.telemetry_patch([{}], set()))
+
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.write_file')
     def test_save_current_state_to_file(self, mock_write, mock_session):
         self.test_client.nuvlaedge_credentials = Mock()
         self.test_client.save_current_state_to_file()
         self.assertEqual(3, mock_write.call_count)
+
+    def test_find_nuvlaedge_id_from_nuvla_session(self):
+        ne_uuid = 'nuvlabox/56f49e36-6ca5-11ef-a8fd-4797009c58a7'
+        mock_res = Mock(spec=CimiResource)
+        mock_res.data = {'identifier': ne_uuid, 'user': ne_uuid}
+        self.mock_nuvla.get.return_value = mock_res
+        self.assertEqual(self.test_client.find_nuvlaedge_id_from_nuvla_session(), ne_uuid)
+
+        self.mock_nuvla.current_session.side_effect = EOFError
+        self.assertIsNone(self.test_client.find_nuvlaedge_id_from_nuvla_session())
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession.model_validate')

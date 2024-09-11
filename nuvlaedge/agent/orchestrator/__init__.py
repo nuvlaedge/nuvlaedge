@@ -303,7 +303,7 @@ class COEClient(ABC):
         """
 
     @abstractmethod
-    def list_raw_resources(self, resource_type) -> list[dict]:
+    def list_raw_resources(self, resource_type) -> list[dict] | None:
         """
         Get list of a COE resource type as returned by the COE API
         """

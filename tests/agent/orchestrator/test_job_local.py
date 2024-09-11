@@ -39,5 +39,5 @@ class JobLocalTestCase(unittest.TestCase):
 
         self.assertIsNone(ret)
 
-        time.sleep(0.001)
+        time.sleep(0.002)
         mock_process_job.assert_called_once()

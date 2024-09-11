@@ -54,7 +54,7 @@ class DockerClient(COEClient):
         self.last_node_info: float = 0.0
         self._node_info: dict = {}
 
-    def list_raw_resources(self, resource_type) -> list[dict]:
+    def list_raw_resources(self, resource_type) -> list[dict] | None:
         api = self.client.api
         match resource_type:
             case 'images':
@@ -74,7 +74,7 @@ class DockerClient(COEClient):
             case 'secrets':
                 return api.secrets()
         logger.error(f'COE resource type "{resource_type}" is not supported')
-        return []
+        return None
 
     @property
     def node_info(self):

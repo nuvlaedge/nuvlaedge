@@ -58,6 +58,18 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.job_engine_lite_component, "nuvlaedge-job-engine-lite",
                          'Base class of the COEClient was not properly initialized')
 
+    def test_list_raw_resources(self):
+        list_raw_resources = self.obj.list_raw_resources
+
+        types = ['images', 'volumes', 'networks', 'containers', 'services', 'tasks', 'configs', 'secrets', 'any']
+        for resource_type in types:
+            try:
+                list_raw_resources(resource_type)
+            except docker.errors.APIError as e:
+                if 'not a swarm manager' in str(e):
+                    continue
+                raise
+
     def test_get_node_info(self):
         self.assertIn('ID', self.obj.node_info,
                       'Unable to retrieve Docker info')
@@ -67,6 +79,11 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         self.assertEqual(self.obj.node_info.keys(), self.local_docker_client.info().keys(),
                          'Get node info return a different value than the real Docker info')
+
+        self.assertIsInstance(self.obj.get_node_info(), dict)
+
+    def test_get_client_version(self):
+        self.assertIsInstance(self.obj.get_client_version(), str)
 
     def test_get_host_os(self):
         self.assertIsInstance(self.obj.get_host_os(), str,
@@ -90,6 +107,14 @@ class COEClientDockerTestCase(unittest.TestCase):
         mock_docker.side_effect = docker.errors.APIError("fake", response=requests.Response())
         self.assertEqual(self.obj.get_join_tokens(), (None, None),
                          'Returned Swarm tokens even though Docker threw an exception')
+
+        # lost quorum
+        mock_docker.side_effect = docker.errors.APIError(
+            "The swarm does not have a leader. It's possible that too few managers are online. Make sure more than half of the managers are online.",
+            response=requests.Response())
+        with self.assertLogs(logger=logger, level='WARNING') as log:
+            self.assertEqual(self.obj.get_join_tokens(), (None, None))
+            self.assertIn('Quorum is lost', '\n'.join(log.output))
 
     @mock.patch('docker.models.nodes.NodeCollection.list')
     def test_list_nodes(self, mock_docker):
@@ -189,6 +214,10 @@ class COEClientDockerTestCase(unittest.TestCase):
             self.assertEqual(self.obj.get_api_ip_port(), ('127.0.0.1', mocked_port),
                              'Could not get default IP from filesystem')
 
+        # empty tcp file
+        with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data='')):
+            self.assertEqual(self.obj.get_api_ip_port(), ('127.0.0.1', mocked_port))
+
     def test_has_pull_job_capability(self):
         # Always return True
         self.assertTrue(self.obj.has_pull_job_capability())
@@ -206,13 +235,11 @@ class COEClientDockerTestCase(unittest.TestCase):
         }
         mock_get_node_info.return_value = node
         err = 'Exception not caught while getting node labels'
-        self.assertEqual(self.obj.get_node_labels(), [],
-                         err)
+        self.assertEqual(self.obj.get_node_labels(), [], err)
 
         mock_inspect_node.reset_mock(side_effect=True)
         mock_get_node_info.side_effect = docker.errors.NullResource
-        self.assertEqual(self.obj.get_node_labels(), [],
-                         err)
+        self.assertEqual(self.obj.get_node_labels(), [], err)
 
         mock_get_node_info.reset_mock(side_effect=True)
         labels = [1, 2]
@@ -225,6 +252,11 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_node_labels(), labels,
                          'Unable to get node labels')
         mock_cast_dict_to_list.assert_called_once_with(labels)
+
+        mock_inspect_node.reset_mock(side_effect=True)
+        mock_get_node_info.side_effect = docker.errors.APIError(
+            'Service Unavailable ("This node is not a swarm manager. Use "docker swarm init" or "docker swarm join" to connect this node to swarm and try again.")')
+        self.assertEqual(self.obj.get_node_labels(), [])
 
     @mock.patch('docker.models.containers.ContainerCollection.get')
     def test_is_vpn_client_running(self, mock_containers_get):
@@ -1068,6 +1100,13 @@ class COEClientDockerTestCase(unittest.TestCase):
         mock_container_list.return_value = []
         with self.assertRaises(docker.errors.NotFound):
             self.obj._get_component_container_by_service_name('test')
+
+        mock_container_list.reset_mock(return_value=True, side_effect=True)
+
+        # One container found
+        c1 = docker.models.containers.Container(attrs={'Id': '0123456789abcdef'})
+        mock_container_list.return_value = [c1]
+        self.assertIs(self.obj._get_component_container_by_service_name('test'), c1)
 
         mock_container_list.reset_mock(return_value=True, side_effect=True)
 

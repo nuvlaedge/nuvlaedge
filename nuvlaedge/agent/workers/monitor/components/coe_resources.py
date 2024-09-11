@@ -37,10 +37,17 @@ class COEResourcesMonitor(Monitor):
             return
 
         docker_data = DockerData()
-        docker_data.images = self.coe_client.list_raw_resources('images')
-        docker_data.volumes = self.coe_client.list_raw_resources('volumes')
-        docker_data.networks = self.coe_client.list_raw_resources('networks')
-        docker_data.containers = self.coe_client.list_raw_resources('containers')
+        # Warning: the order of the list below is important, swarm only resources should be at the end
+        for resource_type in ['images', 'volumes', 'networks', 'containers',
+                              'services', 'tasks', 'configs', 'secrets']:
+            try:
+                setattr(docker_data, resource_type, self.coe_client.list_raw_resources(resource_type))
+            except Exception as e:
+                if 'not a swarm manager' in str(e):
+                    self.logger.debug('This docker node is not a swarm manager. '
+                                      'Cannot get services,tasks,configs,secrets.')
+                    break
+                self.logger.error(f'Failed to get docker {resource_type}: {e}')
 
         self.data.docker = docker_data
 

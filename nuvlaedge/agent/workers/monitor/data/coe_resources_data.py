@@ -13,6 +13,10 @@ class DockerData(BaseDataStructure):
     volumes: list[dict] | None = []
     networks: list[dict] | None = []
     containers: list[dict] | None = []
+    services: list[dict] | None = []
+    tasks: list[dict] | None = []
+    configs: list[dict] | None = []
+    secrets: list[dict] | None = []
 
 
 class COEResourcesData(BaseDataStructure):

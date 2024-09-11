@@ -312,7 +312,7 @@ class KubernetesClient(COEClient):
                       namespace, exc_info=ex)
             raise ex
 
-    def collect_container_metrics(self) -> List[Dict]:
+    def collect_container_metrics(self, old_version: bool = False) -> List[Dict]:
         try:
             pods_here = self.client \
                 .list_pod_for_all_namespaces(

@@ -55,24 +55,27 @@ class DockerClient(COEClient):
         self._node_info: dict = {}
 
     def list_raw_resources(self, resource_type) -> list[dict] | None:
+        def key_created(d): return d.get('Created')
+        def key_created_at(d): return d.get('CreatedAt')
+
         api = self.client.api
         match resource_type:
             case 'images':
-                return api.images()
+                return sorted(api.images(), key=key_created)
             case 'volumes':
-                return api.volumes().get('Volumes', [])
+                return sorted(api.volumes().get('Volumes', []), key=key_created_at)
             case 'networks':
-                return api.networks()
+                return sorted(api.networks(), key=key_created)
             case 'containers':
-                return api.containers(all=True, size=True)
+                return sorted(api.containers(all=True, size=True), key=key_created)
             case 'services':
-                return api.services(status=True)
+                return sorted(api.services(status=True), key=key_created_at)
             case 'tasks':
-                return api.tasks()
+                return sorted(api.tasks(), key=key_created_at)
             case 'configs':
-                return api.configs()
+                return sorted(api.configs(), key=key_created_at)
             case 'secrets':
-                return api.secrets()
+                return sorted(api.secrets(), key=key_created_at)
         logger.error(f'COE resource type "{resource_type}" is not supported')
         return None
 

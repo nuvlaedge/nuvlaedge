@@ -5,7 +5,7 @@ import os
 import socket
 import time
 from subprocess import run, PIPE, TimeoutExpired
-from typing import List, Optional
+from typing import List, Optional, Dict
 import requests
 import re
 import yaml
@@ -740,7 +740,7 @@ class DockerClient(COEClient):
                                f'{container.short_id} ({container.name}): {e}')
         return containers_stats
 
-    def collect_container_metrics(self, old_version=False):
+    def collect_container_metrics(self, old_version=False) -> List[Dict]:
         """
 
         Collects metrics for each container in the system.

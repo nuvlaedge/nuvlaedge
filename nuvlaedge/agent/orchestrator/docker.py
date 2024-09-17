@@ -55,27 +55,53 @@ class DockerClient(COEClient):
         self._node_info: dict = {}
 
     def list_raw_resources(self, resource_type) -> list[dict] | None:
-        def key_created(d): return d.get('Created')
-        def key_created_at(d): return d.get('CreatedAt')
+
+        def get_keys(*keys):
+            def f(d):
+                return ' '.join([str(d.get(k, '')) for k in keys])
+            return f
 
         api = self.client.api
         match resource_type:
             case 'images':
-                return sorted(api.images(), key=key_created)
+                images = sorted(api.images(), key=get_keys('Created', 'Id'))
+                for i in images:
+                    repo_tags = i.get('RepoTags', [])
+                    repo_digests = i.get('RepoDigests', [])
+                    repo_tags.sort()
+                    repo_digests.sort()
+                    if repo_tags:
+                        repo_tag = repo_tags[0].split(':', 1)
+                        i['Repository'] = repo_tag[0]
+                        if len(repo_tag) > 1:
+                            i['Tag'] = repo_tag[1]
+                    elif repo_digests:
+                        i['Repository'] = repo_digests[0].split('@', 1)[0]
+
+                return images
             case 'volumes':
-                return sorted(api.volumes().get('Volumes', []), key=key_created_at)
+                return sorted(api.volumes().get('Volumes', []), key=get_keys('CreatedAt', 'Name'))
             case 'networks':
-                return sorted(api.networks(), key=key_created)
+                return sorted(api.networks(), key=get_keys('Created', 'Id'))
             case 'containers':
-                return sorted(api.containers(all=True, size=True), key=key_created)
+                containers = sorted(api.containers(all=True, size=True), key=get_keys('Created', 'Id'))
+                for c in containers:
+                    c.get('Mounts', []).sort(key=get_keys('Destination'))
+                    c.get('Ports', []).sort(key=get_keys('PrivatePort'))
+                    names = c.get('Names', [])
+                    names.sort()
+                    if names:
+                        c['Name'] = names[0].lstrip('/')
+                return containers
             case 'services':
-                return sorted(api.services(status=True), key=key_created_at)
+                return sorted(api.services(status=True), key=get_keys('CreatedAt', 'ID'))
             case 'tasks':
-                return sorted(api.tasks(), key=key_created_at)
+                return sorted(api.tasks(), key=get_keys('CreatedAt', 'ID'))
             case 'configs':
-                return sorted(api.configs(), key=key_created_at)
+                return sorted(api.configs(), key=get_keys('CreatedAt', 'ID'))
             case 'secrets':
-                return sorted(api.secrets(), key=key_created_at)
+                return sorted(api.secrets(), key=get_keys('CreatedAt', 'ID'))
+
         logger.error(f'COE resource type "{resource_type}" is not supported')
         return None
 

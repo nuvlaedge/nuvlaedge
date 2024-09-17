@@ -5,7 +5,7 @@ import base64
 import contextlib
 import datetime
 import logging
-from unittest.mock import PropertyMock
+from unittest.mock import Mock, PropertyMock
 
 import mock
 import subprocess
@@ -69,6 +69,20 @@ class COEClientDockerTestCase(unittest.TestCase):
                 if 'not a swarm manager' in str(e):
                     continue
                 raise
+
+        api_mock = Mock()
+        self.obj.client.api = api_mock
+
+        api_mock.images.return_value = [{'Id': '1', 'RepoDigests': ['repo@sha256:hash', 'repo@sha256:hash2']},
+                                        {'Id': '0', 'RepoTags': ['repo/img']}]
+        images = list_raw_resources('images')
+        self.assertEqual(images[0]['Repository'], 'repo/img')
+        self.assertEqual(images[1]['Repository'], 'repo')
+
+        api_mock.containers.return_value = [{'Id': '1', 'Names': []},
+                                            {'Id': '0', 'Names': ['/container']}]
+        containers = list_raw_resources('containers')
+        self.assertEqual(containers[0]['Name'], 'container')
 
     def test_get_node_info(self):
         self.assertIn('ID', self.obj.node_info,

@@ -2,7 +2,11 @@
 This file gathers general utilities demanded by most of the classes such as a command executor
 """
 
+
+import base64
+import hashlib
 import os
+import pyaes
 import logging
 import signal
 
@@ -10,7 +14,6 @@ from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
-from nuvlaedge.agent import NuvlaClientWrapper
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
@@ -155,7 +158,7 @@ ${vpn_extra_config}
 """
 
 
-def nuvla_support_new_container_stats(nuvla_client: NuvlaClientWrapper):
+def nuvla_support_new_container_stats(nuvla_client):
 
     def get_attrs(data, prefix=''):
         keys = []
@@ -176,3 +179,29 @@ def nuvla_support_new_container_stats(nuvla_client: NuvlaClientWrapper):
     except Exception as e:
         logger.error(f'Failed to find if Nuvla support new container stats. Defaulting to False: {e}')
         return False
+
+
+def _get_key(nuvlaedge_uuid, machine_id):
+    nuvlaedge_uuid = nuvlaedge_uuid if nuvlaedge_uuid else ''
+    machine_id = machine_id if machine_id else ''
+    return hashlib.sha256((nuvlaedge_uuid.rsplit('/', 1)[-1] + ':' + machine_id).encode()).digest()
+
+
+def _aes_cbc(key, iv):
+    return pyaes.AESModeOfOperationCBC(key, iv)
+
+
+def encrypt_creds(nuvlaedge_uuid, machine_id, cred_key, cred_secret):
+    key = _get_key(nuvlaedge_uuid, machine_id)
+    iv = os.urandom(16)
+    encrypter = pyaes.Encrypter(_aes_cbc(key, iv))
+    creds = cred_key + ':' + cred_secret
+    return base64.b64encode(iv + encrypter.feed(creds) + encrypter.feed())
+
+
+def decrypt_creds(nuvlaedge_uuid, machine_id, creds):
+    key = _get_key(nuvlaedge_uuid, machine_id)
+    data = base64.b64decode(creds)
+    iv = data[:16]
+    decrypter = pyaes.Decrypter(_aes_cbc(key, iv))
+    return tuple((decrypter.feed(data[16:]) + decrypter.feed()).decode().split(':', 1))

@@ -4,10 +4,10 @@ from unittest.mock import Mock, MagicMock, patch
 
 import mock
 from nuvla.api import Api
-from nuvla.api.models import CimiResource, CimiCollection
+from nuvla.api.models import CimiResource
 
-import nuvlaedge.agent.nuvla.client_wrapper
-from nuvlaedge.agent.nuvla.resources import NuvlaID, AutoNuvlaEdgeResource, AutoUpdateNuvlaEdgeTrackedResource
+from nuvlaedge.agent.common.util import decrypt_creds, encrypt_creds
+from nuvlaedge.agent.nuvla.resources import NuvlaID, AutoUpdateNuvlaEdgeTrackedResource
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate, SessionValidationError
 
 
@@ -21,6 +21,7 @@ class TestClientWrapper(TestCase):
                                               insecure=self.mock_insecure,
                                               nuvlaedge_uuid=self.mock_uuid)
         self.test_client.nuvlaedge_client = self.mock_nuvla
+        self.test_client.irs = b'e62T9QScvfRusuY5FBlKf14X+Lxqc/8+MCvdGVUp8OY='
 
     def test_nuvlaedge_status_uuid_property(self):
         self.test_client._nuvlaedge_status_uuid = 'status-uuid_1'
@@ -151,7 +152,7 @@ class TestClientWrapper(TestCase):
         self.test_client.activate()
         mock_save.assert_called_once()
         mock_login.assert_called_once()
-        self.assertEqual(NuvlaApiKeyTemplate(key='key_1', secret='secret_1'), self.test_client.nuvlaedge_credentials)
+        self.assertEqual(decrypt_creds(self.mock_uuid, '', self.test_client.irs), ('key_1', 'secret_1'))
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge', new_callable=mock.PropertyMock)
     def test_commission(self, mock_nuvlaedge):

@@ -54,6 +54,8 @@ class JobTestCase(unittest.TestCase):
         # otherwise, launch the job
         self.mock_nuvla_client.nuvlaedge_credentials.key = 'fake-key'
         self.mock_nuvla_client.nuvlaedge_credentials.secret = 'fake-secret'
+        self.mock_nuvla_client.nuvlaedge_uuid = '0e9c180e-f4a8-488a-89d4-e6ee6496b4d7'
+        self.mock_nuvla_client.irs = b'1rti3hdD3fpMQpdNaSJsBTZRLK8886J3RvvGtFjztbiSuoQelEUSLN2yPl550t8C'
         self.assertIsNone(self.obj.launch(), 'Failed to launch job')
         self.obj.coe_client.launch_job.assert_called_once_with(self.obj.job_id,
                                                                self.obj.job_id_clean,

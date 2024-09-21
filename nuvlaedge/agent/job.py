@@ -6,7 +6,9 @@ Relays pull-mode jobs to local job-engine-lite
 """
 from typing import Protocol, Any
 
+from nuvlaedge.agent.common.util import decrypt_creds
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from nuvlaedge.common.constants import CTE
 
 
 class JobLauncher(Protocol):
@@ -58,9 +60,10 @@ class Job:
 
         :return:
         """
+        key, secret = decrypt_creds(self.nuvla_client.nuvlaedge_uuid, CTE.MACHINE_ID, self.nuvla_client.irs)
         self.coe_client.launch_job(
             self.job_id, self.job_id_clean, self.nuvla_client._host.removeprefix("https://"),
             self.nuvla_client._insecure,
-            self.nuvla_client.nuvlaedge_credentials.key,
-            self.nuvla_client.nuvlaedge_credentials.secret,
+            key,
+            secret,
             self.job_engine_lite_image)

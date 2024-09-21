@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from nuvlaedge.common.file_operations import read_file
+
 
 @dataclass(frozen=True)
 class Constants:
@@ -24,6 +26,7 @@ class Constants:
     # Host System Paths
     HOST_FS: str = "/rootfs"
     SWARM_NODE_CERTIFICATE: str = f"{HOST_FS}/var/lib/docker/swarm/certificates/swarm-node.crt"
+    MACHINE_ID: str = ''
 
     # Timed actions retries
     TIMED_ACTIONS_TRIES: int = 3
@@ -39,4 +42,11 @@ class Constants:
     DATA_GATEWAY_PING_INTERVAL: int = 90
 
 
-CTE: Constants = Constants()
+host_fs = "/rootfs"
+machine_id = ''
+for machine_id_filepath in [f'{host_fs}/etc/machine-id', '/etc/machine-id']:
+    machine_id = read_file(machine_id_filepath, decode_json=False, warn_on_missing=True)
+    if machine_id:
+        break
+
+CTE: Constants = Constants(HOST_FS=host_fs, MACHINE_ID=machine_id)

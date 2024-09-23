@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import Field, field_validator, BaseModel, AliasChoices, model_validator
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
-from nuvlaedge.agent.common.util import encrypt_creds
+from nuvlaedge.agent.common.util import get_irs
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 from nuvlaedge.common.file_operations import read_file
@@ -276,18 +276,22 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         if self.nuvlaedge_api_key and self.nuvlaedge_api_secret:
             logging.info("Nuvla API keys passed as arguments, these will replace local session")
 
-            creds = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
-                                        secret=self.nuvlaedge_api_secret)
             if self._stored_session and self._stored_session.credentials:
+                creds = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
+                                            secret=self.nuvlaedge_api_secret)
                 self._stored_session.credentials = creds
 
-            irs = encrypt_creds(self.nuvlaedge_uuid, CTE.MACHINE_ID,
-                                self.nuvlaedge_api_key, self.nuvlaedge_api_secret)
-            if irs:
-                self._nuvla_client.irs = irs
-                self._stored_session.irs = irs
+            self._nuvla_client.irs = get_irs(self.nuvlaedge_uuid, self.nuvlaedge_api_key, self.nuvlaedge_api_secret)
 
-        if self._stored_session and (self._stored_session.irs or self._stored_session.credentials):
+        if self._stored_session and not self._stored_session.irs and self._stored_session.credentials:
+            self._stored_session.irs = get_irs(self.nuvlaedge_uuid,
+                                               self._stored_session.credentials.key,
+                                               self._stored_session.credentials.secret)
+            
+        if self._stored_session and self._stored_session.irs:
+            self._nuvla_client.irs = self._stored_session.irs
+
+        if self._stored_session and self._nuvla_client.irs:
             logging.info("Nuvla API keys found in stored session, using them to login")
             self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
 

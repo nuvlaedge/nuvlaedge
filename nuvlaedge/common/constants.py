@@ -43,10 +43,14 @@ class Constants:
 
 
 host_fs = "/rootfs"
-machine_id = ''
-for machine_id_filepath in [f'{host_fs}/etc/machine-id', '/etc/machine-id']:
-    machine_id = read_file(machine_id_filepath, decode_json=False, warn_on_missing=True)
-    if machine_id:
-        break
 
-CTE: Constants = Constants(HOST_FS=host_fs, MACHINE_ID=machine_id)
+
+def _get_machine_id(root_fs=''):
+    for machine_id_filepath in [f'{root_fs}/etc/machine-id', '/etc/machine-id']:
+        machine_id = read_file(machine_id_filepath, decode_json=False, warn_on_missing=True)
+        if machine_id:
+            return machine_id
+    return ''
+
+
+CTE: Constants = Constants(HOST_FS=host_fs, MACHINE_ID=_get_machine_id(host_fs))

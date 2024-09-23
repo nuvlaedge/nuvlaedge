@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from nuvla.api import Api as NuvlaApi
 from requests import Response
 
-from nuvlaedge.agent.common.util import encrypt_creds, decrypt_creds
+from nuvlaedge.agent.common.util import get_irs, from_irs
 from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              NuvlaEdgeResource,
                                              NuvlaEdgeStatusResource,
@@ -21,7 +21,6 @@ from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              AutoInfrastructureServiceResource,
                                              AutoCredentialResource)
 from ..settings import NuvlaApiKeyTemplate, NuvlaEdgeSession
-from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 from nuvlaedge.common.file_operations import read_file, write_file
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
@@ -222,7 +221,7 @@ class NuvlaClientWrapper:
         self._resources[res_name].force_update()
 
     def login_nuvlaedge(self) -> bool:
-        key, secret = decrypt_creds(self.nuvlaedge_uuid, CTE.MACHINE_ID, self.irs)
+        key, secret = from_irs(self.nuvlaedge_uuid, self.irs)
         login_response: Response = self.nuvlaedge_client.login_apikey(key, secret)
 
         if login_response.status_code in [200, 201]:
@@ -241,10 +240,7 @@ class NuvlaClientWrapper:
         """
         logger.info("Activating NuvlaEdge...")
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
-        self.irs = encrypt_creds(self.nuvlaedge_uuid,
-                                 CTE.MACHINE_ID,
-                                 credentials['api-key'],
-                                 credentials['secret-key'])
+        self.irs = get_irs(self.nuvlaedge_uuid, credentials['api-key'], credentials['secret-key'])
         logger.info(f'Activation successful, received credential ID: {credentials["api-key"]}, logging in')
 
         self.save_current_state_to_file()
@@ -351,6 +347,7 @@ class NuvlaClientWrapper:
             logger.warning(f"Could not find id with with error: {e}")
             return None
 
+    # TODO: Used only by security module. Switch it to settings.py/_create_client_from_settings()
     @classmethod
     def from_session_store(cls, file: Path | str):
         """ Creates a NuvlaEdgeClient object from a saved session file
@@ -371,16 +368,15 @@ class NuvlaClientWrapper:
             raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
 
         _client = cls(host=session.endpoint, insecure=session.insecure, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        _client.irs = session.irs
+        _client.nuvlaedge_credentials = session.credentials
 
         # Compute IRS from credentials
         if session.credentials and not session.irs:
-            session.irs = encrypt_creds(session.nuvlaedge_uuid, CTE.MACHINE_ID,
-                                        session.credentials.key, session.credentials.secret)
+            _client.irs = get_irs(session.nuvlaedge_uuid, session.credentials.key, session.credentials.secret)
+            _client.save_current_state_to_file()
 
-        if session.irs:
-            _client.irs = session.irs
-            _client.nuvlaedge_credentials = session.credentials
-            _client.login_nuvlaedge()
+        _client.login_nuvlaedge()
 
         # If uuid is none in session, retrieve it from the API
         if not _client.nuvlaedge_uuid and _client.nuvlaedge_credentials is not None:
@@ -388,8 +384,7 @@ class NuvlaClientWrapper:
             _client._nuvlaedge_uuid = _client.find_nuvlaedge_id_from_nuvla_session()
             logger.info(f"NuvlaEdge UUID not found in session, retrieving from API... {_client._nuvlaedge_uuid}")
             if _client.nuvlaedge_uuid:
-                session.irs = encrypt_creds(_client.nuvlaedge_uuid, CTE.MACHINE_ID,
-                                            session.credentials.key, session.credentials.secret)
+                _client.irs = get_irs(_client.nuvlaedge_uuid, session.credentials.key, session.credentials.secret)
                 _client.save_current_state_to_file()
 
         return _client

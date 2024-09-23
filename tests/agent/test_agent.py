@@ -108,9 +108,10 @@ class TestAgent(TestCase):
         mock_payload.model_dump.return_value = "Data to send"
 
         self.mock_nuvla_client.telemetry.return_value = None
+        self.mock_nuvla_client.telemetry_patch.side_effect = Exception
 
         self.assertIsNone(self.agent._telemetry())
-        mock_payload.model_dump.assert_called_once()
+        mock_payload.model_dump.assert_called()
         mock_payload.model_copy.assert_called_once()
         mock_payload.model_dump_json.assert_called_once()
         mock_status.assert_called_with(mock_payload)

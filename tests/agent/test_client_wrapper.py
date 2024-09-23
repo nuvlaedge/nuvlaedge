@@ -21,7 +21,7 @@ class TestClientWrapper(TestCase):
                                               insecure=self.mock_insecure,
                                               nuvlaedge_uuid=self.mock_uuid)
         self.test_client.nuvlaedge_client = self.mock_nuvla
-        self.test_client.irs = b'e62T9QScvfRusuY5FBlKf14X+Lxqc/8+MCvdGVUp8OY='
+        self.test_client.irs = get_irs(self.mock_uuid, 'key_1', 'secret_1')
 
     def test_nuvlaedge_status_uuid_property(self):
         self.test_client._nuvlaedge_status_uuid = 'status-uuid_1'

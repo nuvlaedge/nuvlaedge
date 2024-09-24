@@ -74,7 +74,8 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.obj.client.api = api_mock
 
         api_mock.images.return_value = [{'Id': '1', 'RepoDigests': ['repo@sha256:hash', 'repo@sha256:hash2']},
-                                        {'Id': '0', 'RepoTags': ['repo/img']}]
+                                        {'Id': '0', 'RepoTags': ['repo/img']},
+                                        {'Id': '2'}]
         images = list_raw_resources('images')
         self.assertEqual(images[0]['Repository'], 'repo/img')
         self.assertEqual(images[1]['Repository'], 'repo')

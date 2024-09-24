@@ -57,6 +57,9 @@ class COEClientKubernetesTestCase(unittest.TestCase):
         self.assertEqual(self.obj.job_engine_lite_component, "nuvlaedge-job-engine-lite",
                          'Base class of the COEClient was not properly initialized')
 
+    def test_list_raw_resources(self):
+        self.assertIsNone(self.obj.list_raw_resources('none'))
+
     def test_wait_pod_in_phase_matched(self):
         check_phase = 'Running'
 

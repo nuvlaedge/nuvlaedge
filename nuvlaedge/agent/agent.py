@@ -24,6 +24,7 @@ Engine (COE) client, worker manager, action handler, and the queues for telemetr
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
 import json
+import jsonpatch
 import logging
 import sys
 import time
@@ -401,10 +402,18 @@ class Agent:
         to_send, to_delete = model_diff(self.telemetry_payload, new_telemetry)
         data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
 
-        # Send telemetry via NuvlaClientWrapper
-        logger.debug(f"Sending telemetry data to Nuvla \n "
-                     f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
-        response: dict = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
+        response: dict
+        try:
+            previous_data = self.telemetry_payload.model_dump(exclude_none=True, by_alias=True)
+            telemetry_patch = jsonpatch.make_patch(previous_data, data_to_send)
+            logger.debug(f"Sending telemetry patch data to Nuvla \n {telemetry_patch}")
+            response = self._nuvla_client.telemetry_patch(list(telemetry_patch), attributes_to_delete=list(to_delete))
+        except Exception as e:
+            logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True, stack_info=True)
+            # Send telemetry via NuvlaClientWrapper
+            logger.debug(f"Sending telemetry data to Nuvla \n "
+                         f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
+            response = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
         # If telemetry is successful save telemetry
         if not response:

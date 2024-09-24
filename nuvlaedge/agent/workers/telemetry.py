@@ -107,6 +107,9 @@ class TelemetryPayloadAttributes(NuvlaEdgeStaticModel):
     container_plugins:              Optional[list[str]] = None
     kubelet_version:                Optional[str] = None
 
+    # COE raw resources
+    coe_resources:                  Optional[dict] = None
+
 
 class Telemetry:
     """

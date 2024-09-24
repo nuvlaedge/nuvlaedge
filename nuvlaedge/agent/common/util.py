@@ -201,8 +201,8 @@ def _from_irs(base, irs):
 def from_irs(base, irs):
     try:
         return _from_irs(base, irs)
-    except Exception as e:
-        msg = f'Failed to decode irs: {e}'
+    except Exception:
+        msg = 'Failed to decode irs'
         logger.error(msg)
         logger.debug(msg, exc_info=True)
         raise RuntimeError(msg)

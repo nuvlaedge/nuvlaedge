@@ -9,7 +9,7 @@ from nuvlaedge.agent.common.util import (
     extract_nuvlaedge_version,
     str_if_value_or_none,
     raise_timeout,
-    timeout
+    timeout, from_irs
 )
 
 
@@ -80,6 +80,11 @@ class TestUtils(unittest.TestCase):
     def test_str_if_value_or_none(self):
         self.assertIsNone(str_if_value_or_none(None))
         self.assertEqual('test', str_if_value_or_none('test'))
+
+    def test_irs(self):
+        with self.assertRaises(RuntimeError):
+            from_irs('test', 'test0123456789test')
+
 
     def test_raise_timeout(self):
         with self.assertRaises(TimeoutError):

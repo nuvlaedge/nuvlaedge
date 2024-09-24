@@ -4,8 +4,13 @@ from subprocess import SubprocessError, TimeoutExpired
 from mock import Mock, patch, mock_open
 import unittest
 
-from nuvlaedge.agent.common.util import execute_cmd, extract_nuvlaedge_version, str_if_value_or_none, raise_timeout, \
+from nuvlaedge.agent.common.util import (
+    execute_cmd,
+    extract_nuvlaedge_version,
+    str_if_value_or_none,
+    raise_timeout,
     timeout
+)
 
 
 class TestUtils(unittest.TestCase):

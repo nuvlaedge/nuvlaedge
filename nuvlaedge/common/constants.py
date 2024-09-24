@@ -49,7 +49,7 @@ def _get_machine_id(root_fs=''):
     for machine_id_filepath in [f'{root_fs}/etc/machine-id', '/etc/machine-id']:
         machine_id = read_file(machine_id_filepath, decode_json=False, warn_on_missing=True)
         if machine_id:
-            return machine_id
+            return machine_id.strip()
     return ''
 
 

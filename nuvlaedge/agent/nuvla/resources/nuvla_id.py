@@ -5,7 +5,7 @@ from pydantic_core import CoreSchema, core_schema
 class NuvlaID(str):
     @property
     def resource(self) -> str:
-        parts = self.split("/")
+        parts = self.rsplit("/", 1)
         return parts[0] if len(parts) > 1 else ''
 
     @property

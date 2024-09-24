@@ -362,7 +362,7 @@ class NuvlaClientWrapper:
         _stored_session = None
         try:
             _stored_session = read_file(file, decode_json=True)
-            session: NuvlaEdgeSession = (NuvlaEdgeSession.model_validate(_stored_session))
+            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(_stored_session)
         except Exception as ex:
             logger.warning(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
             raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')

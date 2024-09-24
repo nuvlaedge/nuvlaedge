@@ -192,7 +192,17 @@ def get_irs(base, k, s):
     return base64.b64encode(rand + enc.feed(k + ':' + s) + enc.feed())
 
 
-def from_irs(base, irs):
+def _from_irs(base, irs):
     data = base64.b64decode(irs)
     dec = _Dec(_Cbc(_irs_key(base), data[:16]))
     return tuple((dec.feed(data[16:]) + dec.feed()).decode().split(':', 1))
+
+
+def from_irs(base, irs):
+    try:
+        return _from_irs(base, irs)
+    except Exception as e:
+        msg = f'Failed to decode irs: {e}'
+        logger.error(msg)
+        logger.debug(msg, exc_info=True)
+        raise RuntimeError(msg)

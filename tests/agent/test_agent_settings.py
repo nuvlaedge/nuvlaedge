@@ -2,10 +2,13 @@ import os
 from unittest import TestCase
 from mock import Mock, patch
 
-from nuvlaedge.agent.settings import (parse_cmd_line_args,
-                                      AgentSettings,
-                                      get_cmd_line_settings,
-                                      get_agent_settings)
+from nuvlaedge.agent.settings import (
+    get_cmd_line_settings,
+    parse_cmd_line_args,
+    AgentSettings,
+    NuvlaEdgeSession,
+    NuvlaApiKeyTemplate
+)
 
 env_variables = {
     "COMPOSE_PROJECT_NAME": "mock_project",
@@ -45,6 +48,52 @@ class TestAgentSettings(TestCase):
         
         self.mock_nuvla_client = Mock()
         self.test_settings._nuvla_client = self.mock_nuvla_client
+
+    def test_create_client_from_settings(self):
+        self.test_settings._create_client_from_settings()
+        self.assertIsNone(self.test_settings._nuvla_client.irs)
+
+        # API Key and Secret in env vars
+        self.test_settings.nuvlaedge_api_key = 'key'
+        self.test_settings.nuvlaedge_api_secret = 'secret'
+        self.test_settings._create_client_from_settings()
+        self.assertIsNotNone(self.test_settings._nuvla_client.irs)
+
+        # API key&secret in env vars and existing session
+        self.test_settings._stored_session = NuvlaEdgeSession()
+        self.test_settings._create_client_from_settings()
+        self.assertIsNotNone(self.test_settings._stored_session.irs)
+
+        # API key&secret in session
+        self.test_settings._stored_session.credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
+        self.test_settings._create_client_from_settings()
+        self.assertIsNotNone(self.test_settings._stored_session.credentials)
+
+        # API key&secret in session but not in env var and no irs
+        self.test_settings.nuvlaedge_api_key = None
+        self.test_settings.nuvlaedge_api_secret = None
+        self.test_settings._stored_session.irs = None
+        self.test_settings._stored_session.credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
+        self.test_settings._create_client_from_settings()
+        self.assertIsNotNone(self.test_settings._stored_session.irs)
+
+        # NuvlaEdge UUID in session
+        ne_uuid = 'nuvlaedge/uuid'
+        self.test_settings._stored_session.nuvlaedge_uuid = ne_uuid
+        self.test_settings._create_client_from_settings()
+
+        # With login success
+        self.test_settings._stored_session.nuvlaedge_uuid = None
+        client_class_path = 'nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper'
+        with patch(f'{client_class_path}.login_nuvlaedge') as mock_login_nuvlaedge, \
+             patch(f'{client_class_path}.save_current_state_to_file') as mock_save_current_state_to_file, \
+             patch(f'{client_class_path}.find_nuvlaedge_id_from_nuvla_session') as mock_nuvlaedge_id_from_nuvla_session:
+            mock_login_nuvlaedge.return_value = True
+            mock_nuvlaedge_id_from_nuvla_session.return_value = ne_uuid
+            self.test_settings._nuvlaedge_uuid = ne_uuid
+            self.test_settings._nuvla_client.login_nuvlaedge = Mock()
+            self.test_settings._create_client_from_settings()
+            mock_save_current_state_to_file.assert_called_once()
 
     # Tests for parse_cmd_line_args
     @patch('nuvlaedge.agent.settings.ArgumentParser.parse_args')

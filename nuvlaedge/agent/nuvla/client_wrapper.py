@@ -348,12 +348,13 @@ class NuvlaClientWrapper:
 
         # To provide support for legacy (<2.14) NuvlaEdge agents, we also save the session to the legacy location,
         # both .activated and .context files
-        legacy_credentials = {"api-key": self.nuvlaedge_credentials.key,
-                              "secret-key": self.nuvlaedge_credentials.secret}
-        write_file(legacy_credentials, LEGACY_FILES.ACTIVATION_FLAG)
-
-        legacy_context = {"id": self.nuvlaedge_uuid}
-        write_file(legacy_context, LEGACY_FILES.CONTEXT)
+        if Path(LEGACY_FILES.ACTIVATION_FLAG.parent).exists():
+            legacy_credentials = {"api-key": self.nuvlaedge_credentials.key,
+                                  "secret-key": self.nuvlaedge_credentials.secret}
+            write_file(legacy_credentials, LEGACY_FILES.ACTIVATION_FLAG)
+        if Path(LEGACY_FILES.CONTEXT.parent).exists():
+            legacy_context = {"id": self.nuvlaedge_uuid}
+            write_file(legacy_context, LEGACY_FILES.CONTEXT)
 
     def find_nuvlaedge_id_from_nuvla_session(self) -> Optional[NuvlaID]:
         try:

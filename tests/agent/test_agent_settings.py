@@ -119,16 +119,11 @@ class TestAgentSettings(TestCase):
         self.assertTrue(self.test_settings.nuvlaedge_debug)
         self.assertEqual(self.test_settings.nuvlaedge_log_level, 'DEBUG')
 
-    def test_assert_nuvlaedge_uuid(self):
+    def test_find_nuvlaedge_uuid(self):
         self.test_settings.nuvlaedge_uuid_env = "nuvlabox/ENV_NUVLAEDGE_UUID"
         self.test_settings._stored_session = None
         self.mock_nuvla_client.nuvlaedge_credentials = None
-        self.assertEqual(self.test_settings._assert_nuvlaedge_uuid(), "nuvlabox/ENV_NUVLAEDGE_UUID")
-
-        self.mock_nuvla_client.login_nuvlaedge.return_value = True
-        self.mock_nuvla_client.nuvlaedge_credentials = True
-        self.mock_nuvla_client.find_nuvlaedge_id_from_nuvla_session.return_value = "nuvlabox/NUVLA_NUVLAEDGE_UUID"
-        self.assertEqual(self.test_settings._assert_nuvlaedge_uuid(), "nuvlabox/NUVLA_NUVLAEDGE_UUID")
+        self.assertEqual(self.test_settings._find_nuvlaedge_uuid(), "nuvlabox/ENV_NUVLAEDGE_UUID")
 
         stored_mock = Mock()
         stored_mock.nuvlaedge_uuid = "nuvlabox/STORED_NUVLAEDGE_UUID"
@@ -137,8 +132,9 @@ class TestAgentSettings(TestCase):
         self.test_settings._status_handler = status_mock
         status_mock.warning.return_value = True
         self.test_settings._stored_session = stored_mock
-        self.assertEqual(self.test_settings._assert_nuvlaedge_uuid(), "nuvlabox/STORED_NUVLAEDGE_UUID")
-        self.assertEqual(2, status_mock.warning.call_count)
+        self.assertEqual(self.test_settings._find_nuvlaedge_uuid(), "nuvlabox/STORED_NUVLAEDGE_UUID")
+        self.assertEqual(1, status_mock.warning.call_count)
+
 
     @patch('nuvlaedge.agent.settings.AgentSettings.initialise')
     def test_env_import(self, mock_initialise):

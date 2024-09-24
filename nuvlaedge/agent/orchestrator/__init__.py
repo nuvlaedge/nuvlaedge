@@ -302,4 +302,9 @@ class COEClient(ABC):
         :return: The image name in the container running the component service
         """
 
+    @abstractmethod
+    def list_raw_resources(self, resource_type) -> list[dict] | None:
+        """
+        Get list of a COE resource type as returned by the COE API
+        """
 

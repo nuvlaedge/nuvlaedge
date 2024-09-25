@@ -1,6 +1,7 @@
 import logging
 
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaEdgeSession, NuvlaApiKeyTemplate
+from nuvlaedge.agent.common.util import get_irs
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.common.file_operations import read_file, write_file, copy_file
 from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
@@ -60,12 +61,14 @@ def _build_nuvlaedge_session():
     nuvlaedge_status_uuid = context.get('nuvlabox-status', None)
 
     # Build the new session file
-    session = NuvlaEdgeSession(endpoint=endpoint,
-                               insecure=insecure,
-                               credentials=NuvlaApiKeyTemplate(key=api_key, secret=secret_key),
-                               nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid) if nuvlaedge_uuid else None,
-                               nuvlabox_status_uuid=NuvlaID(nuvlaedge_status_uuid) if nuvlaedge_status_uuid else None
-                               )
+    session = NuvlaEdgeSession(
+        endpoint=endpoint,
+        insecure=insecure,
+        irs=get_irs(nuvlaedge_uuid, api_key, secret_key),
+        credentials=NuvlaApiKeyTemplate(key=api_key, secret=secret_key),
+        nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid) if nuvlaedge_uuid else None,
+        nuvlabox_status_uuid=NuvlaID(nuvlaedge_status_uuid) if nuvlaedge_status_uuid else None
+    )
 
     # Write the session file
     write_file(session, FILE_NAMES.NUVLAEDGE_SESSION)

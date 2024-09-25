@@ -5,11 +5,12 @@ from pydantic_core import CoreSchema, core_schema
 class NuvlaID(str):
     @property
     def resource(self) -> str:
-        return self.split("/")[0]
+        parts = self.rsplit("/", 1)
+        return parts[0] if len(parts) > 1 else ''
 
     @property
     def uuid(self) -> str:
-        return self.split("/")[1]
+        return self.rsplit("/", 1)[-1]
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source_type: any, handler: GetCoreSchemaHandler) -> CoreSchema:

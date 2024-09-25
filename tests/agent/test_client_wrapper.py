@@ -1,14 +1,18 @@
 
 from unittest import TestCase
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 import mock
 from nuvla.api import Api
-from nuvla.api.models import CimiResource, CimiCollection
+from nuvla.api.models import CimiResource
 
-import nuvlaedge.agent.nuvla.client_wrapper
-from nuvlaedge.agent.nuvla.resources import NuvlaID, AutoNuvlaEdgeResource, AutoUpdateNuvlaEdgeTrackedResource
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper, NuvlaApiKeyTemplate, SessionValidationError
+from nuvlaedge.agent.settings import NuvlaApiKeyTemplate
+from nuvlaedge.agent.common.util import from_irs, get_irs
+from nuvlaedge.agent.nuvla.resources import NuvlaID, AutoUpdateNuvlaEdgeTrackedResource
+from nuvlaedge.agent.nuvla.client_wrapper import (NuvlaClientWrapper,
+                                                  SessionValidationError,
+                                                  format_host,
+                                                  logger)
 
 
 class TestClientWrapper(TestCase):
@@ -21,6 +25,31 @@ class TestClientWrapper(TestCase):
                                               insecure=self.mock_insecure,
                                               nuvlaedge_uuid=self.mock_uuid)
         self.test_client.nuvlaedge_client = self.mock_nuvla
+        self.test_client.irs = get_irs(self.mock_uuid, 'key_1', 'secret_1')
+
+    def test_format_host(self):
+        self.assertEqual('https://nuvla.io', format_host('nuvla.io'))
+        self.assertEqual('http://nuvla.io', format_host('http://nuvla.io'))
+        self.assertEqual('https://nuvla.io', format_host('https://nuvla.io'))
+        self.assertEqual('https://test.nuvla.io', format_host('test.nuvla.io'))
+        self.assertEqual('http://test.nuvla.io', format_host('http://test.nuvla.io'))
+        self.assertEqual('https://test.nuvla.io', format_host('https://test.nuvla.io'))
+        self.assertEqual('https://test.nuvla.io', format_host('https://test.nuvla.io'))
+
+    def test_set_nuvlaedge_uuid(self):
+        self.test_client.set_nuvlaedge_uuid(self.mock_uuid)
+        self.assertEqual(self.test_client.nuvlaedge_uuid, self.mock_uuid)
+
+    def test_host(self):
+        self.assertEqual(self.test_client.host, self.host)
+
+    def test_endpoint(self):
+        self.assertEqual(self.test_client.endpoint, self.host)
+
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge')
+    def test_vpn_server_not_found(self, mock_nuvlaedge):
+        mock_nuvlaedge.vpn_server_id = None
+        self.assertIsNone(self.test_client.vpn_server)
 
     def test_nuvlaedge_status_uuid_property(self):
         self.test_client._nuvlaedge_status_uuid = 'status-uuid_1'
@@ -151,7 +180,12 @@ class TestClientWrapper(TestCase):
         self.test_client.activate()
         mock_save.assert_called_once()
         mock_login.assert_called_once()
-        self.assertEqual(NuvlaApiKeyTemplate(key='key_1', secret='secret_1'), self.test_client.nuvlaedge_credentials)
+        self.assertEqual(from_irs(self.mock_uuid, self.test_client.irs), ('key_1', 'secret_1'))
+
+        mock_login.return_value = False
+        with self.assertLogs(logger, level='WARNING') as log:
+            self.test_client.activate()
+            self.assertTrue(any([('Could not log in after activation' in i) for i in log.output]))
 
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge', new_callable=mock.PropertyMock)
     def test_commission(self, mock_nuvlaedge):
@@ -207,9 +241,23 @@ class TestClientWrapper(TestCase):
     def test_save_current_state_to_file(self, mock_write, mock_session):
         self.test_client.nuvlaedge_credentials = Mock()
         self.test_client.save_current_state_to_file()
-        self.assertEqual(3, mock_write.call_count)
+        self.assertEqual(1, mock_write.call_count)
+
+        with patch('pathlib.Path.exists') as mock_path_exists:
+            mock_path_exists.return_value = True
+            mock_write.reset_mock()
+            self.test_client.save_current_state_to_file()
+            self.assertEqual(3, mock_write.call_count)
 
     def test_find_nuvlaedge_id_from_nuvla_session(self):
+        self.assertIsNone(self.test_client.find_nuvlaedge_id_from_nuvla_session())
+
+        mock_get = Mock()
+        uuid = '126f1242-5256-4435-9376-2dad10f2388a'
+        mock_get.data = {'identifier': f'nuvlabox/{uuid}'}
+        self.mock_nuvla.get.return_value = mock_get
+        self.assertEqual(self.test_client.find_nuvlaedge_id_from_nuvla_session().uuid, uuid)
+
         ne_uuid = 'nuvlabox/56f49e36-6ca5-11ef-a8fd-4797009c58a7'
         mock_res = Mock(spec=CimiResource)
         mock_res.data = {'identifier': ne_uuid, 'user': ne_uuid}
@@ -219,18 +267,41 @@ class TestClientWrapper(TestCase):
         self.mock_nuvla.current_session.side_effect = EOFError
         self.assertIsNone(self.test_client.find_nuvlaedge_id_from_nuvla_session())
 
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.save_current_state_to_file')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession.model_validate')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.read_file')
-    def test_from_session_store(self, mock_read, mock_validate, mock_login):
+    def test_from_session_store(self, mock_read, mock_validate, mock_login, mock_save):
         test_file = 'file'
 
         mock_read.reset_mock()
         mock_read.return_value = 'session'
-        mock_validate.return_value = Mock()
+        mock_nuvlaedge_session = Mock()
+        mock_nuvlaedge_session.irs = None
+        mock_nuvlaedge_session.nuvlaedge_uuid = 'uuid'
+        mock_nuvlaedge_session.credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
+        mock_validate.return_value = mock_nuvlaedge_session
         self.assertIsInstance(NuvlaClientWrapper.from_session_store(test_file), NuvlaClientWrapper)
         mock_validate.assert_called_once_with('session')
         mock_login.assert_called_once()
+        mock_save.assert_called_once()
+
+        mock_nuvlaedge_session.irs = None
+        mock_nuvlaedge_session.nuvlaedge_uuid = None
+        NuvlaClientWrapper.from_session_store(test_file)
+
+        with patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.find_nuvlaedge_id_from_nuvla_session') \
+                as mock_find_ne_id:
+            mock_save.reset_mock()
+            mock_find_ne_id.return_value = 'uuid'
+            mock_nuvlaedge_session.irs = None
+            mock_nuvlaedge_session.nuvlaedge_uuid = None
+            NuvlaClientWrapper.from_session_store(test_file)
+            mock_save.assert_called()
+
+        mock_nuvlaedge_session.nuvlaedge_uuid = 'uuid'
+        mock_nuvlaedge_session.irs = get_irs('uuid', 'key', 'secret')
+        NuvlaClientWrapper.from_session_store(test_file)
 
         mock_read.reset_mock()
         mock_read.return_value = 'session'
@@ -240,3 +311,5 @@ class TestClientWrapper(TestCase):
                 self.assertIsNone(NuvlaClientWrapper.from_session_store(test_file))
                 mock_read.assert_called_once()
                 mock_warning.assert_called_once()
+
+

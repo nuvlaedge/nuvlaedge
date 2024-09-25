@@ -42,6 +42,7 @@ toml = "^0.10.2"
 [tool.poetry.group.agent.dependencies]
 jsonpatch = "^1.33"
 psutil = "5.9.5"
+pyaes = "^1.6.1"
 
 [tool.poetry.group.bluetooth.dependencies]
 bleak = { version = "^0.21.1", python = ">=3.11,<3.13"}

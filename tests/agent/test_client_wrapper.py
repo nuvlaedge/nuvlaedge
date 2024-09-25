@@ -243,6 +243,12 @@ class TestClientWrapper(TestCase):
         self.test_client.save_current_state_to_file()
         self.assertEqual(1, mock_write.call_count)
 
+        with patch('pathlib.Path.exists') as mock_path_exists:
+            mock_path_exists.return_value = True
+            mock_write.reset_mock()
+            self.test_client.save_current_state_to_file()
+            self.assertEqual(3, mock_write.call_count)
+
     def test_find_nuvlaedge_id_from_nuvla_session(self):
         self.assertIsNone(self.test_client.find_nuvlaedge_id_from_nuvla_session())
 

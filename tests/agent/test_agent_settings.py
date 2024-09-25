@@ -7,7 +7,8 @@ from nuvlaedge.agent.settings import (
     parse_cmd_line_args,
     AgentSettings,
     NuvlaEdgeSession,
-    NuvlaApiKeyTemplate
+    NuvlaApiKeyTemplate,
+    InsufficientSettingsProvided
 )
 
 env_variables = {
@@ -48,6 +49,25 @@ class TestAgentSettings(TestCase):
         
         self.mock_nuvla_client = Mock()
         self.test_settings._nuvla_client = self.mock_nuvla_client
+
+    def test_verify_conversion(self):
+        ne_session = NuvlaEdgeSession(verify=False)
+        self.assertIsNotNone(ne_session.insecure)
+
+    def test_validate_nuvlaedge_thread_monitors(self):
+        with patch.dict('os.environ', {'NUVLAEDGE_THREAD_MONITORS': 'yes'}):
+            settings = AgentSettings(nuvlaedge_thread_monitors=None)
+            self.assertFalse(settings.nuvlaedge_thread_monitors)
+
+    @patch('nuvlaedge.agent.settings.read_file')
+    def test_initialize(self, mock_read_file):
+        endpoint = 'test.nuvla'
+        mock_read_file.return_value = {'endpoint': endpoint}
+        settings = AgentSettings(nuvlaedge_thread_monitors=None)
+        self.assertEqual(settings.nuvla_endpoint, endpoint)
+
+    def test_nuvla_client(self):
+        self.assertEqual(self.test_settings.nuvla_client, self.mock_nuvla_client)
 
     def test_create_client_from_settings(self):
         self.test_settings._create_client_from_settings()
@@ -95,6 +115,25 @@ class TestAgentSettings(TestCase):
             self.test_settings._create_client_from_settings()
             mock_save_current_state_to_file.assert_called_once()
 
+    def test_ne_uuid_not_match_nuvla_session_identifier(self):
+        mock_nuvlaedge_id_from_nuvla_session = Mock()
+        self.test_settings.nuvla_client.find_nuvlaedge_id_from_nuvla_session = mock_nuvlaedge_id_from_nuvla_session
+        self.test_settings._status_handler = Mock()
+
+        self.test_settings._nuvlaedge_uuid = 'uuid-1'
+        mock_nuvlaedge_id_from_nuvla_session.return_value = 'uuid-2'
+        self.assertFalse(self.test_settings._check_uuid_match_with_nuvla_session())
+        self.test_settings._status_handler.warning.assert_called_once()
+
+        self.test_settings._status_handler.reset_mock()
+
+        # both None
+        self.test_settings._nuvlaedge_uuid = None
+        mock_nuvlaedge_id_from_nuvla_session.return_value = None
+        self.assertFalse(self.test_settings._check_uuid_match_with_nuvla_session())
+        self.test_settings._status_handler.warning.assert_called_once()
+
+
     # Tests for parse_cmd_line_args
     @patch('nuvlaedge.agent.settings.ArgumentParser.parse_args')
     @patch('nuvlaedge.agent.settings.logging.error')
@@ -135,6 +174,13 @@ class TestAgentSettings(TestCase):
         self.assertEqual(self.test_settings._find_nuvlaedge_uuid(), "nuvlabox/STORED_NUVLAEDGE_UUID")
         self.assertEqual(1, status_mock.warning.call_count)
 
+        stored_mock.nuvlaedge_uuid = "STORED_NUVLAEDGE_UUID"
+        self.assertEqual(self.test_settings._find_nuvlaedge_uuid(), "nuvlabox/STORED_NUVLAEDGE_UUID")
+
+        with self.assertRaises(InsufficientSettingsProvided):
+            self.test_settings.nuvlaedge_uuid_env = None
+            self.test_settings._stored_session = None
+            self.test_settings._find_nuvlaedge_uuid()
 
     @patch('nuvlaedge.agent.settings.AgentSettings.initialise')
     def test_env_import(self, mock_initialise):

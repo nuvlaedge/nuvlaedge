@@ -260,8 +260,8 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     def _check_uuid_match_with_nuvla_session(self):
         nuvlaedge_id = self.nuvlaedge_uuid
         nuvla_nuvlaedge_id = self._nuvla_client.find_nuvlaedge_id_from_nuvla_session()
-        uuids_match = (nuvlaedge_id and nuvla_nuvlaedge_id and
-                       self.get_uuid(nuvlaedge_id) == self.get_uuid(nuvla_nuvlaedge_id))
+        uuids_match = bool(nuvlaedge_id and nuvla_nuvlaedge_id and
+                           self.get_uuid(nuvlaedge_id) == self.get_uuid(nuvla_nuvlaedge_id))
         if not uuids_match:
             self._status_handler.warning(
                 self.status_handler.status_channel,

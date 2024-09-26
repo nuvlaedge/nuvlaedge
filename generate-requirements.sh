@@ -7,6 +7,7 @@ mkdir -p $OUTPUT_DIR || true
 poetry export --format requirements.txt --output ${OUTPUT_DIR}/requirements.tests.txt --without-hashes --without-urls \
     --with tests \
     --with agent \
+    --with kubernetes \
     --with system-manager \
     --with network \
     --with modbus \

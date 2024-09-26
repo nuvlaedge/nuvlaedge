@@ -679,13 +679,13 @@ requests = ">=2.32.3,<3.0.0"
 
 [[package]]
 name = "nuvla-job-engine"
-version = "4.3.1"
+version = "4.4.0"
 description = "Nuvla Job Engine."
 optional = false
 python-versions = "<3.12,>=3.11"
 files = [
-    {file = "nuvla_job_engine-4.3.1-py3-none-any.whl", hash = "sha256:53553e3e37b693d70b3ac879859da6dac519f32e17f426b56b46a1fe69790ef9"},
-    {file = "nuvla_job_engine-4.3.1.tar.gz", hash = "sha256:ac5b8053d5bbb0fdc429c7b6c99424118e0a2e5a76374e8a83e34c5aed5543e6"},
+    {file = "nuvla_job_engine-4.4.0-py3-none-any.whl", hash = "sha256:8197b0578179a0856460bfee23a51be7091c555297f874c78ea82e54026939e4"},
+    {file = "nuvla_job_engine-4.4.0.tar.gz", hash = "sha256:84cf4fb221e704931f8b71ffb7bbcbb452722441b0f57476996737658f973137"},
 ]
 
 [package.dependencies]
@@ -1496,4 +1496,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11.0"
-content-hash = "13d11d3c9f498ff5008127ff25d01954d6080b956fce4410b9a555638183d82b"
+content-hash = "42a4a926c18b1bfa9311dd4542a7c3169187c6abef8edd60b16ac958542e26eb"

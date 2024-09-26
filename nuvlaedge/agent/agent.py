@@ -157,7 +157,7 @@ class Agent:
         _state: State = State.NEW
 
         # This means the agent is at least in ACTIVATED state
-        if self._nuvla_client.nuvlaedge_credentials is not None:
+        if self._nuvla_client.irs or self._nuvla_client.nuvlaedge_credentials is not None:
             _state = State.value_of(self._nuvla_client.nuvlaedge.state)
         logger.info(f"Starting NuvlaEdge in state {_state}")
 

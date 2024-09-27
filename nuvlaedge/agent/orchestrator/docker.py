@@ -66,8 +66,8 @@ class DockerClient(COEClient):
             case 'images':
                 images = sorted(api.images(), key=get_keys('Created', 'Id'))
                 for i in images:
-                    repo_tags = i.get('RepoTags', [])
-                    repo_digests = i.get('RepoDigests', [])
+                    repo_tags = i.get('RepoTags') or []
+                    repo_digests = i.get('RepoDigests') or []
                     repo_tags.sort()
                     repo_digests.sort()
                     if repo_tags:

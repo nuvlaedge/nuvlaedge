@@ -197,8 +197,11 @@ RUN upx --lzma \
         /usr/local/bin/kubectl \
         /usr/local/bin/helm
 
-COPY --link requirements.agent.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.agent.txt /tmp/
+RUN pip install -r /tmp/requirements.agent.txt
+
+COPY --link requirements.kubernetes.txt /tmp/
+RUN pip install -r /tmp/requirements.kubernetes.txt
 
 
 # ------------------------------------------------------------------------

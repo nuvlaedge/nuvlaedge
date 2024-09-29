@@ -348,7 +348,7 @@ class NuvlaClientWrapper:
 
         # To provide support for legacy (<2.14) NuvlaEdge agents, we also save the session to the legacy location,
         # both .activated and .context files
-        if Path(LEGACY_FILES.ACTIVATION_FLAG.parent).exists():
+        if Path(LEGACY_FILES.ACTIVATION_FLAG.parent).exists() and self.nuvlaedge_credentials:
             legacy_credentials = {"api-key": self.nuvlaedge_credentials.key,
                                   "secret-key": self.nuvlaedge_credentials.secret}
             write_file(legacy_credentials, LEGACY_FILES.ACTIVATION_FLAG)

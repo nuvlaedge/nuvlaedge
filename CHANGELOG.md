@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.16.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.0) (2024-09-27)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.15.3...2.16.0)
+
+**Merged pull requests:**
+
+- feat: slim version of docker image … [\#200](https://github.com/nuvlaedge/nuvlaedge/pull/200) ([schaubl](https://github.com/schaubl))
+- Cred encryption [\#199](https://github.com/nuvlaedge/nuvlaedge/pull/199) ([schaubl](https://github.com/schaubl))
+- fix: update collect\_container\_metrics\(\) to support old\_version parameter in K8s driver [\#198](https://github.com/nuvlaedge/nuvlaedge/pull/198) ([konstan](https://github.com/konstan))
+- feat\(telemetry\): add raw coe resources [\#197](https://github.com/nuvlaedge/nuvlaedge/pull/197) ([schaubl](https://github.com/schaubl))
+- feat\(telemetry\): wip use json patch for telemetry [\#196](https://github.com/nuvlaedge/nuvlaedge/pull/196) ([schaubl](https://github.com/schaubl))
+- fix\(docker.py\): fix retrieval of current container id via mountinfo [\#195](https://github.com/nuvlaedge/nuvlaedge/pull/195) ([schaubl](https://github.com/schaubl))
+
 ## [2.15.3](https://github.com/nuvlaedge/nuvlaedge/tree/2.15.3) (2024-08-27)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.15.2...2.15.3)

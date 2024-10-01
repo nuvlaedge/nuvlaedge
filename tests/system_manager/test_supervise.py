@@ -8,6 +8,8 @@ import mock
 import requests
 import unittest
 
+from subprocess import CompletedProcess
+
 import nuvlaedge.system_manager.supervise as Supervise
 
 import tests.system_manager.utils.fake as fake
@@ -67,10 +69,9 @@ class SuperviseTestCase(unittest.TestCase):
         self.assertIn((Supervise.utils.status_degraded, 'label-error'), self.obj.operational_status,
                       'Failed to set degraded state')
 
-    @mock.patch('OpenSSL.crypto.load_certificate')
-    @mock.patch('OpenSSL.crypto')
     @mock.patch('os.path.isfile')
-    def test_is_cert_rotation_needed(self, mock_isfile, mock_crypto, mock_load_cert):
+    @mock.patch('nuvlaedge.system_manager.supervise.execute_cmd')
+    def test_is_cert_rotation_needed(self, mock_execute_cmd, mock_isfile):
         # if tls sync is not a file, get False
         mock_isfile.return_value = False
         self.assertFalse(self.obj.is_cert_rotation_needed(),
@@ -85,23 +86,23 @@ class SuperviseTestCase(unittest.TestCase):
                          'Got True even though cert files do not exist')
 
         # otherwise
-        mock_crypto.FILETYPE_PEM = ''
-        cert_obj = mock.MagicMock()
         # a valid certificate is in the future, more than 5 days
-        cert_obj.get_notAfter.return_value = b'99990309161546Z'
-        mock_load_cert.return_value = cert_obj
+        mock_execute_cmd.return_value = CompletedProcess([], 0, 'notAfter=2054-11-24 12:10:00Z')
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.supervise.open'):
-            self.assertFalse(self.obj.is_cert_rotation_needed(),
-                             'Failed to recognize valid certificates')
+        self.assertFalse(self.obj.is_cert_rotation_needed(),
+                         'Failed to recognize valid certificates')
 
         # with less than 5 days to expire, return false
-        cert_obj.get_notAfter.return_value = b'20200309161546Z'
-        mock_load_cert.return_value = cert_obj
+        mock_execute_cmd.return_value = CompletedProcess([], 0, 'notAfter=2024-09-25 12:10:00Z')
         mock_isfile.side_effect = [True, True, True, True]  # TLS file + 3 cert files
-        with mock.patch('nuvlaedge.system_manager.supervise.read_file'):
-            self.assertTrue(self.obj.is_cert_rotation_needed(),
-                            'Failed to recognize certificates in need of renewal')
+        self.assertTrue(self.obj.is_cert_rotation_needed(),
+                        'Failed to recognize certificates in need of renewal')
+
+        # error in openssl
+        msg = 'Could not read certificate from /tmp/empty.\nUnable to load certificate\n'
+        mock_execute_cmd.return_value = CompletedProcess([], 1, stderr=msg)
+        mock_isfile.side_effect = [True, True, True, True]
+        self.assertFalse(self.obj.is_cert_rotation_needed())
 
     @mock.patch('os.remove')
     @mock.patch('os.path.isfile')

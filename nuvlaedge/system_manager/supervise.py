@@ -5,18 +5,18 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Timer
 
 import docker
 import docker.models.networks
 import docker.errors
-import OpenSSL
 
+from nuvlaedge.agent.common.util import execute_cmd
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.data_gateway import DataGatewayConfig
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.common.file_operations import read_file, write_file
+from nuvlaedge.common.file_operations import write_file
 from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
 
 
@@ -86,6 +86,24 @@ class Supervise:
             if err:
                 self.operational_status.append((utils.status_degraded, err))
 
+    def get_certificate_expiry(self, cert_path):
+        if not os.path.isfile(cert_path):
+            self.log.warning(f'Cannot get certificate expiry. Path do not exists: {cert_path}')
+            return None
+
+        command = ["openssl", "x509",
+                   "-enddate", "-noout",
+                   "-in", cert_path,
+                   "-dateopt", "iso_8601"]
+        cert_check = execute_cmd(command)
+
+        if cert_check.returncode != 0 or not cert_check.stdout:
+            self.log.warning(f'Failed to get certificate expiry ({cert_check.returncode}): {cert_check.stderr}')
+            return None
+
+        expiry_date_iso8601 = cert_check.stdout.strip().split('=')[-1]
+        return datetime.fromisoformat(expiry_date_iso8601)
+
     def is_cert_rotation_needed(self):
         """ Checks whether the API certs are about to expire """
 
@@ -98,18 +116,13 @@ class Supervise:
 
         for file in check_expiry_date_on:
             file_path = f"{FILE_NAMES.root_fs}/{file}"
-            content = read_file(file_path)
-            if content is None:
+            end_date = self.get_certificate_expiry(file_path)
+
+            if not end_date:
+                self.log.warning(f'Certificate end date not found for {file_path}')
                 continue
 
-            cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content.encode())
-
-            end_date = cert_obj.get_notAfter().decode()
-            formatted_end_date = datetime(int(end_date[0:4]),
-                                          int(end_date[4:6]),
-                                          int(end_date[6:8]))
-
-            days_left = formatted_end_date - datetime.now()
+            days_left = end_date - datetime.now(timezone.utc)
             # if expiring in less than d days, rotate all
             d = 5
             if days_left.days < d:

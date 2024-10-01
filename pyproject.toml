@@ -71,7 +71,6 @@ xmltodict = "0.13.0"
 
 # Modbus peripheral Deps
 [tool.poetry.group.modbus.dependencies]
-pymodbus = "3.2.2"
 
 # GPU peripheral dependencies
 [tool.poetry.group.gpu.dependencies]
@@ -84,7 +83,6 @@ pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 mock = "^5.0.2"
 coverage = "^7.3.2"
-
 
 [build-system]
 requires = ["poetry-core"]

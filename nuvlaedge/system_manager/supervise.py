@@ -12,7 +12,7 @@ import docker
 import docker.models.networks
 import docker.errors
 
-from nuvlaedge.agent.common.util import execute_cmd
+from nuvlaedge.common.utils import get_certificate_expiry
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.data_gateway import DataGatewayConfig
 from nuvlaedge.system_manager.common import utils
@@ -86,24 +86,6 @@ class Supervise:
             if err:
                 self.operational_status.append((utils.status_degraded, err))
 
-    def get_certificate_expiry(self, cert_path):
-        if not os.path.isfile(cert_path):
-            self.log.warning(f'Cannot get certificate expiry. Path do not exists: {cert_path}')
-            return None
-
-        command = ["openssl", "x509",
-                   "-enddate", "-noout",
-                   "-in", cert_path,
-                   "-dateopt", "iso_8601"]
-        cert_check = execute_cmd(command)
-
-        if cert_check.returncode != 0 or not cert_check.stdout:
-            self.log.warning(f'Failed to get certificate expiry ({cert_check.returncode}): {cert_check.stderr}')
-            return None
-
-        expiry_date_iso8601 = cert_check.stdout.strip().split('=')[-1]
-        return datetime.fromisoformat(expiry_date_iso8601)
-
     def is_cert_rotation_needed(self):
         """ Checks whether the API certs are about to expire """
 
@@ -116,7 +98,7 @@ class Supervise:
 
         for file in check_expiry_date_on:
             file_path = f"{FILE_NAMES.root_fs}/{file}"
-            end_date = self.get_certificate_expiry(file_path)
+            end_date = get_certificate_expiry(file_path)
 
             if not end_date:
                 self.log.warning(f'Certificate end date not found for {file_path}')

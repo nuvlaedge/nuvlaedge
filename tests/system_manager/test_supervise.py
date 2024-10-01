@@ -70,7 +70,7 @@ class SuperviseTestCase(unittest.TestCase):
                       'Failed to set degraded state')
 
     @mock.patch('os.path.isfile')
-    @mock.patch('nuvlaedge.system_manager.supervise.execute_cmd')
+    @mock.patch('nuvlaedge.common.utils.execute_cmd')
     def test_is_cert_rotation_needed(self, mock_execute_cmd, mock_isfile):
         # if tls sync is not a file, get False
         mock_isfile.return_value = False

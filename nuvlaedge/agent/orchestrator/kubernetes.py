@@ -198,7 +198,7 @@ class KubernetesClient(COEClient):
         ssh_folder = '/tmp/ssh'
         try:
             existing_pod = self.client.read_namespaced_pod(namespace=self.namespace, name=name)
-        except client.exceptions.ApiException as e:
+        except ApiException as e:
             if e.status != 404: # If 404, this is good, we can proceed
                 raise
         else:
@@ -256,7 +256,7 @@ class KubernetesClient(COEClient):
     def is_nuvla_job_running(self, job_id, job_execution_id):
         try:
             job = self.client.read_namespaced_pod(namespace=self.namespace, name=job_execution_id)
-        except client.exceptions.ApiException as e:
+        except ApiException as e:
             if e.status == 404:
                 return False
             log.error(f'Cannot handle job {job_id}. Reason: {str(e)}')
@@ -278,7 +278,7 @@ class KubernetesClient(COEClient):
         except AttributeError:
             # assume it is running so we don't mess anything
             return True
-        except client.exceptions.ApiException as e:
+        except ApiException as e:
             # this exception can only happen if we tried to delete the pod and couldn't
             # log it and don't let another job come in
             log.error(f'Failed to handle job {job_id} due to pod management error: {str(e)}')
@@ -331,9 +331,14 @@ class KubernetesClient(COEClient):
         node_cpu_capacity = int(this_node_capacity['cpu'])
         node_mem_capacity_kib = int(this_node_capacity['memory'].rstrip('Ki'))
 
+        try:
+            pod_metrics_list = \
+                client.CustomObjectsApi().list_cluster_custom_object(
+                    "metrics.k8s.io", "v1beta1", "pods")
+        except ApiException as ex:
+            log.error('Failed listing pod metrics: %s', ex)
+            return []
         out = []
-        pod_metrics_list = client.CustomObjectsApi() \
-            .list_cluster_custom_object("metrics.k8s.io", "v1beta1", "pods")
         for pod in pod_metrics_list.get('items', []):
             short_identifier = f"{pod['metadata']['namespace']}/{pod['metadata']['name']}"
             if short_identifier not in pods_here_per_name:

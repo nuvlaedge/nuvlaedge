@@ -383,33 +383,28 @@ class KubernetesClient(COEClient):
                 metrics['restart-count'] = int(cstat.restart_count or 0)
         return metrics
 
-    def get_installation_parameters(self):
+    def get_installation_parameters(self) -> dict:
         nuvlaedge_deployments = \
             self.client_apps.list_namespaced_deployment(
                 namespace=self.namespace, label_selector=util.base_label).items
 
-        environment = []
-        for dep in nuvlaedge_deployments:
-            dep_containers = dep.spec.template.spec.containers
-            for container in dep_containers:
-                try:
-                    env = container.env if container.env else []
-                    for env_var in env:
-                        try:
-                            _ = env_var.value_from
-                            # this is a templated var. No need to report it
-                            continue
-                        except AttributeError:
-                            pass
-
-                        environment.append(f'{env_var.name}={env_var.value}')
-                except AttributeError:
-                    pass
-
+        environment = self._extract_environment_variables(nuvlaedge_deployments)
         unique_env = list(filter(None, set(environment)))
 
         return {'project-name': self.namespace,
                 'environment': unique_env}
+
+    def _extract_environment_variables(self, deployments) -> list:
+        environment = []
+        for dep in deployments:
+            for container in dep.spec.template.spec.containers:
+                if container.env:
+                    environment.extend(self._process_container_env(container.env))
+        return environment
+
+    def _process_container_env(self, env) -> list:
+        return [f'{env_var.name}={env_var.value}' for env_var in env 
+                if not hasattr(env_var, 'value_from')]
 
     def read_system_issues(self, node_info):
         errors = []

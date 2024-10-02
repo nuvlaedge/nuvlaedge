@@ -54,9 +54,6 @@ packaging = "23.2"
 
 # System manager dependencies
 [tool.poetry.group.system-manager.dependencies]
-cffi = "1.15.1"
-cryptography = "41.0.3"
-pyopenssl = "^23.1.1"
 
 # Bluetooth peripheral dependencies
 [tool.poetry.group.bluetooth.dependencies]

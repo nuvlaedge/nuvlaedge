@@ -5,18 +5,18 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from threading import Timer
 
 import docker
 import docker.models.networks
 import docker.errors
-import OpenSSL
 
+from nuvlaedge.common.utils import get_certificate_expiry
 from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.data_gateway import DataGatewayConfig
 from nuvlaedge.system_manager.common import utils
-from nuvlaedge.common.file_operations import read_file, write_file
+from nuvlaedge.common.file_operations import write_file
 from nuvlaedge.system_manager.orchestrator.factory import get_coe_client
 
 
@@ -98,18 +98,13 @@ class Supervise:
 
         for file in check_expiry_date_on:
             file_path = f"{FILE_NAMES.root_fs}/{file}"
-            content = read_file(file_path)
-            if content is None:
+            end_date = get_certificate_expiry(file_path)
+
+            if not end_date:
+                self.log.warning(f'Certificate end date not found for {file_path}')
                 continue
 
-            cert_obj = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, content.encode())
-
-            end_date = cert_obj.get_notAfter().decode()
-            formatted_end_date = datetime(int(end_date[0:4]),
-                                          int(end_date[4:6]),
-                                          int(end_date[6:8]))
-
-            days_left = formatted_end_date - datetime.now()
+            days_left = end_date - datetime.now(timezone.utc)
             # if expiring in less than d days, rotate all
             d = 5
             if days_left.days < d:

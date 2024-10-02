@@ -134,8 +134,8 @@ class TestContainerStatsMonitor(unittest.TestCase):
                          sorted(test_monitor.data.cluster_data.model_dump(by_alias=True, exclude_none=True).keys()),
                          'Unable to set cluster status')
 
-    @patch('nuvlaedge.agent.workers.monitor.components.container_stats.execute_cmd')
-    @patch('os.path.exists')
+    @patch('nuvlaedge.common.utils.execute_cmd')
+    @patch('os.path.isfile')
     def test_get_swarm_certificate_expiration_date(self, mock_exists, mock_run):
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
         # if swarm cert does not exist, get None
@@ -161,8 +161,7 @@ class TestContainerStatsMonitor(unittest.TestCase):
 
         # otherwise, get the expiration date
         mock_run.return_value.returncode = 0
-        exp_date = 'Feb  6 05:41:00 2022 GMT'
-        mock_run.return_value.stdout = f'notAfter={exp_date}\n'
+        mock_run.return_value.stdout = f'notAfter=2022-02-06 05:41:00Z\n'
 
         self.assertEqual(test_monitor.get_swarm_certificate_expiration_date(),
                          '2022-02-06T05:41:00.000Z',

@@ -1,22 +1,21 @@
 """ NuvlaEdge container monitor """
+
 import logging
 import os
-import datetime
-import requests
-from subprocess import CompletedProcess
 
 from docker import errors as docker_err
 
 from nuvlaedge.common.constants import CTE
 
-from nuvlaedge.agent.workers.monitor.data.orchestrator_data import (DeploymentData, ClusterStatusData,
-                                                                    ContainerStatsDataOld, ContainerStatsData)
+from nuvlaedge.agent.workers.monitor.data.orchestrator_data import (DeploymentData,
+                                                                    ClusterStatusData,
+                                                                    ContainerStatsDataOld,
+                                                                    ContainerStatsData)
+from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
-from nuvlaedge.agent.orchestrator import COEClient
-from nuvlaedge.agent.common.util import execute_cmd
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.utils import format_datetime_for_nuvla
+from nuvlaedge.common.utils import get_certificate_expiry, format_datetime_for_nuvla
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -135,24 +134,11 @@ class ContainerStatsMonitor(Monitor):
     def get_swarm_certificate_expiration_date(self) -> str | None:
         """
         If the docker swarm certs can be found, try to infer their expiration date
-
         """
-        if not os.path.exists(self.swarm_node_cert_path):
+        if not os.path.isfile(self.swarm_node_cert_path):
             return None
-
-        command: list[str] = \
-            ["openssl", "x509", "-enddate", "-noout", "-in",
-             self.swarm_node_cert_path]
-
-        cert_check: CompletedProcess = execute_cmd(command)
-
-        if cert_check.returncode != 0 or not cert_check.stdout:
-            return None
-
-        expiry_date_raw = cert_check.stdout.strip().split('=')[-1]
-        raw_format = '%b %d %H:%M:%S %Y %Z'
-
-        return format_datetime_for_nuvla(datetime.datetime.strptime(expiry_date_raw, raw_format))
+        expiry_datetime = get_certificate_expiry(self.swarm_node_cert_path)
+        return format_datetime_for_nuvla(expiry_datetime) if expiry_datetime else None
 
     def update_data(self):
         self.refresh_container_info()

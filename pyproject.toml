@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.15.3"
+version = "2.16.1"
 description = "NuvlaEdge source code"
 authors = ["Nacho <nacho@sixsq.com>"]
 readme = "README.md"
@@ -11,22 +11,22 @@ packages = [{include = "nuvlaedge"}]
 system-manager = "nuvlaedge.system_manager.__main__:entry"
 on-stop = "nuvlaedge.on_stop:main"
 agent = "nuvlaedge.agent:main"
-# Peripherals
+# Optional modules
+## Peripherals
 network = "nuvlaedge.peripherals.network.__init__:entry"
 bluetooth = "nuvlaedge.peripherals.bluetooth.__init__:entry"
 modbus = "nuvlaedge.peripherals.modbus.__init__:entry"
 gpu = "nuvlaedge.peripherals.gpu.__init__:entry"
+## Security
 security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
 python = "~3.11.0"
-nuvla-api = "^4.0.0"
+nuvla-api = "^4.1.0"
 nuvla-job-engine = "^4.3.1"
 requests="^2.32.2"
 docker = "^7.1.0"
 paho-mqtt = "^2"
-kubernetes = "26.1.0"
-cffi = "1.15.1"
 # Pydantic version is fixed here and must be synced with the one in the Dockerfile
 pydantic = "2.7.0"
 pydantic-settings = "^2.1.0"
@@ -34,14 +34,28 @@ pydantic-core = "2.18.1"
 
 # Common library deps
 filelock = "3.12.0"
-
-# Agent Dependencies
-strenum = "^0.4.15"
 toml = "^0.10.2"
 
-[tool.poetry.group.agent.dependencies]
-psutil = "5.9.5"
+[tool.poetry.group.kubernetes.dependencies]
+kubernetes = "26.1.0"
 
+# Agent Dependencies
+[tool.poetry.group.agent.dependencies]
+jsonpatch = "^1.33"
+psutil = "5.9.5"
+pyaes = "^1.6.1"
+strenum = "^0.4.15"
+
+# Job-engine peripheral dependencies
+[tool.poetry.group.job-engine.dependencies]
+pyyaml = "6.0.1"
+statsd = "4.0.1"
+packaging = "23.2"
+
+# System manager dependencies
+[tool.poetry.group.system-manager.dependencies]
+
+# Bluetooth peripheral dependencies
 [tool.poetry.group.bluetooth.dependencies]
 bleak = { version = "^0.21.1", python = ">=3.11,<3.13"}
 
@@ -54,29 +68,18 @@ xmltodict = "0.13.0"
 
 # Modbus peripheral Deps
 [tool.poetry.group.modbus.dependencies]
-pymodbus = "3.2.2"
 
-# System manager dependencies
+# GPU peripheral dependencies
+[tool.poetry.group.gpu.dependencies]
+packaging = "23.2"
+six = "1.16.0"
+
+# Test dependencies
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.4.3"
 pytest-cov = "^4.1.0"
 mock = "^5.0.2"
 coverage = "^7.3.2"
-
-[tool.poetry.group.system-manager.dependencies]
-cryptography = "41.0.3"
-pyopenssl = "^23.1.1"
-
-[tool.poetry.group.gpu.dependencies]
-packaging = "23.2"
-six = "1.16.0"
-
-
-[tool.poetry.group.job-engine.dependencies]
-pyyaml = "6.0.1"
-statsd = "4.0.1"
-packaging = "23.2"
-
 
 [build-system]
 requires = ["poetry-core"]

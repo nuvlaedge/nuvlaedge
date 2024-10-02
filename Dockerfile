@@ -3,9 +3,6 @@
 ARG ALPINE_MAJ_MIN_VERSION="3.18"
 ARG PYTHON_MAJ_MIN_VERSION="3.11"
 ARG GOLANG_VERSION="1.20.4"
-ARG PYTHON_CRYPTOGRAPHY_VERSION="41.0.3"
-ARG PYTHON_BCRYPT_VERSION="4.0.1"
-ARG PYTHON_NACL_VERSION="1.5.0"
 ARG JOB_LITE_IMG_ORG="nuvla"
 ARG PYDANTIC_VERSION=${PYDANTIC_VERSION:-"2.7.0"}
 ARG PYDANTIC_CORE_VERSION="2.16.3"
@@ -140,16 +137,6 @@ RUN go mod tidy && \
 # ------------------------------------------------------------------------
 FROM base-builder AS system-manager-builder
 
-ARG PYTHON_CRYPTOGRAPHY_VERSION
-ARG PYTHON_SITE_PACKAGES
-ARG PYTHON_LOCAL_SITE_PACKAGES
-
-RUN apk add openssl-dev openssl
-RUN apk add "py3-cryptography~${PYTHON_CRYPTOGRAPHY_VERSION}"
-
-RUN cp -r ${PYTHON_SITE_PACKAGES}/cryptography/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-RUN cp -r ${PYTHON_SITE_PACKAGES}/cryptography-${PYTHON_CRYPTOGRAPHY_VERSION}.dist-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-
 COPY --link requirements.system-manager.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
@@ -197,28 +184,17 @@ RUN upx --lzma \
         /usr/local/bin/kubectl \
         /usr/local/bin/helm
 
-COPY --link requirements.agent.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.agent.txt /tmp/
+RUN pip install -r /tmp/requirements.agent.txt
+
+COPY --link requirements.kubernetes.txt /tmp/
+RUN pip install -r /tmp/requirements.kubernetes.txt
 
 
 # ------------------------------------------------------------------------
 # Job Engine builder
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
-
-ARG PYTHON_MAJ_MIN_VERSION
-ARG PYTHON_BCRYPT_VERSION
-ARG PYTHON_NACL_VERSION
-ARG PYTHON_SITE_PACKAGES
-ARG PYTHON_LOCAL_SITE_PACKAGES
-
-RUN apk add "py3-bcrypt~${PYTHON_BCRYPT_VERSION}" "py3-pynacl~${PYTHON_NACL_VERSION}"
-
-RUN cp -r ${PYTHON_SITE_PACKAGES}/bcrypt/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-RUN cp -r ${PYTHON_SITE_PACKAGES}/bcrypt-${PYTHON_BCRYPT_VERSION}.dist-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-
-RUN cp -r ${PYTHON_SITE_PACKAGES}/nacl/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-RUN cp -r ${PYTHON_SITE_PACKAGES}/PyNaCl-${PYTHON_NACL_VERSION}-py${PYTHON_MAJ_MIN_VERSION}.egg-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
 
 COPY --link requirements.job-engine.txt /tmp/requirements.lite.txt
 RUN pip install -r /tmp/requirements.lite.txt
@@ -322,7 +298,7 @@ COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCA
 COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
 # Library required by py-cryptography (pyopenssl).
 # By copying it from base builder we save up ~100MB of the gcc library
-COPY --link --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
+# COPY --link --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
 
 # Peripheral discovery: USB

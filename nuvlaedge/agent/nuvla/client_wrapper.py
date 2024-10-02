@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from nuvla.api import Api as NuvlaApi
 from requests import Response
 
-from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
+from nuvlaedge.agent.common.util import get_irs, from_irs
 from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              NuvlaEdgeResource,
                                              NuvlaEdgeStatusResource,
@@ -21,8 +21,9 @@ from nuvlaedge.agent.nuvla.resources import (NuvlaID,
                                              AutoInfrastructureServiceResource,
                                              AutoCredentialResource)
 from ..settings import NuvlaApiKeyTemplate, NuvlaEdgeSession
-from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+from nuvlaedge.common.constant_files import FILE_NAMES, LEGACY_FILES
 from nuvlaedge.common.file_operations import read_file, write_file
+from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
@@ -117,6 +118,7 @@ class NuvlaClientWrapper:
                                                    compress=True)
 
         self._headers: dict = {}
+        self.irs: str | None = None
         self.nuvlaedge_credentials: NuvlaApiKeyTemplate | None = None
 
         self._nuvlaedge_uuid: NuvlaID = nuvlaedge_uuid
@@ -219,8 +221,8 @@ class NuvlaClientWrapper:
         self._resources[res_name].force_update()
 
     def login_nuvlaedge(self) -> bool:
-        login_response: Response = self.nuvlaedge_client.login_apikey(self.nuvlaedge_credentials.key,
-                                                                      self.nuvlaedge_credentials.secret)
+        key, secret = from_irs(self.nuvlaedge_uuid, self.irs)
+        login_response: Response = self.nuvlaedge_client.login_apikey(key, secret)
 
         if login_response.status_code in [200, 201]:
             logger.debug("Log in successful")
@@ -238,9 +240,8 @@ class NuvlaClientWrapper:
         """
         logger.info("Activating NuvlaEdge...")
         credentials = self.nuvlaedge_client._cimi_post(f'{self.nuvlaedge_uuid}/activate')
-        self.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=credentials['api-key'],
-                                                         secret=credentials['secret-key'])
-        logger.info(f'Activation successful, received credential ID: {self.nuvlaedge_credentials.key}, logging in')
+        self.irs = get_irs(self.nuvlaedge_uuid, credentials['api-key'], credentials['secret-key'])
+        logger.info(f'Activation successful, received credential ID: {credentials["api-key"]}, logging in')
 
         self.save_current_state_to_file()
         # Then log in to access NuvlaEdge resources
@@ -292,16 +293,33 @@ class NuvlaClientWrapper:
             new_status: metrics that have changed from the last telemetry
             attributes_to_delete: attributes no longer present in the metrics
 
-        Returns: a CimiResponse instance with the response of the server including jobs queued for this NuvlaEdge
+        Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
 
         """
-        logger.debug(f"Sending telemetry report to Nuvla: \n"
+        logger.debug(f"Sending telemetry data to Nuvla: \n"
                      f"Changed fields: {new_status}\n"
                      f"Deleted fields: {attributes_to_delete}")
         response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)
         logger.debug(f"Response received from telemetry report: {response.data}")
+        return response.data
+
+    def telemetry_patch(self, telemetry_jsonpatch: list, attributes_to_delete: list[str]) -> dict:
+        """ Sends telemetry metrics to the nuvlaedge-status resource using edit(put) operation
+
+        Args:
+            telemetry_jsonpatch: telemetry data in JSON Patch format
+            attributes_to_delete: attributes no longer present in the metrics
+
+        Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
+
+        """
+        logger.debug(f"Sending telemetry patch data to Nuvla: \n {telemetry_jsonpatch}")
+        response: CimiResource = self.nuvlaedge_client.edit_patch(self.nuvlaedge_status_uuid,
+                                                                  data=telemetry_jsonpatch,
+                                                                  select=attributes_to_delete)
+        logger.debug(f"Response received from telemetry patch report: {response.data}")
         return response.data
 
     def save_current_state_to_file(self):
@@ -318,6 +336,7 @@ class NuvlaClientWrapper:
 
         """
         serial_session = NuvlaEdgeSession(
+            irs=self.irs,
             endpoint=self._host,
             insecure=self._insecure,
             credentials=self.nuvlaedge_credentials,
@@ -329,12 +348,13 @@ class NuvlaClientWrapper:
 
         # To provide support for legacy (<2.14) NuvlaEdge agents, we also save the session to the legacy location,
         # both .activated and .context files
-        legacy_credentials = {"api-key": self.nuvlaedge_credentials.key,
-                              "secret-key": self.nuvlaedge_credentials.secret}
-        write_file(legacy_credentials, LEGACY_FILES.ACTIVATION_FLAG)
-
-        legacy_context = {"id": self.nuvlaedge_uuid}
-        write_file(legacy_context, LEGACY_FILES.CONTEXT)
+        if Path(LEGACY_FILES.ACTIVATION_FLAG.parent).exists() and self.nuvlaedge_credentials:
+            legacy_credentials = {"api-key": self.nuvlaedge_credentials.key,
+                                  "secret-key": self.nuvlaedge_credentials.secret}
+            write_file(legacy_credentials, LEGACY_FILES.ACTIVATION_FLAG)
+        if Path(LEGACY_FILES.CONTEXT.parent).exists():
+            legacy_context = {"id": self.nuvlaedge_uuid}
+            write_file(legacy_context, LEGACY_FILES.CONTEXT)
 
     def find_nuvlaedge_id_from_nuvla_session(self) -> Optional[NuvlaID]:
         try:
@@ -345,6 +365,7 @@ class NuvlaClientWrapper:
             logger.warning(f"Could not find id with with error: {e}")
             return None
 
+    # TODO: Used only by security module. Switch it to settings.py/_create_client_from_settings()
     @classmethod
     def from_session_store(cls, file: Path | str):
         """ Creates a NuvlaEdgeClient object from a saved session file
@@ -359,21 +380,29 @@ class NuvlaClientWrapper:
         _stored_session = None
         try:
             _stored_session = read_file(file, decode_json=True)
-            session: NuvlaEdgeSession = (NuvlaEdgeSession.model_validate(_stored_session))
+            session: NuvlaEdgeSession = NuvlaEdgeSession.model_validate(_stored_session)
         except Exception as ex:
             logger.warning(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
             raise SessionValidationError(f'Could not validate session \n{_stored_session} \nwith error : {ex}')
 
         _client = cls(host=session.endpoint, insecure=session.insecure, nuvlaedge_uuid=session.nuvlaedge_uuid)
+        _client.irs = session.irs
+        _client.nuvlaedge_credentials = session.credentials
 
-        if session.credentials is not None:
-            _client.nuvlaedge_credentials = session.credentials
-            _client.login_nuvlaedge()
+        # Compute IRS from credentials
+        if session.credentials and not session.irs:
+            _client.irs = get_irs(session.nuvlaedge_uuid, session.credentials.key, session.credentials.secret)
+            _client.save_current_state_to_file()
+
+        _client.login_nuvlaedge()
 
         # If uuid is none in session, retrieve it from the API
         if not _client.nuvlaedge_uuid and _client.nuvlaedge_credentials is not None:
             logger.info("NuvlaEdge UUID not found in session, retrieving from API...")
             _client._nuvlaedge_uuid = _client.find_nuvlaedge_id_from_nuvla_session()
             logger.info(f"NuvlaEdge UUID not found in session, retrieving from API... {_client._nuvlaedge_uuid}")
+            if _client.nuvlaedge_uuid:
+                _client.irs = get_irs(_client.nuvlaedge_uuid, session.credentials.key, session.credentials.secret)
+                _client.save_current_state_to_file()
 
         return _client

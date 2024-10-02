@@ -2,6 +2,8 @@
 This file gathers general utilities demanded by most of the classes such as a command executor
 """
 
+import base64
+import hashlib
 import os
 import logging
 import signal
@@ -10,9 +12,10 @@ from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
 
-from nuvlaedge.agent import NuvlaClientWrapper
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
+
+from pyaes import AESModeOfOperationCBC as _Cbc, Encrypter as _Enc, Decrypter as _Dec
 
 
 base_label = 'nuvlaedge.component=True'
@@ -100,7 +103,7 @@ def timeout(time):
     try:
         yield
     finally:
-        # Unregister the signal so it won't be triggered
+        # Unregister the signal, so it won't be triggered
         # if the timeout is not reached.
         signal.signal(signal.SIGALRM, signal.SIG_IGN)
 
@@ -155,7 +158,7 @@ ${vpn_extra_config}
 """
 
 
-def nuvla_support_new_container_stats(nuvla_client: NuvlaClientWrapper):
+def nuvla_support_new_container_stats(nuvla_client):
 
     def get_attrs(data, prefix=''):
         keys = []
@@ -176,3 +179,30 @@ def nuvla_support_new_container_stats(nuvla_client: NuvlaClientWrapper):
     except Exception as e:
         logger.error(f'Failed to find if Nuvla support new container stats. Defaulting to False: {e}')
         return False
+
+
+def _irs_key(base):
+    base = base.rsplit('/', 1)[-1] if base else ''
+    return hashlib.sha256((base + ':' + CTE.MACHINE_ID).encode()).digest()
+
+
+def get_irs(base, k, s):
+    rand = os.urandom(16)
+    enc = _Enc(_Cbc(_irs_key(base), rand))
+    return base64.b64encode(rand + enc.feed(k + ':' + s) + enc.feed())
+
+
+def _from_irs(base, irs):
+    data = base64.b64decode(irs)
+    dec = _Dec(_Cbc(_irs_key(base), data[:16]))
+    return tuple((dec.feed(data[16:]) + dec.feed()).decode().split(':', 1))
+
+
+def from_irs(base, irs):
+    try:
+        return _from_irs(base, irs)
+    except Exception:
+        msg = 'Failed to decode irs'
+        logger.error(msg)
+        logger.debug(msg, exc_info=True)
+        raise RuntimeError(msg)

@@ -1,4 +1,3 @@
-import os
 from threading import Event
 from unittest import TestCase
 from unittest.mock import Mock, patch
@@ -7,7 +6,6 @@ from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
 from nuvlaedge.agent.orchestrator import COEClient
-from nuvlaedge.agent.settings import AgentSettingsMissMatch, InsufficientSettingsProvided
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent import AgentSettings
@@ -41,12 +39,19 @@ class TestAgent(TestCase):
         self.agent.settings = mock_settings
         self.mock_nuvla_client.nuvlaedge_uuid = 'some_uuid'
         self.mock_nuvla_client.nuvlaedge_credentials = None
+        self.mock_nuvla_client.irs = None
         mock_settings.nuvla_client = self.mock_nuvla_client
         self.assertEqual(State.NEW, self.agent._assert_current_state())
 
-        self.mock_nuvla_client.nuvlaedge_credentials = 'creds'
+        self.mock_nuvla_client.irs = 'irs'
+        self.mock_nuvla_client.nuvlaedge_credentials = None
         self.mock_nuvla_client.nuvlaedge.state = "ACTIVATED"
         self.assertEqual(State.ACTIVATED, self.agent._assert_current_state())
+
+        self.mock_nuvla_client.irs = None
+        self.mock_nuvla_client.nuvlaedge_credentials = 'creds'
+        self.mock_nuvla_client.nuvlaedge.state = "COMMISSIONED"
+        self.assertEqual(State.COMMISSIONED, self.agent._assert_current_state())
 
     @patch('nuvlaedge.agent.manager.WorkerManager.add_worker')
     def test_init_workers(self, mock_add_worker):
@@ -108,9 +113,10 @@ class TestAgent(TestCase):
         mock_payload.model_dump.return_value = "Data to send"
 
         self.mock_nuvla_client.telemetry.return_value = None
+        self.mock_nuvla_client.telemetry_patch.side_effect = Exception
 
         self.assertIsNone(self.agent._telemetry())
-        mock_payload.model_dump.assert_called_once()
+        mock_payload.model_dump.assert_called()
         mock_payload.model_copy.assert_called_once()
         mock_payload.model_dump_json.assert_called_once()
         mock_status.assert_called_with(mock_payload)

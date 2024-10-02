@@ -50,7 +50,10 @@ class FileConstants(BaseFileConstants):
 
     def __init__(self, root_fs: str):
         super().__init__(root_fs)
-        if not self.root_fs.exists() and not bool(os.getenv('TOX_TESTENV', False)):
+        if (not self.root_fs.exists()
+            and not bool(os.getenv('TOX_TESTENV', False))
+            and not os.getenv('IDE_PROJECT_ROOTS')
+        ):
             self.root_fs.mkdir()
 
     # Basic file locations

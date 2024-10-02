@@ -52,14 +52,15 @@ jobs:
         run: |
           poetry build --no-interaction
           mkdir req/
-          poetry export -f requirements.txt --output req/requirements.txt --without-hashes --without-urls
-          poetry export -f requirements.txt --output req/requirements.agent.txt --without-hashes --without-urls --with agent
-          poetry export -f requirements.txt --output req/requirements.system-manager.txt --without-hashes --without-urls --with system-manager
-          poetry export -f requirements.txt --output req/requirements.network.txt --without-hashes --without-urls --with network
-          poetry export -f requirements.txt --output req/requirements.modbus.txt --without-hashes --without-urls --with modbus
-          poetry export -f requirements.txt --output req/requirements.gpu.txt --without-hashes --without-urls --with gpu
-          poetry export -f requirements.txt --output req/requirements.job-engine.txt --without-hashes --without-urls --with job-engine
-          poetry export -f requirements.txt --output req/requirements.bluetooth.txt --without-hashes --without-urls --with bluetooth
+          poetry export -f requirements.txt --output req/requirements.txt --without-hashes --without-urls --only main
+          poetry export -f requirements.txt --output req/requirements.agent.txt --without-hashes --without-urls --only agent
+          poetry export -f requirements.txt --output req/requirements.kubernetes.txt --without-hashes --without-urls --only kubernetes
+          poetry export -f requirements.txt --output req/requirements.job-engine.txt --without-hashes --without-urls --only job-engine
+          poetry export -f requirements.txt --output req/requirements.system-manager.txt --without-hashes --without-urls --only system-manager
+          poetry export -f requirements.txt --output req/requirements.network.txt --without-hashes --without-urls --only network
+          poetry export -f requirements.txt --output req/requirements.modbus.txt --without-hashes --without-urls --only modbus
+          poetry export -f requirements.txt --output req/requirements.gpu.txt --without-hashes --without-urls --only gpu
+          poetry export -f requirements.txt --output req/requirements.bluetooth.txt --without-hashes --without-urls --only bluetooth
 
       - name: Build test requirements
         run: ./generate-requirements.sh req
@@ -174,6 +175,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set env
+        shell: bash
+        run: echo "BUILD_TIME=$(date --utc +%FT%T.%3NZ)" >> $GITHUB_ENV
       # ------------------------------------------------
       # Checkout and and download package
       # ------------------------------------------------
@@ -224,7 +228,7 @@ jobs:
           platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
           build-args: |
             GIT_BRANCH=${{ github.head_ref || github.ref_name }}
-            GIT_BUILD_TIME=$(date --utc +%FT%T.%3NZ)
+            GIT_BUILD_TIME=${{ env.BUILD_TIME }}
             GIT_COMMIT_ID=${{ github.sha }}
             GITHUB_RUN_NUMBER=${{ github.run_number }}
             GITHUB_RUN_ID=${{ github.run_id }}
@@ -242,5 +246,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push slim-docker
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.slim-docker
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
+          build-args: |
+            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
+            GIT_BUILD_TIME=${{ env.BUILD_TIME }}
+            GIT_COMMIT_ID=${{ github.sha }}
+            GITHUB_RUN_NUMBER=${{ github.run_number }}
+            GITHUB_RUN_ID=${{ github.run_id }}
+            PROJECT_URL=${{ github.server_url }}/${{ github.repository }}
+            PACKAGE_NAME=${{ env.PACKAGE_NAME }}
+            PYDANTIC_VERSION=${{ vars.PYDANTIC_VERSION }}
+          push: true
+          tags: >
+            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
+            nuvlaedge/${{ github.event.repository.name }}:latest-slim-docker,
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest-slim-docker,
+            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
+            sixsq/${{ github.event.repository.name }}:latest-slim-docker
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
 

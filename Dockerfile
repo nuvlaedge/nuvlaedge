@@ -1,18 +1,17 @@
 # syntax=docker/dockerfile:1.4
 
-ARG ALPINE_MAJ_MIN_VERSION="3.18"
-ARG PYTHON_MAJ_MIN_VERSION="3.11"
-ARG GOLANG_VERSION="1.20.4"
+ARG ALPINE_MAJ_MIN_VERSION="3.20"
+ARG PYTHON_MAJ_MIN_VERSION="3.12"
+ARG GOLANG_VERSION="1.23"
 ARG JOB_LITE_IMG_ORG="nuvla"
-ARG PYDANTIC_VERSION=${PYDANTIC_VERSION:-"2.7.0"}
-ARG PYDANTIC_CORE_VERSION="2.16.3"
+ARG PYDANTIC_VERSION="2.7.4"
 
 ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
-ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:pydantic${PYDANTIC_VERSION}
+ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:python${PYTHON_MAJ_MIN_VERSION}-pydantic${PYDANTIC_VERSION}
 
 # ------------------------------------------------------------------------
 # NuvlaEdge base image for labels and environments variables
@@ -47,7 +46,7 @@ FROM ${PRE_BUILD_IMAGE} as pre-builder-pydantic
 FROM ${BASE_IMAGE} AS base-builder
 
 ARG PYDANTIC_VERSION
-ARG PYDANTIC_CORE_VERSION
+
 ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
@@ -76,13 +75,15 @@ WORKDIR /tmp/pybluez
 # Pybluez has no maintenance altough it accepts contributions. Lock it to the current commit sha
 RUN git checkout 4d46ce1
 
+RUN pip install setuptools
 RUN python setup.py install
+# RUN pip uninstall -y setuptools
 
 # this environment variable is set to fasten the install of dbus-fast.
 # it will be fixed in the later versions of dbus-fast
 ENV SKIP_CYTHON=false
-COPY --link requirements.bluetooth.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.bluetooth.txt /tmp/
+RUN pip install -r /tmp/requirements.bluetooth.txt
 
 
 # ------------------------------------------------------------------------
@@ -90,8 +91,8 @@ RUN pip install -r /tmp/requirements.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS network-builder
 
-COPY --link requirements.network.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.network.txt /tmp/
+RUN pip install -r /tmp/requirements.network.txt
 
 
 # ------------------------------------------------------------------------
@@ -102,8 +103,8 @@ FROM base-builder AS modbus-builder
 WORKDIR /tmp
 RUN apk update; apk add nmap-scripts
 
-COPY --link requirements.modbus.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.modbus.txt /tmp/
+RUN pip install -r /tmp/requirements.modbus.txt
 
 
 # ------------------------------------------------------------------------
@@ -111,8 +112,8 @@ RUN pip install -r /tmp/requirements.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS gpu-builder
 
-COPY --link requirements.gpu.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.gpu.txt /tmp/
+RUN pip install -r /tmp/requirements.gpu.txt
 
 
 # ------------------------------------------------------------------------
@@ -137,8 +138,8 @@ RUN go mod tidy && \
 # ------------------------------------------------------------------------
 FROM base-builder AS system-manager-builder
 
-COPY --link requirements.system-manager.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+COPY --link requirements.system-manager.txt /tmp/
+RUN pip install -r /tmp/requirements.system-manager.txt
 
 
 # ------------------------------------------------------------------------
@@ -196,8 +197,8 @@ RUN pip install -r /tmp/requirements.kubernetes.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
 
-COPY --link requirements.job-engine.txt /tmp/requirements.lite.txt
-RUN pip install -r /tmp/requirements.lite.txt
+COPY --link requirements.job-engine.txt /tmp/
+RUN pip install -r /tmp/requirements.job-engine.txt
 
 
 # ------------------------------------------------------------------------
@@ -222,7 +223,7 @@ COPY --link dist/nuvlaedge-*.whl /tmp/
 RUN pip install /tmp/nuvlaedge-*.whl
 
 # Remove setuptools and pip
-RUN pip uninstall -y setuptools
+# RUN pip uninstall -y setuptools
 RUN pip uninstall -y pip
 
 # Remove psutil tests
@@ -268,19 +269,19 @@ RUN apk add --no-cache upx \
         socat \
         # VPN client
         openvpn \
-		# Job-Engine (envsubst for k8s substitution)
-		gettext-envsubst && \
+        # Job-Engine (envsubst for k8s substitution)
+        gettext-envsubst && \
     rm /usr/share/nmap/nmap-os-db \
        /usr/share/nmap/nselib/data/wp-plugins.lst \
        /usr/share/nmap/nselib/data/wp-themes.lst \
        /usr/share/nmap/nselib/data/drupal-modules.lst && \
     upx --lzma \
         /sbin/ip \
-        /usr/bin/nmap  \
-        /usr/bin/coreutils  \
-        /usr/bin/openssl  \
-        /usr/bin/socat  \
-        /usr/bin/top  \
+        /usr/bin/nmap \
+        /usr/bin/coreutils \
+        /usr/bin/openssl \
+        /usr/bin/socat1 \
+        /usr/bin/top \
         /usr/bin/curl \
         /usr/bin/envsubst \
         /usr/sbin/openvpn && \

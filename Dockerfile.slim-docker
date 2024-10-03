@@ -1,17 +1,14 @@
 # syntax=docker/dockerfile:1.4
 
-ARG ALPINE_MAJ_MIN_VERSION="3.18"
-ARG PYTHON_MAJ_MIN_VERSION="3.11"
+ARG ALPINE_MAJ_MIN_VERSION="3.20"
+ARG PYTHON_MAJ_MIN_VERSION="3.12"
 
-ARG PYTHON_BCRYPT_VERSION="4.0.1"
-ARG PYTHON_NACL_VERSION="1.5.0"
-ARG PYDANTIC_VERSION=${PYDANTIC_VERSION:-"2.7.0"}
+ARG PYDANTIC_VERSION="2.7.4"
 
-ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
-ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:pydantic${PYDANTIC_VERSION}
+ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:python${PYTHON_MAJ_MIN_VERSION}-pydantic${PYDANTIC_VERSION}
 
 
 # ------------------------------------------------------------------------
@@ -35,13 +32,12 @@ RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/distutils/command
 RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/lib2to3
 RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/unittest
 RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages/wheel*
-RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/config*
+RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/config-*
 RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/tkinter
 RUN rm -Rf /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/turtledemo
 
 RUN rm -Rf /usr/local/include/python${PYTHON_MAJ_MIN_VERSION}
 
-RUN find ${PYTHON_SITE_PACKAGES} -name '*.py?' -delete
 RUN find ${PYTHON_LOCAL_SITE_PACKAGES} -name '*.py?' -delete
 RUN find /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION} -name '*.py?' -delete
 
@@ -90,7 +86,6 @@ LABEL git.branch=${GIT_BRANCH} \
 FROM ${PRE_BUILD_IMAGE} as pre-builder-pydantic
 FROM ${BASE_IMAGE} AS base-builder
 
-ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 RUN apk update
@@ -102,8 +97,8 @@ COPY --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SI
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
-RUN rm -f ${PYTHON_LOCAL_SITE_PACKAGES}/certifi/cacert.pem
-RUN ln -s /etc/ssl/certs/ca-certificates.crt ${PYTHON_LOCAL_SITE_PACKAGES}/certifi/cacert.pem
+RUN rm -f ${PYTHON_LOCAL_SITE_PACKAGES}/pip/_vendor/certifi/cacert.pem
+RUN ln -s /etc/ssl/certs/ca-certificates.crt ${PYTHON_LOCAL_SITE_PACKAGES}/pip/_vendor/certifi/cacert.pem
 
 
 # ------------------------------------------------------------------------
@@ -133,20 +128,6 @@ RUN pip install -r /tmp/requirements.agent.txt
 # ------------------------------------------------------------------------
 FROM base-builder AS job-engine-builder
 
-ARG PYTHON_MAJ_MIN_VERSION
-ARG PYTHON_BCRYPT_VERSION
-ARG PYTHON_NACL_VERSION
-ARG PYTHON_SITE_PACKAGES
-ARG PYTHON_LOCAL_SITE_PACKAGES
-
-#RUN apk add "py3-bcrypt~${PYTHON_BCRYPT_VERSION}" "py3-pynacl~${PYTHON_NACL_VERSION}"
-
-#RUN cp -r ${PYTHON_SITE_PACKAGES}/bcrypt/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-#RUN cp -r ${PYTHON_SITE_PACKAGES}/bcrypt-${PYTHON_BCRYPT_VERSION}.dist-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-
-#RUN cp -r ${PYTHON_SITE_PACKAGES}/nacl/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-#RUN cp -r ${PYTHON_SITE_PACKAGES}/PyNaCl-${PYTHON_NACL_VERSION}-py${PYTHON_MAJ_MIN_VERSION}.egg-info/ ${PYTHON_LOCAL_SITE_PACKAGES}/
-
 COPY --link requirements.job-engine.txt /tmp/
 RUN pip install -r /tmp/requirements.job-engine.txt
 
@@ -169,13 +150,13 @@ RUN pip install --no-dependencies /tmp/nuvlaedge-*.whl
 
 RUN rm -Rf $(find /usr/local/lib/python3.11/site-packages/nuvlaedge -maxdepth 1 \
                   -name system_manager \
-                  -or -name security \
+#                  -or -name security \
 #                  -or -name peripherals \
                   -or -name on_stop)
 
 # Remove wheel setuptools and pip
 RUN pip uninstall -y wheel
-# RUN pip uninstall -y setuptools
+RUN pip uninstall -y setuptools
 RUN pip uninstall -y pip
 
 # Remove psutil tests

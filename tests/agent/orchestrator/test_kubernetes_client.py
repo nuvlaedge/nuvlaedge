@@ -4,12 +4,14 @@
 import logging
 import mock
 import os
+import pickle
 import sys
 import unittest
 
 
 import kubernetes
 from kubernetes.client.exceptions import ApiException
+from kubernetes.client.models import V1Pod
 
 import tests.agent.utils.fake as fake
 os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
@@ -506,3 +508,40 @@ class COEClientKubernetesTestCase(unittest.TestCase):
     def test_infer_if_additional_coe_exists(self):
         self.assertEqual(self.obj.infer_if_additional_coe_exists(), {},
                          'Received additional COE even though method is not implemented for K8s')
+
+    def test_container_metrics(self):
+        with open('pod_system_manager.pkl', 'rb') as f:
+            pod = pickle.load(f)
+        pod_metrics = \
+            {'metadata': {'name': 'system-manager-5788c6b45d-mf9ck',
+                          'namespace': 'nuvlabox-8760a7b4-cdc9-47f8-ade1-9738714c4420',
+                          'creationTimestamp': '2024-10-06T20:32:03Z',
+                          'labels': {
+                              'app.kubernetes.io/instance': 'nuvlabox-8760a7b4-cdc9-47f8-ade1-9738714c4420',
+                              'app.kubernetes.io/managed-by': 'Helm',
+                              'app.kubernetes.io/name': 'nuvlaedge',
+                              'app.kubernetes.io/version': '2.16.1',
+                              'component': 'system-manager',
+                              'helm.sh/chart': 'nuvlaedge-2.16.1',
+                              'nuvlaedge.component': 'True',
+                              'nuvlaedge.deployment': 'production',
+                              'pod-template-hash': '5788c6b45d'}},
+             'timestamp': '2024-10-06T20:31:51Z', 'window': '15.01s',
+             'containers': [{'name': 'system-manager',
+                             'usage': {'cpu': '3116988n',
+                                       'memory': '90612Ki'}}]}
+        cstats = pod_metrics['containers'][0]
+        node_capacity = {'cpu': '10',
+                         'ephemeral-storage': '156558308Ki',
+                         'hugepages-1Gi': '0',
+                         'hugepages-2Mi': '0',
+                         'hugepages-32Mi': '0',
+                         'hugepages-64Ki': '0',
+                         'memory': '8129092Ki',
+                         'pods': '110'}
+        node_cpu_capacity = int(node_capacity['cpu'])
+        node_mem_capacity_kib = int(node_capacity['memory'].rstrip('Ki'))
+        self.assertEqual(
+            self.obj._container_metrics(
+                pod, cstats, node_cpu_capacity, node_mem_capacity_kib), {},
+            'Container metrics are not as expected')

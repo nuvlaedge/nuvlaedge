@@ -180,7 +180,14 @@ class VPNHandler:
             str or None: The VPN IP address read from the file, or None if the file is empty or doesn't exist.
 
         """
-        return file_operations.read_file(FILE_NAMES.VPN_IP_FILE)
+        try:
+            ip = file_operations.read_file(FILE_NAMES.VPN_IP_FILE)
+            if ip and isinstance(ip, str):
+                ip = ip.strip()
+            return ip
+        except Exception as e:
+            logger.error(f'Failed to read VPN IP: {e}')
+        return None
 
     def _check_vpn_client_state(self) -> tuple[bool, bool]:
         """

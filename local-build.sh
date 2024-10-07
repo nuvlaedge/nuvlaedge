@@ -10,6 +10,7 @@ export IMAGE_TAG_NAME=$IMAGE_ORG/$IMAGE_REPO:${3:-$nuvlaedge_version}
 poetry build --no-interaction --format=wheel
 poetry export --format requirements.txt --output requirements.txt --without-hashes --without-urls
 poetry export --format requirements.txt --output requirements.agent.txt --without-hashes --without-urls --with agent
+poetry export --format requirements.txt --output requirements.kubernetes.txt --without-hashes --without-urls --with kubernetes
 poetry export --format requirements.txt --output requirements.system-manager.txt --without-hashes --without-urls --with system-manager
 poetry export --format requirements.txt --output requirements.network.txt --without-hashes --without-urls --with network
 poetry export --format requirements.txt --output requirements.modbus.txt --without-hashes --without-urls --with modbus

@@ -1,7 +1,6 @@
-ARG ALPINE_MAJ_MIN_VERSION="3.18"
-ARG PYTHON_MAJ_MIN_VERSION="3.11"
+ARG ALPINE_MAJ_MIN_VERSION="3.20"
+ARG PYTHON_MAJ_MIN_VERSION="3.12"
 ARG PYDANTIC_VERSION=${PYDANTIC_VERSION:-"fail"}
-ARG PYDANTIC_CORE_VERSION=${PYDANTIC_CORE_VERSION:-"fail"}
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 
@@ -14,7 +13,6 @@ FROM ${BASE_IMAGE} AS nuvlaedge-base
 LABEL org.opencontainers.image.source="https://github.com/nuvlaedge/nuvlaedge"
 
 ARG PYDANTIC_VERSION
-ARG PYDANTIC_CORE_VERSION
 
 RUN rm /etc/apk/repositories
 RUN touch /etc/apk/repositories
@@ -25,5 +23,4 @@ RUN apk update && apk upgrade
 RUN apk add rust cargo
 RUN pip install --upgrade pip
 
-RUN pip install pydantic-core==${PYDANTIC_CORE_VERSION}
 RUN pip install pydantic==${PYDANTIC_VERSION}

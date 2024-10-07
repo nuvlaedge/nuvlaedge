@@ -43,7 +43,7 @@ LABEL org.opencontainers.image.authors="support@sixsq.com" \
 # ------------------------------------------------------------------------
 # Base builder stage containing the common python and alpine dependencies
 # ------------------------------------------------------------------------
-FROM ${PRE_BUILD_IMAGE} as pre-builder-pydantic
+FROM ${PRE_BUILD_IMAGE} AS pre-builder-pydantic
 FROM ${BASE_IMAGE} AS base-builder
 
 ARG PYDANTIC_VERSION

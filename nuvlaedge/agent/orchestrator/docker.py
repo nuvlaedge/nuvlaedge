@@ -611,10 +611,8 @@ class DockerClient(COEClient):
         """
         cs = container_stats
         cpu_percent = float('nan')
-        online_cpus = 0
 
         try:
-
             online_cpus_alt = len(cs["cpu_stats"]["cpu_usage"].get("percpu_usage", []))
             online_cpus = cs["cpu_stats"].get('online_cpus', online_cpus_alt)
 

@@ -12,11 +12,24 @@ on:
       - "Dockerfile.base"
       - ".github/workflows/base-image.yml"
   workflow_dispatch:
+    inputs:
+      python_version:
+        description: 'Python version (major.minor)'
+        required: false
+        type: string
+      pydantic_version:
+        description: 'Pydantic version'
+        required: false
+        type: string
 
 jobs:
   build:
     name: "Build base image"
     runs-on: "ubuntu-latest"
+
+    env:
+      PYTHON_VERSION: ${{ inputs.python_version || '3.12' }}
+      PYDANTIC_VERSION: ${{ inputs.pydantic_version || '2.7.4' }}
 
     steps:
       - name: Checkout
@@ -24,8 +37,8 @@ jobs:
 
       - name: Log versions
         run: |
-          echo "Pydantic Core: ${{ vars.PYDANTIC_CORE_VERSION }}"
-          echo "Pydantic : ${{ vars.PYDANTIC_VERSION }}"
+          echo "Python: ${{ env.PYTHON_VERSION }}"
+          echo "Pydantic : ${{ env.PYDANTIC_VERSION }}"
 
       - name: SetUp QEMU
         uses: docker/setup-qemu-action@v3
@@ -48,9 +61,9 @@ jobs:
           file: Dockerfile.base
           platforms: linux/amd64,linux/arm64/v8,linux/arm/v7
           push: true
-          tags: ghcr.io/nuvlaedge/ne-base:pydantic${{ vars.PYDANTIC_VERSION }}
+          tags: ghcr.io/nuvlaedge/ne-base:python${{ env.PYTHON_VERSION }}-pydantic${{ env.PYDANTIC_VERSION }}
           build-args: |
-            PYDANTIC_CORE_VERSION=${{ vars.PYDANTIC_CORE_VERSION }}
-            PYDANTIC_VERSION=${{ vars.PYDANTIC_VERSION }}
+            PYTHON_MAJ_MIN_VERSION=${{ env.PYTHON_VERSION }}
+            PYDANTIC_VERSION=${{ env.PYDANTIC_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

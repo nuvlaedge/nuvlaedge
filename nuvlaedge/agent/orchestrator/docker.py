@@ -797,6 +797,7 @@ class DockerClient(COEClient):
         Returns a list of dictionaries, where each dictionary represents the metrics for a specific container.
         The dictionary will contain the following keys:
 
+        # FIXME: these are old keys and need to be updated.
         - 'id': The ID of the container.
         - 'name': The name of the container.
         - 'container-status': The current status of the container.

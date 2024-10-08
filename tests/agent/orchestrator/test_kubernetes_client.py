@@ -16,7 +16,6 @@ from kubernetes.client.models import V1Pod
 import tests.agent.utils.fake as fake
 os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
 from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient, TimeoutException
-# os.unsetenv('KUBERNETES_SERVICE_HOST')
 
 
 class COEClientKubernetesTestCase(unittest.TestCase):
@@ -510,7 +509,7 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'Received additional COE even though method is not implemented for K8s')
 
     def test_container_metrics(self):
-        with open('pod_system_manager.pkl', 'rb') as f:
+        with open('agent/orchestrator/pod_system_manager.pkl', 'rb') as f:
             pod = pickle.load(f)
         pod_metrics = \
             {'metadata': {'name': 'system-manager-5788c6b45d-mf9ck',
@@ -540,8 +539,17 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'memory': '8129092Ki',
                          'pods': '110'}
         node_cpu_capacity = int(node_capacity['cpu'])
-        node_mem_capacity_kib = int(node_capacity['memory'].rstrip('Ki'))
+        node_mem_capacity_b = int(node_capacity['memory'].rstrip('Ki')) * 1024
         self.assertEqual(
-            self.obj._container_metrics(
-                pod, cstats, node_cpu_capacity, node_mem_capacity_kib), {},
-            'Container metrics are not as expected')
+            self.obj._container_metrics(pod, cstats, node_cpu_capacity,
+                                        node_mem_capacity_b),
+            {
+                'name': 'system-manager-5788c6b45d-mf9ck/system-manager',
+                'id': 'docker://9a1081df886782c1c198623e7e27ce95e44a4f973715e1c8fe249aa4144c72d7',
+                'created-at': '2024-10-02T13:18:45.000Z',
+                'started-at': '2024-10-02T13:18:45.000Z',
+                'image': 'nuvladev/nuvlaedge:tasklist-issue-3298',
+                'restart-count': 0, 'state': 'running', 'status': 'running',
+                'cpu-capacity': 10, 'cpu-usage': 0.03116988,
+                'mem-limit': 8324190208, 'mem-usage': 1.1146632366812923,
+                'net-in': 0, 'net-out': 0, 'blk-in': 0, 'blk-out': 0})

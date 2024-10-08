@@ -3,6 +3,7 @@ import os
 import time
 from typing import Dict, List, Union
 
+from nuvlaedge.common.utils import format_datetime_for_nuvla
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -19,6 +20,8 @@ JOB_TTL_SECONDS_AFTER_FINISHED = 60 * 2
 JOB_BACKOFF_LIMIT = 0
 DEFAULT_IMAGE_PULL_POLICY = "Always"
 
+NANOCORES = 1000000000
+KIB_TO_BYTES = 1024
 
 class TimeoutException(Exception):
     ...
@@ -331,7 +334,8 @@ class KubernetesClient(COEClient):
         if node_info:
             node_capacity = node_info.status.capacity
             node_cpu_capacity = int(node_capacity['cpu'])
-            node_mem_capacity_kib = int(node_capacity['memory'].rstrip('Ki'))
+            node_mem_capacity_b = (int(node_capacity['memory'].rstrip('Ki'))
+                                   * KIB_TO_BYTES)
         else:
             raise Exception('Failed getting node info.')
 
@@ -365,7 +369,7 @@ class KubernetesClient(COEClient):
                         pods_per_ns[short_identifier],
                         cstats,
                         node_cpu_capacity,
-                        node_mem_capacity_kib)
+                        node_mem_capacity_b)
                     out.append(metrics)
                 except Exception as ex:
                     log.error('Failed collecting metrics for container %s in pod %s: %s',
@@ -374,96 +378,59 @@ class KubernetesClient(COEClient):
         return out
 
     def _container_metrics(self, pod: client.V1Pod, cstats: dict,
-                           node_cpu_capacity: int, node_mem_capacity_kib: int):
+                           node_cpu_capacity: int, node_mem_capacity_b: int):
         """
-        Collect container metrics
-        :req-un [::id
-                 ::name]
-        :opt-un [
-                 ::restart-count
+        Compiles and returns container metrics.
 
-                 ::container-status ;; old
-                 ::state
-
-                 ::created-at
-                 ::started-at
-
-                 ::image
-
-                 :container/status
-
-                 ::cpu-limit
-
-                 ::cpu-percent ;; old
-                 ::cpu-capacity
-                 ::cpu-usage
-
-                 ::mem-usage
-                 ::mem-limit
-                 ::mem-usage-limit ;; old
-                 ::mem-percent     ;; old
-
-                 ::disk-in
-                 ::disk-out
-                 ::blk-in-out ;; old
-
-                 ::net-in
-                 ::net-out
-                 ::net-in-out ;; old
-                 ]
-        :param pod_name:
-        :param cstats:
-        :param node_cpu_capacity:
-        :param node_mem_capacity_kib:
-        :param pods_per_ns:
-        :param short_identifier:
-        :return:
+        :param pod: The Kubernetes Pod object containing the container.
+        :type pod: client.V1Pod
+        :param cstats: The container statistics.
+        :type cstats: dict
+        :param node_cpu_capacity: The CPU capacity of the node in cores.
+        :type node_cpu_capacity: int
+        :param node_mem_capacity_b: The memory capacity of the node in bytes.
+        :type node_mem_capacity_b: int
+        :return: A dictionary containing the container metrics.
+        :rtype: dict
         """
 
         pod_name = pod.metadata.name
-
-        metrics = {}
+        container_name = cstats['name']
 
         # Metadata
-        for cs in cstats['status']['container_statuses']:
-            if cs['name'] == cstats['name']:
-                metrics = {
-                    'id': cs['container_id'],
-                    'name': f"{pod_name}/{cstats['name']}"
-                }
-                for k, v in cs['state'].items():
-                    if v:
-                        metrics['container-status'] = k
-                        break
-
-                metrics['restart-count'] = int(cs['restart_count'] or 0)
-                break
+        metrics = {
+            'name': f"{pod_name}/{container_name}"
+        }
         for cstat in pod.status.container_statuses:
-            if cstat.name == cstats['name']:
+            if cstat.name == container_name:
+                metrics['id'] = cstat.container_id
+                metrics['created-at'] = format_datetime_for_nuvla(
+                    cstat.state.running.started_at)
+                metrics['started-at'] = format_datetime_for_nuvla(
+                    cstat.state.running.started_at)
+                metrics['image'] = cstat.image
+                metrics['restart-count'] = int(cstat.restart_count or 0)
                 for k, v in cstat.state.to_dict().items():
                     if v:
-                        metrics['container-status'] = k
+                        metrics['state'] = k
+                        metrics['status'] = k
                         break
 
-                metrics['restart-count'] = int(cstat.restart_count or 0)
-
         # CPU
+        metrics['cpu-capacity'] = node_cpu_capacity
         container_cpu_usage = int(cstats['usage']['cpu'].rstrip('n'))
-        # units come in nanocores
-        metrics['cpu-percent'] = "%.2f" % round(
-            container_cpu_usage * 100 / (node_cpu_capacity * 1000000000), 2)
+        metrics['cpu-usage'] = \
+            (container_cpu_usage / (node_cpu_capacity * NANOCORES)) * 100
+
         # MEM
-        mem_usage_kib = int(cstats['usage']['memory'].rstrip('Ki'))
-        # units come in Ki
-        metrics['mem-percent'] = "%.2f" % round(
-            mem_usage_kib * 100 / node_mem_capacity_kib, 2)
-        metrics['mem-usage-limit'] = \
-            f"{round(mem_usage_kib / 1024, 1)}MiB / {round(node_mem_capacity_kib / 1024, 1)}MiB"
+        metrics['mem-limit'] = node_mem_capacity_b
+        mem_usage_b = int(cstats['usage']['memory'].rstrip('Ki')) * KIB_TO_BYTES
+        metrics['mem-usage'] = (mem_usage_b / node_mem_capacity_b) * 100
+
         # FIXME: implement net and disk metrics collection.
-        net_in, net_out = self._container_metrics_net()
-        blk_in, blk_out = self._container_metrics_block()
-        metrics.update({'net-in-out': f"{round(net_in, 1)}MB / {round(net_out, 1)}MB",
-                        'blk-in-out': f"{round(blk_in, 1)}MB / {round(blk_out, 1)}MB"})
+        self._container_metrics_net(metrics)
+        self._container_metrics_block(metrics)
+
         return metrics
 
     def get_installation_parameters(self) -> dict:
@@ -797,13 +764,17 @@ class KubernetesClient(COEClient):
         except TimeoutException as ex_timeout:
             log.warning('Timeout waiting for pod to be deleted: %s', ex_timeout)
 
-    def _container_metrics_net(self):
+    def _container_metrics_net(self, metrics: dict):
         # FIXME: implement. Not clear how to get Rx/Tx metrics.
-        return 0, 0
+        metrics['net-in'] = 0
+        metrics['net-out'] = 0
+        return metrics
 
-    def _container_metrics_block(self):
+    def _container_metrics_block(self, metrics: dict):
         # FIXME: implement. Not clear how to get the block IO.
-        return 0, 0
+        metrics['blk-in'] = 0
+        metrics['blk-out'] = 0
+        return metrics
 
     def get_current_container_id(self) -> str:
         # TODO

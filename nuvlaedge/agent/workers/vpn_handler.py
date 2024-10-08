@@ -2,6 +2,7 @@ import json
 import logging
 import string
 import time
+
 from pathlib import Path
 from queue import Queue
 from threading import Lock
@@ -10,17 +11,17 @@ from typing import Optional, ClassVar
 import docker.errors
 from pydantic import BaseModel
 
-from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
-from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource, CredentialResource, NuvlaID, State)
 from nuvlaedge.agent.common import util
+from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
+from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource, CredentialResource, NuvlaID, State)
+from nuvlaedge.agent.orchestrator import COEClient
+from nuvlaedge.common import file_operations
+from nuvlaedge.common.constant_files import FILE_NAMES
 from nuvlaedge.common.file_operations import file_exists_and_not_empty
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
-from nuvlaedge.common.constant_files import FILE_NAMES
-from nuvlaedge.common import file_operations
-
-from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
-from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.models import are_models_equal
+
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 _status_module_name = 'VPN Handler'
@@ -565,6 +566,7 @@ class VPNHandler:
         if _credential:
             self.vpn_credential = CredentialResource.model_validate(_credential)
             return
+
         if file_exists_and_not_empty(self.VPN_CLIENT_CONF_FILE):
             self.vpn_credential = self.nuvla_client.vpn_credential.model_copy()
         else:

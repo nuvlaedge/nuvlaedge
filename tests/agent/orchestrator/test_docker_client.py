@@ -1024,15 +1024,22 @@ class COEClientDockerTestCase(unittest.TestCase):
             self.assertEqual(self.obj.get_k3s_commissioning_info(), {},
                              'Received k3s details even though the k3s config cannot be parsed')
 
-        kubeconfig['users'] = [
-            {
-                'user': {
-                    'client-certificate-data': base64.b64encode(cert),
-                    'client-key-data': base64.b64encode(key)
+            kubeconfig['users'] = [
+                {
+                    'user': {
+                        'client-certificate-data': base64.b64encode(cert),
+                        'client-key-data': base64.b64encode(key)
+                    }
                 }
+            ]
+            mock_yaml.return_value = kubeconfig
+            comm_info = {
+                'kubernetes-client-ca': ca.decode(),
+                'kubernetes-client-cert': cert.decode(),
+                'kubernetes-client-key': key.decode(),
+                'kubernetes-endpoint': f'https://{mock_ip.return_value}:6443'
             }
-        ]
-        mock_yaml.return_value = kubeconfig
+            self.assertEqual(self.obj.get_k3s_commissioning_info(), comm_info)
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.run')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_k3s_commissioning_info')

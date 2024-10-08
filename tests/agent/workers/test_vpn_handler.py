@@ -1,26 +1,41 @@
 from pathlib import Path
 from queue import Queue
 from unittest import TestCase
-from unittest.mock import Mock, patch, mock_open, MagicMock
+from unittest.mock import Mock, patch, MagicMock, PropertyMock
 
 import docker.errors
 
-from nuvlaedge.agent.worker import WorkerExitException
-from nuvlaedge.agent.workers.vpn_handler import VPNHandler, VPNConfig, VPNConfigurationMissmatch, \
-    VPNCredentialCreationTimeOut
+from nuvlaedge.agent.workers.vpn_handler import (VPNHandler,
+                                                 VPNConfig,
+                                                 VPNCredentialCreationTimeOut)
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
+from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource,
+                                             CredentialResource)
+from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import State
 from nuvlaedge.agent.orchestrator import COEClient
 
 
-@patch('nuvlaedge.agent.workers.vpn_handler.VPNConfig.model_dump')
-def test_dump_to_template(mock_model_dump):
-    test_vpn_config = VPNConfig()
-    mock_model_dump.return_value = {}
-    test_vpn_config.vpn_intermediate_ca = ['mock_ca_1', 'mock_ca_2']
-    test_vpn_config.vpn_intermediate_ca_is = ['mock_ca_1', 'mock_ca_2']
-    assert test_vpn_config.dump_to_template() == {"vpn_intermediate_ca": 'mock_ca_1 mock_ca_2',
-                                                  "vpn_intermediate_ca_is": 'mock_ca_1 mock_ca_2'}
-    mock_model_dump.assert_called_once()
+class TestVPNConfig(TestCase):
+
+    def setUp(self):
+        self.test_vpn_config = VPNConfig()
+
+    @patch('nuvlaedge.agent.workers.vpn_handler.VPNConfig.model_dump')
+    def test_dump_to_template(self, mock_model_dump):
+        mock_model_dump.return_value = {}
+        self.test_vpn_config.vpn_intermediate_ca = ['mock_ca_1', 'mock_ca_2']
+        self.test_vpn_config.vpn_intermediate_ca_is = ['mock_ca_1', 'mock_ca_2']
+        assert self.test_vpn_config.dump_to_template() == {"vpn_intermediate_ca": 'mock_ca_1 mock_ca_2',
+                                                           "vpn_intermediate_ca_is": 'mock_ca_1 mock_ca_2'}
+        mock_model_dump.assert_called_once()
+
+    @patch('nuvlaedge.agent.workers.vpn_handler.VPNConfig.model_dump')
+    def test_update(self, mock_model_dump):
+        mock_model_dump.return_value = {}
+        self.test_vpn_config.update(self.test_vpn_config)
+
+        mock_model_dump.return_value = {'wrong-key': 'val', 'vpn_extra_config': 'verb 6'}
+        self.test_vpn_config.update(self.test_vpn_config)
 
 
 class TestVPNHandler(TestCase):
@@ -70,9 +85,17 @@ class TestVPNHandler(TestCase):
         mock_fileOps.read_file.return_value = None
         self.assertIsNone(self.test_vpn_handler.get_vpn_ip())
 
-        mock_fileOps.read_file.return_value = '1.1.1.1'
-        self.assertEqual(self.test_vpn_handler.get_vpn_ip(), '1.1.1.1',
+        vpn_ip = '1.1.1.1'
+
+        mock_fileOps.read_file.return_value = vpn_ip
+        self.assertEqual(self.test_vpn_handler.get_vpn_ip(), vpn_ip,
                              'Failed to get VPN IP')
+
+        mock_fileOps.read_file.return_value = f'{vpn_ip}\n'
+        self.assertEqual(self.test_vpn_handler.get_vpn_ip(), vpn_ip)
+
+        mock_fileOps.read_file.side_effect = IOError
+        self.assertIsNone(self.test_vpn_handler.get_vpn_ip())
 
     def test_check_vpn_client_state(self):
         self.mock_coe_client.is_vpn_client_running.reset_mock()
@@ -109,11 +132,15 @@ class TestVPNHandler(TestCase):
         mock_save_creds.assert_not_called()
 
         mock_time.perf_counter.side_effect = [0, 3, 5, 25]
-
         self.mock_nuvla_client.vpn_credential.model_copy.return_value = {'mock_key': 'mock_value'}
         self.assertTrue(self.test_vpn_handler._wait_credential_creation())
         self.assertEqual(self.test_vpn_handler.vpn_credential, {'mock_key': 'mock_value'})
         mock_time.sleep.assert_not_called()
+
+        mock_time.perf_counter.side_effect = [0, 1, 3]
+        self.mock_nuvla_client.vpn_credential.vpn_certificate = None
+        self.assertFalse(self.test_vpn_handler._wait_credential_creation(2))
+        mock_time.sleep.assert_called()
 
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._wait_certificates_ready')
     @patch('nuvlaedge.agent.workers.vpn_handler.util')
@@ -163,8 +190,25 @@ class TestVPNHandler(TestCase):
             mock_status_handler.failing.assert_called_once()
         # self.mock_vpn_channel.put.assert_called_with('read_data')
 
+    def test_is_nuvlaedge_commissioned(self):
+        self.mock_nuvla_client.nuvlaedge.state = State.COMMISSIONED
+        self.assertTrue(self.test_vpn_handler._is_nuvlaedge_commissioned())
+
+        not_commissioned_states = (State.NEW,
+                                   State.ACTIVATED,
+                                   State.DECOMMISSIONED,
+                                   State.DECOMMISSIONING,
+                                   State.UNKNOWN)
+
+        for s in not_commissioned_states:
+            self.mock_nuvla_client.nuvlaedge.state = s
+            self.assertFalse(self.test_vpn_handler._is_nuvlaedge_commissioned())
+
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._is_nuvlaedge_commissioned')
     def test_vpn_needs_commission(self, mock_is_commissioned):
+        mock_is_commissioned.return_value = False
+        self.assertFalse(self.test_vpn_handler._vpn_needs_commission())
+
         self.mock_nuvla_client.vpn_credential.vpn_certificate = False
         mock_is_commissioned.return_value = True
         self.assertTrue(self.test_vpn_handler._vpn_needs_commission())
@@ -234,6 +278,11 @@ class TestVPNHandler(TestCase):
         self.assertEqual(2, mock_vpn_config.update.call_count)
         mock_save_vpn_config.assert_called_once()
 
+        self.test_vpn_handler.vpn_extra_conf = None
+        self.test_vpn_handler._configure_vpn_client()
+        self.assertFalse(mock_vpn_config.vpn_extra_config)
+        self.assertEqual(mock_vpn_config.vpn_extra_config, '')
+
     @patch('nuvlaedge.agent.workers.vpn_handler.NuvlaEdgeStatusHandler')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._check_vpn_client_state')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._vpn_needs_commission')
@@ -276,4 +325,54 @@ class TestVPNHandler(TestCase):
         self.test_vpn_handler.run()
         mock_configure_vpn_client.assert_called_once()
 
+        mock_status.reset_mock()
+        mock_client_state.return_value = (False, False)
+        self.test_vpn_handler.vpn_enable_flag = 0
+        self.test_vpn_handler.run()
+        mock_status.stopped.assert_called_once()
 
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations.read_file')
+    def test_load_vpn_config(self, mock_read_file):
+        mock_read_file.return_value = {'vpn_shared_key': 'shared'}
+        self.test_vpn_handler._load_vpn_config()
+        self.assertEqual(self.test_vpn_handler.vpn_config.vpn_shared_key, 'shared')
+
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations.write_file')
+    def test_save_vpn_config(self, mock_write_file):
+        self.test_vpn_handler._save_vpn_config('')
+        self.assertEqual(mock_write_file.call_count, 2)
+
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations.read_file')
+    def test_load_vpn_server(self, mock_read_file):
+        mock_read_file.return_value = None
+        self.test_vpn_handler._load_vpn_server()
+        self.assertIsNone(self.test_vpn_handler.vpn_server.vpn_common_name_prefix)
+
+        with patch('nuvlaedge.agent.workers.vpn_handler.file_exists_and_not_empty') as mock_file_exists:
+            mock_file_exists.return_value = True
+
+            infra_service_resource = InfrastructureServiceResource(vpn_ca_certificate='ca')
+            mock_nuvla_client_vpn_server = PropertyMock(return_value=infra_service_resource)
+            type(self.mock_nuvla_client).vpn_server = mock_nuvla_client_vpn_server
+            self.test_vpn_handler._load_vpn_server()
+            self.assertEqual(self.test_vpn_handler.vpn_server.vpn_ca_certificate, 'ca')
+
+            mock_read_file.return_value = {'vpn_scope': 'customer'}
+            self.test_vpn_handler._load_vpn_server()
+            self.assertEqual(self.test_vpn_handler.vpn_server.vpn_scope, 'customer')
+
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_exists_and_not_empty')
+    @patch('nuvlaedge.agent.workers.vpn_handler.file_operations.read_file')
+    def test_load_vpn_credential(self, mock_read_file, mock_file_exists):
+        mock_read_file.return_value = None
+        mock_file_exists.return_value = True
+
+        credential_resource = CredentialResource(vpn_certificate='cert')
+        mock_nuvla_client_vpn_credential = PropertyMock(return_value=credential_resource)
+        type(self.mock_nuvla_client).vpn_credential = mock_nuvla_client_vpn_credential
+        self.test_vpn_handler._load_vpn_credential()
+        self.assertEqual(self.test_vpn_handler.vpn_credential.vpn_certificate, 'cert')
+
+        mock_read_file.return_value = {'vpn_certificate_owner': 'toto'}
+        self.test_vpn_handler._load_vpn_credential()
+        self.assertEqual(self.test_vpn_handler.vpn_credential.vpn_certificate_owner, 'toto')

@@ -22,6 +22,7 @@ import requests
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.orchestrator.docker import logger
+from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.common.utils import format_datetime_for_nuvla
 
 
@@ -976,21 +977,28 @@ class COEClientDockerTestCase(unittest.TestCase):
 
     @mock.patch('yaml.safe_load')
     @mock.patch('os.path.isfile')
-    def test_is_k3s_running(self, mock_isfile, mock_yaml):
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_api_ip_port')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.VPNHandler.get_vpn_ip')
+    def test_get_k3s_commissioning_info(self, mock_ip, mock_api_ip_port, mock_isfile, mock_yaml):
+        mock_api_ip_port.return_value = ('', '')
+
         # if k3s_addr is not set, we get {}
-        self.assertEqual(self.obj.is_k3s_running(''), {},
+        mock_ip.return_value = ''
+        self.assertEqual(self.obj.get_k3s_commissioning_info(), {},
                          'Received k3s details even though no address was provided')
 
         # same if the k3s config file cannot be found
         mock_isfile.return_value = False
-        self.assertEqual(self.obj.is_k3s_running('1.1.1.1'), {},
+        mock_ip.return_value = '1.1.1.1'
+        self.assertEqual(self.obj.get_k3s_commissioning_info(), {},
                          'Received k3s details even though k3s config file does not exist')
 
         mock_isfile.return_value = True
         # same again if the k3s config is malformed
         mock_yaml.side_effect = yaml.YAMLError
         with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data='{"notyaml": True}')):
-            self.assertEqual(self.obj.is_k3s_running('1.1.1.1'), {},
+            mock_ip.return_value = '1.1.1.1'
+            self.assertEqual(self.obj.get_k3s_commissioning_info(), {},
                              'Received k3s details even though the k3s config file is malformed')
 
         mock_yaml.reset_mock(side_effect=True)
@@ -1012,21 +1020,29 @@ class COEClientDockerTestCase(unittest.TestCase):
         # if k3s config can be read, but there's an exception while retrieving the values from it, we again get {}
         # let's force a KeyError by omitting the users from the k3s config
         with mock.patch(self.agent_nuvlaedge_common_open, mock.mock_open(read_data='{"notyaml": True}')):
-            self.assertEqual(self.obj.is_k3s_running('1.1.1.1'), {},
+            mock_ip.return_value = '1.1.1.1'
+            self.assertEqual(self.obj.get_k3s_commissioning_info(), {},
                              'Received k3s details even though the k3s config cannot be parsed')
 
-        kubeconfig['users'] = [
-            {
-                'user': {
-                    'client-certificate-data': base64.b64encode(cert),
-                    'client-key-data': base64.b64encode(key)
+            kubeconfig['users'] = [
+                {
+                    'user': {
+                        'client-certificate-data': base64.b64encode(cert),
+                        'client-key-data': base64.b64encode(key)
+                    }
                 }
+            ]
+            mock_yaml.return_value = kubeconfig
+            comm_info = {
+                'kubernetes-client-ca': ca.decode(),
+                'kubernetes-client-cert': cert.decode(),
+                'kubernetes-client-key': key.decode(),
+                'kubernetes-endpoint': f'https://{mock_ip.return_value}:6443'
             }
-        ]
-        mock_yaml.return_value = kubeconfig
+            self.assertEqual(self.obj.get_k3s_commissioning_info(), comm_info)
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.run')
-    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.is_k3s_running')
+    @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_k3s_commissioning_info')
     def test_infer_if_additional_coe_exists(self, mock_k3s, mock_run):
         # if we timeout GREPing for a k8s process, we get {}
         mock_run.side_effect = subprocess.TimeoutExpired('', 0)
@@ -1045,7 +1061,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         mock_k3s.return_value = {'fake-k3s': True}
         self.assertEqual(self.obj.infer_if_additional_coe_exists(), {'fake-k3s': True},
                          'Failed to get additional k3s IS when kube-apiserver PID does not exist')
-        mock_k3s.assert_called_once_with(None)
+        mock_k3s.assert_called_once()
 
         # and we get {} again if also the k3s discovery raises an exception
         mock_k3s.side_effect = TimeoutError

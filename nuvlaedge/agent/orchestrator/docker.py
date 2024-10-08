@@ -14,6 +14,7 @@ import docker
 import docker.errors
 from docker.models.containers import Container
 
+from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -1079,8 +1080,7 @@ class DockerClient(COEClient):
                                    client_key=None) -> dict:
 
         try:
-            fallback_address = api_endpoint.replace('https://', '').split(':')[0] if api_endpoint else None
-            infra_service = self.infer_if_additional_coe_exists(fallback_address=fallback_address)
+            infra_service = self.infer_if_additional_coe_exists()
         except Exception as e:
             # this is a non-critical step, so we should never fail because of it
             logger.warning(f'Exception while trying to find additional COE: {e}')
@@ -1109,13 +1109,16 @@ class DockerClient(COEClient):
                 'swarm-client-cert',
                 'swarm-endpoint']
 
-    def is_k3s_running(self, k3s_address: str) -> dict:
+    def get_k3s_commissioning_info(self) -> dict:
         """
         Checks specifically if k3s is installed
 
         :param k3s_address: endpoint address for the kubernetes API
         :return: commissioning-ready kubernetes infra
         """
+        vpn_ip = VPNHandler.get_vpn_ip()
+        k3s_address = vpn_ip or self.get_api_ip_port()[0]
+
         k3s_cluster_info = {}
         k3s_conf = f'{self.hostfs}/etc/rancher/k3s/k3s.yaml'
         if not os.path.isfile(k3s_conf) or not k3s_address:
@@ -1159,7 +1162,7 @@ class DockerClient(COEClient):
         if not result:
             # try k3s
             try:
-                return self.is_k3s_running(fallback_address)
+                return self.get_k3s_commissioning_info()
             except Exception as ex:
                 logger.debug(f'No K3s found, assuming K8s {ex}')
                 return k8s_cluster_info

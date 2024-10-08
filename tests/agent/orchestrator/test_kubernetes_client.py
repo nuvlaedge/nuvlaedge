@@ -551,5 +551,5 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                 'image': 'nuvladev/nuvlaedge:tasklist-issue-3298',
                 'restart-count': 0, 'state': 'running', 'status': 'running',
                 'cpu-capacity': 10, 'cpu-usage': 0.03116988,
-                'mem-limit': 8324190208, 'mem-usage': 1.1146632366812923,
+                'mem-limit': 8324190208, 'mem-usage': 92786688,
                 'net-in': 0, 'net-out': 0, 'blk-in': 0, 'blk-out': 0})

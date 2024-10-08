@@ -319,10 +319,10 @@ class KubernetesClient(COEClient):
                       namespace, exc_info=ex)
             raise ex
 
-    def collect_container_metrics(self, old_version: bool = False) -> List[Dict]:
+    def collect_container_metrics(self, _: bool = False) -> List[Dict]:
         """
         Collect container metrics.
-        :param old_version:
+        :param _:
         :return: List of container metrics
         """
         # TODO: Generalize this method to be able to collect and compute
@@ -424,8 +424,8 @@ class KubernetesClient(COEClient):
 
         # MEM
         metrics['mem-limit'] = node_mem_capacity_b
-        mem_usage_b = int(cstats['usage']['memory'].rstrip('Ki')) * KIB_TO_BYTES
-        metrics['mem-usage'] = (mem_usage_b / node_mem_capacity_b) * 100
+        metrics['mem-usage'] = (
+                int(cstats['usage']['memory'].rstrip('Ki')) * KIB_TO_BYTES)
 
         # FIXME: implement net and disk metrics collection.
         self._container_metrics_net(metrics)

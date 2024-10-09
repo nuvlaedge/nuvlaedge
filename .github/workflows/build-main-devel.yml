@@ -5,7 +5,7 @@ name: "NuvlaEdge Dev-Image Build"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ !contains(github.ref_name, 'main')}}
 
 
 # This event should only trigger if the changes affect the source code or this file.

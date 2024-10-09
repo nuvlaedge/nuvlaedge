@@ -74,9 +74,6 @@ class JobLocalTestCase(unittest.TestCase):
         time.sleep(0.01)
         mock_process_job.assert_called_once()
 
-        # launching a job already in the job queue
-        ret = self.obj.launch_job(job_id)
-
         # launching a job already running
         job_id_2 = 'job/running'
         self.obj.running_job = job_id_2
@@ -89,10 +86,22 @@ class JobLocalTestCase(unittest.TestCase):
         self.obj.launch_job(job_id_3)
         self.assertNotIn(job_id_3, self.obj.job_queue)
 
+        # thread should not be started again
+        th_ident = self.obj.job_executor_thread.ident
+        self.obj.launch_job('job/thread')
+        self.assertIsNotNone(self.obj.job_executor_thread.ident)
+        self.assertEqual(th_ident, self.obj.job_executor_thread.ident)
+
         # job timeout
-        job_id_4 = 'job_timeout'
-        self.obj.running_job = job_id_4
+        self.obj.running_job = 'job/timeout'
         self.obj.running_job_since = datetime.datetime.fromtimestamp(0)
         self.assertRaises(SystemExit, self.obj.launch_job, 'job/any')
 
-
+        # launching a job already in the job queue
+        job_id_4 = 'job/id'
+        self.obj.running_job_since = None
+        # self.obj.job_queue.get = lambda: time.sleep(1)
+        self.obj.job_queue.queue.clear()
+        self.obj.launch_job(job_id_4)
+        self.obj.launch_job(job_id_4)
+        self.assertEqual(1, self.obj.job_queue.queue.count(job_id_4))

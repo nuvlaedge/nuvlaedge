@@ -1,8 +1,9 @@
 import logging
 import os
 import time
-from typing import Dict, List
+from typing import Dict, List, Union
 
+from nuvlaedge.common.utils import format_datetime_for_nuvla
 from nuvlaedge.agent.common import util
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.common.constant_files import FILE_NAMES
@@ -19,6 +20,8 @@ JOB_TTL_SECONDS_AFTER_FINISHED = 60 * 2
 JOB_BACKOFF_LIMIT = 0
 DEFAULT_IMAGE_PULL_POLICY = "Always"
 
+NANOCORES = 1000000000
+KIB_TO_BYTES = 1024
 
 class TimeoutException(Exception):
     ...
@@ -81,17 +84,18 @@ class KubernetesClient(COEClient):
                     f'Using "{DEFAULT_IMAGE_PULL_POLICY}" instead.')
         return DEFAULT_IMAGE_PULL_POLICY
 
-    def get_node_info(self):
-        if self.host_node_name:
+    def get_node_info(self, node_name=None) -> Union[client.V1Node, None]:
+        node_name = node_name or self.host_node_name
+        if node_name:
             try:
-                return self.client.read_node(self.host_node_name)
+                return self.client.read_node(node_name)
             except AttributeError:
-                log.warning(f'Cannot infer node information for node "{self.host_node_name}"')
+                log.warning(f'Cannot infer node information for node "{node_name}"')
 
         return None
 
     def get_host_os(self):
-        node = self.get_node_info()
+        node = self.get_node_info(self.host_node_name)
         if node:
             return f"{node.status.node_info.os_image} {node.status.node_info.kernel_version}"
 
@@ -315,21 +319,36 @@ class KubernetesClient(COEClient):
                       namespace, exc_info=ex)
             raise ex
 
-    def collect_container_metrics(self, old_version: bool = False) -> List[Dict]:
-        try:
-            pods_here = self.client \
-                .list_pod_for_all_namespaces(
-                    field_selector=f'spec.nodeName={self.host_node_name}')
-        except ApiException as ex:
-            log.error('Failed listing pods for all namespaces on %s: %s',
-                      self.host_node_name, ex, exc_info=ex)
-            return []
-        pods_here_per_name = {f'{p.metadata.namespace}/{p.metadata.name}': p
-                              for p in pods_here.items}
+    def collect_container_metrics(self, _: bool = False) -> List[Dict]:
+        """
+        Collect container metrics.
+        :param _:
+        :return: List of container metrics
+        """
+        # TODO: Generalize this method to be able to collect and compute
+        #  metrics for all containers running on all nodes, not just the one
+        #  where the agent is running.
+        node_name = self.host_node_name
 
-        this_node_capacity = self.get_node_info().status.capacity
-        node_cpu_capacity = int(this_node_capacity['cpu'])
-        node_mem_capacity_kib = int(this_node_capacity['memory'].rstrip('Ki'))
+        node_info = self.get_node_info(node_name)
+        if node_info:
+            node_capacity = node_info.status.capacity
+            node_cpu_capacity = int(node_capacity['cpu'])
+            node_mem_capacity_b = (int(node_capacity['memory'].rstrip('Ki'))
+                                   * KIB_TO_BYTES)
+        else:
+            raise Exception('Failed getting node info.')
+
+        try:
+            pods = self.client.list_pod_for_all_namespaces(
+                field_selector=f'spec.nodeName={node_name}'
+            )
+        except ApiException as ex:
+            log.error('Failed listing pods for all namespaces: %s',
+                      ex, exc_info=ex)
+            return []
+        pods_per_ns = {f'{p.metadata.namespace}/{p.metadata.name}': p
+                       for p in pods.items}
 
         try:
             pod_metrics_list = \
@@ -341,83 +360,114 @@ class KubernetesClient(COEClient):
         out = []
         for pod in pod_metrics_list.get('items', []):
             short_identifier = f"{pod['metadata']['namespace']}/{pod['metadata']['name']}"
-            if short_identifier not in pods_here_per_name:
+            if short_identifier not in pods_per_ns:
                 continue
 
-            for container in pod.get('containers', []):
+            for cstats in pod.get('containers', []):
                 try:
-                    metrics = self._container_metrics(pod['metadata']['name'],
-                                                      container,
-                                                      node_cpu_capacity,
-                                                      node_mem_capacity_kib,
-                                                      pods_here_per_name,
-                                                      short_identifier)
+                    metrics = self._container_metrics(
+                        pods_per_ns[short_identifier],
+                        cstats,
+                        node_cpu_capacity,
+                        node_mem_capacity_b)
                     out.append(metrics)
                 except Exception as ex:
                     log.error('Failed collecting metrics for container %s in pod %s: %s',
-                              container['name'], pod['metadata']['name'], ex)
+                              cstats['name'], pod['metadata']['name'], ex)
 
         return out
 
-    def _container_metrics(self, pod_name: str, container: dict,
-                           node_cpu_capacity: int, node_mem_capacity_kib: int,
-                           pods_here_per_name, short_identifier):
+    def _container_metrics(self, pod: client.V1Pod, cstats: dict,
+                           node_cpu_capacity: int, node_mem_capacity_b: int):
+        """
+        Compiles and returns container metrics.
+
+        :param pod: The Kubernetes Pod object containing the container.
+        :type pod: client.V1Pod
+        :param cstats: The container statistics.
+        :type cstats: dict
+        :param node_cpu_capacity: The CPU capacity of the node in cores.
+        :type node_cpu_capacity: int
+        :param node_mem_capacity_b: The memory capacity of the node in bytes.
+        :type node_mem_capacity_b: int
+        :return: A dictionary containing the container metrics.
+        :rtype: dict
+        """
+
+        pod_name = pod.metadata.name
+        container_name = cstats['name']
+
+        # Metadata
         metrics = {
-            'id': pod_name,
-            'name': container['name']
+            'name': f"{pod_name}/{container_name}"
         }
-        container_cpu_usage = int(container['usage']['cpu'].rstrip('n'))
-        # units come in nanocores
-        metrics['cpu-percent'] = "%.2f" % round(
-            container_cpu_usage * 100 / (node_cpu_capacity * 1000000000), 2)
-        mem_usage_kib = int(container['usage']['memory'].rstrip('Ki'))
-        # units come in Ki
-        metrics['mem-percent'] = "%.2f" % round(
-            mem_usage_kib * 100 / node_mem_capacity_kib, 2)
-        metrics['mem-usage-limit'] = \
-            f"{round(mem_usage_kib / 1024, 1)}MiB / {round(node_mem_capacity_kib / 1024, 1)}MiB"
-        # FIXME: implement net and disk metrics collection.
-        net_in, net_out = self.collect_container_metrics_net()
-        blk_in, blk_out = self.collect_container_metrics_block()
-        metrics.update({'net-in-out': f"{round(net_in, 1)}MB / {round(net_out, 1)}MB",
-                        'blk-in-out': f"{round(blk_in, 1)}MB / {round(blk_out, 1)}MB"})
-        for cstat in pods_here_per_name[short_identifier].status.container_statuses:
-            if cstat.name == container['name']:
+        for cstat in pod.status.container_statuses:
+            if cstat.name == container_name:
+                metrics['id'] = cstat.container_id
+                metrics['image'] = cstat.image
+                metrics['restart-count'] = int(cstat.restart_count or 0)
                 for k, v in cstat.state.to_dict().items():
                     if v:
-                        metrics['container-status'] = k
+                        metrics['state'] = k
+                        metrics['status'] = k
+                        if k == 'running':
+                            metrics['created-at'] = format_datetime_for_nuvla(
+                                pod.metadata.creation_timestamp)
+                            metrics['started-at'] = format_datetime_for_nuvla(
+                                cstat.state.running.started_at)
+                        elif k == 'terminated':
+                            pass
+                            # TODO: expose these metrics
+                            # metrics['finished-at'] = format_datetime_for_nuvla(
+                            #     cstat.state.terminated.finished_at)
+                            # metrics['exit-code'] = cstat.state.terminated.exit_code
+                            # metrics['reason'] = cstat.state.terminated.reason
+                        elif k == 'waiting':
+                            pass
+                            # TODO: expose these metrics
+                            # metrics['reason'] = cstat.state.waiting.reason
                         break
 
-                metrics['restart-count'] = int(cstat.restart_count or 0)
+        # CPU
+        metrics['cpu-capacity'] = node_cpu_capacity
+        container_cpu_usage = int(cstats['usage']['cpu'].rstrip('n'))
+        metrics['cpu-usage'] = \
+            (container_cpu_usage / (node_cpu_capacity * NANOCORES)) * 100
+
+        # MEM
+        metrics['mem-limit'] = node_mem_capacity_b
+        metrics['mem-usage'] = (
+                int(cstats['usage']['memory'].rstrip('Ki')) * KIB_TO_BYTES)
+
+        # FIXME: implement net and disk metrics collection.
+        self._container_metrics_net(metrics)
+        self._container_metrics_block(metrics)
+
         return metrics
 
-    def get_installation_parameters(self):
+    def get_installation_parameters(self) -> dict:
         nuvlaedge_deployments = \
             self.client_apps.list_namespaced_deployment(
                 namespace=self.namespace, label_selector=util.base_label).items
 
-        environment = []
-        for dep in nuvlaedge_deployments:
-            dep_containers = dep.spec.template.spec.containers
-            for container in dep_containers:
-                try:
-                    env = container.env if container.env else []
-                    for env_var in env:
-                        try:
-                            _ = env_var.value_from
-                            # this is a templated var. No need to report it
-                            continue
-                        except AttributeError:
-                            pass
-
-                        environment.append(f'{env_var.name}={env_var.value}')
-                except AttributeError:
-                    pass
-
+        environment = self._extract_environment_variables(nuvlaedge_deployments)
         unique_env = list(filter(None, set(environment)))
 
         return {'project-name': self.namespace,
                 'environment': unique_env}
+
+    def _extract_environment_variables(self, deployments) -> list:
+        environment = []
+        for dep in deployments:
+            for container in dep.spec.template.spec.containers:
+                if container.env:
+                    environment.extend(self._process_container_env(container.env))
+        return environment
+
+    @staticmethod
+    def _process_container_env(env) -> list:
+        return [f'{env_var.name}={env_var.value}' for env_var in env 
+                if not hasattr(env_var, 'value_from')]
 
     def read_system_issues(self, node_info):
         errors = []
@@ -726,13 +776,17 @@ class KubernetesClient(COEClient):
         except TimeoutException as ex_timeout:
             log.warning('Timeout waiting for pod to be deleted: %s', ex_timeout)
 
-    def collect_container_metrics_net(self):
+    def _container_metrics_net(self, metrics: dict):
         # FIXME: implement. Not clear how to get Rx/Tx metrics.
-        return 0, 0
+        metrics['net-in'] = 0
+        metrics['net-out'] = 0
+        return metrics
 
-    def collect_container_metrics_block(self):
+    def _container_metrics_block(self, metrics: dict):
         # FIXME: implement. Not clear how to get the block IO.
-        return 0, 0
+        metrics['blk-in'] = 0
+        metrics['blk-out'] = 0
+        return metrics
 
     def get_current_container_id(self) -> str:
         # TODO

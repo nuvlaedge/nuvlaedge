@@ -612,10 +612,8 @@ class DockerClient(COEClient):
         """
         cs = container_stats
         cpu_percent = float('nan')
-        online_cpus = 0
 
         try:
-
             online_cpus_alt = len(cs["cpu_stats"]["cpu_usage"].get("percpu_usage", []))
             online_cpus = cs["cpu_stats"].get('online_cpus', online_cpus_alt)
 
@@ -800,6 +798,7 @@ class DockerClient(COEClient):
         Returns a list of dictionaries, where each dictionary represents the metrics for a specific container.
         The dictionary will contain the following keys:
 
+        # FIXME: these are old keys and need to be updated.
         - 'id': The ID of the container.
         - 'name': The name of the container.
         - 'container-status': The current status of the container.

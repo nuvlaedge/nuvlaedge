@@ -6,6 +6,7 @@ IMAGE_REPO=${2:-nuvlaedge}
 export nuvlaedge_version=$(poetry version -s)
 export IMAGE_TAG_NAME=$IMAGE_ORG/$IMAGE_REPO:${3:-$nuvlaedge_version}
 
+rm -rf dist/*
 
 poetry build --no-interaction --format=wheel
 poetry export --format requirements.txt --output requirements.txt --without-hashes --without-urls
@@ -18,7 +19,4 @@ poetry export --format requirements.txt --output requirements.gpu.txt --without-
 poetry export --format requirements.txt --output requirements.job-engine.txt --without-hashes --without-urls --with job-engine
 poetry export --format requirements.txt --output requirements.bluetooth.txt --without-hashes --without-urls --with bluetooth
 
-mv dist/nuvlaedge-${nuvlaedge_version}-py3-none-any.whl dist/nuvlaedge-latest-py3-none-any.whl
-
 docker build --build-arg PACKAGE_TAG=$nuvlaedge_version -t ${IMAGE_TAG_NAME} .
-

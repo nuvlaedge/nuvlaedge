@@ -404,16 +404,28 @@ class KubernetesClient(COEClient):
         for cstat in pod.status.container_statuses:
             if cstat.name == container_name:
                 metrics['id'] = cstat.container_id
-                metrics['created-at'] = format_datetime_for_nuvla(
-                    cstat.state.running.started_at)
-                metrics['started-at'] = format_datetime_for_nuvla(
-                    cstat.state.running.started_at)
                 metrics['image'] = cstat.image
                 metrics['restart-count'] = int(cstat.restart_count or 0)
                 for k, v in cstat.state.to_dict().items():
                     if v:
                         metrics['state'] = k
                         metrics['status'] = k
+                        if k == 'running':
+                            metrics['created-at'] = format_datetime_for_nuvla(
+                                pod.metadata.creation_timestamp)
+                            metrics['started-at'] = format_datetime_for_nuvla(
+                                cstat.state.running.started_at)
+                        elif k == 'terminated':
+                            pass
+                            # TODO: expose these metrics
+                            # metrics['finished-at'] = format_datetime_for_nuvla(
+                            #     cstat.state.terminated.finished_at)
+                            # metrics['exit-code'] = cstat.state.terminated.exit_code
+                            # metrics['reason'] = cstat.state.terminated.reason
+                        elif k == 'waiting':
+                            pass
+                            # TODO: expose these metrics
+                            # metrics['reason'] = cstat.state.waiting.reason
                         break
 
         # CPU

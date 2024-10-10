@@ -354,14 +354,31 @@ class COEClientKubernetesTestCase(unittest.TestCase):
         mock_pod_metrics.return_value = {
             'items': [fake.mock_kubernetes_pod_metrics("pod-1"), fake.mock_kubernetes_pod_metrics("pod-2")]
         }
-        self.assertIsInstance(self.obj.collect_container_metrics(), list,
-                              'Expecting list of pod container metrics, but got something else')
+        res = self.obj.collect_container_metrics()
 
-        expected_field = ['container-status', 'name', 'id', 'cpu-percent', 'mem-percent']
-        self.assertTrue(set(self.obj.collect_container_metrics()[0]).issuperset(set(expected_field)),
+        self.assertIsInstance(
+            res, list,
+            'Expecting list of pod container metrics, but got something else')
+        self.assertEqual(
+            len(res), 2,
+            'Expecting metrics for 2 containers, but got something else')
+
+        expected_field = {'name',
+                          'id',
+                          'image',
+                          'restart-count',
+                          'state',
+                          'status',
+                          'cpu-capacity',
+                          'cpu-usage',
+                          'mem-limit',
+                          'mem-usage',
+                          'net-in',
+                          'net-out',
+                          'blk-in',
+                          'blk-out'}
+        self.assertTrue(set(res[0]).issuperset(expected_field),
                         'Missing container metrics keys')
-        self.assertEqual(len(self.obj.collect_container_metrics()), 2,
-                         'Expecting metrics for 2 containers, but got something else')
 
     def test_get_installation_parameters(self):
         self.obj.client_apps.list_namespaced_deployment.return_value.items = []
@@ -509,7 +526,9 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'Received additional COE even though method is not implemented for K8s')
 
     def test_container_metrics(self):
-        with open('agent/orchestrator/pod_system_manager.pkl', 'rb') as f:
+        fn = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          'pod_system_manager.pkl')
+        with open(fn, 'rb') as f:
             pod = pickle.load(f)
         pod_metrics = \
             {'metadata': {'name': 'system-manager-5788c6b45d-mf9ck',
@@ -540,16 +559,17 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'pods': '110'}
         node_cpu_capacity = int(node_capacity['cpu'])
         node_mem_capacity_b = int(node_capacity['memory'].rstrip('Ki')) * 1024
-        self.assertEqual(
-            self.obj._container_metrics(pod, cstats, node_cpu_capacity,
-                                        node_mem_capacity_b),
-            {
-                'name': 'system-manager-5788c6b45d-mf9ck/system-manager',
-                'id': 'docker://9a1081df886782c1c198623e7e27ce95e44a4f973715e1c8fe249aa4144c72d7',
-                'created-at': '2024-10-02T13:18:45.000Z',
-                'started-at': '2024-10-02T13:18:45.000Z',
-                'image': 'nuvladev/nuvlaedge:tasklist-issue-3298',
-                'restart-count': 0, 'state': 'running', 'status': 'running',
-                'cpu-capacity': 10, 'cpu-usage': 0.03116988,
-                'mem-limit': 8324190208, 'mem-usage': 92786688,
-                'net-in': 0, 'net-out': 0, 'blk-in': 0, 'blk-out': 0})
+
+        res = self.obj._container_metrics(
+            pod, cstats, node_cpu_capacity, node_mem_capacity_b)
+        cmp = {
+            'name': 'system-manager-5788c6b45d-mf9ck/system-manager',
+            'id': 'docker://9a1081df886782c1c198623e7e27ce95e44a4f973715e1c8fe249aa4144c72d7',
+            'created-at': '2024-10-02T13:18:33.000Z',
+            'started-at': '2024-10-02T13:18:45.000Z',
+            'image': 'nuvladev/nuvlaedge:tasklist-issue-3298',
+            'restart-count': 0, 'state': 'running', 'status': 'running',
+            'cpu-capacity': 10, 'cpu-usage': 0.03116988,
+            'mem-limit': 8324190208, 'mem-usage': 92786688,
+            'net-in': 0, 'net-out': 0, 'blk-in': 0, 'blk-out': 0}
+        self.assertEqual(res, cmp)

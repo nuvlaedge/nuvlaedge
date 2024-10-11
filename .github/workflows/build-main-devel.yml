@@ -169,7 +169,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.slim-docker
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
+          platforms: ${{ matrix.arch }}
           build-args: |
             GIT_BRANCH=${{ github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}

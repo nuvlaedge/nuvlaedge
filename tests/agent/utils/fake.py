@@ -44,12 +44,16 @@ def base_pod(name: str = None, phase: str = 'running'):
             'container_statuses': [
                 {
                     'name': 'container1',
+                    'container_id': 'docker://1234567891',
+                    'image': 'fake-image',
                     'ready': True,
                     'restart_count': 1,
                     'state': ''
                 },
                 {
                     'name': 'container2',
+                    'container_id': 'docker://1234567892',
+                    'image': 'fake-image',
                     'ready': True,
                     'restart_count': 2,
                     'state': ''

@@ -3,9 +3,9 @@
 
 name: "NuvlaEdge Dev-Image Build"
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: ${{ !contains(github.ref_name, 'main')}}
+#concurrency:
+#  group: ${{ github.workflow }}-${{ github.ref_name }}
+#  cancel-in-progress: ${{ !contains(github.ref_name, 'main')}}
 
 
 # This event should only trigger if the changes affect the source code or this file.
@@ -77,6 +77,10 @@ jobs:
   build-dev:
     runs-on: ubuntu-latest
     needs: unittests
+
+    strategy:
+      matrix:
+        arch: [ linux/amd64, linux/arm/v7, linux/arm64/v8 ]
     steps:
       - name: Set env
         shell: bash
@@ -142,49 +146,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64
-          build-args: |
-            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
-            GIT_BUILD_TIME=${{ env.BUILD_TIME }}
-            GIT_COMMIT_ID=${{ github.sha }}
-            GITHUB_RUN_NUMBER=${{ github.run_number }}
-            GITHUB_RUN_ID=${{ github.run_id }}
-            PROJECT_URL=${{ github.server_url }}/${{ github.repository }}
-            PACKAGE_NAME=${{ env.PACKAGE_NAME }}
-          push: true
-          tags: >
-            nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }},
-            nuvladev/${{ github.event.repository.name }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push ARMV7
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/arm/v7
-          build-args: |
-            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
-            GIT_BUILD_TIME=${{ env.BUILD_TIME }}
-            GIT_COMMIT_ID=${{ github.sha }}
-            GITHUB_RUN_NUMBER=${{ github.run_number }}
-            GITHUB_RUN_ID=${{ github.run_id }}
-            PROJECT_URL=${{ github.server_url }}/${{ github.repository }}
-            PACKAGE_NAME=${{ env.PACKAGE_NAME }}
-          push: true
-          tags: >
-            nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }},
-            nuvladev/${{ github.event.repository.name }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push ARM64
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/arm64/v8
+          platforms: ${{ matrix.arch }}
           build-args: |
             GIT_BRANCH=${{ github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}

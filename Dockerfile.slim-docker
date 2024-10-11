@@ -110,7 +110,7 @@ FROM base-builder AS agent-builder
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Docker and docker compose CLIs
-COPY --link--from=docker /usr/local/bin/docker /usr/bin/docker
+COPY --link --from=docker /usr/local/bin/docker /usr/bin/docker
 #COPY --link --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
 #                   /usr/local/libexec/docker/cli-plugins/docker-compose
 # Docker Compose

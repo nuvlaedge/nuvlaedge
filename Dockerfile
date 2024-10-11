@@ -13,30 +13,11 @@ ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:python${PYTHON_MAJ_MIN_VERSION}-pydantic${PYDANTIC_VERSION}
 
+
 # ------------------------------------------------------------------------
 # NuvlaEdge base image for labels and environments variables
 # ------------------------------------------------------------------------
 FROM ${BASE_IMAGE} AS nuvlaedge-base
-
-ARG GIT_BRANCH
-ARG GIT_COMMIT_ID
-ARG GIT_BUILD_TIME
-ARG GITHUB_RUN_NUMBER
-ARG GITHUB_RUN_ID
-ARG PROJECT_URL
-
-
-LABEL git.branch=${GIT_BRANCH} \
-      git.commit.id=${GIT_COMMIT_ID} \
-      git.build.time=${GIT_BUILD_TIME} \
-      git.run.number=${GITHUB_RUN_NUMBER} \
-      git.run.id=${GITHUB_RUN_ID}
-LABEL org.opencontainers.image.authors="support@sixsq.com" \
-      org.opencontainers.image.created=${GIT_BUILD_TIME} \
-      org.opencontainers.image.url=${PROJECT_URL} \
-      org.opencontainers.image.vendor="SixSq SA" \
-      org.opencontainers.image.title="NuvlaEdge" \
-      org.opencontainers.image.description="Common image for NuvlaEdge software components"
 
 
 # ------------------------------------------------------------------------
@@ -237,7 +218,7 @@ RUN find /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION} -name '*.py?' -delete
 # ------------------------------------------------------------------------
 # Final NuvlaEdge image
 # ------------------------------------------------------------------------
-FROM nuvlaedge-base
+FROM nuvlaedge-base AS nuvlaedge-final
 
 ARG PYTHON_MAJ_MIN_VERSION
 
@@ -373,6 +354,24 @@ RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/r
     ln -s /app/my_init /usr/bin/my_init && \
     ln -s $(which python3) /usr/bin/python3
 
+ARG GIT_BRANCH
+ARG GIT_COMMIT_ID
+ARG GIT_BUILD_TIME
+ARG GITHUB_RUN_NUMBER
+ARG GITHUB_RUN_ID
+ARG PROJECT_URL
+
+LABEL git.branch=${GIT_BRANCH} \
+      git.commit.id=${GIT_COMMIT_ID} \
+      git.build.time=${GIT_BUILD_TIME} \
+      git.run.number=${GITHUB_RUN_NUMBER} \
+      git.run.id=${GITHUB_RUN_ID}
+LABEL org.opencontainers.image.authors="support@sixsq.com" \
+      org.opencontainers.image.created=${GIT_BUILD_TIME} \
+      org.opencontainers.image.url=${PROJECT_URL} \
+      org.opencontainers.image.vendor="SixSq SA" \
+      org.opencontainers.image.title="NuvlaEdge" \
+      org.opencontainers.image.description="Common image for NuvlaEdge software components"
 
 WORKDIR /opt/nuvlaedge/
 

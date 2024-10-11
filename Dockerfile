@@ -33,7 +33,7 @@ RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
 
 # Install pydantic form source to prevent bulding locally
-COPY --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -130,8 +130,8 @@ FROM base-builder AS agent-builder
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Docker and docker compose CLIs
-COPY --from=docker /usr/local/bin/docker /usr/bin/docker
-#COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
+COPY --link --from=docker /usr/local/bin/docker /usr/bin/docker
+#COPY --link --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
 #                   /usr/local/libexec/docker/cli-plugins/docker-compose
 # Docker Compose
 RUN set -eux; \

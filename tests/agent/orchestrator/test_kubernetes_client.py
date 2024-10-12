@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+from datetime import datetime
+from types import SimpleNamespace
+import json
 import logging
-import mock
 import os
-import pickle
 import sys
-import unittest
 
+import unittest
+import unittest.mock as mock
 
 import kubernetes
 from kubernetes.client.exceptions import ApiException
-from kubernetes.client.models import V1Pod
 
 import tests.agent.utils.fake as fake
 os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
@@ -525,11 +525,23 @@ class COEClientKubernetesTestCase(unittest.TestCase):
         self.assertEqual(self.obj.infer_if_additional_coe_exists(), {},
                          'Received additional COE even though method is not implemented for K8s')
 
-    def test_container_metrics(self):
+    @staticmethod
+    def _k8s_pod_for_container_metrics():
         fn = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'pod_system_manager.pkl')
-        with open(fn, 'rb') as f:
-            pod = pickle.load(f)
+                          'pod_system_manager.json')
+        with open(fn) as fp:
+            pod = json.load(fp, object_hook=lambda d: SimpleNamespace(**d))
+        for cs in pod.status.container_statuses:
+            started_at = kubernetes.client.V1ContainerStateRunning(
+                started_at=datetime.fromisoformat(cs.state.running.started_at))
+            cs.state = kubernetes.client.V1ContainerState(running=started_at)
+        pod.metadata.creation_timestamp = datetime.fromisoformat(
+            pod.metadata.creation_timestamp)
+        return pod
+
+    def test_container_metrics(self):
+        pod = self._k8s_pod_for_container_metrics()
+
         pod_metrics = \
             {'metadata': {'name': 'system-manager-5788c6b45d-mf9ck',
                           'namespace': 'nuvlabox-8760a7b4-cdc9-47f8-ade1-9738714c4420',

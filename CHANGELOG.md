@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.16.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.1) (2024-09-30)
+
+[Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.0...2.16.1)
+
 ## [2.16.0](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.0) (2024-09-27)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.15.3...2.16.0)

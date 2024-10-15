@@ -180,7 +180,7 @@ jobs:
           gh release create ${{ github.ref }} --generate-notes ./dist/*
 
   release-image:
-    needs: image-matrix
+    needs: trigger-release
     if: needs.trigger-release.outputs.release_created
     runs-on: ubuntu-latest
     strategy:

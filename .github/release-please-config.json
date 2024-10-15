@@ -1,7 +1,7 @@
 {
   "release-type": "python",
   "include-v-in-tag": false,
-  "last-release-sha": "347100ee64c27d15f8c8a5ef65895a51dc4dfdb5",
+  "bootstrap-sha": "347100ee64c27d15f8c8a5ef65895a51dc4dfdb5",
   "changelog-sections": [
     { "type": "feat", "section": "Features" },
     { "type": "feature", "section": "Features" },

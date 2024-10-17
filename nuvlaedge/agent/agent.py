@@ -54,7 +54,6 @@ from nuvlaedge.agent.manager import WorkerManager
 from nuvlaedge.agent.settings import AgentSettings
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.orchestrator.factory import get_coe_client
-from nuvlaedge.agent.orchestrator.job_local import JobLocal
 from nuvlaedge.models import model_diff
 
 
@@ -478,6 +477,7 @@ class Agent:
 
     @cached_property
     def job_local(self):
+        from nuvlaedge.agent.orchestrator.job_local import JobLocal
         return JobLocal(self._nuvla_client.nuvlaedge_client)
 
     def get_job_launcher(self, job_href) -> JobLauncher:

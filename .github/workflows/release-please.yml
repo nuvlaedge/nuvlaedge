@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - release-please
+      - main
+      - release/*
 
 jobs:
   build-nuvlaedge:

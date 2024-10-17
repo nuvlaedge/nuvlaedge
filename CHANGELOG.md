@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-10-17)
+
+
+### Continuous Integration
+
+* Add release-please ([b4cfb14](https://github.com/nuvlaedge/nuvlaedge/commit/b4cfb141e517e4829c810532ade35c7b376c3707))
+
 ## [2.16.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.1) (2024-09-30)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.0...2.16.1)

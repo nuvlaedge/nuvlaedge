@@ -748,12 +748,10 @@ class COEClientDockerTestCase(unittest.TestCase):
         # otherwise...
         mock_containers_get.reset_mock(side_effect=True)
         mock_containers_get.return_value = fake.MockContainer(myid=agent_id)
-        # since all labels exist, the output should container the respective fields for the telemetry
         expected_fields = ['project-name', 'working-dir', 'config-files', 'environment']
         self.assertIsInstance(self.obj.get_installation_parameters(), dict,
                               'Expecting installation parameters to be a JSON structure')
-        self.assertTrue(set(expected_fields).issubset(self.obj.get_installation_parameters()),
-                        f'Installation parameters are missing the required telemetry fields: {expected_fields}')
+        self.assertTrue(set(self.obj.get_installation_parameters()).issubset(expected_fields))
 
         # if containers have labels that are supposed to be ignored, these should not be in the returned value
         new_agent_container = fake.MockContainer(myid=agent_id)
@@ -762,7 +760,7 @@ class COEClientDockerTestCase(unittest.TestCase):
         mock_containers_list.return_value = [fake.MockContainer(), new_agent_container]
         mock_containers_get.return_value = new_agent_container
         self.assertNotIn(ignore_env,
-                         self.obj.get_installation_parameters()['environment'],
+                         self.obj.get_installation_parameters().get('environment', {}),
                          'Unwanted environment variables are not being properly ignored')
 
         # other environment variables will be included though
@@ -790,11 +788,11 @@ class COEClientDockerTestCase(unittest.TestCase):
                          ['c.yml'],
                          'Installation config files are not reported correctly after an update')
 
-        # finally, if one of the compose file labels are missing from the agent_container, we get None
-        new_agent_container.labels['com.docker.compose.project'] = None
+        # finally, if all the compose file labels and env are missing from the agent_container, we get None
+        new_agent_container.labels = {'com.docker.compose.project': ''}
+        new_agent_container.attrs['Config']['Env'] = []
         mock_containers_get.return_value = new_agent_container
-        self.assertIsNone(self.obj.get_installation_parameters(),
-                          'Expected no installation parameters due to missing Docker Compose labels, but got something')
+        self.assertIsNone(self.obj.get_installation_parameters())
 
     def test_read_system_issues(self):
         node_info = {

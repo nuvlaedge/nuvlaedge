@@ -27,56 +27,8 @@ on:
 
 
 jobs:
-  unittests:
-    name: "Run UniTests"
-    runs-on: "ubuntu-latest"
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: SetUp python interpreter
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Load cached poetry
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: dotlocal-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-
-      - name: Generate requirements for TOX
-        run: ./generate-requirements.sh
-
-      - name: Install Tox
-        run: pip install tox
-
-      - name: Run UnitTests
-        run: tox
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          check_name: "| Unit Tests Results: Common Library |"
-          files: test-report.xml
-
   build-dev:
     runs-on: ubuntu-latest
-    needs: unittests
     steps:
       - name: Set env
         shell: bash

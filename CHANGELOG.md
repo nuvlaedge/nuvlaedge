@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-10-18)
+
+
+### Bug Fixes
+
+* **agent:** send installation-parameters even if partial ([#209](https://github.com/nuvlaedge/nuvlaedge/issues/209)) ([f0992ae](https://github.com/nuvlaedge/nuvlaedge/commit/f0992ae40195fe2cbcf8f62d6ba58a8be6af3ebb))
+
+
+### Continuous Integration
+
+* replace release workflow with release-please action ([#210](https://github.com/nuvlaedge/nuvlaedge/issues/210)) ([4e09af5](https://github.com/nuvlaedge/nuvlaedge/commit/4e09af5f934d82122c6413f3ab7237f03c025db6))
+
 ## [2.16.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.1) (2024-09-30)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.0...2.16.1)

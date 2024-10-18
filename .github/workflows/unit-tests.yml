@@ -1,12 +1,25 @@
-name: "UnitTesting: NuvlaEdge"
+name: "UnitTests"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: ${{ !contains(github.ref_name, 'main')}}
 
 on:
   workflow_dispatch:
 
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    paths:
+      - "nuvlaedge/**"
+      - "tests/**"
+      - ".github/workflows/unit-tests.yml"
+      - "pyproject.toml"
 
 jobs:
   unittests:
-    name: "Run UniTests"
+    name: "Run UnitTests"
     runs-on: "ubuntu-latest"
 
     steps:

@@ -975,7 +975,7 @@ class DockerClient(COEClient):
                 - 'config-files': A list of unique configuration files.
                 - 'environment': A list of unique environment variables.
 
-                If any of the required parameters (working directory, project name, config files) are missing, None is returned.
+                If all parameters are missing, None is returned.
         Raises:
             RuntimeError: If the current container cannot be found by ID.
         """
@@ -1007,13 +1007,17 @@ class DockerClient(COEClient):
         unique_config_files = list(filter(None, set(config_files)))
         unique_env = list(filter(None, set(environment)))
 
-        if working_dir and project_name and unique_config_files:
-            return {'project-name': project_name,
-                    'working-dir': working_dir,
-                    'config-files': unique_config_files,
-                    'environment': unique_env}
-        else:
-            return None
+        installation_parameters = {}
+        if working_dir:
+            installation_parameters['working-dir'] = working_dir
+        if project_name:
+            installation_parameters['project-name'] = project_name
+        if unique_config_files:
+            installation_parameters['config-files'] = unique_config_files
+        if unique_env:
+            installation_parameters['environment'] = unique_env
+
+        return installation_parameters if installation_parameters else None
 
     def read_system_issues(self, node_info):
         errors = []

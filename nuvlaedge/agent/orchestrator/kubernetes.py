@@ -23,6 +23,7 @@ DEFAULT_IMAGE_PULL_POLICY = "Always"
 NANOCORES = 1000000000
 KIB_TO_BYTES = 1024
 
+
 class TimeoutException(Exception):
     ...
 
@@ -52,6 +53,7 @@ class KubernetesClient(COEClient):
         super().__init__()
         config.load_incluster_config()
         self.client = client.CoreV1Api()
+        self.client_network = client.NetworkingV1Api()
         self.client_apps = client.AppsV1Api()
         self.client_batch_api = client.BatchV1Api()
         self.namespace = \
@@ -65,7 +67,75 @@ class KubernetesClient(COEClient):
         self.job_image_pull_policy = os.getenv('JOB_IMAGE_PULL_POLICY', DEFAULT_IMAGE_PULL_POLICY)
         self.data_gateway_name = f"data-gateway.{self.namespace}"
 
-    def list_raw_resources(self, resource_type) -> list[dict] | None:
+    def list_raw_resources(self, resource_type: str) -> list[dict] | None:
+        match resource_type:
+            case 'images':
+                imgs = [x.to_dict() for x in
+                        self.client.read_node(
+                            self.host_node_name).status.images]
+                for img in imgs:
+                    img['names'] = sorted(img.pop('names'))
+                return sorted(imgs, key=lambda x: x['names'][0])
+            case 'namespaces':
+                return sorted([x.to_dict() for x in
+                               self.client.list_namespace().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'persistentvolumes':
+                return sorted([x.to_dict() for x in
+                               self.client.list_persistent_volume().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'persistentvolumeclaims':
+                return sorted([x.to_dict() for x in
+                               self.client.list_persistent_volume_claim_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'configmaps':
+                return sorted([x.to_dict() for x in
+                               self.client.list_config_map_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'secrets':
+                return sorted([x.to_dict() for x in
+                               self.client.list_secret_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'services':
+                return sorted([x.to_dict() for x in
+                               self.client.list_service_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'ingresses':
+                return sorted([x.to_dict() for x in
+                               self.client_network.list_ingress_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'cronjobs':
+                return sorted([x.to_dict() for x in
+                               self.client_batch_api.list_cron_job_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'jobs':
+                return sorted([x.to_dict() for x in
+                               self.client_batch_api.list_job_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'statefulsets':
+                return sorted([x.to_dict() for x in
+                               self.client_apps.list_stateful_set_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'daemonsets':
+                return sorted([x.to_dict() for x in
+                               self.client_apps.list_daemon_set_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'deployments':
+                return sorted([x.to_dict() for x in
+                               self.client_apps.list_deployment_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'pods':
+                return sorted([x.to_dict() for x in
+                               self.client.list_pod_for_all_namespaces().items],
+                              key=lambda x: x['metadata']['name'])
+            case 'nodes':
+                res = [node.to_dict() for node in self.client.list_node().items]
+                for node in res:
+                    if 'status' in node and 'images' in node['status']:
+                        del node['status']['images']
+                return sorted(res, key=lambda x: x['metadata']['name'])
+            case _:
+                log.error(f'Unknown resource type: {resource_type}')
         return None
 
     @staticmethod

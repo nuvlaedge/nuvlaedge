@@ -1,0 +1,93 @@
+name: 'Pre-Release Validation'
+
+on:
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: 'Logging Level'
+        required: false
+        type: choice
+        default: 'INFO'
+        options:
+          - 'DEBUG'
+          - 'INFO'
+          - 'WARNING'
+          - 'ERROR'
+
+      deployment_branch:
+        description: 'Deployment Repository branch to test against'
+        required: false
+        type: string
+
+      nuvlaedge_version:
+        description: 'NuvlaEdge Tag'
+        required: false
+        type: string
+
+      retrieve_logs:
+        # Logs are retrieved whenever there is an error on the validation
+        description: 'Retrieve docker execution logs'
+        required: false
+        type: boolean
+        default: false
+
+  pull_request:
+    branches:
+      - "release-please--branches-main"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  VALIDATION_IMAGE_NAME: "nuvladev/validation:latest"
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
+
+jobs:
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      boards: ${{ steps.set-boards.outputs.boards }}
+      tests: ${{ steps.set-tests.outputs.tests }}
+    steps:
+      - id: set-boards
+        run: |
+          echo "boards=${{ vars.TESTBED_BOARDS }}" >> $GITHUB_OUTPUT
+
+      - id: set-tests
+        run: |
+          echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
+
+  run-validation:
+    needs: setup-matrix
+    strategy:
+      matrix:
+        board-config: ${{ fromJSON(needs.setup-matrix.outputs.boards) }}
+        validation-type: ${{ fromJSON(needs.setup-matrix.outputs.tests) }}
+      fail-fast: false
+    runs-on: ${{ matrix.board-config }}
+
+    steps:
+      - name: Pull Validation Image
+        run: docker pull $VALIDATION_IMAGE_NAME
+
+      - name: Reset results directory
+        run: rm -rf results && mkdir results
+
+      - name: Run Validation
+        run: >
+          docker run 
+          --rm 
+          -v ~/.ssh:/root/.ssh 
+          -v ./results/:/results 
+          -v ./logs/:/tmp/nuvlaedge_validator/logs
+          ${{ env.VALIDATION_IMAGE_NAME }} 
+          --target ${{ matrix.board-config }}.toml
+          --key ${{ secrets.VALIDATION_NUVLA_API_KEY }}
+          --secret ${{ secrets.VALIDATION_NUVLA_API_SECRET }}
+          --validator ${{ matrix.validation-type }}
+          --retrieve_logs ${{ github.event.inputs.retrieve_logs }}
+          --nuvlaedge_branch ${{ env.BRANCH_NAME }}
+          --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version || 'latest' }} 
+          --deployment_branch ${{ github.event.inputs.deployment_branch || 'None' }}
+          --log_level ${{ github.event.inputs.log_level || 'INFO' }}

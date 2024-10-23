@@ -39,7 +39,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VALIDATION_IMAGE_NAME: "nuvladev/validation:latest"
+  VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:latest"
   BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
 
 jobs:

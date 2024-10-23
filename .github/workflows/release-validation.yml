@@ -78,7 +78,7 @@ jobs:
           docker run 
           --rm 
           -v /home/ubuntu/.ssh:/root/.ssh
-          -v ./results/:/results 
+          -v runner_${{ matrix.board-config }}-vol:/results 
           -v ./logs/:/tmp/nuvlaedge_validator/logs
           ${{ env.VALIDATION_IMAGE_NAME }} 
           --target ${{ matrix.board-config }}.toml
@@ -90,3 +90,17 @@ jobs:
           --nuvlaedge_version ${{ github.event.inputs.nuvlaedge_version || 'latest' }} 
           --deployment_branch ${{ github.event.inputs.deployment_branch || 'None' }}
           --log_level ${{ github.event.inputs.log_level || 'INFO' }}
+
+      - name: Save logs as artifacts if requested or failed
+        if: ${{ github.event.inputs.retrieve_logs }} || ${{ steps.validate.outcome }} != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'nuvlaedge_logs_${{ matrix.board-config }}-${{ matrix.validation-type }}'
+          path: /tmp/nuvlaedge_validator/
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action/linux@v2
+        if: always()
+        with:
+          check_name: "| ${{ matrix.board-config }} --- ${{ matrix.validation-type }} |"
+          junit_files: "results/temp/xml/*.xml"

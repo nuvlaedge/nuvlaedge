@@ -77,7 +77,8 @@ jobs:
         run: >
           docker run 
           --rm 
-          -v ~/.ssh:/root/.ssh 
+          -v /home/runner/.ssh/id_rsa:/root/.ssh/id_rsa
+          -v /home/runner/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub
           -v ./results/:/results 
           -v ./logs/:/tmp/nuvlaedge_validator/logs
           ${{ env.VALIDATION_IMAGE_NAME }} 

@@ -15,7 +15,8 @@ on:
       - '**'
     paths:
       - '**.py'
-      - '.github/workflows/unittests.yml'
+      # Adding the workflow file as a trigger for the workflow causes the workflow to be trigger on any push on the pull request
+      # - '.github/workflows/unittests.yml'
       - 'pyproject.toml'
       - 'poetry.lock'
 

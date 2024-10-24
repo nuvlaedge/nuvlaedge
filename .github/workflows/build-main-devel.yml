@@ -20,7 +20,8 @@ on:
       - 'scripts/**.sh'
 #      - '.github/workflows/build-main-devel.yml'
       - 'pyproject.toml'
-#      - 'Dockerfile'
+      - 'poetry.lock'
+      - 'Dockerfile'
 
   workflow_dispatch:
 

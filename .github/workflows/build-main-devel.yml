@@ -20,7 +20,7 @@ on:
     paths:
       - 'nuvlaedge/**.py'
       - 'scripts/**.sh'
-#      - '.github/workflows/build-main-devel.yml'
+      - '.github/workflows/build-main-devel.yml'
       - 'pyproject.toml'
       - 'poetry.lock'
       - 'Dockerfile'

@@ -14,7 +14,8 @@ on:
     paths:
       - '**.py'
 #      - '.github/workflows/unittests.yml'
-#      - 'pyproject.toml'
+      - 'pyproject.toml'
+      - 'poetry.lock'
 
 jobs:
   unittests:

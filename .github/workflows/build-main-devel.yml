@@ -16,8 +16,8 @@ on:
       - 'main'
   pull_request:
     paths:
-      - 'nuvlaedge/**'
-#      - 'scripts/**.sh'
+      - 'nuvlaedge/**.py'
+      - 'scripts/**.sh'
 #      - '.github/workflows/build-main-devel.yml'
 #      - 'pyproject.toml'
 #      - 'Dockerfile'

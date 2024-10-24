@@ -19,7 +19,7 @@ on:
       - 'nuvlaedge/**.py'
       - 'scripts/**.sh'
 #      - '.github/workflows/build-main-devel.yml'
-#      - 'pyproject.toml'
+      - 'pyproject.toml'
 #      - 'Dockerfile'
 
   workflow_dispatch:

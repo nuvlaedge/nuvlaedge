@@ -102,4 +102,4 @@ jobs:
         if: always()
         with:
           check_name: "| ${{ matrix.board-config }} --- ${{ matrix.validation-type }} |"
-          junit_files: "results/temp/xml/*.xml"
+          junit_files: "/home/runner/actions-runner/results/temp/xml/*.xml"

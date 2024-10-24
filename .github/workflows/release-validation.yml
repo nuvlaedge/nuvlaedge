@@ -70,7 +70,7 @@ jobs:
         run: docker pull $VALIDATION_IMAGE_NAME
 
       - name: Reset results directory
-        run: rm -rf /home/runner/actions-runner/results/temp && mkdir -p /home/runner/actions-runner/results/temp
+        run: sudo rm -rf /home/runner/actions-runner/results/temp && sudo mkdir -p /home/runner/actions-runner/results/temp
 
       - name: Run Validation
         run: >

@@ -98,6 +98,11 @@ jobs:
           name: 'nuvlaedge_logs_${{ matrix.board-config }}-${{ matrix.validation-type }}'
           path: /tmp/nuvlaedge_validator/
 
+      - name: Setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action/linux@v2
         if: always()

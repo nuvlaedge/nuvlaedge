@@ -16,11 +16,11 @@ on:
       - 'main'
   pull_request:
     paths:
-      - 'nuvlaedge/**.py'
-      - 'scripts/**.sh'
-      - '.github/workflows/build-main-devel.yml'
-      - 'pyproject.toml'
-      - 'Dockerfile'
+      - 'nuvlaedge/**'
+#      - 'scripts/**.sh'
+#      - '.github/workflows/build-main-devel.yml'
+#      - 'pyproject.toml'
+#      - 'Dockerfile'
 
   workflow_dispatch:
 

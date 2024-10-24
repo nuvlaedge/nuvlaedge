@@ -12,10 +12,9 @@ on:
       - 'main'
   pull_request:
     paths:
-      - "nuvlaedge/**"
-      - "tests/**"
-      - ".github/workflows/unit-tests.yml"
-      - "pyproject.toml"
+      - '**.py'
+      - '.github/workflows/unittests.yml'
+      - 'pyproject.toml'
 
 jobs:
   unittests:

@@ -13,8 +13,8 @@ on:
   pull_request:
     paths:
       - '**.py'
-      - '.github/workflows/unittests.yml'
-      - 'pyproject.toml'
+#      - '.github/workflows/unittests.yml'
+#      - 'pyproject.toml'
 
 jobs:
   unittests:

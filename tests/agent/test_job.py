@@ -54,12 +54,17 @@ class JobTestCase(unittest.TestCase):
 
         # otherwise, launch the job
         self.mock_nuvla_client.nuvlaedge_uuid = '0e9c180e-f4a8-488a-89d4-e6ee6496b4d7'
+        self.mock_nuvla_client.nuvlaedge_client.session.persist_cookie = False
         self.mock_nuvla_client.irs = get_irs(self.mock_nuvla_client.nuvlaedge_uuid, 'fake-key', 'fake-secret')
         self.assertIsNone(self.obj.launch(), 'Failed to launch job')
-        self.obj.coe_client.launch_job.assert_called_once_with(self.obj.job_id,
-                                                               self.obj.job_id_clean,
-                                                               self.obj.nuvla_client._host.removeprefix("https://"),
-                                                               self.obj.nuvla_client._insecure,
-                                                               'fake-key',
-                                                               'fake-secret',
-                                                               self.obj.job_engine_lite_image)
+        launch_params: dict = {
+            "job_id": self.obj.job_id,
+            "job_id_clean": self.obj.job_id_clean,
+            "nuvla_endpoint": self.obj.nuvla_client._host.removeprefix("https://"),
+            "nuvla_endpoint_insecure": self.obj.nuvla_client._insecure,
+            "api_key": 'fake-key',
+            "api_secret": 'fake-secret',
+            "cookies": None,
+            "docker_image": self.job_engine_lite_image
+        }
+        self.obj.coe_client.launch_job.assert_called_once_with(**launch_params)

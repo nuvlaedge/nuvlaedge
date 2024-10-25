@@ -7,6 +7,7 @@ Relays pull-mode jobs to local job-engine-lite
 from http.cookiejar import MozillaCookieJar
 from typing import Protocol, Any
 
+from nuvla.api.api import DEFAULT_COOKIE_FILE
 from nuvlaedge.agent.common.util import from_irs
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 
@@ -73,7 +74,7 @@ class Job:
         }
 
         if self.nuvla_client.nuvlaedge_client.session.persist_cookie:
-            with open(self.nuvla_client.nuvlaedge_client.session.cookie_file, "r") as f:
+            with open(DEFAULT_COOKIE_FILE, "r") as f:
                 launch_params["cookies"] = f.read()
 
         else:

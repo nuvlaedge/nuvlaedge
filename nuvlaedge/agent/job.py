@@ -4,7 +4,7 @@
 
 Relays pull-mode jobs to local job-engine-lite
 """
-from http.cookiejar import MozillaCookieJar
+import base64
 from typing import Protocol, Any
 
 from nuvla.api.api import DEFAULT_COOKIE_FILE
@@ -64,7 +64,7 @@ class Job:
         """
         launch_params: dict = {
             "job_id": self.job_id,
-            "job_id_clean": self.job_id_clean,
+            "job_execution_id": self.job_id_clean,
             "nuvla_endpoint": self.nuvla_client._host.removeprefix("https://"),
             "nuvla_endpoint_insecure": self.nuvla_client._insecure,
             "api_key": None,
@@ -75,7 +75,8 @@ class Job:
 
         if self.nuvla_client.nuvlaedge_client.session.persist_cookie:
             with open(DEFAULT_COOKIE_FILE, "r") as f:
-                launch_params["cookies"] = f.read()
+                cookie_data = f.read()
+                launch_params["cookies"] = base64.b64encode(cookie_data.encode('utf-8')).decode('utf-8')
 
         else:
             key, secret = from_irs(self.nuvla_client.nuvlaedge_uuid, self.nuvla_client.irs)

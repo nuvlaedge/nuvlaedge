@@ -59,7 +59,7 @@ class JobTestCase(unittest.TestCase):
         self.assertIsNone(self.obj.launch(), 'Failed to launch job')
         launch_params: dict = {
             "job_id": self.obj.job_id,
-            "job_id_clean": self.obj.job_id_clean,
+            "job_execution_id": self.obj.job_id_clean,
             "nuvla_endpoint": self.obj.nuvla_client._host.removeprefix("https://"),
             "nuvla_endpoint_insecure": self.obj.nuvla_client._insecure,
             "api_key": 'fake-key',

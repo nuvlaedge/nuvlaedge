@@ -4,6 +4,7 @@
 
 Relays pull-mode jobs to local job-engine-lite
 """
+from http.cookiejar import MozillaCookieJar
 from typing import Protocol, Any
 
 from nuvlaedge.agent.common.util import from_irs
@@ -18,6 +19,7 @@ class JobLauncher(Protocol):
                    nuvla_endpoint_insecure: bool = False,
                    api_key: Any = None,
                    api_secret: Any = None,
+                   cookies: Any = None,
                    docker_image: Any = None) -> Any:
         """ An object capable of running jobs from JobId """
 
@@ -59,10 +61,24 @@ class Job:
 
         :return:
         """
-        key, secret = from_irs(self.nuvla_client.nuvlaedge_uuid, self.nuvla_client.irs)
-        self.coe_client.launch_job(
-            self.job_id, self.job_id_clean, self.nuvla_client._host.removeprefix("https://"),
-            self.nuvla_client._insecure,
-            key,
-            secret,
-            self.job_engine_lite_image)
+        launch_params: dict = {
+            "job_id": self.job_id,
+            "job_id_clean": self.job_id_clean,
+            "nuvla_endpoint": self.nuvla_client._host.removeprefix("https://"),
+            "nuvla_endpoint_insecure": self.nuvla_client._insecure,
+            "api_key": None,
+            "api_secret": None,
+            "cookies": None,
+            "docker_image": self.job_engine_lite_image
+        }
+
+        if self.nuvla_client.nuvlaedge_client.session.persist_cookie:
+            with open(self.nuvla_client.nuvlaedge_client.session.cookie_file, "r") as f:
+                launch_params["cookies"] = f.read()
+
+        else:
+            key, secret = from_irs(self.nuvla_client.nuvlaedge_uuid, self.nuvla_client.irs)
+            launch_params["api_key"] = key
+            launch_params["api_secret"] = secret
+
+        self.coe_client.launch_job(**launch_params)

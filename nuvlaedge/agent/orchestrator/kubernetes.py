@@ -292,12 +292,19 @@ class KubernetesClient(COEClient):
 
     def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
-                   docker_image=None, **kwargs):
+                   docker_image=None, cookies=None, **kwargs):
+
+        authentication = ""
+        if api_key and api_secret:
+            authentication = (f'--api-key {api_key} '
+                              f'--api-secret {api_secret} ')
+
+        if cookies:
+            authentication = f'--cookies {cookies} '
 
         cmd = '/app/job_executor.py'
         args = f'--api-url https://{nuvla_endpoint} ' \
-               f'--api-key {api_key} ' \
-               f'--api-secret {api_secret} ' \
+               f'{authentication} ' \
                f'--nuvlaedge-fs {FILE_NAMES.root_fs} ' \
                f'--job-id {job_id}'
 

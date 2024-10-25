@@ -34,7 +34,6 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
-from nuvlaedge.agent.common.util import nuvla_support_new_container_stats
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
@@ -192,6 +191,8 @@ class Agent:
 
         """ Initialise Telemetry """
         logger.info("Registering Telemetry")
+        coe_resources_supported = self._nuvla_support_telemetry_field('coe-resources')
+        new_container_stats_supported = self._nuvla_support_telemetry_field('resources.container-stats.item.cpu-usage')
         self.worker_manager.add_worker(
             period=self.telemetry_period,
             worker_type=Telemetry,
@@ -200,7 +201,8 @@ class Agent:
                               'report_channel': self.telemetry_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
-                              'new_container_stats_supported': nuvla_support_new_container_stats(self._nuvla_client),
+                              'coe_resources_supported': coe_resources_supported,
+                              'new_container_stats_supported': new_container_stats_supported,
                               }),
             actions=['run'],
             initial_delay=8
@@ -351,6 +353,13 @@ class Agent:
         logger.info(f"Status gathered: \n{status} \n {json.dumps(notes,indent=4)}")
         telemetry.status = status
         telemetry.status_notes = notes
+
+    def _nuvla_support_telemetry_field(self, field):
+        try:
+            return field in self._nuvla_client.supported_nuvla_telemetry_fields
+        except Exception as e:
+            logger.error(f'Failed to find if Nuvla support telemetry field "{field}". Defaulting to False: {e}')
+            return False
 
     # Agent Actions
     def _update_periodic_actions(self):

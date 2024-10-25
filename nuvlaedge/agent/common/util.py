@@ -158,29 +158,6 @@ ${vpn_extra_config}
 """
 
 
-def nuvla_support_new_container_stats(nuvla_client):
-
-    def get_attrs(data, prefix=''):
-        keys = []
-        for d in data:
-            name = d.get('name', '?')
-            if prefix:
-                name = prefix + '.' + name
-            keys.append(name)
-            ct = d.get('child-types')
-            if ct:
-                keys += get_attrs(ct, name)
-        return keys
-
-    try:
-        resp = nuvla_client.nuvlaedge_client.get('resource-metadata/nuvlabox-status-2')
-        attrs = get_attrs(resp.data['attributes'])
-        return 'resources.container-stats.item.cpu-usage' in attrs
-    except Exception as e:
-        logger.error(f'Failed to find if Nuvla support new container stats. Defaulting to False: {e}')
-        return False
-
-
 def _irs_key(base):
     base = base.rsplit('/', 1)[-1] if base else ''
     return hashlib.sha256((base + ':' + CTE.MACHINE_ID).encode()).digest()

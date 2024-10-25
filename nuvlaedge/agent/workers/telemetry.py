@@ -131,6 +131,7 @@ class Telemetry:
                  status_channel: Queue[StatusReport],
                  nuvlaedge_uuid: NuvlaID,
                  excluded_monitors,
+                 coe_resources_supported,
                  new_container_stats_supported):
         """
         Initializes the Telemetry object with the given parameters. It is also in charge of initialising the child
@@ -160,6 +161,7 @@ class Telemetry:
         # Data variable where the monitors dump their readings
         self.edge_status: EdgeStatus = EdgeStatus()
 
+        self.coe_resources_supported = coe_resources_supported
         self.new_container_stats_supported = new_container_stats_supported
 
         # Monitors modular system initialisation

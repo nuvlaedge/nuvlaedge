@@ -1,5 +1,6 @@
 import json
 import logging
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -364,6 +365,23 @@ class NuvlaClientWrapper:
         except Exception as e:
             logger.warning(f"Could not find id with with error: {e}")
             return None
+
+    @cached_property
+    def supported_nuvla_telemetry_fields(self):
+        def get_attrs(data, prefix=''):
+            keys = []
+            for d in data:
+                name = d.get('name', '?')
+                if prefix:
+                    name = prefix + '.' + name
+                keys.append(name)
+                ct = d.get('child-types')
+                if ct:
+                    keys += get_attrs(ct, name)
+            return keys
+
+        resp = self.nuvlaedge_client.get('resource-metadata/nuvlabox-status-2')
+        return get_attrs(resp.data['attributes'])
 
     # TODO: Used only by security module. Switch it to settings.py/_create_client_from_settings()
     @classmethod

@@ -23,7 +23,8 @@ class TestTelemetry(TestCase):
                                             self.mock_status_channel,
                                             self.uuid,
                                             self.excluded_monitors,
-                                            self.endpoint)
+                                            True,
+                                            True)
 
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
     @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')

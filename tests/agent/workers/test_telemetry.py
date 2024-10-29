@@ -26,10 +26,24 @@ class TestTelemetry(TestCase):
                                             True,
                                             True)
 
+    @patch('nuvlaedge.agent.workers.telemetry.Telemetry._initialize_monitors')
+    def test_init_excluded_monitors(self, mock_init_monitors):
+        excluded_monitors = 'gpio,power'
+        telemetry = Telemetry(
+            self.mock_coe_client,
+            self.mock_report_channel,
+            self.mock_status_channel,
+            self.uuid,
+            excluded_monitors,
+            True,
+            True)
+        self.assertEqual(['gpio', 'power'], telemetry.excluded_monitors)
+
+
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
     @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')
-    def test_initialize_monitors(self, mock_check_health, mock_get_monitors):
-        mock_get_monitors.return_value.return_value = Mock()
+    def test_initialize_monitors(self, mock_check_health, mock_get_monitor):
+        mock_get_monitor.return_value.return_value = Mock()
         self.test_telemetry._initialize_monitors()
         monitor_count = len(self.test_telemetry.monitor_list)
         mock_check_health.assert_called_once()
@@ -38,6 +52,12 @@ class TestTelemetry(TestCase):
         self.test_telemetry.excluded_monitors = ['power', 'container_stats']
         self.test_telemetry._initialize_monitors()
         self.assertEqual(monitor_count - 2, len(self.test_telemetry.monitor_list))
+
+    @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')
+    def test_initialize_unsupported_monitors(self, mock_check_health):
+        with patch('nuvlaedge.agent.workers.telemetry.active_monitors', ['gpio']):
+            self.test_telemetry._initialize_monitors()
+        self.assertEqual(0, len(self.test_telemetry.monitor_list))
 
     @patch('nuvlaedge.agent.workers.telemetry.TelemetryPayloadAttributes.model_validate')
     def test_collect_monitor_metrics(self, mock_update):
@@ -107,6 +127,9 @@ class TestTelemetry(TestCase):
         self.test_telemetry.edge_status.nuvlaedge_info = test_data
         self.test_telemetry._sync_status_to_telemetry()
         self.assertEqual(self.test_telemetry._local_telemetry.operating_system, test_data.operating_system)
+
+        self.test_telemetry.edge_status.nuvlaedge_info = NuvlaEdgeData()
+        self.test_telemetry._sync_status_to_telemetry()
 
     @patch('nuvlaedge.agent.common.status_handler.NuvlaEdgeStatusHandler.running')
     @patch('nuvlaedge.agent.workers.telemetry.Telemetry._sync_status_to_telemetry')

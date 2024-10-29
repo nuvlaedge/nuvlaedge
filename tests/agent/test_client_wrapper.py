@@ -51,6 +51,27 @@ class TestClientWrapper(TestCase):
         mock_nuvlaedge.vpn_server_id = None
         self.assertIsNone(self.test_client.vpn_server)
 
+    def test_supported_nuvla_telemetry_fields_property(self):
+        metadata = {
+            "attributes": [
+                {"name": "coe-resources"},
+                {"name": "resources",
+                 "child-types": [{"name": "container-stats"}]}
+            ]
+        }
+        mock_get = Mock()
+        mock_get.data = metadata
+        self.mock_nuvla.get.return_value = mock_get
+        telemetry_fields = self.test_client.supported_nuvla_telemetry_fields
+        self.mock_nuvla.get.assert_called_once()
+        self.assertEqual(['coe-resources', 'resources', 'resources.container-stats'],
+                         telemetry_fields)
+        self.assertIn('resources.container-stats', telemetry_fields)
+
+        # assert cached
+        self.test_client.supported_nuvla_telemetry_fields
+        self.mock_nuvla.get.assert_called_once()
+
     def test_nuvlaedge_status_uuid_property(self):
         self.test_client._nuvlaedge_status_uuid = 'status-uuid_1'
         self.assertEqual('status-uuid_1', self.test_client.nuvlaedge_status_uuid)

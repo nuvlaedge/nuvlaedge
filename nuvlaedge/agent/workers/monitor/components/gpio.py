@@ -6,9 +6,11 @@ from subprocess import SubprocessError, CompletedProcess
 
 from nuvlaedge.agent.common.util import execute_cmd
 from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
 
 
+@monitor('gpio')
 class GpioMonitor(Monitor):
     """
     Monitor class to read GPIO pins for system-on-board devices
@@ -50,8 +52,7 @@ class GpioMonitor(Monitor):
 
         """
         try:
-            _ = execute_cmd(self._GPIO_VERSION_COMMAND)
-            return True
+            return execute_cmd(self._GPIO_VERSION_COMMAND) is not None
         except (SubprocessError, FileNotFoundError):
             return False
 
@@ -142,6 +143,8 @@ class GpioMonitor(Monitor):
         @returns list of JSONs, i.e. [{pin: 1, name: GPIO. 1, bcm: 4, mode: IN},
         {pin: 7, voltage: 0, mode: ALT1}]
         """
+        if not self.data.pins:
+            self.data.pins = {}
 
         new_lines: list[str] = self.gather_gpio_lines()
 

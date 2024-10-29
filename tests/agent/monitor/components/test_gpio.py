@@ -4,7 +4,7 @@ import unittest
 from mock import Mock, patch
 
 from nuvlaedge.agent.workers.monitor.components.gpio import GpioMonitor
-from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData
+from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
@@ -24,9 +24,10 @@ class TestGpioMonitor(unittest.TestCase):
         edge_status = EdgeStatus()
         mock_telemetry = Mock()
         mock_telemetry.edge_status = edge_status
-        GpioMonitor('test_monitor', mock_telemetry, True)
+        gpio_monitor = GpioMonitor('test_monitor', mock_telemetry, True)
         self.assertTrue(edge_status.gpio_pins)
         self.assertIsInstance(edge_status.gpio_pins, GpioData)
+        gpio_monitor.__init__('test_monitor', mock_telemetry)
 
     @patch('nuvlaedge.agent.workers.monitor.components.gpio.execute_cmd')
     def test_gpio_availability(self, mock_cmd):
@@ -112,4 +113,14 @@ class TestGpioMonitor(unittest.TestCase):
         ...
 
     def test_populate_nb_report(self):
-        ...
+        test_monitor: GpioMonitor = self.get_base_monitor()
+
+        test_monitor.data = GpioData(telemetry_name='test_monitor')
+        test_monitor.data.pins = {}
+        gpio_pin = GpioPin()
+        gpio_pin.pin = 1
+        test_monitor.data.pins[gpio_pin.pin] = gpio_pin
+
+        telemetry_data = {}
+        test_monitor.populate_nb_report(telemetry_data)
+        self.assertEqual({'gpio-pins': {1: {'pin': 1}}}, telemetry_data)

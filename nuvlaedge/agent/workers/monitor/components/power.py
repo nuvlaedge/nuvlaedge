@@ -49,13 +49,13 @@ class PowerMonitor(Monitor):
         }
     }
 
-    def __init__(self, name: str, telemetry, enable_monitor: bool):
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
         super().__init__(name, PowerData, enable_monitor)
 
         self.host_fs: str = CTE.HOST_FS
 
         if not self.available_power_drivers:
-            self.logger.info(f'no power driver supported. Disabling {self.__class__.__name__}')
+            self.logger.info(f'No power driver supported. Disabling {self.__class__.__name__}')
             self.enabled_monitor = False
 
         if not telemetry.edge_status.power:

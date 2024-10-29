@@ -16,15 +16,18 @@ class TestPowerMonitor(unittest.TestCase):
         mock_telemetry = Mock()
         mock_telemetry.edge_status = EdgeStatus()
         mock_telemetry.edge_status.power = None
-        return PowerMonitor('test_monitor', mock_telemetry, True)
+        power_monitor = PowerMonitor('test_monitor', mock_telemetry, True)
+        setattr(power_monitor, 'available_power_drivers', ['ina3221x'])
+        return power_monitor
 
     def test_init(self):
         mock_telemetry = Mock()
         mock_telemetry.edge_status = EdgeStatus()
         mock_telemetry.edge_status.power = None
-        PowerMonitor('test_monitor', mock_telemetry, True)
+        power_monitor = PowerMonitor('test_monitor', mock_telemetry, True)
         self.assertTrue(mock_telemetry.edge_status.power)
         self.assertIsInstance(mock_telemetry.edge_status.power, PowerData)
+        power_monitor.__init__('test_monitor', mock_telemetry)
 
     @patch('os.listdir')
     @patch('os.path.exists')
@@ -119,29 +122,29 @@ class TestPowerMonitor(unittest.TestCase):
                              expected_output[0],
                              'Unable to get power consumption')
 
-    # @patch('nuvlaedge.agent.workers.monitor.components.power.PowerMonitor.get_power')
-    # def test_update_data_and_populate_nb_report(self, mock_get_power):
-    #     test_monitor: PowerMonitor = self.get_base_monitor()
-    #     self.assertIsNone(test_monitor.data.power_entries)
-    #     mock_get_power.return_value = None
-    #     test_monitor.update_data()
-    #     self.assertFalse(test_monitor.data.power_entries)
-    #
-    #     test_entry = PowerEntry(metric_name='current',
-    #                             energy_consumption=1, unit='mA')
-    #     mock_get_power.return_value = test_entry
-    #     test_monitor.update_data()
-    #     self.assertEqual(test_monitor.data.power_entries['current'], test_entry)
-    #
-    #     telemetry_data = {}
-    #     test_monitor.populate_nb_report(telemetry_data)
-    #     self.assertEqual({
-    #         'resources': {
-    #             'power-consumption': [
-    #                 {'metric-name': 'current', 'energy-consumption': 1.0, 'unit': 'mA'}
-    #             ]
-    #         }
-    #     }, telemetry_data)
+    @patch('nuvlaedge.agent.workers.monitor.components.power.PowerMonitor.get_power')
+    def test_update_data_and_populate_nb_report(self, mock_get_power):
+        test_monitor: PowerMonitor = self.get_base_monitor()
+        self.assertIsNone(test_monitor.data.power_entries)
+        mock_get_power.return_value = None
+        test_monitor.update_data()
+        self.assertFalse(test_monitor.data.power_entries)
+
+        test_entry = PowerEntry(metric_name='current',
+                                energy_consumption=1, unit='mA')
+        mock_get_power.return_value = test_entry
+        test_monitor.update_data()
+        self.assertEqual(test_monitor.data.power_entries['current'], test_entry)
+
+        telemetry_data = {}
+        test_monitor.populate_nb_report(telemetry_data)
+        self.assertEqual({
+            'resources': {
+                'power-consumption': [
+                    {'metric-name': 'current', 'energy-consumption': 1.0, 'unit': 'mA'}
+                ]
+            }
+        }, telemetry_data)
 
     def test_populate_nb_report(self):
         ...

@@ -138,10 +138,12 @@ class PowerMonitor(Monitor):
         if not self.data.power_entries:
             self.data.power_entries = {}
 
-        for drive in self._NVIDIA_MODEL:
-            it_data: PowerEntry = self.get_power(drive)
+        for driver in self._NVIDIA_MODEL:
+            it_data: PowerEntry = self.get_power(driver)
             if it_data:
                 self.data.power_entries[it_data.metric_name] = it_data
 
     def populate_nb_report(self, nuvla_report: dict):
-        ...
+        data = self.data.model_dump(exclude_none=True, by_alias=True)
+        resources = nuvla_report.setdefault('resources', {})
+        resources['power-consumption'] = list(data.get('power-entries', {}).values())

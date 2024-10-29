@@ -120,7 +120,7 @@ class TestPowerMonitor(unittest.TestCase):
                              'Unable to get power consumption')
 
     @patch('nuvlaedge.agent.workers.monitor.components.power.PowerMonitor.get_power')
-    def test_update_data(self, mock_get_power):
+    def test_update_data_and_populate_nb_report(self, mock_get_power):
         test_monitor: PowerMonitor = self.get_base_monitor()
         self.assertIsNone(test_monitor.data.power_entries)
         mock_get_power.return_value = None
@@ -132,6 +132,16 @@ class TestPowerMonitor(unittest.TestCase):
         mock_get_power.return_value = test_entry
         test_monitor.update_data()
         self.assertEqual(test_monitor.data.power_entries['current'], test_entry)
+
+        telemetry_data = {}
+        test_monitor.populate_nb_report(telemetry_data)
+        self.assertEqual({
+            'resources': {
+                'power-consumption': [
+                    {'metric-name': 'current', 'energy-consumption': 1.0, 'unit': 'mA'}
+                ]
+            }
+        }, telemetry_data)
 
     def test_populate_nb_report(self):
         ...

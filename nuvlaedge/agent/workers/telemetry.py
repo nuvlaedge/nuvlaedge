@@ -182,8 +182,13 @@ class Telemetry:
         """
         for mon in active_monitors:
             if mon.rsplit('_', 1)[0] in self.excluded_monitors:
+                logger.info(f'Monitor "{mon}" excluded')
                 continue
-            self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
+            monitor = get_monitor(mon)(mon, self, True)
+            if monitor.enabled_monitor:
+                self.monitor_list[mon] = monitor
+            else:
+                logger.info(f'Monitor "{mon}" disabled')
 
         self._check_monitors_health()
 

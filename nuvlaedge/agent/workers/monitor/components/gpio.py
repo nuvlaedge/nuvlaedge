@@ -1,10 +1,10 @@
 """
     GpioMonitor.py
 """
+import logging
 from subprocess import SubprocessError, CompletedProcess
 
 from nuvlaedge.agent.common.util import execute_cmd
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
 
@@ -27,16 +27,20 @@ class GpioMonitor(Monitor):
     _second_pin_indexes = [14, 11, 10, 9, 8]
 
     # Class constructor
-    def __init__(self, name: str, status: EdgeStatus, enable_monitor: bool = True):
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        if not self.gpio_availability():
+            self.logger.info('gpio not supported. Disabling {self.__class__.__name__}')
+            enable_monitor = False
 
         # Instantiate parent class
         super().__init__(name, GpioData, enable_monitor)
 
         # Check GPIO availability
         if self.enabled_monitor:
-            self.enabled_monitor = self.gpio_availability()
-            if not status.gpio_pins:
-                status.gpio_pins = self.data
+            if not telemetry.status.gpio_pins:
+                telemetry.status.gpio_pins = self.data
 
     def gpio_availability(self) -> bool:
         """
@@ -150,4 +154,5 @@ class GpioMonitor(Monitor):
                 self.data.pins[pin_2.pin] = pin_2
 
     def populate_nb_report(self, nuvla_report: dict):
-        ...
+        data = self.data.model_dump(exclude_none=True, by_alias=True)
+        nuvla_report['gpio-pins'] = data.get('pins')

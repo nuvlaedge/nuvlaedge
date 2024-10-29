@@ -1,6 +1,7 @@
 import json
 import logging
 from pathlib import Path
+from pprint import pformat
 from typing import Optional
 
 from nuvla.api.models import CimiResource
@@ -306,21 +307,43 @@ class NuvlaClientWrapper:
         return response.data
 
     def telemetry_patch(self, telemetry_jsonpatch: list, attributes_to_delete: list[str]) -> dict:
-        """ Sends telemetry metrics to the nuvlaedge-status resource using edit(put) operation
+        """Sends telemetry metrics to the nuvlaedge-status resource.
 
         Args:
             telemetry_jsonpatch: telemetry data in JSON Patch format
             attributes_to_delete: attributes no longer present in the metrics
 
-        Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
-
+        Returns: a dict with the data of the response of the server including
+                 jobs queued for this NuvlaEdge
         """
-        logger.debug(f"Sending telemetry patch data to Nuvla: \n {telemetry_jsonpatch}")
-        response: CimiResource = self.nuvlaedge_client.edit_patch(self.nuvlaedge_status_uuid,
-                                                                  data=telemetry_jsonpatch,
-                                                                  select=attributes_to_delete)
-        logger.debug(f"Response received from telemetry patch report: {response.data}")
+        self._log_debug_telemetry_jsonpatch(telemetry_jsonpatch,
+                                            attributes_to_delete)
+
+        response: CimiResource = self.nuvlaedge_client.edit_patch(
+            self.nuvlaedge_status_uuid,
+            data=telemetry_jsonpatch,
+            select=attributes_to_delete)
+        logger.debug("Response received from telemetry patch report: %s",
+                     response.data)
         return response.data
+
+    @staticmethod
+    def _log_debug_telemetry_jsonpatch(telemetry_jsonpatch: list,
+                                       attributes_to_delete: list[str]):
+        logger.debug("Sending telemetry patch data to Nuvla: \n %s",
+                     telemetry_jsonpatch)
+        logger.debug("Attributes no longer present in the metrics: \n %s",
+                     attributes_to_delete)
+
+        if logger.level == logging.DEBUG and len(telemetry_jsonpatch) > 0 and \
+                'op' in telemetry_jsonpatch[0] and 'path' in telemetry_jsonpatch[0]:
+            ops_paths = [(x['op'], x['path'])
+                         for x in sorted(telemetry_jsonpatch,
+                                         key=lambda x: (x['op'], x['path']))]
+            logger.debug('Telemetry patch data ops and paths:\n%s',
+                         pformat(ops_paths))
+            logger.debug("Telemetry patch data size: %s",
+                         len(bytes(json.dumps(telemetry_jsonpatch), 'utf-8')))
 
     def save_current_state_to_file(self):
         """ Saves the current state of the NuvlaEdge client to a file.

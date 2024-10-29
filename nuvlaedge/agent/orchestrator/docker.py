@@ -543,9 +543,6 @@ class DockerClient(COEClient):
             authentication = (f'--api-key {api_key} '
                               f'--api-secret {api_secret} ')
 
-        if cookies:
-            authentication = f'--cookies {cookies} '
-
         command = (f'-- /app/job_executor.py '
                    f'--api-url https://{nuvla_endpoint} '
                    f'{authentication}'
@@ -557,6 +554,9 @@ class DockerClient(COEClient):
 
         environment = {k: v for k, v in os.environ.items()
                        if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
+
+        if cookies:
+            environment["JOB_COOKIES"] = cookies
 
         logger.info(f'Starting job "{job_id}" with docker image "{image}" and command: "{command}"')
 

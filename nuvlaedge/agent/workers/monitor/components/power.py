@@ -97,9 +97,9 @@ class PowerMonitor(Monitor):
         for _, power_info in self._NVIDIA_MODEL[driver]['boards'].items():
             known_i2c_addresses = power_info['i2c_addresses']
             known_i2c_addresses.sort()
-            if i2c_addresses_found != known_i2c_addresses:
-                self.logger.debug('I2C address found is not known: '
-                                  f'{i2c_addresses_found} not in {known_i2c_addresses}')
+            if not set(known_i2c_addresses).issubset(set(i2c_addresses_found)):
+                self.logger.debug('i2c address found do not match known i2c address: '
+                                  f'{known_i2c_addresses} is not a subset of {i2c_addresses_found}')
                 continue
 
             for metrics_folder_name in power_info['channels_path']:

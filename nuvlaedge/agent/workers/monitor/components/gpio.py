@@ -39,8 +39,8 @@ class GpioMonitor(Monitor):
 
         # Check GPIO availability
         if self.enabled_monitor:
-            if not telemetry.status.gpio_pins:
-                telemetry.status.gpio_pins = self.data
+            if not telemetry.edge_status.gpio_pins:
+                telemetry.edge_status.gpio_pins = self.data
 
     def gpio_availability(self) -> bool:
         """

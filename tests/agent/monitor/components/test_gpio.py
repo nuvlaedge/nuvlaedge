@@ -22,7 +22,9 @@ class TestGpioMonitor(unittest.TestCase):
     def test_init(self, mock_availability):
         mock_availability.return_value = True
         edge_status = EdgeStatus()
-        GpioMonitor('test_monitor', edge_status, True)
+        mock_telemetry = Mock()
+        mock_telemetry.edge_status = edge_status
+        GpioMonitor('test_monitor', mock_telemetry, True)
         self.assertTrue(edge_status.gpio_pins)
         self.assertIsInstance(edge_status.gpio_pins, GpioData)
 

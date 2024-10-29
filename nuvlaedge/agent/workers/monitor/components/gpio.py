@@ -30,14 +30,11 @@ class GpioMonitor(Monitor):
 
     # Class constructor
     def __init__(self, name: str, telemetry, enable_monitor: bool = True):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        super().__init__(name, GpioData, enable_monitor)
 
         if not self.gpio_availability():
-            self.logger.info('gpio not supported. Disabling {self.__class__.__name__}')
-            enable_monitor = False
-
-        # Instantiate parent class
-        super().__init__(name, GpioData, enable_monitor)
+            self.logger.info(f'gpio not supported. Disabling {self.__class__.__name__}')
+            self.enabled_monitor = False
 
         # Check GPIO availability
         if self.enabled_monitor:

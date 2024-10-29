@@ -20,14 +20,12 @@ class COEResourcesMonitor(Monitor):
     Handles the retrieval of raw COE resources.
     """
     def __init__(self, name: str, telemetry, enable_monitor=True):
-        self.logger = logging.getLogger(self.__class__.__name__)
+        super().__init__(self.__class__.__name__, COEResourcesData,
+                         enable_monitor=enable_monitor)
 
         if not telemetry.coe_resources_supported:
             self.logger.info('coe-resources not supported by Nuvla. Disabling COEResourcesMonitor')
-            enable_monitor = False
-
-        super().__init__(self.__class__.__name__, COEResourcesData,
-                         enable_monitor=enable_monitor)
+            self.enabled_monitor = False
 
         self.coe_client: COEClient = telemetry.coe_client
 

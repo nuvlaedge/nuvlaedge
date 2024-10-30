@@ -1,5 +1,4 @@
 """ Module containing power report monitor """
-import logging
 import os
 import re
 
@@ -55,7 +54,7 @@ class PowerMonitor(Monitor):
         self.host_fs: str = CTE.HOST_FS
 
         if not self.available_power_drivers:
-            self.logger.info(f'No power driver supported. Disabling {self.__class__.__name__}')
+            self.logger.info(f'No power driver supported. Disabling {self.name}')
             self.enabled_monitor = False
 
         if not telemetry.edge_status.power:
@@ -72,7 +71,7 @@ class PowerMonitor(Monitor):
                 drivers.append(driver)
         return drivers
 
-    def get_power(self, driver: str) -> PowerEntry | None:
+    def get_powers(self, driver: str) -> list[PowerEntry] | None:
         """
         Parses the driver info received and reads the corresponding files to create a
         PowerEntry data structure
@@ -81,13 +80,15 @@ class PowerMonitor(Monitor):
             driver: driver name to find the power
 
         Returns:
-            An Power entry with the instant power values
+            A list of PowerEntry with the instant power values
         """
         i2c_fs_path = self.get_power_path(driver)
 
+        powers: list[PowerEntry] = []
+
         if not os.path.exists(i2c_fs_path):
             self.logger.warning(f'Path {i2c_fs_path} do not exist but it was at initialisation time')
-            return None
+            return []
 
         i2c_addresses_found = \
             [addr for addr in os.listdir(i2c_fs_path) if
@@ -150,13 +151,13 @@ class PowerMonitor(Monitor):
                     for metric_combo in desired_metrics_files:
                         try:
                             with open(metric_combo[0], encoding='utf-8') as metric_f:
-                                return PowerEntry(
+                                powers.append(PowerEntry(
                                     metric_name=metric_combo[1],
                                     energy_consumption=float(metric_f.read().split()[0]),
-                                    unit=metric_combo[2])
+                                    unit=metric_combo[2]))
                         except (IOError, IndexError, ValueError):
                             self.logger.debug('Failed to get metric combo', exc_info=True)
-                            return
+        return powers
 
     def update_data(self):
 
@@ -164,9 +165,9 @@ class PowerMonitor(Monitor):
             self.data.power_entries = {}
 
         for driver in self.available_power_drivers:
-            it_data: PowerEntry = self.get_power(driver)
-            if it_data:
-                self.data.power_entries[it_data.metric_name] = it_data
+            for it_data in self.get_powers(driver):
+                if it_data:
+                    self.data.power_entries[it_data.metric_name] = it_data
 
     def populate_nb_report(self, nuvla_report: dict):
         data = self.data.model_dump(exclude_none=True, by_alias=True)

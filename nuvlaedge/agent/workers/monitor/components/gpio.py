@@ -32,14 +32,13 @@ class GpioMonitor(Monitor):
     def __init__(self, name: str, telemetry, enable_monitor: bool = True):
         super().__init__(name, GpioData, enable_monitor)
 
+        # Check GPIO availability
         if not self.gpio_availability():
-            self.logger.info(f'gpio not supported. Disabling {self.__class__.__name__}')
+            self.logger.info(f'gpio not supported. Disabling {self.name}')
             self.enabled_monitor = False
 
-        # Check GPIO availability
-        if self.enabled_monitor:
-            if not telemetry.edge_status.gpio_pins:
-                telemetry.edge_status.gpio_pins = self.data
+        if self.enabled_monitor and not telemetry.edge_status.gpio_pins:
+            telemetry.edge_status.gpio_pins = self.data
 
     def gpio_availability(self) -> bool:
         """

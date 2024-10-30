@@ -109,7 +109,6 @@ class TemperatureMonitor(Monitor):
     def update_data(self):
         if not os.path.exists(self.thermal_fs_path):
             if hasattr(psutil, 'sensors_temperatures'):
-
                 self.update_temperatures_with_psutil()
         else:
             self.update_temperatures_with_file()

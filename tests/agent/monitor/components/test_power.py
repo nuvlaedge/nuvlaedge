@@ -31,19 +31,19 @@ class TestPowerMonitor(unittest.TestCase):
 
     @patch('os.listdir')
     @patch('os.path.exists')
-    def test_get_power(self, mock_exists, mock_listdir):
+    def test_get_powers(self, mock_exists, mock_listdir):
         power_open: str = 'nuvlaedge.agent.workers.monitor.components.power.open'
         test_monitor: PowerMonitor = self.get_base_monitor()
         mock_exists.return_value = False
-        self.assertIsNone(test_monitor.get_power('some_text'),
-                          'Got power consumption even when I2C drivers cannot be found')
+        self.assertEqual([], test_monitor.get_powers('some_text'),
+                         'Got power consumption even when I2C drivers cannot be found')
 
         # else, go through the model
         mock_exists.return_value = True
         # if addresses do not match, get [] again
         mock_listdir.return_value = ['not-match']
-        self.assertIsNone(test_monitor.get_power('ina3221x'),
-                          'Got power consumption even when I2C drivers cannot be found')
+        self.assertEqual([], test_monitor.get_powers('ina3221x'),
+                         'Got power consumption even when I2C drivers cannot be found')
 
         # otherwise
         mock_listdir.return_value = ['0-0040', '0-0041']
@@ -53,7 +53,7 @@ class TestPowerMonitor(unittest.TestCase):
             [False for _ in range(
                 0,
                 len(test_monitor._NVIDIA_MODEL['ina3221x']['boards']))]
-        self.assertEqual(test_monitor.get_power('ina3221x'), None,
+        self.assertEqual([], test_monitor.get_powers('ina3221x'),
                          'Got power consumption even though I2C metrics_folder_path do '
                          'not exist')
 
@@ -63,15 +63,15 @@ class TestPowerMonitor(unittest.TestCase):
         mock_exists.side_effect = [True] + \
                                   [False, True] + [False, False,
                                                    False]
-        self.assertEqual(test_monitor.get_power('ina3221x'), None,
+        self.assertEqual([], test_monitor.get_powers('ina3221x'),
                          'Got power consumption even though I2C rail files do not exist')
 
         # if rail files exist, open them, unless there is an error, which means = []
         with patch(power_open, mock_open(read_data=None)):
             # 2 boards matching + 3 channels
             mock_exists.side_effect = [True, False, True, True, True, True] + [False]*100
-            self.assertIsNone(test_monitor.get_power('ina3221x'),
-                              'Got power consumption when rail files cannot be read')
+            self.assertEqual([], test_monitor.get_powers('ina3221x'),
+                             'Got power consumption when rail files cannot be read')
 
         # if reading goes well, but metrics_folder_path is empty, get []
         mock_exists.side_effect = [True] + \
@@ -81,8 +81,8 @@ class TestPowerMonitor(unittest.TestCase):
                                     [], [], []]  # 3 channel reading
         with patch(power_open,
                    mock_open(read_data='valid_data')):
-            self.assertIsNone(test_monitor.get_power('ina3221x'),
-                              'Got power consumption when rail files cannot be read')
+            self.assertEqual([], test_monitor.get_powers('ina3221x'),
+                             'Got power consumption when rail files cannot be read')
 
         # if reading data is valid and metrics_folder_path contains the desired metric
         # matches
@@ -100,9 +100,9 @@ class TestPowerMonitor(unittest.TestCase):
 
         with patch(power_open,
                    mock_open(read_data='not-float-data')):
-            self.assertIsNone(test_monitor.get_power('ina3221x'),
-                              'Got power consumption when rail files can be read but do '
-                              'not have data as a float')
+            self.assertEqual([], test_monitor.get_powers('ina3221x'),
+                             'Got power consumption when rail files can be read but do '
+                             'not have data as a float')
 
         mock_exists.side_effect = [True] + \
                                   [False, True] + [True, True,
@@ -118,21 +118,21 @@ class TestPowerMonitor(unittest.TestCase):
         ]
 
         with patch(power_open, mock_open(read_data='1')):
-            self.assertEqual(test_monitor.get_power('ina3221x').dict(by_alias=True),
+            self.assertEqual(test_monitor.get_powers('ina3221x')[0].dict(by_alias=True),
                              expected_output[0],
                              'Unable to get power consumption')
 
-    @patch('nuvlaedge.agent.workers.monitor.components.power.PowerMonitor.get_power')
-    def test_update_data_and_populate_nb_report(self, mock_get_power):
+    @patch('nuvlaedge.agent.workers.monitor.components.power.PowerMonitor.get_powers')
+    def test_update_data_and_populate_nb_report(self, mock_get_powers):
         test_monitor: PowerMonitor = self.get_base_monitor()
         self.assertIsNone(test_monitor.data.power_entries)
-        mock_get_power.return_value = None
+        mock_get_powers.return_value = []
         test_monitor.update_data()
         self.assertFalse(test_monitor.data.power_entries)
 
         test_entry = PowerEntry(metric_name='current',
                                 energy_consumption=1, unit='mA')
-        mock_get_power.return_value = test_entry
+        mock_get_powers.return_value = [test_entry]
         test_monitor.update_data()
         self.assertEqual(test_monitor.data.power_entries['current'], test_entry)
 

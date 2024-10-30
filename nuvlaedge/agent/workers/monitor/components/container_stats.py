@@ -28,6 +28,7 @@ class ContainerStatsMonitor(Monitor):
     """
     def __init__(self, name: str, telemetry, enable_monitor: bool):
         super().__init__(name, DeploymentData, enable_monitor)
+
         self.is_thread = True
         self.coe_client: COEClient = telemetry.coe_client
 

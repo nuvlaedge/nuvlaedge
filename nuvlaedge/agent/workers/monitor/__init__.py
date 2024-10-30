@@ -20,7 +20,10 @@ class Monitor(ABC, Thread):
     Serves as a base class to facilitate and structure the telemetry gathering
     along the device.
     """
-    def __init__(self, name: str, data_type: Type, enable_monitor: bool,
+    def __init__(self,
+                 name: str,
+                 data_type: Type,
+                 enable_monitor: bool = True,
                  thread_period: int = 60):
         super().__init__()
         # Define default thread attributes
@@ -32,11 +35,11 @@ class Monitor(ABC, Thread):
         else:
             self.is_thread: bool = True
 
-        self.name: str = name
-        self.data: data_type = data_type(telemetry_name=name)
+        self.name: str = name or self.__class__.__name__
+        self.data: data_type = data_type(telemetry_name=self.name)
 
         # Logging system
-        self.logger: logging.Logger = get_nuvlaedge_logger(__name__)
+        self.logger: logging.Logger = get_nuvlaedge_logger(self.__class__.__module__)
 
         # Enable flag
         self._enabled_monitor: bool = enable_monitor

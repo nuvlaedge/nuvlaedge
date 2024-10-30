@@ -121,5 +121,4 @@ class TemperatureMonitor(Monitor):
                                   for v in self.local_temp_registry.values()]
 
     def populate_nb_report(self, nuvla_report: dict):
-        data = self.data.model_dump(exclude_none=True, by_alias=True)
-        nuvla_report['temperatures'] = data.get('temperatures')
+        ...

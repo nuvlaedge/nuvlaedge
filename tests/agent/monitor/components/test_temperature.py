@@ -3,6 +3,7 @@ import unittest
 
 from mock import Mock, patch, mock_open
 
+from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
 from nuvlaedge.agent.workers.monitor.components.temperature import TemperatureMonitor
 from nuvlaedge.agent.workers.monitor.data.temperature_data import TemperatureData, TemperatureZone
 from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
@@ -154,8 +155,11 @@ class TestTemperatureMonitor(unittest.TestCase):
         }
         test_monitor.update_data()
 
-        telemetry_data = {}
-        test_monitor.populate_nb_report(telemetry_data)
+        telemetry_payload = TelemetryPayloadAttributes()
+        data = test_monitor.data.model_dump(exclude_none=True, by_alias=True)
+        telemetry_payload.update(data)
+
+        telemetry_data = telemetry_payload.model_dump(exclude_none=True, by_alias=True)
         self.assertEqual(telemetry_data, {
             'temperatures': [{'thermal-zone': 'cpu-thermal', 'value': 85.123},
                              {'thermal-zone': 'GPU-therm', 'value': 39.5}]})

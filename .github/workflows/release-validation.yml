@@ -121,6 +121,7 @@ jobs:
 
   setup-matrix:
     runs-on: ubuntu-latest
+    needs: build-dev
     outputs:
       boards: ${{ steps.set-boards.outputs.boards }}
       tests: ${{ steps.set-tests.outputs.tests }}
@@ -153,7 +154,7 @@ jobs:
         run: >
           docker run 
           --rm 
-          -v /home/ubuntu/.ssh:/root/.ssh
+          -v /home/sixsq/.validation_keys:/root/.ssh
           -v runner_${{ matrix.board-config }}-vol:/results 
           -v ./logs/:/tmp/nuvlaedge_validator/logs
           ${{ env.VALIDATION_IMAGE_NAME }} 

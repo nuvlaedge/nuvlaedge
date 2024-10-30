@@ -303,7 +303,7 @@ class NuvlaClientWrapper:
         response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)
-        logger.debug(f"Response received from telemetry report: {response.data}")
+        logger.debug('Response received from telemetry report: %s', response.data)
         return response.data
 
     def telemetry_patch(self, telemetry_jsonpatch: list, attributes_to_delete: list[str]) -> dict:
@@ -316,11 +316,11 @@ class NuvlaClientWrapper:
         Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
 
         """
-        logger.debug(f"Sending telemetry patch data to Nuvla: \n {telemetry_jsonpatch}")
+        logger.debug('Sending telemetry patch data to Nuvla: %s', telemetry_jsonpatch)
         response: CimiResource = self.nuvlaedge_client.edit_patch(self.nuvlaedge_status_uuid,
                                                                   data=telemetry_jsonpatch,
                                                                   select=attributes_to_delete)
-        logger.debug(f"Response received from telemetry patch report: {response.data}")
+        logger.debug('Response received from telemetry patch report: %s', response.data)
         return response.data
 
     def save_current_state_to_file(self):

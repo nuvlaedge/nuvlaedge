@@ -333,7 +333,7 @@ class Agent:
                 # so there is no need to create a local stored file
                 self.telemetry_payload.update(self._nuvla_client.nuvlaedge_status)
                 logger.debug(f"Telemetry from Nuvla: \n "
-                             f"{self.telemetry_payload.model_dump_json(indent=4, exclude_none=True, by_alias=True)}")
+                             f"{self.telemetry_payload.model_dump_json(exclude_none=True, by_alias=True)}")
 
             case State.DECOMMISSIONED | State.DECOMMISSIONING:
                 logger.error(f"Force exiting the agent due to wrong state {current_state}")
@@ -350,7 +350,7 @@ class Agent:
         # Gather the status report
         status, notes = self.status_handler.get_status(self._coe_engine)
 
-        logger.info(f"Status gathered: \n{status} \n {json.dumps(notes,indent=4)}")
+        logger.info(f"Status gathered: {status}. \nNotes: {json.dumps(notes, indent=4)}")
         telemetry.status = status
         telemetry.status_notes = notes
 
@@ -415,13 +415,9 @@ class Agent:
         try:
             previous_data = self.telemetry_payload.model_dump(exclude_none=True, by_alias=True)
             telemetry_patch = jsonpatch.make_patch(previous_data, data_to_send)
-            logger.debug(f"Sending telemetry patch data to Nuvla \n {telemetry_patch}")
             response = self._nuvla_client.telemetry_patch(list(telemetry_patch), attributes_to_delete=list(to_delete))
         except Exception as e:
-            logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True, stack_info=True)
-            # Send telemetry via NuvlaClientWrapper
-            logger.debug(f"Sending telemetry data to Nuvla \n "
-                         f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
+            logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True)
             response = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
         # If telemetry is successful save telemetry

@@ -272,6 +272,10 @@ class Telemetry:
 
         # Clean the model from empty fields
 
+    @property
+    def _local_telemetry_json(self):
+        return self._local_telemetry.model_dump_json(exclude_none=True, by_alias=True)
+
     def run(self):
         """
         Collects monitor metrics, checks threaded monitors health,
@@ -295,8 +299,7 @@ class Telemetry:
         self._local_telemetry.current_time = datetime.utcnow().isoformat().split('.')[0] + 'Z'
 
         try:
-            logger.debug(f"Writing telemetry to Agent Queue"
-                         f" {self._local_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True)}")
+            logger.debug("Writing telemetry to Agent Queue: %s", self._local_telemetry_json)
             self.report_channel.put(self._local_telemetry, block=False)
 
         except Full:

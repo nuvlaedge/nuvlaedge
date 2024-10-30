@@ -565,7 +565,7 @@ class DockerClient(COEClient):
             command=command,
             name=job_execution_id,
             hostname=job_execution_id,
-            # auto_remove=True,
+            auto_remove=True,
             detach=True,
             network=local_net,
             volumes=volumes,

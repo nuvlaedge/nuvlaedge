@@ -28,7 +28,7 @@ class TestTelemetry(TestCase):
 
     @patch('nuvlaedge.agent.workers.telemetry.Telemetry._initialize_monitors')
     def test_init_excluded_monitors(self, mock_init_monitors):
-        excluded_monitors = 'gpio,power'
+        excluded_monitors = 'gpio_monitor,power_monitor'
         telemetry = Telemetry(
             self.mock_coe_client,
             self.mock_report_channel,
@@ -37,7 +37,7 @@ class TestTelemetry(TestCase):
             excluded_monitors,
             True,
             True)
-        self.assertEqual(['gpio', 'power'], telemetry.excluded_monitors)
+        self.assertEqual(['gpio_monitor', 'power_monitor'], telemetry.excluded_monitors)
 
 
     @patch('nuvlaedge.agent.workers.telemetry.get_monitor')
@@ -55,7 +55,7 @@ class TestTelemetry(TestCase):
 
     @patch('nuvlaedge.agent.workers.telemetry.Telemetry._check_monitors_health')
     def test_initialize_unsupported_monitors(self, mock_check_health):
-        with patch('nuvlaedge.agent.workers.telemetry.active_monitors', ['gpio']):
+        with patch('nuvlaedge.agent.workers.telemetry.active_monitors', ['gpio_monitor']):
             self.test_telemetry._initialize_monitors()
         self.assertEqual(0, len(self.test_telemetry.monitor_list))
 

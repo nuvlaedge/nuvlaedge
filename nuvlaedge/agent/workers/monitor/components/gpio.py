@@ -10,7 +10,7 @@ from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
 
 
-@monitor('gpio')
+@monitor('gpio_monitor')
 class GpioMonitor(Monitor):
     """
     Monitor class to read GPIO pins for system-on-board devices

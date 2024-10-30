@@ -2,9 +2,10 @@ name: 'Pre-Release Validation'
 
 on:
   pull_request:
-    branches:
-      - "release-please--branches-main"
-      - "issue_tasklist_**"
+#    branches:
+#      - "release-please--branches-main"
+#      - "issue_tasklist_**"
+  workflow_dispatch:
 
 
 concurrency:

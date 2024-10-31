@@ -16,8 +16,8 @@ on:
       - 'main'
   pull_request:
     paths:
-      - 'nuvlaedge/**.py'
-      - 'scripts/**.sh'
+      - '**.py'
+      - '**.sh'
       # Adding the workflow file as a trigger for the workflow causes the workflow to be trigger on any push on the pull request
       # - '.github/workflows/build-main-devel.yml'
       - 'pyproject.toml'

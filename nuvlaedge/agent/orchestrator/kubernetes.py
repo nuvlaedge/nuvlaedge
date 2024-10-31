@@ -299,9 +299,6 @@ class KubernetesClient(COEClient):
             authentication = (f'--api-key {api_key} '
                               f'--api-secret {api_secret} ')
 
-        if cookies:
-            authentication = f'--cookies {cookies} '
-
         cmd = '/app/job_executor.py'
         args = f'--api-url https://{nuvla_endpoint} ' \
                f'{authentication} ' \

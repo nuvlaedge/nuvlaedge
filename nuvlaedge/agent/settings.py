@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import Field, field_validator, BaseModel, AliasChoices, model_validator
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
-from nuvlaedge.agent.common.util import get_irs
+from nuvlaedge.agent.common.util import get_irs, from_irs
 from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.settings_parser import NuvlaEdgeBaseSettings
 from nuvlaedge.common.file_operations import read_file
@@ -43,12 +43,21 @@ class NuvlaEdgeSession(NuvlaEdgeBaseModel):
     verify: bool | None = None
 
     # Important Random String
-    irs: str | None = None
+    irs_v2: str | None = Field(None, alias='irs2')
+    irs_v1: str | None = Field(None, alias='irs')
 
     credentials: NuvlaApiKeyTemplate | None = None
 
     nuvlaedge_uuid: NuvlaID | None = None
     nuvlaedge_status_uuid: NuvlaID | None = None
+
+    @property
+    def irs(self):
+        return self.irs_v2
+
+    @irs.setter
+    def irs(self, value):
+        self.irs_v2 = value
 
     @model_validator(mode='after')
     @classmethod
@@ -191,6 +200,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         self._nuvlaedge_uuid = self._find_nuvlaedge_uuid()
 
+        self._migrate_irs()
         self._create_client_from_settings()
 
         logging.info("Initialising agent settings for NuvlaEdge: %s", self.nuvlaedge_uuid)
@@ -278,6 +288,15 @@ class AgentSettings(NuvlaEdgeBaseSettings):
             logging.warning(f'NuvlaEdge UUID ({nuvlaedge_id}) '
                             f'do not match Nuvla session identifier ({nuvla_nuvlaedge_id})')
         return uuids_match
+
+    def _migrate_irs(self):
+        if self._stored_session and not self._stored_session.irs_v2 and self._stored_session.irs_v1:
+            # Migration from IRSv1 to IRSv2
+            try:
+                data = from_irs(self.nuvlaedge_uuid, self._stored_session.irs_v1, CTE.MACHINE_ID)
+                self._stored_session.irs_v2 = get_irs(self.nuvlaedge_uuid, *data)
+            except Exception as e:
+                logging.exception(f'Failed to migrate IRS from v1 to v2: {e}')
 
     def _create_client_from_settings(self):
         from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper

@@ -221,3 +221,27 @@ class TestAgentSettings(TestCase):
         self.assertIsNotNone(self.test_settings._nuvla_client.irs)
         self.assertIsNone(self.test_settings._stored_session.irs)
 
+    @patch('nuvlaedge.agent.settings.CTE')
+    def test_migrate_irs(self, patch_cte):
+        def get_session():
+            return NuvlaEdgeSession.model_validate({
+                'nuvlaedge_uuid': ne_uuid,
+                'irs': 'MDEyMzQ1Njc4OWFiY2RlZtYpd2DhppINNf/9ELmMMt0='
+            })
+
+        ne_uuid = '11111111-2222-3333-4444-555555555555'
+        self.test_settings._nuvlaedge_uuid = ne_uuid
+        self.test_settings._stored_session = get_session()
+        patch_cte.MACHINE_ID = '66666666-7777-8888-9999-000000000000'
+        self.test_settings._migrate_irs()
+        self.assertIsNotNone(self.test_settings._stored_session.irs_v2)
+        self.assertIsNotNone(self.test_settings._stored_session.irs)
+        self.assertNotEqual(self.test_settings._stored_session.irs_v2,
+                            self.test_settings._stored_session.irs_v1)
+
+        self.test_settings._nuvlaedge_uuid = ''
+        self.test_settings._stored_session = get_session()
+        with self.assertLogs(level='ERROR') as log:
+            self.test_settings._migrate_irs()
+            self.assertTrue(any([('Failed' in i) for i in log.output]))
+

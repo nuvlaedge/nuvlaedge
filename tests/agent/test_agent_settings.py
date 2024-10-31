@@ -204,3 +204,20 @@ class TestAgentSettings(TestCase):
 
         os.environ.clear()
         os.environ.update(original_env)
+
+    def test_handle_api_key_secret_from_env(self):
+        self.test_settings.nuvlaedge_api_key = 'api-key'
+        self.test_settings.nuvlaedge_api_secret = 'api-secret'
+
+        self.test_settings._stored_session = NuvlaEdgeSession()
+        self.mock_nuvla_client.login_nuvlaedge.return_value = True
+        self.test_settings._handle_api_key_secret_from_env()
+        self.assertIsNotNone(self.test_settings._nuvla_client.irs)
+        self.assertIsNotNone(self.test_settings._stored_session.irs)
+
+        self.test_settings._stored_session = NuvlaEdgeSession()
+        self.mock_nuvla_client.login_nuvlaedge.side_effect = RuntimeError
+        self.test_settings._handle_api_key_secret_from_env()
+        self.assertIsNotNone(self.test_settings._nuvla_client.irs)
+        self.assertIsNone(self.test_settings._stored_session.irs)
+

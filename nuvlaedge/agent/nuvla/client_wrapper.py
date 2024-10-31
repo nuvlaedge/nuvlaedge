@@ -392,17 +392,6 @@ class NuvlaClientWrapper:
         # Compute IRS from credentials
         if session.credentials and not session.irs:
             _client.irs = get_irs(session.nuvlaedge_uuid, session.credentials.key, session.credentials.secret)
-            _client.save_current_state_to_file()
 
         _client.login_nuvlaedge()
-
-        # If uuid is none in session, retrieve it from the API
-        if not _client.nuvlaedge_uuid and _client.nuvlaedge_credentials is not None:
-            logger.info("NuvlaEdge UUID not found in session, retrieving from API...")
-            _client._nuvlaedge_uuid = _client.find_nuvlaedge_id_from_nuvla_session()
-            logger.info(f"NuvlaEdge UUID not found in session, retrieving from API... {_client._nuvlaedge_uuid}")
-            if _client.nuvlaedge_uuid:
-                _client.irs = get_irs(_client.nuvlaedge_uuid, session.credentials.key, session.credentials.secret)
-                _client.save_current_state_to_file()
-
         return _client

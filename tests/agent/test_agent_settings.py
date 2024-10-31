@@ -76,13 +76,16 @@ class TestAgentSettings(TestCase):
         # API Key and Secret in env vars
         self.test_settings.nuvlaedge_api_key = 'key'
         self.test_settings.nuvlaedge_api_secret = 'secret'
+        self.test_settings._nuvla_client = self.mock_nuvla_client
         self.test_settings._create_client_from_settings()
         self.assertIsNotNone(self.test_settings._nuvla_client.irs)
 
-        # API key&secret in env vars and existing session
+        # API key&secret in env vars and existing session and login with api-key failed
         self.test_settings._stored_session = NuvlaEdgeSession()
+        self.test_settings._nuvla_client = self.mock_nuvla_client
         self.test_settings._create_client_from_settings()
-        self.assertIsNotNone(self.test_settings._stored_session.irs)
+        self.assertIsNone(self.test_settings._stored_session.irs)
+        self.assertIsNotNone(self.test_settings.nuvla_client.irs)
 
         # API key&secret in session
         self.test_settings._stored_session.credentials = NuvlaApiKeyTemplate(key='key', secret='secret')

@@ -254,7 +254,16 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                 self._stored_session.credentials = creds
 
             self._nuvla_client.irs = get_irs(self.nuvlaedge_uuid, self.nuvlaedge_api_key, self.nuvlaedge_api_secret)
-            if self._stored_session:
+
+            try:
+                login_success = self._nuvla_client.login_nuvlaedge()
+                if not login_success:
+                    logging.error('Failed to login to Nuvla with the API key and secret provided from the environment')
+            except Exception as e:
+                logging.exception(f'Login with API key and secret provided from the environment failed with: {e}')
+                login_success = False
+
+            if self._stored_session and login_success:
                 self._stored_session.irs = self._nuvla_client.irs
 
     def _check_uuid_match_with_nuvla_session(self):
@@ -286,10 +295,10 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                                                self._stored_session.credentials.secret)
 
         if self._stored_session and self._stored_session.irs:
+            logging.info("Nuvla API key found in stored session, using them to login")
             self._nuvla_client.irs = self._stored_session.irs
 
         if self._nuvla_client.irs:
-            logging.info("Nuvla API keys found in stored session, using them to login")
             if self._stored_session:
                 self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
 

@@ -24,6 +24,10 @@ class PowerMonitor(Monitor):
                     "i2c_addresses": ["1-0040", "1-0041"],
                     "channels_path": ["1-0040/iio:device0", "1-0041/iio:device1"]
                 },
+                "xavier_nx": {
+                    "i2c_addresses": ["7-0040"],
+                    "channels_path": ["7-0040/iio:device0"]
+                },
                 "nano": {
                     "i2c_addresses": ["6-0040"],
                     "channels_path": ["6-0040/iio:device0"]

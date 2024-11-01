@@ -3,7 +3,7 @@ import logging
 from argparse import ArgumentParser, Namespace
 from typing import Optional
 
-from pydantic import Field, field_validator, BaseModel, AliasChoices, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.common.util import get_irs, from_irs
@@ -37,6 +37,8 @@ class NuvlaApiKeyTemplate(BaseModel, frozen=True):
 
 
 class NuvlaEdgeSession(NuvlaEdgeBaseModel):
+    model_config = ConfigDict(frozen=True)
+
     endpoint: str = "https://nuvla.io"
     insecure: bool | None = None
     # To support updates from 2.14.1 to >=2.14.2
@@ -55,13 +57,11 @@ class NuvlaEdgeSession(NuvlaEdgeBaseModel):
     def irs(self):
         return self.irs_v2
 
-    @irs.setter
-    def irs(self, value):
-        self.irs_v2 = value
-
     @model_validator(mode='after')
     @classmethod
     def validate_fields(cls, v):
+        v.model_config['frozen'] = False
+
         if v.insecure is None and v.verify is None:
             # Default to secure connection
             v.insecure = False
@@ -71,6 +71,7 @@ class NuvlaEdgeSession(NuvlaEdgeBaseModel):
             # to the opposite of what it should be. This is fixed in version 2.14.2.
             v.insecure = v.verify
 
+        v.model_config['frozen'] = True
         return v
 
 
@@ -165,7 +166,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
     _status_report_type = None
 
     _nuvlaedge_uuid: Optional[NuvlaID] = None
-    _stored_session: Optional[NuvlaEdgeSession] = None
+    _stored_session: NuvlaEdgeSession = NuvlaEdgeSession()
 
     @field_validator('nuvlaedge_thread_monitors', mode='after')
     @classmethod
@@ -218,7 +219,7 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         """
 
         env_nuvlaedge_id = self.nuvlaedge_uuid_env
-        stored_nuvlaedge_id = self._stored_session.nuvlaedge_uuid if self._stored_session else None
+        stored_nuvlaedge_id = self._stored_session.nuvlaedge_uuid
         _found_id = None
 
         if (stored_nuvlaedge_id and env_nuvlaedge_id and
@@ -254,23 +255,28 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         return NuvlaID(_found_id)
 
     def _handle_api_key_secret_from_env(self):
+        """
+        Handle a special case when the NuvlaEdge credentials are provided as ENV variables.
+        These credentials need to replace any local session if the configuration match with the stored session
+        and Nuvla after login.
+        """
         if self.nuvlaedge_api_key and self.nuvlaedge_api_secret:
             logging.info("Nuvla API keys passed as arguments, these will replace local session if valid")
 
-            self._nuvla_client.irs = get_irs(self.nuvlaedge_uuid, self.nuvlaedge_api_key, self.nuvlaedge_api_secret)
+            irs = get_irs(self.nuvlaedge_uuid, self.nuvlaedge_api_key, self.nuvlaedge_api_secret)
             try:
-                login_success = self._nuvla_client.login_nuvlaedge()
+                login_success = self._nuvla_client.login_nuvlaedge(irs)
                 if not login_success:
                     logging.error('Failed to login to Nuvla with the API key and secret provided from the environment')
             except Exception as e:
                 logging.exception(f'Login with API key and secret provided from the environment failed with: {e}')
                 login_success = False
 
-            if self._stored_session and login_success:
-                self._stored_session.irs = self._nuvla_client.irs
+            if login_success:
+                self._nuvla_client.irs = irs
                 if self._stored_session.credentials:
-                    self._stored_session.credentials = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
-                                                                           secret=self.nuvlaedge_api_secret)
+                    self._nuvla_client.nuvlaedge_credentials = NuvlaApiKeyTemplate(key=self.nuvlaedge_api_key,
+                                                                                   secret=self.nuvlaedge_api_secret)
 
     def _check_uuid_match_with_nuvla_session(self):
         nuvlaedge_id = self.nuvlaedge_uuid
@@ -286,24 +292,27 @@ class AgentSettings(NuvlaEdgeBaseSettings):
         return uuids_match
 
     def _irs_migration(self):
-        if self._stored_session and not self._stored_session.irs_v2 and self._stored_session.irs_v1:
-            # Migration from IRSv1 to IRSv2
+        # Migration from IRSv1 to IRSv2
+        if not self._stored_session.irs_v2 and self._stored_session.irs_v1:
             try:
                 data = from_irs(self.nuvlaedge_uuid, self._stored_session.irs_v1, CTE.MACHINE_ID)
-                self._stored_session.irs_v2 = get_irs(self.nuvlaedge_uuid, *data)
+                irs2 = get_irs(self.nuvlaedge_uuid, *data)
+                self._stored_session = self._stored_session.model_copy(deep=True, update={'irs_v2': irs2})
             except Exception as e:
                 logging.exception(f'Failed to migrate IRS from v1 to v2: {e}')
 
-    def _generate_irs_from_settings(self):
-        if self._stored_session and self._stored_session.credentials:
-            logging.debug('Generating new IRS from settings')
-            self._stored_session.irs = get_irs(self.nuvlaedge_uuid,
-                                               self._stored_session.credentials.key,
-                                               self._stored_session.credentials.secret)
+        # Keep IRSv1
+        self._nuvla_client.irs_v1 = self._stored_session.irs_v1
 
-    def _set_old_credentials_if_exist(self):
-        if self._stored_session and self._stored_session.credentials:
-            self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
+        # Keep credentials
+        self._nuvla_client.nuvlaedge_credentials = self._stored_session.credentials
+
+    def _generate_irs_from_settings(self):
+        if self._stored_session.credentials:
+            logging.debug('Generating new IRS from settings')
+            self._nuvla_client.irs = get_irs(self.nuvlaedge_uuid,
+                                             self._stored_session.credentials.key,
+                                             self._stored_session.credentials.secret)
 
     def _create_client_from_settings(self):
         from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
@@ -312,32 +321,27 @@ class AgentSettings(NuvlaEdgeBaseSettings):
 
         self._irs_migration()
 
-        # Handle a special case when the NuvlaEdge credentials are provided as ENV variables. These credentials need
-        # to replace any local session if the configuration match with the stored session and Nuvla after login.
         self._handle_api_key_secret_from_env()
 
-        if self._stored_session and not self._stored_session.irs:
-            self._generate_irs_from_settings()
-
-        if self._stored_session and self._stored_session.irs:
+        if not self._nuvla_client.irs and self._stored_session.irs:
             logging.info("Nuvla API key found in stored session, using it to login")
             self._nuvla_client.irs = self._stored_session.irs
 
-        if self._nuvla_client.irs:
-            self._set_old_credentials_if_exist()
+        if not self._nuvla_client.irs and not self._stored_session.irs:
+            self._generate_irs_from_settings()
 
+        if self._nuvla_client.irs:
             try:
                 login_success = self._nuvla_client.login_nuvlaedge()
             except RuntimeError as e:
-                if 'irs' in str(e) and self._stored_session and self._stored_session.credentials:
+                if 'irs' in str(e) and self._stored_session.credentials:
                     self._generate_irs_from_settings()
-                    self._nuvla_client.irs = self._stored_session.irs
                     login_success = self._nuvla_client.login_nuvlaedge()
                 else:
                     raise
 
-            # To prevent a situation where the stored session is not valid anymore, we need to check if the UUID's match
-            # before the assessment of the uuid.
+            # To prevent a situation where the stored session is not valid anymore,
+            # we need to check if the UUID's match before the assessment of the uuid.
             if login_success and self._check_uuid_match_with_nuvla_session():
                 # After logging in if UUID's match, save the session to file
                 self._nuvla_client.save_current_state_to_file()

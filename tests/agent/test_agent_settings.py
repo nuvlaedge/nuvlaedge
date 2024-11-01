@@ -69,46 +69,57 @@ class TestAgentSettings(TestCase):
     def test_nuvla_client(self):
         self.assertEqual(self.test_settings.nuvla_client, self.mock_nuvla_client)
 
-    def test_create_client_from_settings(self):
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.login_nuvlaedge')
+    def test_create_client_from_settings(self, mock_login_nuvlaedge):
         self.test_settings._create_client_from_settings()
         self.assertIsNone(self.test_settings._nuvla_client.irs)
 
         # API Key and Secret in env vars
-        self.test_settings.nuvlaedge_api_key = 'key'
-        self.test_settings.nuvlaedge_api_secret = 'secret'
+        mock_login_nuvlaedge.side_effect = [True, False]
+        self.test_settings.nuvlaedge_api_key = 'new-key'
+        self.test_settings.nuvlaedge_api_secret = 'new-secret'
         self.test_settings._nuvla_client = self.mock_nuvla_client
         self.test_settings._create_client_from_settings()
         self.assertIsNotNone(self.test_settings._nuvla_client.irs)
 
         # API key&secret in env vars and existing session and login with api-key failed
+        mock_login_nuvlaedge.reset_mock(side_effect=True)
+        mock_login_nuvlaedge.side_effect = [True, False]
         self.test_settings._stored_session = NuvlaEdgeSession()
         self.test_settings._nuvla_client = self.mock_nuvla_client
         self.test_settings._create_client_from_settings()
-        self.assertIsNone(self.test_settings._stored_session.irs)
+        self.assertIsNone(self.test_settings._nuvla_client.nuvlaedge_credentials)
         self.assertIsNotNone(self.test_settings.nuvla_client.irs)
 
-        # API key&secret in session
-        self.test_settings._stored_session.credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
+        creds = NuvlaApiKeyTemplate(key='key', secret='secret')
+
+        # API key&secret in session and in env vars
+        mock_login_nuvlaedge.reset_mock(side_effect=True)
+        mock_login_nuvlaedge.side_effect = [True, False]
+        self.test_settings._stored_session = NuvlaEdgeSession(credentials=creds)
         self.test_settings._create_client_from_settings()
-        self.assertIsNotNone(self.test_settings._stored_session.credentials)
+        self.assertIsNotNone(self.test_settings._nuvla_client.nuvlaedge_credentials)
+        self.assertIsNotNone(self.test_settings.nuvla_client.irs)
+        self.assertEqual('new-key', self.test_settings._nuvla_client.nuvlaedge_credentials.key)
 
         # API key&secret in session but not in env var and no irs
+        mock_login_nuvlaedge.reset_mock(side_effect=True)
+        mock_login_nuvlaedge.return_value = False
         self.test_settings.nuvlaedge_api_key = None
         self.test_settings.nuvlaedge_api_secret = None
-        self.test_settings._stored_session.irs = None
-        self.test_settings._stored_session.credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
+        self.test_settings._stored_session = NuvlaEdgeSession(credentials=creds)
         self.test_settings._create_client_from_settings()
-        self.assertIsNotNone(self.test_settings._stored_session.irs)
+        self.assertIsNotNone(self.test_settings._nuvla_client.irs)
 
         # NuvlaEdge UUID in session
         ne_uuid = 'nuvlaedge/uuid'
-        self.test_settings._stored_session.nuvlaedge_uuid = ne_uuid
+        self.test_settings._stored_session = NuvlaEdgeSession(nuvlaedge_uuid=ne_uuid)
         self.test_settings._create_client_from_settings()
 
-        self.test_settings._stored_session.nuvlaedge_uuid = None
+        self.test_settings._stored_session = NuvlaEdgeSession(nuvlaedge_uuid=None, irs_v2='irs')
+
         client_class_path = 'nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper'
-        with patch(f'{client_class_path}.login_nuvlaedge') as mock_login_nuvlaedge, \
-             patch(f'{client_class_path}.save_current_state_to_file') as mock_save_current_state_to_file, \
+        with patch(f'{client_class_path}.save_current_state_to_file') as mock_save_current_state_to_file, \
              patch(f'{client_class_path}.find_nuvlaedge_id_from_nuvla_session') as mock_nuvlaedge_id_from_nuvla_session:
 
             mock_nuvlaedge_id_from_nuvla_session.return_value = ne_uuid
@@ -132,6 +143,7 @@ class TestAgentSettings(TestCase):
             mock_save_current_state_to_file.reset_mock()
             mock_login_nuvlaedge.reset_mock(return_value=True, side_effect=True)
             mock_login_nuvlaedge.side_effect = [RuntimeError('Failed to decode irs'), True]
+            self.test_settings._stored_session = NuvlaEdgeSession(credentials=creds)
             self.test_settings._create_client_from_settings()
             mock_save_current_state_to_file.assert_called_once()
             self.assertEqual(mock_login_nuvlaedge.call_count, 2)
@@ -189,7 +201,7 @@ class TestAgentSettings(TestCase):
 
     def test_find_nuvlaedge_uuid(self):
         self.test_settings.nuvlaedge_uuid_env = "nuvlabox/ENV_NUVLAEDGE_UUID"
-        self.test_settings._stored_session = None
+        self.test_settings._stored_session = NuvlaEdgeSession()
         self.mock_nuvla_client.nuvlaedge_credentials = None
         self.assertEqual(self.test_settings._find_nuvlaedge_uuid(), "nuvlabox/ENV_NUVLAEDGE_UUID")
 
@@ -208,7 +220,7 @@ class TestAgentSettings(TestCase):
 
         with self.assertRaises(InsufficientSettingsProvided):
             self.test_settings.nuvlaedge_uuid_env = None
-            self.test_settings._stored_session = None
+            self.test_settings._stored_session = NuvlaEdgeSession()
             self.test_settings._find_nuvlaedge_uuid()
 
     @patch('nuvlaedge.agent.settings.AgentSettings.initialise')
@@ -239,23 +251,27 @@ class TestAgentSettings(TestCase):
         self.mock_nuvla_client.login_nuvlaedge.return_value = True
         self.test_settings._handle_api_key_secret_from_env()
         self.assertIsNotNone(self.test_settings._nuvla_client.irs)
-        self.assertIsNotNone(self.test_settings._stored_session.irs)
 
         # with preexisting old credentials
-        credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
-        self.test_settings._stored_session = NuvlaEdgeSession()
-        self.test_settings._stored_session.credentials = credentials
+        credentials = NuvlaApiKeyTemplate(key='old-key', secret='old-secret')
+        self.test_settings._stored_session = NuvlaEdgeSession(credentials=credentials)
         self.mock_nuvla_client.login_nuvlaedge.return_value = True
         self.test_settings._handle_api_key_secret_from_env()
         self.assertIsNotNone(self.test_settings._nuvla_client.irs)
-        self.assertIsNotNone(self.test_settings._stored_session.irs)
-        self.assertNotEqual(self.test_settings._stored_session.credentials, credentials)
+        self.assertNotEqual(self.test_settings._nuvla_client.nuvlaedge_credentials, credentials)
 
+        # nuvla return login failure
+        self.test_settings._stored_session = NuvlaEdgeSession()
+        self.test_settings._nuvla_client.irs = None
+        self.mock_nuvla_client.login_nuvlaedge.return_value = False
+        self.test_settings._handle_api_key_secret_from_env()
+        self.assertIsNone(self.test_settings._nuvla_client.irs)
+
+        # login fails with exception
         self.test_settings._stored_session = NuvlaEdgeSession()
         self.mock_nuvla_client.login_nuvlaedge.side_effect = RuntimeError
         self.test_settings._handle_api_key_secret_from_env()
-        self.assertIsNotNone(self.test_settings._nuvla_client.irs)
-        self.assertIsNone(self.test_settings._stored_session.irs)
+        self.assertIsNone(self.test_settings._nuvla_client.irs)
 
     @patch('nuvlaedge.agent.settings.CTE')
     def test_irs_migration(self, patch_cte):
@@ -280,4 +296,8 @@ class TestAgentSettings(TestCase):
         with self.assertLogs(level='ERROR') as log:
             self.test_settings._irs_migration()
             self.assertTrue(any([('Failed' in i) for i in log.output]))
+
+        # ignore unknown attribute
+        session = NuvlaEdgeSession.model_validate({'unknown_attribute': '?'})
+        self.assertRaises(AttributeError, getattr, session, 'unknown_attribute')
 

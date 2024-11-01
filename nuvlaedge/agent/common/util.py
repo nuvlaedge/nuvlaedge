@@ -186,9 +186,9 @@ def _irs_key(base, suffix=''):
     return hashlib.sha256((base + ':' + suffix).encode()).digest()
 
 
-def get_irs(base, k, s):
+def get_irs(base, k, s, suffix=''):
     rand = os.urandom(16)
-    enc = _Enc(_Cbc(_irs_key(base), rand))
+    enc = _Enc(_Cbc(_irs_key(base, suffix), rand))
     return base64.b64encode(rand + enc.feed(k + ':' + s) + enc.feed())
 
 

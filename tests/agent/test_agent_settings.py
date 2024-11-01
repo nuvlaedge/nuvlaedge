@@ -105,18 +105,44 @@ class TestAgentSettings(TestCase):
         self.test_settings._stored_session.nuvlaedge_uuid = ne_uuid
         self.test_settings._create_client_from_settings()
 
-        # With login success
         self.test_settings._stored_session.nuvlaedge_uuid = None
         client_class_path = 'nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper'
         with patch(f'{client_class_path}.login_nuvlaedge') as mock_login_nuvlaedge, \
              patch(f'{client_class_path}.save_current_state_to_file') as mock_save_current_state_to_file, \
              patch(f'{client_class_path}.find_nuvlaedge_id_from_nuvla_session') as mock_nuvlaedge_id_from_nuvla_session:
-            mock_login_nuvlaedge.return_value = True
+
             mock_nuvlaedge_id_from_nuvla_session.return_value = ne_uuid
+
+            # With login success
+            mock_login_nuvlaedge.return_value = True
             self.test_settings._nuvlaedge_uuid = ne_uuid
             self.test_settings._nuvla_client.login_nuvlaedge = Mock()
             self.test_settings._create_client_from_settings()
             mock_save_current_state_to_file.assert_called_once()
+
+            # Test exception in login
+            mock_save_current_state_to_file.reset_mock()
+            mock_login_nuvlaedge.reset_mock(return_value=True, side_effect=True)
+            mock_login_nuvlaedge.side_effect = Exception
+            self.assertRaises(Exception, self.test_settings._create_client_from_settings)
+            mock_save_current_state_to_file.assert_not_called()
+            mock_login_nuvlaedge.assert_called_once()
+
+            # Test recover from credentials
+            mock_save_current_state_to_file.reset_mock()
+            mock_login_nuvlaedge.reset_mock(return_value=True, side_effect=True)
+            mock_login_nuvlaedge.side_effect = [RuntimeError('Failed to decode irs'), True]
+            self.test_settings._create_client_from_settings()
+            mock_save_current_state_to_file.assert_called_once()
+            self.assertEqual(mock_login_nuvlaedge.call_count, 2)
+
+            # Test cannot recover from credentials
+            mock_save_current_state_to_file.reset_mock()
+            mock_login_nuvlaedge.reset_mock(return_value=True, side_effect=True)
+            mock_login_nuvlaedge.side_effect = RuntimeError
+            self.assertRaises(RuntimeError, self.test_settings._create_client_from_settings)
+            mock_save_current_state_to_file.assert_not_called()
+            mock_login_nuvlaedge.assert_called_once()
 
     def test_ne_uuid_not_match_nuvla_session_identifier(self):
         mock_nuvlaedge_id_from_nuvla_session = Mock()
@@ -215,6 +241,16 @@ class TestAgentSettings(TestCase):
         self.assertIsNotNone(self.test_settings._nuvla_client.irs)
         self.assertIsNotNone(self.test_settings._stored_session.irs)
 
+        # with preexisting old credentials
+        credentials = NuvlaApiKeyTemplate(key='key', secret='secret')
+        self.test_settings._stored_session = NuvlaEdgeSession()
+        self.test_settings._stored_session.credentials = credentials
+        self.mock_nuvla_client.login_nuvlaedge.return_value = True
+        self.test_settings._handle_api_key_secret_from_env()
+        self.assertIsNotNone(self.test_settings._nuvla_client.irs)
+        self.assertIsNotNone(self.test_settings._stored_session.irs)
+        self.assertNotEqual(self.test_settings._stored_session.credentials, credentials)
+
         self.test_settings._stored_session = NuvlaEdgeSession()
         self.mock_nuvla_client.login_nuvlaedge.side_effect = RuntimeError
         self.test_settings._handle_api_key_secret_from_env()
@@ -222,7 +258,7 @@ class TestAgentSettings(TestCase):
         self.assertIsNone(self.test_settings._stored_session.irs)
 
     @patch('nuvlaedge.agent.settings.CTE')
-    def test_migrate_irs(self, patch_cte):
+    def test_irs_migration(self, patch_cte):
         def get_session():
             return NuvlaEdgeSession.model_validate({
                 'nuvlaedge_uuid': ne_uuid,
@@ -233,7 +269,7 @@ class TestAgentSettings(TestCase):
         self.test_settings._nuvlaedge_uuid = ne_uuid
         self.test_settings._stored_session = get_session()
         patch_cte.MACHINE_ID = '66666666-7777-8888-9999-000000000000'
-        self.test_settings._migrate_irs()
+        self.test_settings._irs_migration()
         self.assertIsNotNone(self.test_settings._stored_session.irs_v2)
         self.assertIsNotNone(self.test_settings._stored_session.irs)
         self.assertNotEqual(self.test_settings._stored_session.irs_v2,
@@ -242,6 +278,6 @@ class TestAgentSettings(TestCase):
         self.test_settings._nuvlaedge_uuid = ''
         self.test_settings._stored_session = get_session()
         with self.assertLogs(level='ERROR') as log:
-            self.test_settings._migrate_irs()
+            self.test_settings._irs_migration()
             self.assertTrue(any([('Failed' in i) for i in log.output]))
 

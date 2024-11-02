@@ -181,28 +181,29 @@ def nuvla_support_new_container_stats(nuvla_client):
         return False
 
 
-def _irs_key(base):
+def _irs_key(base, suffix=''):
     base = base.rsplit('/', 1)[-1] if base else ''
-    return hashlib.sha256((base + ':' + CTE.MACHINE_ID).encode()).digest()
+    return hashlib.sha256((base + ':' + suffix).encode()).digest()
 
 
-def get_irs(base, k, s):
+def get_irs(base, k, s, suffix=''):
     rand = os.urandom(16)
-    enc = _Enc(_Cbc(_irs_key(base), rand))
+    enc = _Enc(_Cbc(_irs_key(base, suffix), rand))
     return base64.b64encode(rand + enc.feed(k + ':' + s) + enc.feed())
 
 
-def _from_irs(base, irs):
+def _from_irs(base, irs, suffix=''):
     data = base64.b64decode(irs)
-    dec = _Dec(_Cbc(_irs_key(base), data[:16]))
+    dec = _Dec(_Cbc(_irs_key(base, suffix), data[:16]))
     return tuple((dec.feed(data[16:]) + dec.feed()).decode().split(':', 1))
 
 
-def from_irs(base, irs):
+def from_irs(base, irs, suffix=''):
     try:
-        return _from_irs(base, irs)
+        return _from_irs(base, irs, suffix)
     except Exception:
         msg = 'Failed to decode irs'
         logger.error(msg)
         logger.debug(msg, exc_info=True)
-        raise RuntimeError(msg)
+        raise RuntimeError(msg) from None
+

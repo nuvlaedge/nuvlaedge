@@ -177,7 +177,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Releasing NuvlaEdge version ${{ github.ref_name }}"
+          echo "Releasing NuvlaEdge version ${{ needs.trigger-release.outputs.tag_name }}"
           gh release upload ${{ needs.trigger-release.outputs.tag_name }} ./dist/*
 
 
@@ -242,7 +242,7 @@ jobs:
           file: ./Dockerfile
           platforms: ${{ matrix.platform }}
           build-args: |
-            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
+            GIT_BRANCH=${{ needs.trigger-release.outputs.tag_name || github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}
             GIT_COMMIT_ID=${{ github.sha }}
             GITHUB_RUN_NUMBER=${{ github.run_number }}
@@ -251,11 +251,11 @@ jobs:
             PACKAGE_NAME=${{ env.PACKAGE_NAME }}
           push: true
           tags: >
-            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
+            nuvlaedge/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }},
             nuvlaedge/${{ github.event.repository.name }}:latest,
-            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }},
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest,
-            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }},
+            sixsq/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }},
             sixsq/${{ github.event.repository.name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -267,7 +267,7 @@ jobs:
           file: ./Dockerfile.slim-docker
           platforms: ${{ matrix.platform }}
           build-args: |
-            GIT_BRANCH=${{ github.head_ref || github.ref_name }}
+            GIT_BRANCH=${{ needs.trigger-release.outputs.tag_name || github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}
             GIT_COMMIT_ID=${{ github.sha }}
             GITHUB_RUN_NUMBER=${{ github.run_number }}
@@ -276,11 +276,11 @@ jobs:
             PACKAGE_NAME=${{ env.PACKAGE_NAME }}
           push: true
           tags: >
-            nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
+            nuvlaedge/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }}-slim-docker,
             nuvlaedge/${{ github.event.repository.name }}:latest-slim-docker,
-            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
+            ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }}-slim-docker,
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest-slim-docker,
-            sixsq/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
+            sixsq/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }}-slim-docker,
             sixsq/${{ github.event.repository.name }}:latest-slim-docker
           cache-from: type=gha
           cache-to: type=gha,mode=max

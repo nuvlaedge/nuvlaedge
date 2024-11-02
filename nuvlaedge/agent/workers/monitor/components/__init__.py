@@ -56,9 +56,9 @@ class Monitors:
 
         """
         def decorator(monitor_class):
-            _monitor_name: str = monitor_name
-            if not monitor_name:
-                _monitor_name = monitor_class.__name__
+            _monitor_name = monitor_name or monitor_class.__name__
+
+            setattr(monitor_class, 'monitor_name', _monitor_name)
 
             if _monitor_name in cls.active_monitors:
                 file_logger.error(f'Monitor {_monitor_name} is already defined')

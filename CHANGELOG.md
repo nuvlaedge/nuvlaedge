@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-11-02)
+
+
+### Bug Fixes
+
+* **agent:** fix an issue with irs loading on some platforms ([#217](https://github.com/nuvlaedge/nuvlaedge/issues/217)) ([862ce13](https://github.com/nuvlaedge/nuvlaedge/commit/862ce135888767ff2974b2518fb1439cf7d6ee82))
+* **agent:** send installation-parameters even if partial ([#209](https://github.com/nuvlaedge/nuvlaedge/issues/209)) ([f0992ae](https://github.com/nuvlaedge/nuvlaedge/commit/f0992ae40195fe2cbcf8f62d6ba58a8be6af3ebb))
+* **telemetry:** fixes and improvements to telemetry ([#215](https://github.com/nuvlaedge/nuvlaedge/issues/215)) ([65b41fd](https://github.com/nuvlaedge/nuvlaedge/commit/65b41fd07be12c78851d6556661aed49dc9a88dc))
+
+
+### Continuous Integration
+
+* replace release workflow with release-please action ([#210](https://github.com/nuvlaedge/nuvlaedge/issues/210)) ([4e09af5](https://github.com/nuvlaedge/nuvlaedge/commit/4e09af5f934d82122c6413f3ab7237f03c025db6))
+
 ## [2.16.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.1) (2024-09-30)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.0...2.16.1)

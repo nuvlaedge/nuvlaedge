@@ -117,10 +117,9 @@ class TestNetworkMonitor(unittest.TestCase):
                 self.assertEqual('output', test_ip_monitor._gather_host_ip_route())
                 patch_exec_cmd.assert_called_once()
                 patch_exec_cmd.return_value['returncode'] = 1
-                with self.assertLogs(level="ERROR") as l:
+                with self.assertLogs(logger=test_ip_monitor.__class__.__module__, level="ERROR") as log:
                     self.assertEqual('', test_ip_monitor._gather_host_ip_route())
-                    self.assertTrue(any([('error' in i) for i in l.output]))
-
+                    self.assertTrue(any([('error' in i) for i in log.output]))
 
     def test_set_local_data(self):
         # Test no available route IP's

@@ -1,5 +1,6 @@
 import json
 import logging
+from functools import cached_property
 from pathlib import Path
 from typing import Optional
 
@@ -305,7 +306,7 @@ class NuvlaClientWrapper:
         response: CimiResource = self.nuvlaedge_client.edit(self.nuvlaedge_status_uuid,
                                                             data=new_status,
                                                             select=attributes_to_delete)
-        logger.debug(f"Response received from telemetry report: {response.data}")
+        logger.debug('Response received from telemetry report: %s', response.data)
         return response.data
 
     def telemetry_patch(self, telemetry_jsonpatch: list, attributes_to_delete: list[str]) -> dict:
@@ -318,11 +319,11 @@ class NuvlaClientWrapper:
         Returns: a dict with the data of the response of the server including jobs queued for this NuvlaEdge
 
         """
-        logger.debug(f"Sending telemetry patch data to Nuvla: \n {telemetry_jsonpatch}")
+        logger.debug('Sending telemetry patch data to Nuvla: %s', telemetry_jsonpatch)
         response: CimiResource = self.nuvlaedge_client.edit_patch(self.nuvlaedge_status_uuid,
                                                                   data=telemetry_jsonpatch,
                                                                   select=attributes_to_delete)
-        logger.debug(f"Response received from telemetry patch report: {response.data}")
+        logger.debug('Response received from telemetry patch report: %s', response.data)
         return response.data
 
     def save_current_state_to_file(self):
@@ -368,6 +369,23 @@ class NuvlaClientWrapper:
         except Exception as e:
             logger.warning(f"Could not find id with with error: {e}")
             return None
+
+    @cached_property
+    def supported_nuvla_telemetry_fields(self):
+        def get_attrs(data, prefix=''):
+            keys = []
+            for d in data:
+                name = d.get('name', '?')
+                if prefix:
+                    name = prefix + '.' + name
+                keys.append(name)
+                ct = d.get('child-types')
+                if ct:
+                    keys += get_attrs(ct, name)
+            return keys
+
+        resp = self.nuvlaedge_client.get('resource-metadata/nuvlabox-status-2')
+        return get_attrs(resp.data['attributes'])
 
     # TODO: Used only by security module. Switch it to settings.py/_create_client_from_settings()
     @classmethod

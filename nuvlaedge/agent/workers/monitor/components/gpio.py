@@ -1,14 +1,16 @@
 """
     GpioMonitor.py
 """
+import logging
 from subprocess import SubprocessError, CompletedProcess
 
 from nuvlaedge.agent.common.util import execute_cmd
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 from nuvlaedge.agent.workers.monitor import Monitor
+from nuvlaedge.agent.workers.monitor.components import monitor
 from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
 
 
+@monitor('gpio_monitor')
 class GpioMonitor(Monitor):
     """
     Monitor class to read GPIO pins for system-on-board devices
@@ -27,16 +29,16 @@ class GpioMonitor(Monitor):
     _second_pin_indexes = [14, 11, 10, 9, 8]
 
     # Class constructor
-    def __init__(self, name: str, status: EdgeStatus, enable_monitor: bool = True):
-
-        # Instantiate parent class
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
         super().__init__(name, GpioData, enable_monitor)
 
         # Check GPIO availability
-        if self.enabled_monitor:
-            self.enabled_monitor = self.gpio_availability()
-            if not status.gpio_pins:
-                status.gpio_pins = self.data
+        if not self.gpio_availability():
+            self.logger.info(f'gpio not supported. Disabling {self.name}')
+            self.enabled_monitor = False
+
+        if self.enabled_monitor and not telemetry.edge_status.gpio_pins:
+            telemetry.edge_status.gpio_pins = self.data
 
     def gpio_availability(self) -> bool:
         """
@@ -46,8 +48,7 @@ class GpioMonitor(Monitor):
 
         """
         try:
-            _ = execute_cmd(self._GPIO_VERSION_COMMAND)
-            return True
+            return execute_cmd(self._GPIO_VERSION_COMMAND) is not None
         except (SubprocessError, FileNotFoundError):
             return False
 
@@ -138,6 +139,8 @@ class GpioMonitor(Monitor):
         @returns list of JSONs, i.e. [{pin: 1, name: GPIO. 1, bcm: 4, mode: IN},
         {pin: 7, voltage: 0, mode: ALT1}]
         """
+        if not self.data.pins:
+            self.data.pins = {}
 
         new_lines: list[str] = self.gather_gpio_lines()
 
@@ -150,4 +153,5 @@ class GpioMonitor(Monitor):
                 self.data.pins[pin_2.pin] = pin_2
 
     def populate_nb_report(self, nuvla_report: dict):
-        ...
+        data = self.data.model_dump(exclude_none=True, by_alias=True)
+        nuvla_report['gpio-pins'] = data.get('pins')

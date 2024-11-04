@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-11-02)
+
+
+### Bug Fixes
+
+* **agent:** fix an issue with irs loading on some platforms ([#217](https://github.com/nuvlaedge/nuvlaedge/issues/217)) ([862ce13](https://github.com/nuvlaedge/nuvlaedge/commit/862ce135888767ff2974b2518fb1439cf7d6ee82))
+* **agent:** send installation-parameters even if partial ([#209](https://github.com/nuvlaedge/nuvlaedge/issues/209)) ([f0992ae](https://github.com/nuvlaedge/nuvlaedge/commit/f0992ae40195fe2cbcf8f62d6ba58a8be6af3ebb))
+* **telemetry:** fixes and improvements to telemetry ([#215](https://github.com/nuvlaedge/nuvlaedge/issues/215)) ([65b41fd](https://github.com/nuvlaedge/nuvlaedge/commit/65b41fd07be12c78851d6556661aed49dc9a88dc))
+
+
+### Continuous Integration
+
+* (release-please): fix upload of assets in release ([72fd227](https://github.com/nuvlaedge/nuvlaedge/commit/72fd22781f6a34f3bf5fe65957a2bbfacfb50338))
+* add workflow manual-release.yml ([63dd40a](https://github.com/nuvlaedge/nuvlaedge/commit/63dd40ac1357f60a5cf5d540c4bb56261d81067d))
+* **release-please:** fix version number and docker images tag ([21efa96](https://github.com/nuvlaedge/nuvlaedge/commit/21efa961350cff3205aa2bb8c1c51b62ebe4f321))
+* replace release workflow with release-please action ([#210](https://github.com/nuvlaedge/nuvlaedge/issues/210)) ([4e09af5](https://github.com/nuvlaedge/nuvlaedge/commit/4e09af5f934d82122c6413f3ab7237f03c025db6))
+
 ## [2.16.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.1) (2024-09-30)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.0...2.16.1)

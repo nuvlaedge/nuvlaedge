@@ -1,5 +1,6 @@
 import logging
 
+from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaEdgeSession, NuvlaApiKeyTemplate
 from nuvlaedge.agent.common.util import get_irs
 from nuvlaedge.agent.nuvla.resources import NuvlaID
@@ -64,7 +65,8 @@ def _build_nuvlaedge_session():
     session = NuvlaEdgeSession(
         endpoint=endpoint,
         insecure=insecure,
-        irs=get_irs(nuvlaedge_uuid, api_key, secret_key),
+        irs_v1=get_irs(nuvlaedge_uuid, api_key, secret_key, CTE.MACHINE_ID),
+        irs_v2=get_irs(nuvlaedge_uuid, api_key, secret_key),
         credentials=NuvlaApiKeyTemplate(key=api_key, secret=secret_key),
         nuvlaedge_uuid=NuvlaID(nuvlaedge_uuid) if nuvlaedge_uuid else None,
         nuvlabox_status_uuid=NuvlaID(nuvlaedge_status_uuid) if nuvlaedge_status_uuid else None

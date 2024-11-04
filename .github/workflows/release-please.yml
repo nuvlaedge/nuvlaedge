@@ -108,24 +108,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Uploading wheel to release ${{ needs.trigger-release.outputs.tag_name }}"
-          gh release upload ${{ needs.trigger-release.outputs.tag_name }} dist/*.whl
+          gh release upload ${{ needs.trigger-release.outputs.tag_name }} ./dist/*
 
 
   release-image:
     needs: trigger-release
     if: needs.trigger-release.outputs.release_created
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platform: [ linux/amd64, linux/arm/v7, linux/arm64/v8 ]
 
     steps:
       - name: Set env
         shell: bash
         run: echo "BUILD_TIME=$(date --utc +%FT%T.%3NZ)" >> $GITHUB_ENV
-      # ------------------------------------------------
-      # Checkout and and download package
-      # ------------------------------------------------
+
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Do not download forked repos atm
@@ -139,9 +134,6 @@ jobs:
         run: |
           cp req/* .
 
-      # ------------------------------------------------
-      # Setup Docker ad Qemu
-      # ------------------------------------------------
       - name: SetUp QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -170,7 +162,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
           build-args: |
             GIT_BRANCH=${{ needs.trigger-release.outputs.tag_name || github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}
@@ -195,7 +187,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.slim-docker
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
           build-args: |
             GIT_BRANCH=${{ needs.trigger-release.outputs.tag_name || github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}

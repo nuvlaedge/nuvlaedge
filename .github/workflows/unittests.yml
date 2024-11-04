@@ -1,12 +1,26 @@
-name: "UnitTesting: NuvlaEdge"
+name: "UnitTests"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: ${{ !contains(github.ref_name, 'main')}}
 
 on:
   workflow_dispatch:
 
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    paths:
+      - '**.py'
+      # Adding the workflow file as a trigger for the workflow causes the workflow to be trigger on any push on the pull request
+      # - '.github/workflows/unittests.yml'
+      - 'pyproject.toml'
+      - 'poetry.lock'
 
 jobs:
   unittests:
-    name: "Run UniTests"
+    name: "Run UnitTests"
     runs-on: "ubuntu-latest"
 
     steps:

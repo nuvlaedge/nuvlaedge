@@ -47,10 +47,10 @@ RUN apk add --no-cache upx && upx --lzma $(find /usr/local/bin /usr/sbin /usr/bi
 COPY --link conf/example/* /etc/nuvlaedge/
 
 # Docker auto cleanup
-COPY scripts/docker-auto-cleanup/docker-prune.sh /usr/bin/docker-prune
+COPY --link scripts/docker-auto-cleanup/docker-prune.sh /usr/bin/docker-prune
 
 # License
-COPY LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
+COPY --link LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
 
 
 # ------------------------------------------------------------------------
@@ -58,7 +58,7 @@ COPY LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
 # ------------------------------------------------------------------------
 FROM scratch AS nuvlaedge-base
 
-COPY --from=base-image / /
+COPY --link --from=base-image / /
 
 ARG GIT_BRANCH
 ARG GIT_COMMIT_ID
@@ -92,7 +92,7 @@ RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
 
 # Install pydantic form source to prevent bulding locally
-COPY --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -110,8 +110,8 @@ FROM base-builder AS agent-builder
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Docker and docker compose CLIs
-COPY --from=docker /usr/local/bin/docker /usr/bin/docker
-#COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
+COPY --link --from=docker /usr/local/bin/docker /usr/bin/docker
+#COPY --link --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
 #                   /usr/local/libexec/docker/cli-plugins/docker-compose
 # Docker Compose
 RUN set -eux; \

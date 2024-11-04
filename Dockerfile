@@ -6,37 +6,17 @@ ARG GOLANG_VERSION="1.23"
 ARG JOB_LITE_IMG_ORG="nuvla"
 ARG PYDANTIC_VERSION="2.7.4"
 
-ARG PYTHON_SITE_PACKAGES="/usr/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 ARG PYTHON_LOCAL_SITE_PACKAGES="/usr/local/lib/python${PYTHON_MAJ_MIN_VERSION}/site-packages"
 
 ARG BASE_IMAGE=python:${PYTHON_MAJ_MIN_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG GO_BASE_IMAGE=golang:${GOLANG_VERSION}-alpine${ALPINE_MAJ_MIN_VERSION}
 ARG PRE_BUILD_IMAGE=ghcr.io/nuvlaedge/ne-base:python${PYTHON_MAJ_MIN_VERSION}-pydantic${PYDANTIC_VERSION}
 
+
 # ------------------------------------------------------------------------
 # NuvlaEdge base image for labels and environments variables
 # ------------------------------------------------------------------------
 FROM ${BASE_IMAGE} AS nuvlaedge-base
-
-ARG GIT_BRANCH
-ARG GIT_COMMIT_ID
-ARG GIT_BUILD_TIME
-ARG GITHUB_RUN_NUMBER
-ARG GITHUB_RUN_ID
-ARG PROJECT_URL
-
-
-LABEL git.branch=${GIT_BRANCH} \
-      git.commit.id=${GIT_COMMIT_ID} \
-      git.build.time=${GIT_BUILD_TIME} \
-      git.run.number=${GITHUB_RUN_NUMBER} \
-      git.run.id=${GITHUB_RUN_ID}
-LABEL org.opencontainers.image.authors="support@sixsq.com" \
-      org.opencontainers.image.created=${GIT_BUILD_TIME} \
-      org.opencontainers.image.url=${PROJECT_URL} \
-      org.opencontainers.image.vendor="SixSq SA" \
-      org.opencontainers.image.title="NuvlaEdge" \
-      org.opencontainers.image.description="Common image for NuvlaEdge software components"
 
 
 # ------------------------------------------------------------------------
@@ -47,14 +27,13 @@ FROM ${BASE_IMAGE} AS base-builder
 
 ARG PYDANTIC_VERSION
 
-ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 RUN apk update
 RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
 
 # Install pydantic form source to prevent bulding locally
-COPY --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
+COPY --link --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
 
 COPY --link requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
@@ -151,8 +130,8 @@ FROM base-builder AS agent-builder
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 # Docker and docker compose CLIs
-COPY --from=docker /usr/local/bin/docker /usr/bin/docker
-#COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
+COPY --link --from=docker /usr/local/bin/docker /usr/bin/docker
+#COPY --link --from=docker /usr/local/libexec/docker/cli-plugins/docker-compose \
 #                   /usr/local/libexec/docker/cli-plugins/docker-compose
 # Docker Compose
 RUN set -eux; \
@@ -237,21 +216,8 @@ RUN find /usr/local/lib/python${PYTHON_MAJ_MIN_VERSION} -name '*.py?' -delete
 # ------------------------------------------------------------------------
 # Final NuvlaEdge image
 # ------------------------------------------------------------------------
-FROM nuvlaedge-base
+FROM nuvlaedge-base AS nuvlaedge-final
 
-ARG PYTHON_MAJ_MIN_VERSION
-
-#RUN rm -f /lib/libcrypto.so.3 && \
-#RUN rm -Rf /usr/lib/python${PYTHON_MAJ_MIN_VERSION}/ensurepip && \
-#    pip uninstall -y setuptools && \
-#    pip uninstall -y pip
-
-ARG PYTHON_LOCAL_SITE_PACKAGES
-
-# License
-COPY LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
-RUN chmod +x /opt/nuvlaedge/license.sh
-ONBUILD RUN ./license.sh
 
 # Required packages
 RUN apk add --no-cache upx \
@@ -294,12 +260,9 @@ RUN ln -s /usr/local/libexec/docker/cli-plugins/docker-compose /usr/local/bin/do
 COPY --link --from=agent-builder /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --link --from=agent-builder /usr/local/bin/helm /usr/local/bin/helm
 
-# Required python packages
-COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
+
+# Binaries from nuvlaedge-builder
 COPY --link --from=nuvlaedge-builder /usr/local/bin /usr/local/bin
-# Library required by py-cryptography (pyopenssl).
-# By copying it from base builder we save up ~100MB of the gcc library
-# COPY --link --from=nuvlaedge-builder /usr/lib/libgcc_s.so.1 /usr/lib/
 
 
 # Peripheral discovery: USB
@@ -324,11 +287,11 @@ COPY --link nuvlaedge/security/security-entrypoint.sh /usr/bin/security-entrypoi
 
 
 # Compute API
-COPY scripts/compute-api/api.sh /usr/bin/api
+COPY --link scripts/compute-api/api.sh /usr/bin/api
 
 
 # Docker auto cleanup
-COPY scripts/docker-auto-cleanup/docker-prune.sh /usr/bin/docker-prune
+COPY --link scripts/docker-auto-cleanup/docker-prune.sh /usr/bin/docker-prune
 
 
 # VPN Client
@@ -362,9 +325,18 @@ RUN chmod +x \
 # Configuration files
 COPY --link conf/example/* /etc/nuvlaedge/
 
+# License
+COPY --link LICENSE nuvlaedge/license.sh /opt/nuvlaedge/
+RUN chmod +x /opt/nuvlaedge/license.sh
+ONBUILD RUN ./license.sh
+
+# Required python packages
+ARG PYTHON_LOCAL_SITE_PACKAGES
+COPY --link --from=nuvlaedge-builder ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}
+
 # Job engine
-RUN mkdir -p /app/
-RUN ln -s ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla/scripts/* /app/
+RUN mkdir -p /app/ && ln -s ${PYTHON_LOCAL_SITE_PACKAGES}/nuvla/scripts/* /app/
+
 
 # my_init
 WORKDIR /app
@@ -373,6 +345,24 @@ RUN wget -O my_init https://raw.githubusercontent.com/phusion/baseimage-docker/r
     ln -s /app/my_init /usr/bin/my_init && \
     ln -s $(which python3) /usr/bin/python3
 
+ARG GIT_BRANCH
+ARG GIT_COMMIT_ID
+ARG GIT_BUILD_TIME
+ARG GITHUB_RUN_NUMBER
+ARG GITHUB_RUN_ID
+ARG PROJECT_URL
+
+LABEL git.branch=${GIT_BRANCH} \
+      git.commit.id=${GIT_COMMIT_ID} \
+      git.build.time=${GIT_BUILD_TIME} \
+      git.run.number=${GITHUB_RUN_NUMBER} \
+      git.run.id=${GITHUB_RUN_ID}
+LABEL org.opencontainers.image.authors="support@sixsq.com" \
+      org.opencontainers.image.created=${GIT_BUILD_TIME} \
+      org.opencontainers.image.url=${PROJECT_URL} \
+      org.opencontainers.image.vendor="SixSq SA" \
+      org.opencontainers.image.title="NuvlaEdge" \
+      org.opencontainers.image.description="Common image for NuvlaEdge software components"
 
 WORKDIR /opt/nuvlaedge/
 

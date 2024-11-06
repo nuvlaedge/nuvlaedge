@@ -49,6 +49,7 @@ class JobTestCase(unittest.TestCase):
         self.assertTrue(self.obj.check_job_is_running(),
                         'Failed to check job is running')
 
+
     def test_launch(self):
         self.obj.coe_client.launch_job.return_value = None
 
@@ -65,6 +66,22 @@ class JobTestCase(unittest.TestCase):
             "api_key": 'fake-key',
             "api_secret": 'fake-secret',
             "cookies": None,
+            "docker_image": self.job_engine_lite_image
+        }
+        self.obj.coe_client.launch_job.assert_called_once_with(**launch_params)
+
+    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="sample-cookie")
+    def test_launch_with_cookie(self, mock_open):
+        self.mock_nuvla_client.nuvlaedge_client.session.persist_cookie = True
+        self.obj.launch()
+        launch_params = {
+            "job_id": self.obj.job_id,
+            "job_execution_id": self.obj.job_id_clean,
+            "nuvla_endpoint": self.obj.nuvla_client._host.removeprefix("https://"),
+            "nuvla_endpoint_insecure": self.obj.nuvla_client._insecure,
+            "api_key": None,
+            "api_secret": None,
+            "cookies": "c2FtcGxlLWNvb2tpZQ==",  # base64 encoded "sample-cookie"
             "docker_image": self.job_engine_lite_image
         }
         self.obj.coe_client.launch_job.assert_called_once_with(**launch_params)

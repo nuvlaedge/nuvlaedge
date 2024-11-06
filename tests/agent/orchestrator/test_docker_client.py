@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+import os
 import base64
 import contextlib
 import datetime
@@ -22,7 +22,6 @@ import requests
 import tests.agent.utils.fake as fake
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.orchestrator.docker import logger
-from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.common.utils import format_datetime_for_nuvla
 
 
@@ -466,6 +465,64 @@ class COEClientDockerTestCase(unittest.TestCase):
         # reset
         mock_container_start.reset_mock(side_effect=True)
         mock_remove_container.reset_mock()
+
+    @mock.patch('docker.models.containers.ContainerCollection.create')
+    @mock.patch('os.environ',
+                {'NE_IMAGE_REGISTRY': '', 'NE_IMAGE_ORGANIZATION': 'sixsq', 'NE_IMAGE_REPOSITORY': 'nuvlaedge',
+                 'NE_IMAGE_TAG': 'latest'})
+    def test_launch_job_with_cookies(self, create_mock):
+        self.obj.client.containers.create = mock.Mock()
+        self.obj.client.containers.run = mock.Mock()
+
+        self.obj.launch_job(
+            job_id='test-job-id',
+            job_execution_id='test-job-execution-id',
+            nuvla_endpoint='test-endpoint',
+            cookies='test-cookies'
+        )
+        environment = {k: v for k, v in os.environ.items() if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
+        environment["JOB_COOKIES"] = 'test-cookies'
+        create_mock.assert_called_once_with(
+            image=mock.ANY,
+            command=mock.ANY,
+            name='test-job-execution-id',
+            hostname='test-job-execution-id',
+            auto_remove=True,
+            detach=True,
+            network=mock.ANY,
+            volumes=mock.ANY,
+            environment=environment
+        )
+
+    @mock.patch('docker.models.containers.ContainerCollection.create')
+    @mock.patch('os.environ',
+                {'NE_IMAGE_REGISTRY': '', 'NE_IMAGE_ORGANIZATION': 'sixsq', 'NE_IMAGE_REPOSITORY': 'nuvlaedge',
+                 'NE_IMAGE_TAG': 'latest'})
+    def test_launch_job_with_authentication(self, create_mock):
+        self.obj.launch_job(
+            job_id='test-job-id',
+            job_execution_id='test-job-execution-id',
+            nuvla_endpoint='test-endpoint',
+            api_key='test-api-key',
+            api_secret='test-api-secret'
+        )
+        expected_command = ('-- /app/job_executor.py '
+                            '--api-url https://test-endpoint '
+                            '--api-key test-api-key '
+                            '--api-secret test-api-secret '
+                            '--nuvlaedge-fs /var/lib/nuvlaedge '
+                            '--job-id test-job-id')
+        create_mock.assert_called_once_with(
+            image=mock.ANY,
+            command=expected_command,
+            name='test-job-execution-id',
+            hostname='test-job-execution-id',
+            auto_remove=True,
+            detach=True,
+            network=mock.ANY,
+            volumes=mock.ANY,
+            environment=mock.ANY
+        )
 
     # Only available in Python >= 3.10
     @contextlib.contextmanager

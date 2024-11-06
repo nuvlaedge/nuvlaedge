@@ -38,15 +38,13 @@ class NetworkMonitor(Monitor):
     _NUVLAEDGE_COMPONENT_LABEL_KEY: str = util.base_label
 
     def __init__(self, name: str, telemetry, enable_monitor=True):
-
-        super().__init__(self.__class__.__name__, NetworkingData,
-                         enable_monitor=enable_monitor)
+        super().__init__(name, NetworkingData, enable_monitor)
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
                                self.set_swarm_data,
                                self.set_vpn_data]
-        self.logger = logging.getLogger(self.__class__.__name__)
+
         self.host_fs: str = CTE.HOST_FS
         self.first_net_stats: dict = {}
         self.previous_net_stats_file: str = FILE_NAMES.PREVIOUS_NET_STATS_FILE

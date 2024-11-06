@@ -131,6 +131,7 @@ class Telemetry:
                  status_channel: Queue[StatusReport],
                  nuvlaedge_uuid: NuvlaID,
                  excluded_monitors,
+                 coe_resources_supported,
                  new_container_stats_supported):
         """
         Initializes the Telemetry object with the given parameters. It is also in charge of initialising the child
@@ -160,6 +161,7 @@ class Telemetry:
         # Data variable where the monitors dump their readings
         self.edge_status: EdgeStatus = EdgeStatus()
 
+        self.coe_resources_supported = coe_resources_supported
         self.new_container_stats_supported = new_container_stats_supported
 
         # Monitors modular system initialisation
@@ -180,8 +182,13 @@ class Telemetry:
         """
         for mon in active_monitors:
             if mon.rsplit('_', 1)[0] in self.excluded_monitors:
+                logger.info(f'Monitor "{mon}" excluded')
                 continue
-            self.monitor_list[mon] = (get_monitor(mon)(mon, self, True))
+            monitor = get_monitor(mon)(mon, self, True)
+            if monitor.enabled_monitor:
+                self.monitor_list[mon] = monitor
+            else:
+                logger.info(f'Monitor "{mon}" disabled')
 
         self._check_monitors_health()
 
@@ -265,6 +272,10 @@ class Telemetry:
 
         # Clean the model from empty fields
 
+    @property
+    def _local_telemetry_json(self):
+        return self._local_telemetry.model_dump_json(exclude_none=True, by_alias=True)
+
     def run(self):
         """
         Collects monitor metrics, checks threaded monitors health,
@@ -288,8 +299,7 @@ class Telemetry:
         self._local_telemetry.current_time = datetime.utcnow().isoformat().split('.')[0] + 'Z'
 
         try:
-            logger.debug(f"Writing telemetry to Agent Queue"
-                         f" {self._local_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True)}")
+            logger.debug("Writing telemetry to Agent Queue: %s", self._local_telemetry_json)
             self.report_channel.put(self._local_telemetry, block=False)
 
         except Full:

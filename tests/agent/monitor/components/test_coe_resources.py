@@ -27,6 +27,12 @@ class TestCOEResourcesMonitor(unittest.TestCase):
         COEResourcesMonitor('test_monitor', telemetry, True)
         self.assertIsInstance(telemetry.edge_status.coe_resources, COEResourcesData)
 
+    def test_coe_resource_not_supported_by_nuvla(self):
+        telemetry = Mock()
+        telemetry.coe_resources_supported = False
+        coe_resources_monitor = COEResourcesMonitor('test_monitor', telemetry, True)
+        self.assertFalse(coe_resources_monitor.enabled_monitor)
+
     def test_coe_resource_monitor(self):
         telemetry = Mock()
         telemetry.edge_status = EdgeStatus()

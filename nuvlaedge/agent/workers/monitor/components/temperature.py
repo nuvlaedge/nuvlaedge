@@ -109,7 +109,6 @@ class TemperatureMonitor(Monitor):
     def update_data(self):
         if not os.path.exists(self.thermal_fs_path):
             if hasattr(psutil, 'sensors_temperatures'):
-
                 self.update_temperatures_with_psutil()
         else:
             self.update_temperatures_with_file()
@@ -118,7 +117,8 @@ class TemperatureMonitor(Monitor):
             self.data.temperatures = None
             return
 
-        self.data.temperatures = [v.model_dump(exclude_none=True, by_alias=True) for v in self.local_temp_registry.values()]
+        self.data.temperatures = [v.model_dump(exclude_none=True, by_alias=True)
+                                  for v in self.local_temp_registry.values()]
 
     def populate_nb_report(self, nuvla_report: dict):
         ...

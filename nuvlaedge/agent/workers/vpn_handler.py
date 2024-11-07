@@ -299,10 +299,8 @@ class VPNHandler:
         """
         logger.info("Commissioning VPN...")
         vpn_data = file_operations.read_file(self.VPN_CSR_FILE)
-        logger.debug(f"Triggering commission with VPN Data: {vpn_data}")
 
         vpn_payload: dict = {'vpn-csr': vpn_data}
-        logger.debug(f"Commissioning VPN with payload: {json.dumps(vpn_payload, indent=4)}")
 
         commission_response: dict = self.nuvla_client.commission(vpn_payload)
         if not commission_response:
@@ -314,7 +312,7 @@ class VPNHandler:
             logger.info("Commissioning VPN... Success")
             NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
-        logger.debug(f"Commission response: {json.dumps(commission_response, indent=4)}")
+        logger.debug(f"VPN Commission response: {json.dumps(commission_response, indent=4)}")
 
     def _is_nuvlaedge_commissioned(self) -> bool:
         """
@@ -444,14 +442,11 @@ class VPNHandler:
         # So we need to move it to its corresponding field, then the CA will be automatically
         # replaced
         self.vpn_config.vpn_intermediate_ca_is = self.vpn_server.vpn_intermediate_ca
-        logger.debug(f"VPN Configured with VPN Server data \n"
-                     f" {self.vpn_config.model_dump_json(indent=4, exclude_none=True)}")
+
         self.vpn_server = self.nuvla_client.vpn_server.model_copy()
 
         # Update Credentials data
         self.vpn_config.update(self.vpn_credential)
-        logger.debug(f"VPN Configured with VPN credential data \n"
-                     f" {self.vpn_config.model_dump_json(indent=4, exclude_none=True)}")
 
         # VPN interface name can be renamed from the agent settings, assign it here
         self.vpn_config.vpn_interface_name = self.interface_name

@@ -350,13 +350,13 @@ testing = ["covdefaults (>=2.3)", "coverage (>=7.2.3)", "diff-cover (>=7.5)", "p
 
 [[package]]
 name = "google-auth"
-version = "2.35.0"
+version = "2.36.0"
 description = "Google Authentication Library"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "google_auth-2.35.0-py2.py3-none-any.whl", hash = "sha256:25df55f327ef021de8be50bad0dfd4a916ad0de96da86cd05661c9297723ad3f"},
-    {file = "google_auth-2.35.0.tar.gz", hash = "sha256:f4c64ed4e01e8e8b646ef34c018f8bf3338df0c8e37d8b3bba40e7f574a3278a"},
+    {file = "google_auth-2.36.0-py2.py3-none-any.whl", hash = "sha256:51a15d47028b66fd36e5c64a82d2d57480075bccc7da37cde257fc94177a61fb"},
+    {file = "google_auth-2.36.0.tar.gz", hash = "sha256:545e9618f2df0bcbb7dcbc45a546485b1212624716975a1ea5ae8149ce769ab1"},
 ]
 
 [package.dependencies]
@@ -548,13 +548,13 @@ requests = ">=2.32.3,<3.0.0"
 
 [[package]]
 name = "nuvla-job-engine"
-version = "4.6.1"
+version = "4.7.0"
 description = "Nuvla Job Engine."
 optional = false
 python-versions = "<4.0,>=3.11"
 files = [
-    {file = "nuvla_job_engine-4.6.1-py3-none-any.whl", hash = "sha256:99492491fea7391cd0e6384e5ffe3a5eabebc42a6fbc9ad46b9594e020474c54"},
-    {file = "nuvla_job_engine-4.6.1.tar.gz", hash = "sha256:5076938a1b0d82b16668a996d4668835753a18484ea96be9f34f3f1dc1c69866"},
+    {file = "nuvla_job_engine-4.7.0-py3-none-any.whl", hash = "sha256:7d754a85bcfa0659da3df0159574bf115b7c79ca6551ad483e6dd65b3eaef279"},
+    {file = "nuvla_job_engine-4.7.0.tar.gz", hash = "sha256:9ef6969ebb6cb5c6d5b4c59e60886d3e42d3b703c028b7f4b2aa884677775323"},
 ]
 
 [package.dependencies]
@@ -794,13 +794,13 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydantic-settings"
-version = "2.6.0"
+version = "2.6.1"
 description = "Settings management using Pydantic"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pydantic_settings-2.6.0-py3-none-any.whl", hash = "sha256:4a819166f119b74d7f8c765196b165f95cc7487ce58ea27dec8a5a26be0970e0"},
-    {file = "pydantic_settings-2.6.0.tar.gz", hash = "sha256:44a1804abffac9e6a30372bb45f6cafab945ef5af25e66b1c634c01dd39e0188"},
+    {file = "pydantic_settings-2.6.1-py3-none-any.whl", hash = "sha256:7fb0637c786a558d3103436278a7c4f1cfd29ba8973238a50c5bb9a55387da87"},
+    {file = "pydantic_settings-2.6.1.tar.gz", hash = "sha256:e0f92546d8a9923cb8941689abf85d6601a8c19a23e97a34b2964a2e3f813ca0"},
 ]
 
 [package.dependencies]
@@ -1543,4 +1543,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.12.6"
-content-hash = "798516165f031e0ab30c57e6fd13cb1422fd9ef4395299b945cb578767ae5248"
+content-hash = "2f5d11b9f583142c5c6fb7e5954997e17e0c317eab0650209ecdb3514daf0b80"

@@ -71,8 +71,7 @@ class JobTestCase(unittest.TestCase):
         }
         self.obj.coe_client.launch_job.assert_called_once_with(**launch_params)
 
-    @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="sample-cookie")
-    def test_launch_with_cookie(self, mock_open):
+    def test_launch_with_cookie(self):
         cookiejar = CookieJar()
         cookiejar.set_cookie(Cookie(
             version=0, name='com.com.sixsq.nuvla.cookie', value='data', port=None, port_specified=False,

@@ -324,6 +324,55 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                           'Unable to launch new job')
         self.obj.client_batch_api.create_namespaced_job.assert_called_once()
 
+    @mock.patch('os.environ',
+                {'NE_IMAGE_REGISTRY': '', 'NE_IMAGE_ORGANIZATION': 'sixsq', 'NE_IMAGE_REPOSITORY': 'nuvlaedge',
+                 'NE_IMAGE_TAG': 'latest'})
+    def test_launch_job_with_cookies(self):
+        job_kwargs = dict(job_id='test-job-id',
+                          job_execution_id='test-job-execution-id',
+                          nuvla_endpoint='test-endpoint',
+                          cookies='test-cookies')
+
+        self.obj.client_batch_api.create_namespaced_job = mock.Mock()
+        self.obj.launch_job(**job_kwargs)
+        self.obj.client_batch_api.create_namespaced_job.assert_called_once()
+        job = self.obj.client_batch_api.create_namespaced_job.call_args[0][1]
+        env = job.spec.template.spec.containers[0].env
+        self.assertTrue(any([(var.name == 'JOB_COOKIES' and var.value == job_kwargs['cookies']) for var in env]))
+
+        self.obj._job_executor_job_def = mock.Mock()
+        self.obj.launch_job(**job_kwargs)
+        environment = {k: v for k, v in os.environ.items() if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
+        environment["JOB_COOKIES"] = 'test-cookies'
+        self.obj._job_executor_job_def.assert_called_once_with(
+            mock.ANY, 'test-job-execution-id', mock.ANY, mock.ANY, environment
+        )
+
+    @mock.patch('os.environ',
+                {'NE_IMAGE_REGISTRY': '', 'NE_IMAGE_ORGANIZATION': 'sixsq', 'NE_IMAGE_REPOSITORY': 'nuvlaedge',
+                 'NE_IMAGE_TAG': 'latest'})
+    def test_launch_job_with_authentication(self):
+        self.obj._job_executor_job_def = mock.Mock()
+        self.obj.launch_job(
+            job_id='test-job-id',
+            job_execution_id='test-job-execution-id',
+            nuvla_endpoint='test-endpoint',
+            api_key='test-api-key',
+            api_secret='test-api-secret'
+        )
+        expected_command = ('--api-url https://test-endpoint '
+                            '--api-key test-api-key '
+                            '--api-secret test-api-secret '
+                            ' --nuvlaedge-fs /var/lib/nuvlaedge '
+                            '--job-id test-job-id')
+        self.obj._job_executor_job_def.assert_called_once_with(
+            'fake-job-lite-image',
+            'test-job-execution-id',
+            '/app/job_executor.py',
+            expected_command,
+            mock.ANY)
+
+
     @mock.patch('kubernetes.client.CustomObjectsApi.list_cluster_custom_object')
     @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.get_node_info')
     def test_collect_container_metrics(self, mock_get_node_info, mock_pod_metrics):

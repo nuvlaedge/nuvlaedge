@@ -292,12 +292,16 @@ class KubernetesClient(COEClient):
 
     def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
-                   docker_image=None, **kwargs):
+                   docker_image=None, cookies=None, **kwargs):
+
+        authentication = ""
+        if api_key and api_secret:
+            authentication = (f'--api-key {api_key} '
+                              f'--api-secret {api_secret} ')
 
         cmd = '/app/job_executor.py'
         args = f'--api-url https://{nuvla_endpoint} ' \
-               f'--api-key {api_key} ' \
-               f'--api-secret {api_secret} ' \
+               f'{authentication} ' \
                f'--nuvlaedge-fs {FILE_NAMES.root_fs} ' \
                f'--job-id {job_id}'
 
@@ -306,9 +310,15 @@ class KubernetesClient(COEClient):
 
         image = docker_image if docker_image else self.job_engine_lite_image
 
+        environment = {k: v for k, v in os.environ.items()
+                       if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
+
+        if cookies:
+            environment["JOB_COOKIES"] = cookies
+
         log.info(f'Launch Nuvla job {job_id} using {image} with: {cmd} {args}')
 
-        job = self._job_executor_job_def(image, job_execution_id, cmd, args)
+        job = self._job_executor_job_def(image, job_execution_id, cmd, args, environment)
 
         namespace = self._namespace(**kwargs)
         log.debug('Run job %s in namespace %s', job.to_str(), namespace)
@@ -589,13 +599,19 @@ class KubernetesClient(COEClient):
                        volume_mounts: List[client.V1VolumeMount] | None,
                        command: str = None,
                        image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
-                       args: str = None) -> client.V1Container:
+                       args: str = None,
+                       env: dict = None) -> client.V1Container:
 
         args = args.split() if args else None
         command = command.split() if command else None
 
+        parsed_env = None
+        if env:
+            parsed_env = [client.V1EnvVar(name=k, value=v) for k, v in env.items()]
+
         return client.V1Container(image=image,
                                   name=name,
+                                  env=parsed_env,
                                   command=command,
                                   volume_mounts=volume_mounts,
                                   image_pull_policy=self.get_image_pull_policy(image_pull_policy),
@@ -642,12 +658,14 @@ class KubernetesClient(COEClient):
                  network: str = None,
                  mount_ne_db: bool = False,
                  image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
+                 env: dict = None,
                  **kwargs) -> client.V1Pod:
 
         pod_spec = self._pod_spec_with_container(image, name,
                                                  command, args,
                                                  network, mount_ne_db,
                                                  image_pull_policy=image_pull_policy,
+                                                 env=env,
                                                  **kwargs)
         return client.V1Pod(
             metadata=client.V1ObjectMeta(name=name, annotations={}),
@@ -659,6 +677,7 @@ class KubernetesClient(COEClient):
                                  network: str = None,
                                  mount_ne_db: bool = False,
                                  image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
+                                 env: dict = None,
                                  **kwargs):
 
         container_volume_mounts, pod_volumes = None, None
@@ -671,7 +690,8 @@ class KubernetesClient(COEClient):
                                         volume_mounts=container_volume_mounts,
                                         command=command,
                                         image_pull_policy=image_pull_policy,
-                                        args=args)
+                                        args=args,
+                                        env=env)
 
         return self._pod_spec(container,
                               network=network,
@@ -684,12 +704,14 @@ class KubernetesClient(COEClient):
                  network: str = None,
                  mount_ne_db: bool = False,
                  image_pull_policy: str = DEFAULT_IMAGE_PULL_POLICY,
+                 env: dict = None,
                  **kwargs) -> client.V1Job:
 
         pod_spec = self._pod_spec_with_container(image, name,
                                                  command, args,
                                                  network, mount_ne_db,
                                                  image_pull_policy=image_pull_policy,
+                                                 env=env,
                                                  **kwargs)
 
         job_spec = client.V1JobSpec(template=self._pod_template_spec(name, pod_spec))
@@ -704,12 +726,13 @@ class KubernetesClient(COEClient):
                             metadata=client.V1ObjectMeta(name=name),
                             spec=job_spec)
 
-    def _job_executor_job_def(self, image, name, cmd, args):
+    def _job_executor_job_def(self, image, name, cmd, args, env=None) -> client.V1Job:
         return self._job_def(image, self._to_k8s_obj_name(name),
                              command=cmd, args=args,
                              mount_ne_db=True,
                              restart_policy='Never',
-                             image_pull_policy=self.job_image_pull_policy)
+                             image_pull_policy=self.job_image_pull_policy,
+                             env=env)
 
     def container_run_command(self, image, name,
                               command: str = None,

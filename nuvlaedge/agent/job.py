@@ -4,11 +4,10 @@
 
 Relays pull-mode jobs to local job-engine-lite
 """
-import base64
+from base64 import b64encode
 from typing import Protocol, Any
 
-from nuvla.api.api import DEFAULT_COOKIE_FILE
-from nuvlaedge.agent.common.util import from_irs
+from nuvlaedge.agent.common.util import from_irs, get_lwp_cookies
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 
 
@@ -73,14 +72,13 @@ class Job:
             "docker_image": self.job_engine_lite_image
         }
 
-        if self.nuvla_client.nuvlaedge_client.session.persist_cookie:
-            with open(DEFAULT_COOKIE_FILE, "r") as f:
-                cookie_data = f.read()
-                launch_params["cookies"] = base64.b64encode(cookie_data.encode('utf-8')).decode('utf-8')
-
+        cookies = self.nuvla_client.nuvlaedge_client.session.cookies
+        if cookies:
+            launch_params["cookies"] = b64encode(get_lwp_cookies(cookies).encode('utf-8')).decode('utf-8')
         else:
             key, secret = from_irs(self.nuvla_client.nuvlaedge_uuid, self.nuvla_client.irs)
             launch_params["api_key"] = key
             launch_params["api_secret"] = secret
 
         self.coe_client.launch_job(**launch_params)
+

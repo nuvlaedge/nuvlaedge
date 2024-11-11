@@ -8,6 +8,7 @@ import os
 import logging
 import signal
 
+from http.cookiejar import lwp_cookie_str
 from contextlib import contextmanager
 from subprocess import (Popen, run, PIPE, TimeoutExpired,
                         SubprocessError, STDOUT, CompletedProcess)
@@ -183,4 +184,11 @@ def from_irs(base, irs, suffix=''):
         logger.error(msg)
         logger.debug(msg, exc_info=True)
         raise RuntimeError(msg) from None
+
+
+def get_lwp_cookies(cookie_jar):
+    lwp_cookies = ['#LWP-Cookies-0.0']
+    for cookie in cookie_jar:
+        lwp_cookies.append('Set-Cookie3:' + lwp_cookie_str(cookie))
+    return '\n'.join(lwp_cookies)
 

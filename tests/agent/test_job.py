@@ -4,6 +4,7 @@
 import logging
 import mock
 import unittest
+from http.cookiejar import CookieJar, Cookie
 
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.common.util import get_irs
@@ -55,7 +56,7 @@ class JobTestCase(unittest.TestCase):
 
         # otherwise, launch the job
         self.mock_nuvla_client.nuvlaedge_uuid = '0e9c180e-f4a8-488a-89d4-e6ee6496b4d7'
-        self.mock_nuvla_client.nuvlaedge_client.session.persist_cookie = False
+        self.mock_nuvla_client.nuvlaedge_client.session.cookies = None
         self.mock_nuvla_client.irs = get_irs(self.mock_nuvla_client.nuvlaedge_uuid, 'fake-key', 'fake-secret')
         self.assertIsNone(self.obj.launch(), 'Failed to launch job')
         launch_params: dict = {
@@ -72,7 +73,12 @@ class JobTestCase(unittest.TestCase):
 
     @mock.patch('builtins.open', new_callable=mock.mock_open, read_data="sample-cookie")
     def test_launch_with_cookie(self, mock_open):
-        self.mock_nuvla_client.nuvlaedge_client.session.persist_cookie = True
+        cookiejar = CookieJar()
+        cookiejar.set_cookie(Cookie(
+            version=0, name='com.com.sixsq.nuvla.cookie', value='data', port=None, port_specified=False,
+            domain='nuvla.io', domain_specified=False, domain_initial_dot=False, path='/', path_specified=False,
+            secure=True, expires=1729183995, discard=False, comment=None, comment_url=None, rest={}, rfc2109=False))
+        self.mock_nuvla_client.nuvlaedge_client.session.cookies = cookiejar
         self.obj.launch()
         launch_params = {
             "job_id": self.obj.job_id,
@@ -81,7 +87,7 @@ class JobTestCase(unittest.TestCase):
             "nuvla_endpoint_insecure": self.obj.nuvla_client._insecure,
             "api_key": None,
             "api_secret": None,
-            "cookies": "c2FtcGxlLWNvb2tpZQ==",  # base64 encoded "sample-cookie"
+            "cookies": "I0xXUC1Db29raWVzLTAuMApTZXQtQ29va2llMzpjb20uY29tLnNpeHNxLm51dmxhLmNvb2tpZT1kYXRhOyBwYXRoPSIvIjsgZG9tYWluPSJudXZsYS5pbyI7IHNlY3VyZTsgZXhwaXJlcz0iMjAyNC0xMC0xNyAxNjo1MzoxNVoiOyB2ZXJzaW9uPTA=",  # base64 encoded "sample-cookie"
             "docker_image": self.job_engine_lite_image
         }
         self.obj.coe_client.launch_job.assert_called_once_with(**launch_params)

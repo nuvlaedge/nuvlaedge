@@ -1,7 +1,7 @@
+import datetime
 import logging
 import os
 import time
-from datetime import datetime
 from typing import Dict, List, Union
 
 from nuvlaedge.common.utils import format_datetime_for_nuvla
@@ -81,7 +81,7 @@ class KubernetesClient(COEClient):
             return res_dict
         elif isinstance(data, list):
             return [cls._sanitize_k8s_object(element) for element in data]
-        elif isinstance(data, datetime):
+        elif isinstance(data, datetime.datetime):
             return data.isoformat()
         else:
             return data

@@ -87,6 +87,13 @@ class KubernetesClient(COEClient):
             return data
 
     def list_raw_resources(self, resource_type: str) -> list[dict] | None:
+        def get_creation_timestamp(k8s_object):
+            return k8s_object.get('metadata', {}).get('creation_timestamp')
+
+        def sanitize_and_sort(k8s_objects):
+            return sorted([self._sanitize_k8s_object(x.to_dict()) for x in k8s_objects.items],
+                          key=get_creation_timestamp)
+
         match resource_type:
             case 'nodes':
                 res = [self._sanitize_k8s_object(x.to_dict())
@@ -95,8 +102,7 @@ class KubernetesClient(COEClient):
                     # remove images
                     if 'status' in node and 'images' in node['status']:
                         del node['status']['images']
-                return sorted(res,
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sorted(res, key=get_creation_timestamp)
             case 'images':
                 imgs = [self._sanitize_k8s_object(x.to_dict()) for x in
                         self.client.read_node(
@@ -111,7 +117,7 @@ class KubernetesClient(COEClient):
                         for k in x.data:
                             x.data[k] = ''
                     res_list.append(self._sanitize_k8s_object(x.to_dict()))
-                return sorted(res_list, key=lambda x: x['metadata']['creation_timestamp'])
+                return sorted(res_list, key=get_creation_timestamp)
             case 'secrets':
                 res_list = []
                 for x in self.client.list_secret_for_all_namespaces().items:
@@ -119,51 +125,38 @@ class KubernetesClient(COEClient):
                         for k in x.data:
                             x.data[k] = ''
                     res_list.append(self._sanitize_k8s_object(x.to_dict()))
-                return sorted(res_list, key=lambda x: x['metadata']['creation_timestamp'])
+                return sorted(res_list, key=get_creation_timestamp)
             case 'namespaces':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client.list_namespace().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(self.client.list_namespace())
             case 'persistentvolumes':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client.list_persistent_volume().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(self.client.list_persistent_volume())
             case 'persistentvolumeclaims':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client.list_persistent_volume_claim_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client.list_persistent_volume_claim_for_all_namespaces())
             case 'services':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client.list_service_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client.list_service_for_all_namespaces())
             case 'ingresses':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client_network.list_ingress_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client_network.list_ingress_for_all_namespaces())
             case 'cronjobs':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client_batch_api.list_cron_job_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client_batch_api.list_cron_job_for_all_namespaces())
             case 'jobs':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client_batch_api.list_job_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client_batch_api.list_job_for_all_namespaces())
             case 'statefulsets':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client_apps.list_stateful_set_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client_apps.list_stateful_set_for_all_namespaces())
             case 'daemonsets':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client_apps.list_daemon_set_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client_apps.list_daemon_set_for_all_namespaces())
             case 'deployments':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client_apps.list_deployment_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client_apps.list_deployment_for_all_namespaces())
             case 'pods':
-                return sorted([self._sanitize_k8s_object(x.to_dict()) for x in
-                               self.client.list_pod_for_all_namespaces().items],
-                              key=lambda x: x['metadata']['creation_timestamp'])
+                return sanitize_and_sort(
+                    self.client.list_pod_for_all_namespaces())
             case _:
                 log.error(f'Unknown resource type: {resource_type}')
         return None

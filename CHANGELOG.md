@@ -17,6 +17,14 @@
 * **release-please:** fix version number and docker images tag ([21efa96](https://github.com/nuvlaedge/nuvlaedge/commit/21efa961350cff3205aa2bb8c1c51b62ebe4f321))
 * replace release workflow with release-please action ([#210](https://github.com/nuvlaedge/nuvlaedge/issues/210)) ([4e09af5](https://github.com/nuvlaedge/nuvlaedge/commit/4e09af5f934d82122c6413f3ab7237f03c025db6))
 
+## [2.16.2](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.1...2.16.2) (2024-11-02)
+
+### Bug Fixes
+
+* **agent:** fix an issue with irs loading on some platforms (backport of [#217](https://github.com/nuvlaedge/nuvlaedge/issues/217)) (original commit: [862ce13](https://github.com/nuvlaedge/nuvlaedge/commit/862ce135888767ff2974b2518fb1439cf7d6ee82))
+* **telemetry:** fixes and improvements to telemetry (backport of [#215](https://github.com/nuvlaedge/nuvlaedge/issues/215)) (original commit: [65b41fd](https://github.com/nuvlaedge/nuvlaedge/commit/65b41fd07be12c78851d6556661aed49dc9a88dc))
+* use our own compose binary in the slim-docker image (backport) (original commit: [7322d3f](https://github.com/nuvlaedge/nuvlaedge/commit/7322d3f5363e7d340140e2654025080f76548f82))
+
 ## [2.16.1](https://github.com/nuvlaedge/nuvlaedge/tree/2.16.1) (2024-09-30)
 
 [Full Changelog](https://github.com/nuvlaedge/nuvlaedge/compare/2.16.0...2.16.1)

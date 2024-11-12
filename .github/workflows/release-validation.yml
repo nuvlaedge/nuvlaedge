@@ -1,31 +1,19 @@
-# Builds the python wheel package and the NuvlaEdge base image and publishes
-# it into nuvladev/ dockerhub registry
+name: 'Pre-Release Validation'
 
-name: "NuvlaEdge Dev-Image Build"
+on:
+  pull_request:
+    branches:
+      - "release-please--branches-main"
+  workflow_dispatch:
+
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
-  cancel-in-progress: ${{ !contains(github.ref_name, 'main')}}
+  cancel-in-progress: true
 
-
-# This event should only trigger if the changes affect the source code or this file.
-# Also leave the possibility for manual triggers
-on:
-  push:
-    branches:
-      - 'main'
-  pull_request:
-    paths:
-      - '**.py'
-      - '**.sh'
-      # Adding the workflow file as a trigger for the workflow causes the workflow to be trigger on any push on the pull request
-      # - '.github/workflows/build-main-devel.yml'
-      - 'pyproject.toml'
-      - 'poetry.lock'
-      - 'Dockerfile'
-
-  workflow_dispatch:
-
+env:
+  VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:latest"
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
 
 jobs:
   build-dev:
@@ -95,7 +83,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
+          platforms: linux/amd64,linux/arm64/v8
           build-args: |
             GIT_BRANCH=${{ github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}
@@ -106,8 +94,7 @@ jobs:
             PACKAGE_NAME=${{ env.PACKAGE_NAME }}
           push: true
           tags: >
-            nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }},
-            nuvladev/${{ github.event.repository.name }}:latest
+            nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -116,7 +103,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.slim-docker
-          platforms: linux/amd64,linux/arm/v7,linux/arm64/v8
+          platforms: linux/amd64,linux/arm64/v8
           build-args: |
             GIT_BRANCH=${{ github.head_ref || github.ref_name }}
             GIT_BUILD_TIME=${{ env.BUILD_TIME }}
@@ -127,9 +114,69 @@ jobs:
             PACKAGE_NAME=${{ env.PACKAGE_NAME }}
           push: true
           tags: >
-            nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }}-slim-docker,
-            nuvladev/${{ github.event.repository.name }}:latest-slim-docker
+            nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }}-slim-docker
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  setup-matrix:
+    runs-on: ubuntu-latest
+    needs: build-dev
+    outputs:
+      boards: ${{ steps.set-boards.outputs.boards }}
+      tests: ${{ steps.set-tests.outputs.tests }}
+    steps:
+      - id: set-boards
+        run: |
+          echo "boards=${{ vars.TESTBED_BOARDS }}" >> $GITHUB_OUTPUT
 
+      - id: set-tests
+        run: |
+          echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
+
+  run-validation:
+    needs: setup-matrix
+    strategy:
+      matrix:
+        board-config: ${{ fromJSON(needs.setup-matrix.outputs.boards) }}
+        validation-type: ${{ fromJSON(needs.setup-matrix.outputs.tests) }}
+      fail-fast: false
+    runs-on: ${{ matrix.board-config }}
+
+    steps:
+      - name: Pull Validation Image
+        run: docker pull $VALIDATION_IMAGE_NAME
+
+      - name: Reset results directory
+        run: sudo rm -rf /home/runner/actions-runner/results/temp && sudo mkdir -p /home/runner/actions-runner/results/temp
+
+      - name: Run Validation
+        run: >
+          docker run 
+          --rm 
+          -v /home/sixsq/.validation_keys:/root/.ssh
+          -v runner_${{ matrix.board-config }}-vol:/results 
+          -v ./logs/:/tmp/nuvlaedge_validator/logs
+          ${{ env.VALIDATION_IMAGE_NAME }} 
+          --target ${{ matrix.board-config }}.toml
+          --key ${{ secrets.VALIDATION_NUVLA_API_KEY }}
+          --secret ${{ secrets.VALIDATION_NUVLA_API_SECRET }}
+          --validator ${{ matrix.validation-type }}
+          --retrieve_logs 'true' 
+          --nuvlaedge_branch ${{ env.BRANCH_NAME || 'main' }}
+          --nuvlaedge_version 'latest' 
+          --deployment_branch 'None' 
+          --log_level 'INFO' 
+
+      - name: Save logs as artifacts if requested or failed
+        if: ${{ steps.validate.outcome }} != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'nuvlaedge_logs_${{ matrix.board-config }}-${{ matrix.validation-type }}'
+          path: /tmp/nuvlaedge_validator/
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-result-action/linux@v2
+        if: always()
+        with:
+          check_name: "| ${{ matrix.board-config }} --- ${{ matrix.validation-type }} |"
+          junit_files: "/home/runner/actions-runner/results/temp/xml/*.xml"

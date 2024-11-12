@@ -34,7 +34,6 @@ from threading import Event
 
 from nuvla.api.models import CimiResponse
 
-from nuvlaedge.agent.common.util import nuvla_support_new_container_stats
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
@@ -192,6 +191,8 @@ class Agent:
 
         """ Initialise Telemetry """
         logger.info("Registering Telemetry")
+        coe_resources_supported = self._nuvla_support_telemetry_field('coe-resources')
+        new_container_stats_supported = self._nuvla_support_telemetry_field('resources.container-stats.item.cpu-usage')
         self.worker_manager.add_worker(
             period=self.telemetry_period,
             worker_type=Telemetry,
@@ -200,7 +201,8 @@ class Agent:
                               'report_channel': self.telemetry_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
-                              'new_container_stats_supported': nuvla_support_new_container_stats(self._nuvla_client),
+                              'coe_resources_supported': coe_resources_supported,
+                              'new_container_stats_supported': new_container_stats_supported,
                               }),
             actions=['run'],
             initial_delay=8
@@ -331,7 +333,7 @@ class Agent:
                 # so there is no need to create a local stored file
                 self.telemetry_payload.update(self._nuvla_client.nuvlaedge_status)
                 logger.debug(f"Telemetry from Nuvla: \n "
-                             f"{self.telemetry_payload.model_dump_json(indent=4, exclude_none=True, by_alias=True)}")
+                             f"{self.telemetry_payload.model_dump_json(exclude_none=True, by_alias=True)}")
 
             case State.DECOMMISSIONED | State.DECOMMISSIONING:
                 logger.error(f"Force exiting the agent due to wrong state {current_state}")
@@ -348,9 +350,16 @@ class Agent:
         # Gather the status report
         status, notes = self.status_handler.get_status(self._coe_engine)
 
-        logger.info(f"Status gathered: \n{status} \n {json.dumps(notes,indent=4)}")
+        logger.info(f"Status gathered: {status}. \nNotes: {json.dumps(notes, indent=4)}")
         telemetry.status = status
         telemetry.status_notes = notes
+
+    def _nuvla_support_telemetry_field(self, field):
+        try:
+            return field in self._nuvla_client.supported_nuvla_telemetry_fields
+        except Exception as e:
+            logger.error(f'Failed to find if Nuvla support telemetry field "{field}". Defaulting to False: {e}')
+            return False
 
     # Agent Actions
     def _update_periodic_actions(self):
@@ -406,13 +415,9 @@ class Agent:
         try:
             previous_data = self.telemetry_payload.model_dump(exclude_none=True, by_alias=True)
             telemetry_patch = jsonpatch.make_patch(previous_data, data_to_send)
-            logger.debug(f"Sending telemetry patch data to Nuvla \n {telemetry_patch}")
             response = self._nuvla_client.telemetry_patch(list(telemetry_patch), attributes_to_delete=list(to_delete))
         except Exception as e:
-            logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True, stack_info=True)
-            # Send telemetry via NuvlaClientWrapper
-            logger.debug(f"Sending telemetry data to Nuvla \n "
-                         f"{new_telemetry.model_dump_json(indent=4, exclude_none=True, by_alias=True, include=to_send)}")
+            logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True)
             response = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
         # If telemetry is successful save telemetry

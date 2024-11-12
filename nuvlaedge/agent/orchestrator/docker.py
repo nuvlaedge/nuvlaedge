@@ -496,7 +496,7 @@ class DockerClient(COEClient):
 
     def launch_job(self, job_id, job_execution_id, nuvla_endpoint,
                    nuvla_endpoint_insecure=False, api_key=None, api_secret=None,
-                   docker_image=None):
+                   docker_image=None, cookies=None):
         """
         Launches a job on the local node using the specified Docker image. Takes into account
         various parameters to configure the Docker container. It also handles errors during
@@ -510,7 +510,7 @@ class DockerClient(COEClient):
             api_key (str, optional): API Key for the Nuvla API. Defaults to None.
             api_secret (str, optional): API Secret for the Nuvla API. Defaults to None.
             docker_image (str, optional): Docker image to be used for the job. Defaults to None.
-
+            cookies(str, optional): Nuvla Session cookie. Defaults to None.
         Raises:
             Exception: If there's an error during the container creation or starting process.
 
@@ -538,10 +538,14 @@ class DockerClient(COEClient):
             }
         }
 
+        authentication = ""
+        if api_key and api_secret:
+            authentication = (f'--api-key {api_key} '
+                              f'--api-secret {api_secret} ')
+
         command = (f'-- /app/job_executor.py '
                    f'--api-url https://{nuvla_endpoint} '
-                   f'--api-key {api_key} '
-                   f'--api-secret {api_secret} '
+                   f'{authentication}'
                    f'--nuvlaedge-fs {FILE_NAMES.root_fs} '
                    f'--job-id {job_id}')
 
@@ -550,6 +554,9 @@ class DockerClient(COEClient):
 
         environment = {k: v for k, v in os.environ.items()
                        if k.startswith('NE_IMAGE_') or k.startswith('JOB_')}
+
+        if cookies:
+            environment["JOB_COOKIES"] = cookies
 
         logger.info(f'Starting job "{job_id}" with docker image "{image}" and command: "{command}"')
 

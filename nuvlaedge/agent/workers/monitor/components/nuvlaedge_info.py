@@ -20,8 +20,7 @@ from ..components import monitor
 @monitor('nuvlaedge_info_monitor')
 class NuvlaEdgeInfoMonitor(Monitor):
     """ NuvlaEdge information monitor class. """
-    def __init__(self, name: str, telemetry,
-                 enable_monitor: bool = True):
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
         super().__init__(name, NuvlaInfo, enable_monitor)
 
         self.coe_client: COEClient = telemetry.coe_client

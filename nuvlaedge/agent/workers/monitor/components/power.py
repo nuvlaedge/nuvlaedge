@@ -2,6 +2,8 @@
 import os
 import re
 
+from functools import cached_property
+
 from nuvlaedge.common.constants import CTE
 from nuvlaedge.agent.workers.monitor import Monitor
 from nuvlaedge.agent.workers.monitor.components import monitor
@@ -21,6 +23,10 @@ class PowerMonitor(Monitor):
                 "agx_xavier": {
                     "i2c_addresses": ["1-0040", "1-0041"],
                     "channels_path": ["1-0040/iio:device0", "1-0041/iio:device1"]
+                },
+                "xavier_nx": {
+                    "i2c_addresses": ["7-0040"],
+                    "channels_path": ["7-0040/iio:device0"]
                 },
                 "nano": {
                     "i2c_addresses": ["6-0040"],
@@ -46,15 +52,30 @@ class PowerMonitor(Monitor):
         }
     }
 
-    def __init__(self, name: str, telemetry, enable_monitor: bool):
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
         super().__init__(name, PowerData, enable_monitor)
 
         self.host_fs: str = CTE.HOST_FS
 
+        if not self.available_power_drivers:
+            self.logger.info(f'No power driver supported. Disabling {self.name}')
+            self.enabled_monitor = False
+
         if not telemetry.edge_status.power:
             telemetry.edge_status.power = self.data
 
-    def get_power(self, driver: str) -> PowerEntry | None:
+    def get_power_path(self, driver):
+        return f'{self.host_fs}/sys/bus/i2c/drivers/{driver}'
+
+    @cached_property
+    def available_power_drivers(self):
+        drivers = []
+        for driver in self._NVIDIA_MODEL:
+            if os.path.exists(self.get_power_path(driver)):
+                drivers.append(driver)
+        return drivers
+
+    def get_powers(self, driver: str) -> list[PowerEntry] | None:
         """
         Parses the driver info received and reads the corresponding files to create a
         PowerEntry data structure
@@ -63,12 +84,15 @@ class PowerMonitor(Monitor):
             driver: driver name to find the power
 
         Returns:
-            An Power entry with the instant power values
+            A list of PowerEntry with the instant power values
         """
-        i2c_fs_path = f'{self.host_fs}/sys/bus/i2c/drivers/{driver}'
+        i2c_fs_path = self.get_power_path(driver)
+
+        powers: list[PowerEntry] = []
 
         if not os.path.exists(i2c_fs_path):
-            return None
+            self.logger.warning(f'Path {i2c_fs_path} do not exist but it was at initialisation time')
+            return []
 
         i2c_addresses_found = \
             [addr for addr in os.listdir(i2c_fs_path) if
@@ -78,17 +102,21 @@ class PowerMonitor(Monitor):
         for _, power_info in self._NVIDIA_MODEL[driver]['boards'].items():
             known_i2c_addresses = power_info['i2c_addresses']
             known_i2c_addresses.sort()
-            if i2c_addresses_found != known_i2c_addresses:
+            if not set(known_i2c_addresses).issubset(set(i2c_addresses_found)):
+                self.logger.debug('i2c address found do not match known i2c address: '
+                                  f'{known_i2c_addresses} is not a subset of {i2c_addresses_found}')
                 continue
 
             for metrics_folder_name in power_info['channels_path']:
                 metrics_folder_path = f'{i2c_fs_path}/{metrics_folder_name}'
                 if not os.path.exists(metrics_folder_path):
+                    self.logger.debug(f'Power metric folder do not exists: {metrics_folder_path}')
                     continue
 
                 for channel in range(0, channels):
                     rail_name_file = f'{metrics_folder_path}/rail_name_{channel}'
                     if not os.path.exists(rail_name_file):
+                        self.logger.debug(f'Power metric rail file do not exists: {rail_name_file}')
                         continue
 
                     with open(rail_name_file, encoding='utf-8') as rail_file:
@@ -118,30 +146,34 @@ class PowerMonitor(Monitor):
 
                     if not all(desired_metric[0].split('/')[-1] in existing_metrics
                                for desired_metric in desired_metrics_files):
-                        # one or more power metric files we need, are missing from the
-                        # directory, skip them
+                        self.logger.debug(
+                            'One or more power metric files we need, are missing from the directory. skipping'
+                            f'desired_metrics_files: {desired_metrics_files}.'
+                            f'existing_metrics: {existing_metrics}.')
                         continue
 
                     for metric_combo in desired_metrics_files:
                         try:
                             with open(metric_combo[0], encoding='utf-8') as metric_f:
-
-                                return PowerEntry(
+                                powers.append(PowerEntry(
                                     metric_name=metric_combo[1],
                                     energy_consumption=float(metric_f.read().split()[0]),
-                                    unit=metric_combo[2])
+                                    unit=metric_combo[2]))
                         except (IOError, IndexError, ValueError):
-                            return
+                            self.logger.debug('Failed to get metric combo', exc_info=True)
+        return powers
 
     def update_data(self):
 
         if not self.data.power_entries:
             self.data.power_entries = {}
 
-        for drive in self._NVIDIA_MODEL:
-            it_data: PowerEntry = self.get_power(drive)
-            if it_data:
-                self.data.power_entries[it_data.metric_name] = it_data
+        for driver in self.available_power_drivers:
+            for it_data in self.get_powers(driver):
+                if it_data:
+                    self.data.power_entries[it_data.metric_name] = it_data
 
     def populate_nb_report(self, nuvla_report: dict):
-        ...
+        data = self.data.model_dump(exclude_none=True, by_alias=True)
+        resources = nuvla_report.setdefault('resources', {})
+        resources['power-consumption'] = list(data.get('power-entries', {}).values())

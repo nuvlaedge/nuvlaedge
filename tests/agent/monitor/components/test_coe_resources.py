@@ -59,7 +59,7 @@ class TestCOEResourcesMonitor(unittest.TestCase):
                              {'id': '2', 'name': 'networks-2'}],
                 'containers': [{'id': '1', 'name': 'containers-1'},
                                {'id': '2', 'name': 'containers-2'}],
-                'services': [], 'tasks': [], 'configs': [], 'secrets': []}}
+                'services': [], 'tasks': [], 'configs': [], 'secrets': [], 'nodes': []}}
         self.assertEqual(nb_report['coe-resources'], expected_data)
 
         self.assertIs(telemetry.edge_status.coe_resources, test_monitor.data)

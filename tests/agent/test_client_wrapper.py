@@ -257,6 +257,17 @@ class TestClientWrapper(TestCase):
         self.mock_nuvla.edit_patch.return_value = mock_res
         self.assertEqual({'jobs': ['job1']}, self.test_client.telemetry_patch([{}], set()))
 
+    def test_log_debug_telemetry_jsonpatch(self):
+        with self.assertLogs(logger, level='DEBUG') as log:
+            self.test_client._log_debug_telemetry_jsonpatch([], [])
+            self.assertTrue(len(log.output) > 0)
+
+        with self.assertLogs(logger, level='DEBUG') as log:
+            self.test_client._log_debug_telemetry_jsonpatch([{'foo': 1, 'bar': 2}], [])
+            r = list(filter(lambda x: 'WARNING' in x.levelname, log.records))
+            self.assertEqual(1, len(r))
+            self.assertTrue('Error logging telemetry patch' in r[0].message)
+
     # @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.write_file')
     def test_save_current_state_to_file(self, mock_write):

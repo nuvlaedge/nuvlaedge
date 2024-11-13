@@ -334,20 +334,22 @@ class NuvlaClientWrapper:
     @staticmethod
     def _log_debug_telemetry_jsonpatch(telemetry_jsonpatch: list,
                                        attributes_to_delete: list[str]):
-        logger.debug("Sending telemetry patch data to Nuvla: \n %s",
+        logger.debug('Sending telemetry patch data to Nuvla: \n %s',
                      telemetry_jsonpatch)
-        logger.debug("Attributes no longer present in the metrics: \n %s",
+        logger.debug('Attributes no longer present in the metrics: \n %s',
                      attributes_to_delete)
 
-        if logger.level == logging.DEBUG and len(telemetry_jsonpatch) > 0 and \
-                'op' in telemetry_jsonpatch[0] and 'path' in telemetry_jsonpatch[0]:
-            ops_paths = [(x['op'], x['path'])
-                         for x in sorted(telemetry_jsonpatch,
-                                         key=lambda x: (x['op'], x['path']))]
-            logger.debug('Telemetry patch data ops and paths:\n%s',
-                         pformat(ops_paths))
-            logger.debug("Telemetry patch data size: %s",
-                         len(bytes(json.dumps(telemetry_jsonpatch), 'utf-8')))
+        if logger.level == logging.DEBUG:
+            try:
+                ops_paths = [(x['op'], x['path'])
+                             for x in sorted(telemetry_jsonpatch,
+                                             key=lambda x: (x['op'], x['path']))]
+                logger.debug('Telemetry patch data ops and paths:\n%s',
+                             pformat(ops_paths))
+                logger.debug('Telemetry patch data size: %s',
+                             len(bytes(json.dumps(telemetry_jsonpatch), 'utf-8')))
+            except Exception as ex:
+                logger.warning('Error logging telemetry patch data: %s', ex)
 
     def save_current_state_to_file(self):
         """ Saves the current state of the NuvlaEdge client to a file.

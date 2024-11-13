@@ -94,12 +94,15 @@ class KubernetesClient(COEClient):
             return sorted([self._sanitize_k8s_object(x.to_dict()) for x in k8s_objects.items],
                           key=get_creation_timestamp)
 
+        def _emtpy_data_items(k8s_object):
+            if k8s_object.data:
+                for k in k8s_object.data:
+                    k8s_object.data[k] = ''
+
         def sanitize_and_sort_with_data(k8s_objects):
             res_list = []
             for x in k8s_objects.items:
-                if x.data:
-                    for k in x.data:
-                        x.data[k] = ''
+                _emtpy_data_items(x)
                 res_list.append(self._sanitize_k8s_object(x.to_dict()))
             return sorted(res_list, key=get_creation_timestamp)
 

@@ -94,6 +94,15 @@ class KubernetesClient(COEClient):
             return sorted([self._sanitize_k8s_object(x.to_dict()) for x in k8s_objects.items],
                           key=get_creation_timestamp)
 
+        def sanitize_and_sort_with_data(k8s_objects):
+            res_list = []
+            for x in k8s_objects.items:
+                if x.data:
+                    for k in x.data:
+                        x.data[k] = ''
+                res_list.append(self._sanitize_k8s_object(x.to_dict()))
+            return sorted(res_list, key=get_creation_timestamp)
+
         match resource_type:
             case 'nodes':
                 res = [self._sanitize_k8s_object(x.to_dict())
@@ -111,21 +120,11 @@ class KubernetesClient(COEClient):
                     img['names'] = sorted(img.pop('names'))
                 return sorted(imgs, key=lambda x: x['names'][0])
             case 'configmaps':
-                res_list = []
-                for x in self.client.list_config_map_for_all_namespaces().items:
-                    if x.data:
-                        for k in x.data:
-                            x.data[k] = ''
-                    res_list.append(self._sanitize_k8s_object(x.to_dict()))
-                return sorted(res_list, key=get_creation_timestamp)
+                return sanitize_and_sort_with_data(
+                    self.client.list_config_map_for_all_namespaces())
             case 'secrets':
-                res_list = []
-                for x in self.client.list_secret_for_all_namespaces().items:
-                    if x.data:
-                        for k in x.data:
-                            x.data[k] = ''
-                    res_list.append(self._sanitize_k8s_object(x.to_dict()))
-                return sorted(res_list, key=get_creation_timestamp)
+                return sanitize_and_sort_with_data(
+                    self.client.list_secret_for_all_namespaces())
             case 'namespaces':
                 return sanitize_and_sort(self.client.list_namespace())
             case 'persistentvolumes':

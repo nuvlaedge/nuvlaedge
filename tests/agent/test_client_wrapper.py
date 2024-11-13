@@ -260,13 +260,13 @@ class TestClientWrapper(TestCase):
     def test_log_debug_telemetry_jsonpatch(self):
         with self.assertLogs(logger, level='DEBUG') as log:
             self.test_client._log_debug_telemetry_jsonpatch([], [])
-            self.assertTrue(len(log.output) > 0)
+            self.assertGreater(len(log.output), 0)
 
         with self.assertLogs(logger, level='DEBUG') as log:
             self.test_client._log_debug_telemetry_jsonpatch([{'foo': 1, 'bar': 2}], [])
             r = list(filter(lambda x: 'WARNING' in x.levelname, log.records))
             self.assertEqual(1, len(r))
-            self.assertTrue('Error logging telemetry patch' in r[0].message)
+            self.assertIn('Error logging telemetry patch', r[0].message)
 
     # @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaEdgeSession')
     @patch('nuvlaedge.agent.nuvla.client_wrapper.write_file')

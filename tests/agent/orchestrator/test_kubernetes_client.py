@@ -59,7 +59,99 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'Base class of the COEClient was not properly initialized')
 
     def test_list_raw_resources(self):
-        self.assertIsNone(self.obj.list_raw_resources('none'))
+        mock_image_one = mock.MagicMock()
+        mock_image_one.to_dict.return_value = \
+            {
+                "size_bytes": 123,
+                "names": [
+                    "foo-1", "bar-1", "baz-1"
+                ]
+            }
+        mock_image_two = mock.MagicMock()
+        mock_image_two.to_dict.return_value = \
+            {
+                "size_bytes": 456,
+                "names": [
+                    "foo-2", "bar-2", "baz-2"
+                ]
+            }
+
+        ret = mock.MagicMock()
+        ret.status.images = [mock_image_two, mock_image_one]
+        self.obj.client.read_node = mock.MagicMock(return_value=ret)
+
+        result = self.obj.list_raw_resources('images')
+        self.assertEqual(2, len(result))
+        self.assertEqual('bar-1', result[0]['names'][0])
+        self.assertEqual('foo-2', result[1]['names'][2])
+
+    def test_sanitize_k8s_object_with_dict(self):
+        data = {
+            'name': 'test',
+            'status': 'active',
+            'timestamp': datetime(2023, 1, 1, 12, 0, 0),
+            'managed_fields': 'should be skipped'
+        }
+        expected = {
+            'name': 'test',
+            'status': 'active',
+            'timestamp': '2023-01-01T12:00:00'
+        }
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, expected)
+
+    def test_sanitize_k8s_object_with_list(self):
+        data = [
+            {'timestamp': datetime(2023, 1, 1, 12, 0, 0)},
+            {'timestamp': datetime(2023, 1, 2, 12, 0, 0)}
+        ]
+        expected = [
+            {'timestamp': '2023-01-01T12:00:00'},
+            {'timestamp': '2023-01-02T12:00:00'}
+        ]
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, expected)
+
+    def test_sanitize_k8s_object_with_datetime(self):
+        data = datetime(2023, 1, 1, 12, 0, 0)
+        expected = '2023-01-01T12:00:00'
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, expected)
+
+    def test_sanitize_k8s_object_with_other_types(self):
+        data = 'string'
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, 'string')
+
+        data = 123
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, 123)
+
+        data = 123.45
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, 123.45)
+
+    def test_sanitize_k8s_object_with_nested_structure(self):
+        data = {
+            'name': 'test',
+            'details': {
+                'timestamp': datetime(2023, 1, 1, 12, 0, 0),
+                'info': [
+                    {'timestamp': datetime(2023, 1, 2, 12, 0, 0)}
+                ]
+            }
+        }
+        expected = {
+            'name': 'test',
+            'details': {
+                'timestamp': '2023-01-01T12:00:00',
+                'info': [
+                    {'timestamp': '2023-01-02T12:00:00'}
+                ]
+            }
+        }
+        result = KubernetesClient._sanitize_k8s_object(data)
+        self.assertEqual(result, expected)
 
     def test_wait_pod_in_phase_matched(self):
         check_phase = 'Running'

@@ -19,6 +19,42 @@ class DockerData(BaseDataStructure):
     secrets: list[dict] | None = []
 
 
+class KubernetesData(BaseDataStructure):
+    # Namespaced resources
+
+    # configs
+    configmaps: list[dict] | None = []
+    secrets: list[dict] | None = []
+
+    # storage
+    persistentvolumeclaims: list[dict] | None = []
+
+    # network
+    services: list[dict] | None = []
+    ingresses: list[dict] | None = []
+
+    # workload
+    cronjobs: list[dict] | None = []
+    jobs: list[dict] | None = []
+    statefulsets: list[dict] | None = []
+    daemonsets: list[dict] | None = []
+    deployments: list[dict] | None = []
+    pods: list[dict] | None = []
+
+    # Non-namespaced resources
+
+    images: list[dict] | None = []
+    namespaces: list[dict] | None = []
+    persistentvolumes: list[dict] | None = []
+
+    # Cluster
+    nodes: list[dict] | None = []
+
+
+def kubernetes_data_attributes():
+    return KubernetesData.model_fields.keys()
+
+
 class COEResourcesData(BaseDataStructure):
     docker: DockerData | None = None
-    # kubernetes: KubernetesData | None = None
+    kubernetes: KubernetesData | None = None

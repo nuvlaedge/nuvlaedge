@@ -4,11 +4,9 @@ NuvlaEdge logging
 NuvlaEdge logging is configured so by default logs to console with the level configured. Also, logs to individual files
 errors and warnings
 """
-import inspect
 import logging
 import os
 import sys
-import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 

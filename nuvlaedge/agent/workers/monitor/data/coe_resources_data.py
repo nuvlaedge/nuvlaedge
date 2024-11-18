@@ -50,6 +50,9 @@ class KubernetesData(BaseDataStructure):
     # Cluster
     nodes: list[dict] | None = []
 
+    # Helm
+    helmreleases: list[dict] | None = []
+
 
 def kubernetes_data_attributes():
     return KubernetesData.model_fields.keys()

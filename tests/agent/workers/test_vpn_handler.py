@@ -181,7 +181,7 @@ class TestVPNHandler(TestCase):
         self.mock_nuvla_client.commission.return_value = {'vpn_csr': 'read_data'}
         with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.debug') as mock_debug:
             self.test_vpn_handler._trigger_commission()
-            self.assertEqual(1, mock_debug.call_count)
+            self.assertEqual(2, mock_debug.call_count)
 
         self.mock_nuvla_client.commission.return_value = None
         with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.error') as mock_error:

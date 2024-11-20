@@ -91,22 +91,22 @@ class KubernetesClient(COEClient):
 
     @staticmethod
     def _list_helm_releases():
-        cmd = 'helm list --all-namespaces -o json'
+        cmd = ['helm', 'list', '--all-namespaces', '-o', 'json']
         try:
-            result = run(cmd, capture_output=True,
-                         timeout=10, encoding='UTF-8',
-                         shell=True, check=False)
+            result = run(cmd, capture_output=True, timeout=10,
+                         encoding='UTF-8', check=False)
             if result.returncode != 0:
                 log.error('Failed to list Helm releases: %s', result.stderr)
                 return []
             log.debug('Helm list command output: %s', result.stdout)
             return json.loads(result.stdout)
-        except json.JSONDecodeError as e:
-            log.error('Failed to parse Helm list output: %s, %s', e, result.stdout)
-            return []
+        except json.JSONDecodeError as ex:
+            log.error('Failed to parse Helm list output: %s with %s', result.stdout, ex)
         except TimeoutExpired:
             log.warning('Timed out waiting for Helm list command.')
-            return []
+        except Exception as ex:
+            log.error('Failed to list Helm releases: %s', ex)
+        return []
 
     def list_raw_resources(self, resource_type: str) -> list[dict] | None:
         def get_creation_timestamp(k8s_object):

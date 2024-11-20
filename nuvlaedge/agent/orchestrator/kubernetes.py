@@ -104,8 +104,6 @@ class KubernetesClient(COEClient):
             log.error('Failed to parse Helm list output: %s with %s', result.stdout, ex)
         except TimeoutExpired:
             log.warning('Timed out waiting for Helm list command.')
-        except Exception as ex:
-            log.error('Failed to list Helm releases: %s', ex)
         return []
 
     def list_raw_resources(self, resource_type: str) -> list[dict] | None:

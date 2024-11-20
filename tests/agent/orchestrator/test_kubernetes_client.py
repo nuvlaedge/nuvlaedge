@@ -740,11 +740,10 @@ class COEClientKubernetesTestCase(unittest.TestCase):
 
         self.assertEqual(releases, [{'name': 'release1'}])
         mock_run.assert_called_once_with(
-            'helm list --all-namespaces -o json',
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
             capture_output=True,
             timeout=10,
             encoding='UTF-8',
-            shell=True,
             check=False,
         )
 
@@ -760,11 +759,10 @@ class COEClientKubernetesTestCase(unittest.TestCase):
 
         self.assertEqual(releases, [])
         mock_run.assert_called_once_with(
-            'helm list --all-namespaces -o json',
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
             capture_output=True,
             timeout=10,
             encoding='UTF-8',
-            shell=True,
             check=False,
         )
 
@@ -780,11 +778,10 @@ class COEClientKubernetesTestCase(unittest.TestCase):
 
         self.assertEqual(releases, [])
         mock_run.assert_called_once_with(
-            'helm list --all-namespaces -o json',
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
             capture_output=True,
             timeout=10,
             encoding='UTF-8',
-            shell=True,
             check=False,
         )
 
@@ -799,10 +796,9 @@ class COEClientKubernetesTestCase(unittest.TestCase):
 
         self.assertEqual(releases, [])
         mock_run.assert_called_once_with(
-            'helm list --all-namespaces -o json',
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
             capture_output=True,
             timeout=10,
             encoding='UTF-8',
-            shell=True,
             check=False,
         )

@@ -61,7 +61,9 @@ class COEClientDockerTestCase(unittest.TestCase):
     def test_list_raw_resources(self):
         list_raw_resources = self.obj.list_raw_resources
 
-        types = ['images', 'volumes', 'networks', 'containers', 'services', 'tasks', 'configs', 'secrets', 'any']
+        types = ['images', 'volumes', 'networks', 'containers',
+                 'services', 'tasks', 'configs', 'secrets', 'nodes',
+                 'any']
         for resource_type in types:
             try:
                 list_raw_resources(resource_type)

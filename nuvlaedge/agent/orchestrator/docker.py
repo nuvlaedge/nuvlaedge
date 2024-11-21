@@ -102,6 +102,8 @@ class DockerClient(COEClient):
                 return sorted(api.configs(), key=get_keys('CreatedAt', 'ID'))
             case 'secrets':
                 return sorted(api.secrets(), key=get_keys('CreatedAt', 'ID'))
+            case 'nodes':
+                return sorted(api.nodes(), key=get_keys('CreatedAt', 'ID'))
 
         logger.error(f'COE resource type "{resource_type}" is not supported')
         return None

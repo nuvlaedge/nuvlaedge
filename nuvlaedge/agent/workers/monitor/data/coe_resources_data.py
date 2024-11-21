@@ -17,6 +17,7 @@ class DockerData(BaseDataStructure):
     tasks: list[dict] | None = []
     configs: list[dict] | None = []
     secrets: list[dict] | None = []
+    nodes: list[dict] | None = []
 
 
 class KubernetesData(BaseDataStructure):

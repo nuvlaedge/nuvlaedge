@@ -48,7 +48,7 @@ class COEResourcesMonitor(Monitor):
         docker_data = DockerData()
         # Warning: the order of the list below is important, swarm only resources should be at the end
         for resource_type in ['images', 'volumes', 'networks', 'containers',
-                              'services', 'tasks', 'configs', 'secrets']:
+                              'services', 'tasks', 'configs', 'secrets', 'nodes']:
             try:
                 setattr(docker_data, resource_type,
                         self.coe_client.list_raw_resources(resource_type))

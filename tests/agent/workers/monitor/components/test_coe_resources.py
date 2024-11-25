@@ -27,6 +27,8 @@ class TestCOEResourcesMonitor(unittest.TestCase):
         nodes.status.images = [image]
 
         k8s_client = KubernetesClient()
+        k8s_client._list_helm_releases = MagicMock()
+        k8s_client._list_helm_releases.return_value = [{'foo': 'bar'}]
         k8s_client.client = MagicMock()
         k8s_client.client.read_node.return_value = nodes
         k8s_client.client.list_node.return_value.items = result
@@ -57,5 +59,7 @@ class TestCOEResourcesMonitor(unittest.TestCase):
             self.assertEqual(len(r), 1)
             if r_name == 'images':
                 self.assertEqual(r[0], image.to_dict())
+            elif r_name == 'helmreleases':
+                self.assertEqual(r[0], {'foo': 'bar'})
             else:
                 self.assertEqual(r[0], resource.to_dict())

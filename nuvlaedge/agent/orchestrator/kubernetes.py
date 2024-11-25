@@ -1,8 +1,11 @@
 import datetime
+import json
 import logging
 import os
 import time
 from typing import Dict, List, Union
+
+from subprocess import run, TimeoutExpired
 
 from nuvlaedge.common.utils import format_datetime_for_nuvla
 from nuvlaedge.agent.common import util
@@ -86,6 +89,23 @@ class KubernetesClient(COEClient):
         else:
             return data
 
+    @staticmethod
+    def _list_helm_releases():
+        cmd = ['helm', 'list', '--all-namespaces', '-o', 'json']
+        try:
+            result = run(cmd, capture_output=True, timeout=10,
+                         encoding='UTF-8', check=False)
+            if result.returncode != 0:
+                log.error('Failed to list Helm releases: %s', result.stderr)
+                return []
+            log.debug('Helm list command output: %s', result.stdout)
+            return json.loads(result.stdout)
+        except json.JSONDecodeError as ex:
+            log.error('Failed to parse Helm list output: %s with %s', result.stdout, ex)
+        except TimeoutExpired:
+            log.warning('Timed out waiting for Helm list command.')
+        return []
+
     def list_raw_resources(self, resource_type: str) -> list[dict] | None:
         def get_creation_timestamp(k8s_object):
             return k8s_object.get('metadata', {}).get('creation_timestamp')
@@ -159,6 +179,8 @@ class KubernetesClient(COEClient):
             case 'pods':
                 return sanitize_and_sort(
                     self.client.list_pod_for_all_namespaces())
+            case 'helmreleases':
+                return self._list_helm_releases()
             case _:
                 log.error(f'Unknown resource type: {resource_type}')
         return None

@@ -10,6 +10,8 @@ import sys
 import unittest
 import unittest.mock as mock
 
+from subprocess import TimeoutExpired, CompletedProcess
+
 import kubernetes
 from kubernetes.client.exceptions import ApiException
 
@@ -464,7 +466,6 @@ class COEClientKubernetesTestCase(unittest.TestCase):
             expected_command,
             mock.ANY)
 
-
     @mock.patch('kubernetes.client.CustomObjectsApi.list_cluster_custom_object')
     @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.get_node_info')
     def test_collect_container_metrics(self, mock_get_node_info, mock_pod_metrics):
@@ -726,3 +727,78 @@ class COEClientKubernetesTestCase(unittest.TestCase):
             'mem-limit': 8324190208, 'mem-usage': 92786688,
             'net-in': 0, 'net-out': 0, 'blk-in': 0, 'blk-out': 0}
         self.assertEqual(res, cmp)
+
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.run')
+    def test_list_helm_releases_success(self, mock_run):
+        mock_result = CompletedProcess(
+            args=['helm'], returncode=0, stdout='[{"name": "release1"}]', stderr=''
+        )
+        mock_run.return_value = mock_result
+
+        client = KubernetesClient()
+        releases = client._list_helm_releases()
+
+        self.assertEqual(releases, [{'name': 'release1'}])
+        mock_run.assert_called_once_with(
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
+            capture_output=True,
+            timeout=10,
+            encoding='UTF-8',
+            check=False,
+        )
+
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.run')
+    def test_list_helm_releases_failure(self, mock_run):
+        mock_result = CompletedProcess(
+            args=['helm'], returncode=1, stdout='', stderr='error'
+        )
+        mock_run.return_value = mock_result
+
+        client = KubernetesClient()
+        releases = client._list_helm_releases()
+
+        self.assertEqual(releases, [])
+        mock_run.assert_called_once_with(
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
+            capture_output=True,
+            timeout=10,
+            encoding='UTF-8',
+            check=False,
+        )
+
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.run')
+    def test_list_helm_releases_json_decode_error(self, mock_run):
+        mock_result = CompletedProcess(
+            args=['helm'], returncode=0, stdout='invalid json', stderr=''
+        )
+        mock_run.return_value = mock_result
+
+        client = KubernetesClient()
+        releases = client._list_helm_releases()
+
+        self.assertEqual(releases, [])
+        mock_run.assert_called_once_with(
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
+            capture_output=True,
+            timeout=10,
+            encoding='UTF-8',
+            check=False,
+        )
+
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.run')
+    def test_list_helm_releases_timeout(self, mock_run):
+        mock_run.side_effect = TimeoutExpired(
+            cmd='helm list --all-namespaces -o json', timeout=10
+        )
+
+        client = KubernetesClient()
+        releases = client._list_helm_releases()
+
+        self.assertEqual(releases, [])
+        mock_run.assert_called_once_with(
+            ['helm', 'list', '--all-namespaces', '-o', 'json'],
+            capture_output=True,
+            timeout=10,
+            encoding='UTF-8',
+            check=False,
+        )

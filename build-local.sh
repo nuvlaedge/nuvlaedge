@@ -20,3 +20,4 @@ poetry export --format requirements.txt --output requirements.job-engine.txt --w
 poetry export --format requirements.txt --output requirements.bluetooth.txt --without-hashes --without-urls --with bluetooth
 
 docker build --build-arg PACKAGE_TAG=$nuvlaedge_version -t ${IMAGE_TAG_NAME} .
+echo $IMAGE_TAG_NAME

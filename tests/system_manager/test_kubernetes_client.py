@@ -1,20 +1,16 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-import json
 import logging
-import mock
 import os
-import sys
-import unittest
+
+from unittest import TestCase, mock
+
+os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
+from nuvlaedge.system_manager.orchestrator.kubernetes import Kubernetes
 import tests.system_manager.utils.fake as fake
 
 
-class KubernetesTestCase(unittest.TestCase):
+class KubernetesTestCase(TestCase):
 
     def setUp(self) -> None:
-        os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
-        from nuvlaedge.system_manager.orchestrator.kubernetes import Kubernetes
-
         with mock.patch('kubernetes.client.CoreV1Api') as mock_k8s_client_CoreV1Api:
             with mock.patch('kubernetes.client.AppsV1Api') as mock_k8s_client_AppsV1Api:
                 with mock.patch('kubernetes.config.load_incluster_config') as mock_k8s_config:

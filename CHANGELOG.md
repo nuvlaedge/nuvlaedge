@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.18.0](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.1...2.18.0) (2024-11-29)
+
+
+### Features
+
+* **job:** authenticate to Nuvla with cookies when starting job engine container ([#214](https://github.com/nuvlaedge/nuvlaedge/issues/214)) ([6887e61](https://github.com/nuvlaedge/nuvlaedge/commit/6887e61e1b1893b2577393d2a825f1fbc386437c))
+* **kubernetes:** add support for listing Helm releases ([#225](https://github.com/nuvlaedge/nuvlaedge/issues/225)) ([3629076](https://github.com/nuvlaedge/nuvlaedge/commit/362907612c0b8ad918f50cb3fea479432d0cc1b7))
+* **telemetry:** add raw coe resources for kubernetes ([#216](https://github.com/nuvlaedge/nuvlaedge/issues/216)) ([fa39833](https://github.com/nuvlaedge/nuvlaedge/commit/fa3983327e0033f8be37acbbe567205805273f60))
+
+
+### Bug Fixes
+
+* filtering out sensitive fields when logging VPN related informations ([#222](https://github.com/nuvlaedge/nuvlaedge/issues/222)) ([eff57a1](https://github.com/nuvlaedge/nuvlaedge/commit/eff57a19441d53825bb7d9d2365ae3509c44ab18))
+
+
+### Continuous Integration
+
+* improve ci  ([#213](https://github.com/nuvlaedge/nuvlaedge/issues/213)) ([0a59d74](https://github.com/nuvlaedge/nuvlaedge/commit/0a59d743ee3a15d1b074de231cb72e1f0540aabf))
+
 ## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-11-02)
 
 

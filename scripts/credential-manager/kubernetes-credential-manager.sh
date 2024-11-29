@@ -1,43 +1,55 @@
 #!/bin/sh -xe
 
-WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}
-CSR_NAME=${CSR_NAME:-nuvlaedge-csr}
-
-SHARED="/var/lib/nuvlaedge/"
-SYNC_FILE=".tls"
-CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-USER="nuvla"
-
-echo "The NuvlaEdge UUID is set to: ${NUVLAEDGE_UUID}"
-
-if [ ! -z $SET_MULTIPLE ]
-then
-    echo "We are in the multiple NE mode..."
-    UUID=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
-    echo "The UUID string got set to: ${UUID}"
-    CSR_NAME=${CSR_NAME}-${UUID}
-    SYNC_FILE=".${UUID}.tls"
-    CRB_NAME=${USER}-crb-${UUID}
-else
-    CRB_NAME=${USER}-crb
+if [ -z "${KUBERNETES_SERVICE_HOST}" ]; then
+  echo "ERROR: KUBERNETES_SERVICE_HOST is not defined. Exiting."
+  exit 1
 fi
 
-echo "The sync file is set to: $SYNC_FILE"                                         
-echo "The certificate siging request (CSR) is set to ${CSR_NAME}"  
-echo "The cluster role binding name (CRB) is set to ${CRB_NAME}"  
+SHARED="/var/lib/nuvlaedge/"
+CA="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+USER="nuvla"
+SYNC_FILE=".tls"
+
+WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC:-600}
+
+CSR_NAME=${CSR_NAME:-nuvlaedge-csr}
+CRB_NAME=${USER}-crb
+
+if [ "${CSR_NAME}" = "nuvlaedge-csr" ]; then
+
+  if [ -z "${NUVLAEDGE_UUID}" ]; then
+    echo "Using default CSR name, but NUVLAEDGE_UUID is not set. Exiting."
+    exit 1
+  fi
+  echo "NuvlaEdge ID: ${NUVLAEDGE_UUID}"
+  UUID=$(echo $NUVLAEDGE_UUID | awk -F "/" '{print $2}')
+
+  SYNC_FILE=${SYNC_FILE}-${UUID}
+  CSR_NAME=${CSR_NAME}-${UUID}
+  CRB_NAME=${CRB_NAME}-${UUID}
+fi
+
+echo "INFO: Local environment variables:"
+echo "INFO: WAIT_APPROVED_SEC=${WAIT_APPROVED_SEC}"
+echo "INFO: SHARED=${SHARED}"
+echo "INFO: CA=${CA}"
+echo "INFO: USER=${USER}"
+echo "INFO: SYNC_FILE=${SYNC_FILE}"
+echo "INFO: CSR_NAME=${CSR_NAME}"
+echo "INFO: CRB_NAME=${CRB_NAME}"
 
 is_cred_valid() {
-  CRED_PATH=${1}
+  local cred_path=${1}
 
   echo "INFO: md5 of certificate:"
-  openssl x509 -noout -modulus -in ${CRED_PATH}/cert.pem | openssl md5
+  openssl x509 -noout -modulus -in ${cred_path}/cert.pem | openssl md5
   echo "INFO: md5 of private key:"
-  openssl rsa -noout -modulus -in ${CRED_PATH}/key.pem | openssl md5
+  openssl rsa -noout -modulus -in ${cred_path}/key.pem | openssl md5
 
   curl -f https://${KUBERNETES_SERVICE_HOST}/api \
-    --cacert ${CRED_PATH}/ca.pem \
-    --cert ${CRED_PATH}/cert.pem  \
-    --key ${CRED_PATH}/key.pem
+    --cacert ${cred_path}/ca.pem \
+    --cert ${cred_path}/cert.pem  \
+    --key ${cred_path}/key.pem
   if [ $? -ne 0 ]
   then
     return 1
@@ -50,7 +62,6 @@ generate_credentials() {
   echo "INFO: Generating new user '${USER}' and API access certificates."
 
   openssl genrsa -out key.pem 4096
-
   cat>nuvlaedge.cnf <<EOF
 [ req ]
 default_bits = 4096
@@ -66,7 +77,6 @@ basicConstraints=CA:FALSE
 keyUsage=keyEncipherment,dataEncipherment
 extendedKeyUsage=serverAuth,clientAuth
 EOF
-
   openssl req -config ./nuvlaedge.cnf -new -key key.pem -out nuvlaedge.csr
 
   BASE64_CSR=$(cat ./nuvlaedge.csr | base64 | tr -d '\n')
@@ -89,17 +99,15 @@ spec:
   - key encipherment
   - client auth
 EOF
-
   kubectl delete -f nuvlaedge-csr.yaml || true
-
   kubectl apply -f nuvlaedge-csr.yaml
-
   kubectl get csr
-
-  timeout ${WAIT_APPROVED_SEC} sh -c 'while [[ -z "$CERT" ]]
-do
-CERT=`kubectl get csr ${CSR_NAME} -o jsonpath="{.status.certificate}" | base64 -d`
-done'
+  timeout ${WAIT_APPROVED_SEC} sh -c "
+while [ -z \"\$CERT\" ]; do
+  CERT=\$(kubectl get csr ${CSR_NAME} -o jsonpath={.status.certificate} | base64 -d)
+  sleep 1
+done
+"
   kubectl get csr ${CSR_NAME} -o jsonpath="{.status.certificate}" | base64 -d > cert.pem
 
   echo "INFO: Validating credentials."
@@ -108,7 +116,7 @@ done'
   then
     cp ca.pem cert.pem key.pem ${SHARED}
     echo `date +%s` > ${SHARED}/${SYNC_FILE}
-    echo "INFO: Success. Generated new valid credentials: \n$(ls -al ${SHARED}/*.pem ${SHARED}/${SYNC_FILE})"
+    echo "INFO: Generated new valid credentials: \n$(ls -al ${SHARED}/*.pem ${SHARED}/${SYNC_FILE})"
   else
     echo "ERROR: Generated credentials are not valid."
     return 1

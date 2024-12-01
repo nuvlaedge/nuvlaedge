@@ -409,15 +409,20 @@ class Agent:
 
         # Calculate the difference from the latest telemetry sent and the new data to reduce package size
         to_send, to_delete = model_diff(self.telemetry_payload, new_telemetry)
-        data_to_send: dict = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
 
         response: dict
+        _status = "RUNNING"
+        _status_message = ""
         try:
             previous_data = self.telemetry_payload.model_dump(exclude_none=True, by_alias=True)
-            telemetry_patch = jsonpatch.make_patch(previous_data, data_to_send)
+            new_data = new_telemetry.model_dump(exclude_none=True, by_alias=True)
+            telemetry_patch = jsonpatch.make_patch(previous_data, new_data)
             response = self._nuvla_client.telemetry_patch(list(telemetry_patch), attributes_to_delete=list(to_delete))
         except Exception as e:
             logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True)
+            data_to_send = new_telemetry.model_dump(exclude_none=True, by_alias=True, include=to_send)
+            _status = "WARNING"
+            _status_message = "Failed to send telemetry patch data"
             response = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
         # If telemetry is successful save telemetry
@@ -425,7 +430,6 @@ class Agent:
             return
 
         logger.info("Executing telemetry... Success")
-        NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
         self.telemetry_payload = new_telemetry.model_copy(deep=True)
         write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
@@ -435,10 +439,11 @@ class Agent:
             data_gateway_client.send_telemetry(new_telemetry)
         except Exception as e:
             logger.error(f"Failed to send telemetry data to MQTT broker: {e}")
-            NuvlaEdgeStatusHandler.failing(self.status_channel,
-                                           _status_module_name,
-                                           "Failed to send telemetry data to MQTT broker")
+            _status = "FAILING"
+            _status_message += " || Failed to send telemetry data to MQTT broker"
 
+
+        NuvlaEdgeStatusHandler.send_status(self.status_channel, _status_module_name, _status, _status_message)
         return response
 
     def _heartbeat(self) -> dict | None:

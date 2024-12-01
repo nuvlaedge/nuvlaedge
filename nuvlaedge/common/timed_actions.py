@@ -45,13 +45,13 @@ class TimedAction:
             if self.max_tries <= -1:
                 return None
 
+            self.exceptions.append(ex)
+
             # If max retries reached, gather all the exceptions and raise a Group
             if self.max_tries - self.tries <= 0:
                 logger.warning(f"Max retries reached in {self.name} raising exceptions")
                 raise ExceptionGroup(f"error running {self.name}", self.exceptions)
 
-            # If not, save exception and increase retries
-            self.exceptions.append(ex)
             logger.info(f"Remaining retries for {self.name}: {self.max_tries - self.tries}")
             return None
 

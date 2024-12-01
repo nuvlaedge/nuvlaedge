@@ -30,7 +30,7 @@ class TestTimedAction(TestCase):
         self.assertEqual(len(self.action.exceptions), 0)
 
         # Test No retries
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ExceptionGroup):
             self.action.tries = 0
             self.action.max_tries = 0
             self.action._execute_action()

@@ -935,10 +935,10 @@ class DockerClient(COEClient):
             A container object representing the current container.
 
         """
-        get_id_functions = [self._get_container_id_from_hostname,
-                            self._get_container_id_from_cpuset,
+        get_id_functions = [self._get_container_id_from_cpuset,
                             self._get_container_id_from_cgroup,
                             self._get_container_id_from_mountinfo,
+                            self._get_container_id_from_hostname,
                             self._get_container_name_from_env]
         for get_id_function in get_id_functions:
             container_id = get_id_function()

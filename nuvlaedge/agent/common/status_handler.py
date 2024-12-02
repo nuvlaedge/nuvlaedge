@@ -107,10 +107,11 @@ class NuvlaEdgeStatusHandler:
         Returns: None. Status is reported via the status_channel for consistency
 
         """
+        sm_module_name = "System Manager"
         sm_enabled = os.getenv("NUVLAEDGE_SYSTEM_MANAGER_ENABLE", 0)
-        if not sm_enabled or type(sm_enabled) != int or sm_enabled < 1:
-            if 'System Manager' in self.module_reports:
-                self.remove_module('System Manager')
+        if not sm_enabled or not isinstance(sm_enabled, int) or sm_enabled < 1:
+            if sm_module_name in self.module_reports:
+                self.remove_module(sm_module_name)
             return
 
         _status: str = read_file(FILE_NAMES.STATUS_FILE)
@@ -125,7 +126,7 @@ class NuvlaEdgeStatusHandler:
             case _:
                 _module_status = "UNKNOWN"
         logger.debug(f"System Manager status: {_module_status} - {_notes}")
-        self.status_channel.put(StatusReport(origin_module='System Manager',
+        self.status_channel.put(StatusReport(origin_module=sm_module_name,
                                              module_status=_module_status,
                                              message=_notes if _notes is not None else '',
                                              date=datetime.now()))

@@ -126,6 +126,7 @@ class Monitor(ABC, Thread):
             except Empty:
                 # It is highly unlikely that this will happen, but add this protection to prevent from
                 # exiting the monitor thread
+                self.logger.debug("Channel was empty, no need to discard data")
                 pass
 
         self.report_channel.put(self.telemetry_data, block=False)
@@ -146,25 +147,23 @@ class Monitor(ABC, Thread):
         finally:
             self.last_process_duration = round((time.time_ns() - init_time)/1e9, 4)
 
-    def run(self) -> None:
-        def compute_wait_time(period: int = self._period) -> float:
-            return period - (time.time() - self._last_update)
+    def _compute_wait_time(self, period: int) -> float:
+        return period - (time.time() - self._last_update)
 
+    def run(self) -> None:
         # the first time it runs, it should do  it at half the period. This is due to the fact that
         # the first run is executed sequentially on NuvlaEdge startup.
-        _wait_time: float = compute_wait_time(int(self._period/2))
+
+        _wait_time: float = self._compute_wait_time(int(self._period/2))
         if _wait_time < 0:
             _wait_time = 0.0
 
         while not self._exit_event.wait(timeout=_wait_time):
             self.run_update_data()
 
-            _wait_time = compute_wait_time()
+            _wait_time = self._compute_wait_time(self._period)
             if _wait_time < 0:
                 _wait_time = 0.0
                 self.logger.warning(f'Monitor {self.name} took too long to complete '
                                     f'({self.last_process_duration} > {self._period})')
                 continue
-
-
-

@@ -155,7 +155,7 @@ class Commissioner:
         if cluster_info:
             self._current_payload.update(cluster_info)
         logger.debug(f"Current payload: "
-                     f"{json.dumps(self._current_payload.model_dump(exclude_none=True, by_alias=True))}")
+                     f"{self._current_payload.model_dump_json(exclude_none=True, by_alias=True)}")
 
         # Current implementation requires not to commission cluster data until nuvlaedge-status has been updated with
         # node-id. Why not node-id here? Mysteries of life...

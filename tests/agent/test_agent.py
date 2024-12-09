@@ -73,24 +73,97 @@ class TestAgent(TestCase):
         self.agent._init_actions()
         self.assertEqual(3, mock_add.call_count)
 
+    @patch('nuvlaedge.agent.agent.logger')
+    def test_watch_workers(self, mock_logger):
+        self.agent.worker_manager = Mock()
+        self.agent._watch_workers()
+        self.agent.worker_manager.heal_workers.assert_called_once()
+        self.agent.worker_manager.summary.assert_called_once()
+        self.assertEqual(2, mock_logger.info.call_count)
+
+    def test_install_ssh_key(self):
+
+        self.settings.host_home = None
+        self.settings.nuvlaedge_immutable_ssh_pub_key = None
+        self.agent._install_ssh_key()
+        self.mock_coe_client.install_ssh_key.assert_not_called()
+
+        self.settings.nuvlaedge_immutable_ssh_pub_key = "key"
+        self.settings.host_home = "host"
+        self.agent._install_ssh_key()
+        self.mock_coe_client.install_ssh_key.assert_called_with("key", "host")
+
+    @patch('nuvlaedge.agent.agent.logger')
+    @patch('nuvlaedge.agent.agent.Agent._install_ssh_key')
     @patch('nuvlaedge.agent.agent.Agent._init_workers')
     @patch('nuvlaedge.agent.agent.Agent._init_actions')
     @patch('nuvlaedge.agent.agent.Agent._assert_current_state')
-    def test_start_agent(self, mock_assert_current_state, mock_init_actions, mock_init_workers):
-        mock_settings = Mock()
-        self.agent.settings = mock_settings
-        mock_settings.nuvlaedge_immutable_ssh_pub_key = None
+    @patch('nuvlaedge.agent.agent.Agent._run_controlled_startup')
+    def test_start_agent(self, mock_run_startup, mock_assert_current_state, mock_init_actions, mock_init_workers, mock_install_ssh, mock_logger):
         mock_assert_current_state.return_value = State.NEW
         self.mock_nuvla_client.activate.return_value = True
 
         self.agent.start_agent()
+        mock_install_ssh.assert_called_once()
         self.mock_nuvla_client.activate.assert_called_once()
         mock_init_actions.assert_called_once()
         mock_init_workers.assert_called_once()
 
+        mock_init_actions.reset_mock()
+        mock_init_workers.reset_mock()
+
         mock_assert_current_state.return_value = State.DECOMMISSIONED
         with self.assertRaises(SystemExit):
             self.agent.start_agent()
+        mock_logger.error.assert_called_with("Force exiting the agent due to wrong state DECOMMISSIONED")
+        mock_init_actions.assert_not_called()
+        mock_init_workers.assert_not_called()
+        mock_run_startup.assert_not_called()
+
+        mock_logger.reset_mock()
+
+        mock_assert_current_state.return_value = State.DECOMMISSIONING
+        with self.assertRaises(SystemExit):
+            self.agent.start_agent()
+        mock_logger.error.assert_called_with("Force exiting the agent due to wrong state DECOMMISSIONING")
+
+        self.agent.telemetry_payload = Mock()
+        mock_assert_current_state.return_value = State.COMMISSIONED
+
+        self.agent.start_agent()
+        self.agent.telemetry_payload.update.assert_called_once()
+
+    @patch('nuvlaedge.agent.agent.logger')
+    @patch('nuvlaedge.agent.agent.Agent._telemetry_worker', new_callable=PropertyMock)
+    @patch('nuvlaedge.agent.agent.Agent._commission_worker', new_callable=PropertyMock)
+    @patch('nuvlaedge.agent.agent.Agent._telemetry')
+    def test_run_controlled_startup(self, mock_telemetry, mock_commissioner_worker, mock_telemetry_worker, mock_logger):
+        commissioner = Mock()
+        telemetry = Mock()
+        mock_commissioner_worker.return_value = None
+        self.agent._run_controlled_startup()
+        mock_logger.warning.assert_called_with("Commissioner not found in controlled startup...")
+
+        mock_logger.reset_mock()
+
+        mock_commissioner_worker.return_value = commissioner
+        mock_telemetry_worker.return_value = None
+        self.agent._run_controlled_startup()
+        commissioner.run.assert_called_once()
+        mock_logger.warning.assert_called_with("Telemetry not found in controlled startup...")
+
+        mock_logger.reset_mock()
+        commissioner.run.reset_mock()
+
+        mock_telemetry_worker.return_value = telemetry
+        self.agent.telemetry_payload = TelemetryPayloadAttributes(node_id="mock_id")
+        self.mock_nuvla_client.nuvlaedge_status.node_id = "mock_id_2"
+        self.agent._run_controlled_startup()
+        self.assertEqual(2, commissioner.run.call_count)
+        telemetry.run_once.assert_called_once()
+        self.assertEqual("mock_id", self.mock_nuvla_client.nuvlaedge_status.node_id)
+
+
 
     def test_gather_status(self):
         mock_status = Mock()
@@ -101,6 +174,25 @@ class TestAgent(TestCase):
         self.agent._gather_status(mock_telemetry)
         self.assertEqual("OPERATIONAL", mock_telemetry.status)
         self.assertEqual(["RUNNING FINE"], mock_telemetry.status_notes)
+
+    @patch('nuvlaedge.agent.agent.Agent._telemetry_worker', new_callable=PropertyMock)
+    @patch('nuvlaedge.agent.agent.logger')
+    def test_update_periodic_actions(self, mock_logger, mock_telemetry_worker):
+        self.mock_nuvla_client.nuvlaedge.refresh_interval = 0
+        self.mock_nuvla_client.nuvlaedge.heartbeat_interval = 0
+        self.agent.telemetry_period = 0
+        self.agent.heartbeat_period = 0
+
+        self.agent._update_periodic_actions()
+        mock_logger.info.assert_called_with("Updating periodic actions...")
+
+        mock_logger.reset_logger()
+        self.mock_nuvla_client.nuvlaedge.refresh_interval = 10
+
+        self.agent._update_periodic_actions()
+        self.assertEqual(10, self.agent.telemetry_period)
+        self.assertEqual(3, mock_logger.info.call_count)
+
 
     @patch('nuvlaedge.agent.agent.Agent._telemetry_worker', new_callable=PropertyMock)
     @patch('nuvlaedge.agent.agent.write_file')

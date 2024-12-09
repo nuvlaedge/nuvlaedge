@@ -372,8 +372,7 @@ class Agent:
         telemetry.run_once()
         self._telemetry()
 
-        if self.telemetry_payload.node_id != self._nuvla_client.nuvlaedge_status.node_id:
-            self._nuvla_client.nuvlaedge_status.node_id = self.telemetry_payload.node_id
+        self._nuvla_client.nuvlaedge_status.node_id = self.telemetry_payload.node_id
 
         commissioner.run()
 

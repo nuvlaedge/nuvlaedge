@@ -1,21 +1,23 @@
+import logging
 from threading import Event
 from unittest import TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, PropertyMock
 
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.nuvla.resources import NuvlaID
-from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
+from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
 from nuvlaedge.agent.orchestrator import COEClient
 from nuvlaedge.agent.nuvla.resources.nuvlaedge_res import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent import AgentSettings
 from nuvlaedge.agent.agent import Agent
+from nuvlaedge.common.constant_files import FILE_NAMES
 
 
 class TestAgent(TestCase):
 
     def setUp(self):
-
+        logging.disable(logging.CRITICAL)
         self.settings = Mock(spec=AgentSettings)
         self.exit_event = Mock(spec=Event)
         self.mock_nuvla_client = Mock(spec=NuvlaClientWrapper)
@@ -29,6 +31,9 @@ class TestAgent(TestCase):
         # Mock the agent's nuvla client and COE client
         self.agent._coe_client = self.mock_coe_client
         self.agent._nuvla_client = self.mock_nuvla_client
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
 
     def test_init(self):
         assert isinstance(self.agent.settings, AgentSettings)
@@ -66,7 +71,7 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.common.timed_actions.ActionHandler.add')
     def test_init_actions(self, mock_add):
         self.agent._init_actions()
-        self.assertEqual(4, mock_add.call_count)
+        self.assertEqual(3, mock_add.call_count)
 
     @patch('nuvlaedge.agent.agent.Agent._init_workers')
     @patch('nuvlaedge.agent.agent.Agent._init_actions')
@@ -97,42 +102,53 @@ class TestAgent(TestCase):
         self.assertEqual("OPERATIONAL", mock_telemetry.status)
         self.assertEqual(["RUNNING FINE"], mock_telemetry.status_notes)
 
+    @patch('nuvlaedge.agent.agent.Agent._telemetry_worker', new_callable=PropertyMock)
+    @patch('nuvlaedge.agent.agent.write_file')
+    @patch('nuvlaedge.agent.agent.jsonpatch.make_patch')
     @patch('nuvlaedge.agent.agent.data_gateway_client')
     @patch('nuvlaedge.agent.agent.model_diff')
     @patch('nuvlaedge.agent.agent.Agent._gather_status')
-    def test_telemetry(self, mock_status, mock_model_diff, mock_data_gateway):
-        mock_channel = Mock()
-        mock_payload = Mock(spec=TelemetryPayloadAttributes)
-        mock_channel.empty.return_value = True
-        mock_payload.model_copy.return_value = mock_payload
-        self.agent.telemetry_channel = mock_channel
-        self.agent.telemetry_payload = mock_payload
+    def test_telemetry(self, mock_status, mock_model_diff, mock_data_gateway, mock_patch, mock_write_file, mock_telemetry_worker):
+        mock_telemetry = Mock()
+        new_telemetry = TelemetryPayloadAttributes(node_id="node_id")
+        self.agent.telemetry_payload = TelemetryPayloadAttributes()
+        mock_telemetry.get_telemetry.return_value = new_telemetry
+        mock_telemetry_worker.return_value = mock_telemetry
+        mock_model_diff.return_value = ({"node_id"}, {})
 
-        mock_model_diff.return_value = ('send', 'delete')
-        mock_payload.model_dump.return_value = {}
-        mock_payload.model_dump.return_value = "Data to send"
-
-        self.mock_nuvla_client.telemetry.return_value = None
-        self.mock_nuvla_client.telemetry_patch.side_effect = Exception
-
+        # Test normal patch telemetry
+        mock_patch.return_value = ["Not None"]
+        self.mock_nuvla_client.telemetry_patch.return_value = None
         self.assertIsNone(self.agent._telemetry())
-        mock_payload.model_dump.assert_called()
-        mock_payload.model_copy.assert_called_once()
-        mock_status.assert_called_with(mock_payload)
 
-        mock_payload.reset_mock()
-        mock_response = Mock()
-        mock_response.data = mock_response
-        self.mock_nuvla_client.telemetry.return_value = mock_response
-        with patch('nuvlaedge.agent.agent.write_file') as mock_json:
-            self.assertEqual(mock_response, self.agent._telemetry())
-        self.assertEqual(2, mock_payload.model_copy.call_count)
+        self.mock_nuvla_client.telemetry_patch.assert_called_once()
+        self.mock_nuvla_client.telemetry.assert_not_called()
+        mock_status.assert_called_once()
+        mock_telemetry.get_telemetry.assert_called_once()
+        mock_write_file.assert_not_called()
 
-        mock_channel.empty.return_value = False
-        mock_channel.get.return_value = mock_payload
-        with patch('nuvlaedge.agent.agent.write_file') as mock_json:
-            self.assertEqual(mock_response, self.agent._telemetry())
-        mock_channel.get.assert_called_once()
+        # Test Fallback telemetry
+        self.mock_nuvla_client.telemetry_patch.side_effect = Exception("Error mock")
+        self.mock_nuvla_client.telemetry.return_value = None
+        self.mock_nuvla_client.telemetry_patch.reset_mock()
+        self.assertIsNone(self.agent._telemetry())
+
+        self.mock_nuvla_client.telemetry.assert_called_once()
+        self.mock_nuvla_client.telemetry_patch.assert_called_once()
+
+        # Test whole process
+        mock_client = Mock()
+        self.agent._nuvla_client = mock_client
+        self.agent._nuvla_client.telemetry_patch.reset_mock()
+        self.agent._nuvla_client.telemetry.reset_mock()
+        mock_response = "Success response"
+        self.agent._nuvla_client.telemetry_patch.return_value = mock_response
+
+        self.assertEqual(mock_response, self.agent._telemetry())
+        mock_write_file.assert_called_with(new_telemetry, FILE_NAMES.STATUS_FILE)
+        self.assertEqual(self.agent.telemetry_payload, new_telemetry)
+        mock_data_gateway.send_telemetry.assert_called_with(new_telemetry)
+
 
     def test_heartbeat(self):
         self.mock_nuvla_client.nuvlaedge.state = State.NEW
@@ -150,16 +166,29 @@ class TestAgent(TestCase):
 
     @patch('nuvlaedge.agent.agent.Agent._process_jobs')
     def test_process_response(self, mock_process_jobs):
-        mock_response = Mock()
+        mock_response = {
+            "jobs": []
+        }
         operation = "mocked_operation"
-        mock_response.get.return_value = []
 
         self.agent._process_response(mock_response, operation)
         mock_process_jobs.assert_not_called()
 
-        mock_response.get.return_value = ['job/mock_id']
+        mock_response = {
+            "jobs": 'job/mock_id'
+        }
         self.agent._process_response(mock_response, operation)
         mock_process_jobs.assert_called_once()
+
+        mock_response = {
+            "doc-last-updated": "2021-08-01T00:00:00Z",
+        }
+        self.agent._nuvla_client.update_nuvlaedge_resource_if_changed = Mock()
+        self.agent._update_periodic_actions = Mock()
+
+        self.agent._process_response(mock_response, operation)
+        self.agent._nuvla_client.update_nuvlaedge_resource_if_changed.assert_called_once()
+        self.agent._update_periodic_actions.assert_called_once()
 
     @patch('nuvlaedge.agent.agent.Job')
     def test_process_jobs(self, mock_job):

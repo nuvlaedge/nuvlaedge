@@ -8,7 +8,6 @@ from mock import Mock
 from nuvlaedge.agent.orchestrator.docker import DockerClient
 from nuvlaedge.agent.workers.monitor.components.coe_resources import COEResourcesMonitor
 from nuvlaedge.agent.workers.monitor.data.coe_resources_data import COEResourcesData
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 def list_raw_resources(resource_type):
@@ -20,13 +19,6 @@ def list_raw_resources(resource_type):
 
 class TestCOEResourcesMonitor(unittest.TestCase):
 
-    def test_coe_resource_empty(self):
-        telemetry = Mock()
-        telemetry.edge_status = EdgeStatus()
-        telemetry.edge_status.coe_resources = None
-        COEResourcesMonitor('test_monitor', telemetry, True)
-        self.assertIsInstance(telemetry.edge_status.coe_resources, COEResourcesData)
-
     def test_coe_resource_not_supported_by_nuvla(self):
         telemetry = Mock()
         telemetry.coe_resources_supported = False
@@ -35,7 +27,6 @@ class TestCOEResourcesMonitor(unittest.TestCase):
 
     def test_coe_resource_monitor(self):
         telemetry = Mock()
-        telemetry.edge_status = EdgeStatus()
         test_monitor = COEResourcesMonitor('test_monitor', telemetry, True)
         test_monitor.coe_client.list_raw_resources = list_raw_resources
 
@@ -47,8 +38,8 @@ class TestCOEResourcesMonitor(unittest.TestCase):
         test_monitor.update_data()
         self.assertIsNotNone(test_monitor.data.docker)
 
-        nb_report: dict = {}
-        test_monitor.populate_nb_report(nb_report)
+
+        test_monitor.populate_telemetry_payload()
         expected_data = {
             'docker': {
                 'images': [{'id': '1', 'name': 'images-1'},
@@ -60,9 +51,7 @@ class TestCOEResourcesMonitor(unittest.TestCase):
                 'containers': [{'id': '1', 'name': 'containers-1'},
                                {'id': '2', 'name': 'containers-2'}],
                 'services': [], 'tasks': [], 'configs': [], 'secrets': [], 'nodes': []}}
-        self.assertEqual(nb_report['coe-resources'], expected_data)
-
-        self.assertIs(telemetry.edge_status.coe_resources, test_monitor.data)
+        self.assertEqual(test_monitor.telemetry_data.coe_resources, expected_data)
 
     def test_coe_resource_docker(self):
         test_monitor = COEResourcesMonitor('test_monitor', Mock(), True)

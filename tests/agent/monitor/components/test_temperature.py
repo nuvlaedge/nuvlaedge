@@ -3,11 +3,9 @@ import unittest
 
 from mock import Mock, patch, mock_open
 
-from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
+from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
 from nuvlaedge.agent.workers.monitor.components.temperature import TemperatureMonitor
 from nuvlaedge.agent.workers.monitor.data.temperature_data import TemperatureData, TemperatureZone
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
-
 
 temperature_class_path = 'nuvlaedge.agent.workers.monitor.components.temperature'
 temperature_monitor_class_path = f'{temperature_class_path}.TemperatureMonitor'
@@ -18,17 +16,7 @@ class TestTemperatureMonitor(unittest.TestCase):
     @staticmethod
     def get_base_monitor() -> TemperatureMonitor:
         mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
-        mock_telemetry.edge_status.power = None
         return TemperatureMonitor('test_monitor', mock_telemetry, True)
-
-    def test_init(self):
-        mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
-        mock_telemetry.edge_status.temperatures = None
-        TemperatureMonitor('test_monitor', mock_telemetry, True)
-        self.assertTrue(mock_telemetry.edge_status.temperatures)
-        self.assertIsInstance(mock_telemetry.edge_status.temperatures, TemperatureData)
 
     def test_update_temperature_entry(self):
         test_monitor: TemperatureMonitor = self.get_base_monitor()
@@ -70,7 +58,6 @@ class TestTemperatureMonitor(unittest.TestCase):
     @patch('os.path.exists')
     def test_update_temperatures_with_file(self, mock_exists, mock_listdir,
                                            mock_read_temperature_files):
-
         test_monitor: TemperatureMonitor = self.get_base_monitor()
         test_monitor.data.temperatures = []
         # otherwise, if thermal paths do no exist, return []
@@ -82,7 +69,7 @@ class TestTemperatureMonitor(unittest.TestCase):
         mock_listdir.assert_called_once()
 
         # same if thermal files do not exist
-        mock_exists.side_effect = [False]*100
+        mock_exists.side_effect = [False] * 100
         mock_listdir.return_value = ['thermal-dir1', 'thermal-dir2']
         test_monitor.update_temperatures_with_file()
         self.assertFalse(test_monitor.data.temperatures,
@@ -141,25 +128,18 @@ class TestTemperatureMonitor(unittest.TestCase):
         test_monitor.update_data()
         mock_update_file.assert_called_once()
 
-    @patch(f'{temperature_monitor_class_path}.update_temperatures_with_file')
-    @patch('os.path.exists')
-    def test_populate_nb_report(self, mock_exists, mock_update_file):
+    def test_populate_telemetry_payload(self):
         test_monitor: TemperatureMonitor = self.get_base_monitor()
+        test_monitor.data.temperatures = None
+        test_monitor.populate_telemetry_payload()
+        self.assertIsNone(test_monitor.telemetry_data.resources)
 
-        mock_update_file.return_value = None
-        mock_exists.return_value = True
+        expected = [{'thermal-zone': 'cpu-thermal', 'value': 85.123},
+                    {'thermal-zone': 'GPU-therm', 'value': 39.5}]
+        mock_data = TemperatureData()
+        mock_data.temperatures = expected
 
-        test_monitor.local_temp_registry = {
-            'cpu-thermal': TemperatureZone(thermal_zone='cpu-thermal', value=85.123),
-            'GPU-therm': TemperatureZone(thermal_zone='GPU-therm', value=39.5),
-        }
-        test_monitor.update_data()
-
-        telemetry_payload = TelemetryPayloadAttributes()
-        data = test_monitor.data.model_dump(exclude_none=True, by_alias=True)
-        telemetry_payload.update(data)
-
-        telemetry_data = telemetry_payload.model_dump(exclude_none=True, by_alias=True)
-        self.assertEqual(telemetry_data, {
-            'temperatures': [{'thermal-zone': 'cpu-thermal', 'value': 85.123},
-                             {'thermal-zone': 'GPU-therm', 'value': 39.5}]})
+        test_monitor.data = mock_data
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.temperatures,
+                         expected)

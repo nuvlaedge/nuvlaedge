@@ -31,6 +31,7 @@ import time
 from functools import cached_property
 from queue import Queue
 from threading import Event
+from typing import cast
 
 from nuvla.api.models import CimiResponse
 
@@ -45,7 +46,8 @@ from nuvlaedge.common.data_gateway import data_gateway_client
 from nuvlaedge.agent.workers.vpn_handler import VPNHandler
 from nuvlaedge.agent.workers.peripheral_manager import PeripheralManager
 from nuvlaedge.agent.workers.commissioner import Commissioner
-from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes, Telemetry
+from nuvlaedge.agent.workers.telemetry import Telemetry
+from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.nuvla.resources import State
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
@@ -77,7 +79,6 @@ class Agent:
         action_handler: `ActionHandler` - Handles timed actions for heartbeat and telemetry.
         status_handler: `NuvlaEdgeStatusHandler` - Handles NuvlaEdge status.
         telemetry_payload: `TelemetryPayloadAttributes` - Static objects that collect telemetry data.
-        telemetry_channel: `Queue` - A channel to handle telemetry payloads.
         status_channel: `Queue` - A channel to handle status reports.
 
     """
@@ -118,8 +119,7 @@ class Agent:
 
         # Telemetry sent to nuvla
         self.telemetry_payload: TelemetryPayloadAttributes = TelemetryPayloadAttributes()
-        # Telemetry channel connecting the telemetry handler and the agent
-        self.telemetry_channel: Queue[TelemetryPayloadAttributes] = Queue(maxsize=10)
+
         # Status channel connecting any module and the status handler
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
@@ -198,7 +198,6 @@ class Agent:
             worker_type=Telemetry,
             init_params=((), {'coe_client': self._coe_engine,
                               'status_channel': self.status_channel,
-                              'report_channel': self.telemetry_channel,
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
                               'coe_resources_supported': coe_resources_supported,
@@ -262,14 +261,16 @@ class Agent:
         )
 
         # Period refreshing action
-        self.action_handler.add(
-            TimedAction(
-                name='update_period',
-                period=60,
-                action=self._update_periodic_actions,
-                remaining_time=60
-            )
-        )
+        # DEPRECATED: This action is not needed anymore. The period is updated by the response received in
+        # the telemetry and heartbeat actions responses.
+        # self.action_handler.add(
+        #     TimedAction(
+        #         name='update_period',
+        #         period=60,
+        #         action=self._update_periodic_actions,
+        #         remaining_time=60
+        #     )
+        # )
 
         # Status report for Worker Manager
         self.action_handler.add(
@@ -341,9 +342,42 @@ class Agent:
 
         # Before starting up the system and creating actions and workers we can retrieve once from Nuvla the
         # desired period of the actions and adapt the workers in consequence
-        self._update_periodic_actions()
+        # self._update_periodic_actions()
         self._init_workers()
+
+        if self._nuvla_client.nuvlaedge.state == State.ACTIVATED:
+            self._run_controlled_startup()
+
         self._init_actions()
+
+    def _run_controlled_startup(self):
+        """
+        Needs to be run only when NE is in activated state
+        Returns:
+
+        """
+        # Runs initial commission
+        # Forces telemetry update
+        # Runs second commission
+        commissioner = self._commission_worker
+        if not commissioner:
+            logger.warning("Commissioner not found in controlled startup...")
+            return
+        commissioner.run()
+
+        telemetry = self._telemetry_worker
+        if not telemetry:
+            logger.warning("Telemetry not found in controlled startup...")
+            return
+        telemetry.run_once()
+        self._telemetry()
+
+        if self.telemetry_payload.node_id != self._nuvla_client.nuvlaedge_status.node_id:
+            self._nuvla_client.nuvlaedge_status.node_id = self.telemetry_payload.node_id
+
+        commissioner.run()
+
+
 
     def _gather_status(self, telemetry: TelemetryPayloadAttributes):
         """ Gathers the status from the workers and stores it in the telemetry payload """
@@ -361,6 +395,16 @@ class Agent:
             logger.error(f'Failed to find if Nuvla support telemetry field "{field}". Defaulting to False: {e}')
             return False
 
+    @property
+    def _commission_worker(self) -> Commissioner | None:
+        worker = self.worker_manager.registered_workers.get("Commissioner", None)
+        return cast(Commissioner, worker.worker_instance) if worker else None
+
+    @property
+    def _telemetry_worker(self) -> Telemetry | None:
+        worker = self.worker_manager.registered_workers.get("Telemetry", None)
+        return cast(Telemetry, worker.worker_instance) if worker else None
+
     # Agent Actions
     def _update_periodic_actions(self):
         logger.info("Updating periodic actions...")
@@ -371,6 +415,7 @@ class Agent:
             self.telemetry_period = self._nuvla_client.nuvlaedge.refresh_interval
             # We should keep telemetry action and telemetry worker synchronised.
             self.worker_manager.edit_period(Telemetry, self.telemetry_period)
+            self._telemetry_worker.set_period(self.telemetry_period)
             self.action_handler.edit_period('telemetry', self.telemetry_period)
 
         # Check heartbeat period
@@ -391,18 +436,7 @@ class Agent:
             dict | None: The response from the telemetry operation if successful, None otherwise.
         """
         logger.info("Executing telemetry...")
-
-        # If there is no telemetry available there is nothing to do
-        if self.telemetry_channel.empty():
-            logger.warning("Telemetry class not reporting fast enough to Agent")
-            NuvlaEdgeStatusHandler.failing(self.status_channel,
-                                           _status_module_name,
-                                           "Telemetry not reported fast enough")
-            new_telemetry: TelemetryPayloadAttributes = self.telemetry_payload.model_copy(deep=True)
-        else:
-            # Retrieve telemetry. Maybe we need to consume all in order to retrieve the latest
-            new_telemetry: TelemetryPayloadAttributes = self.telemetry_channel.get(block=False)
-            logger.debug("Metrics received from Telemetry class")
+        new_telemetry = self._telemetry_worker.get_telemetry()
 
         # Gather the status report
         self._gather_status(new_telemetry)
@@ -414,19 +448,22 @@ class Agent:
         response: dict
         try:
             previous_data = self.telemetry_payload.model_dump(exclude_none=True, by_alias=True)
-            telemetry_patch = jsonpatch.make_patch(previous_data, data_to_send)
+            telemetry_patch = jsonpatch.make_patch(
+                previous_data,
+                new_telemetry.model_dump(exclude_none=True, by_alias=True))
             response = self._nuvla_client.telemetry_patch(list(telemetry_patch), attributes_to_delete=list(to_delete))
+
         except Exception as e:
             logger.warning(f'Failed to send telemetry patch data, sending standard telemetry: {e}', exc_info=True)
             response = self._nuvla_client.telemetry(data_to_send, attributes_to_delete=list(to_delete))
 
-        # If telemetry is successful save telemetry
         if not response:
             return
 
         logger.info("Executing telemetry... Success")
+        # If telemetry is successful save telemetry
         NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-        self.telemetry_payload = new_telemetry.model_copy(deep=True)
+        self.telemetry_payload = new_telemetry
         write_file(self.telemetry_payload, FILE_NAMES.STATUS_FILE)
 
         # Send telemetry data to MQTT broker
@@ -480,6 +517,12 @@ class Agent:
         if jobs:
             self._process_jobs([NuvlaID(j) for j in jobs])
             logger.info(f"Jobs Response process finished in {time.perf_counter() - start_time}")
+
+        last_update = response.get('doc-last-updated', "")
+        if last_update and self._nuvla_client.update_nuvlaedge_resource_if_changed(last_update):
+            logger.info("NuvlaEdge resource has changed, updating local copy")
+            self._update_periodic_actions()
+
 
     @cached_property
     def job_local(self):

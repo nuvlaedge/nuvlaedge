@@ -6,7 +6,8 @@ from mock import Mock, patch, mock_open
 import unittest
 
 from nuvlaedge.agent.workers.monitor.components.vulnerabilities import VulnerabilitiesMonitor
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
+
+from nuvlaedge.agent.workers.monitor.data.vulnerabilities_data import VulnerabilitiesData, VulnerabilitiesSummary
 
 
 class TestVulnerabilitiesMonitor(unittest.TestCase):
@@ -25,7 +26,8 @@ class TestVulnerabilitiesMonitor(unittest.TestCase):
 
         fake_data: dict = {"name": "file"}
         with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.read_file') as mock_read_file:
-            with patch('nuvlaedge.agent.workers.monitor.components.vulnerabilities.file_exists_and_not_empty') as mock_exists:
+            with patch(
+                    'nuvlaedge.agent.workers.monitor.components.vulnerabilities.file_exists_and_not_empty') as mock_exists:
                 mock_exists.return_value = True
                 mock_read_file.side_effect = [fake_data]
                 ans = test_monitor.retrieve_security_vulnerabilities()
@@ -34,7 +36,6 @@ class TestVulnerabilitiesMonitor(unittest.TestCase):
     @patch.object(VulnerabilitiesMonitor, 'retrieve_security_vulnerabilities')
     def test_update_data(self, mock_retrieve):
         fake_telemetry: Mock = Mock()
-        fake_telemetry.edge_status = EdgeStatus()
 
         # Test empty vulnerabilities
         mock_retrieve.return_value = None
@@ -68,41 +69,24 @@ class TestVulnerabilitiesMonitor(unittest.TestCase):
         }
         self.assertEqual(test_monitor.data.dict(by_alias=True), expected_out)
 
-    @patch.object(VulnerabilitiesMonitor, 'retrieve_security_vulnerabilities')
-    def test_populate_nb_report(self, mock_retrieve):
-        body: Dict = {}
-        fake_telemetry: Mock = Mock()
-        fake_telemetry.edge_status = EdgeStatus()
-
-        # Test empty vulnerabilities
-        mock_retrieve.return_value = None
-        test_monitor: VulnerabilitiesMonitor = VulnerabilitiesMonitor(
-            'vul_mon', fake_telemetry, Mock())
-        test_monitor.update_data()
-        test_monitor.populate_nb_report(body)
-        self.assertEqual(body, {})
-
-        # Test simply vulnerability
-        mock_retrieve.return_value = [
-            {
-                "product": self.openssh_ctr,
-                "vulnerability-id": "CVE-2021-28041",
-                "vulnerability-score": 7.1
-            }
-        ]
-        test_monitor.update_data()
-        test_monitor.populate_nb_report(body)
-        expected_out = {
-            'items': [{
-                "product": self.openssh_ctr,
-                "vulnerability-id": "CVE-2021-28041",
-                "vulnerability-score": 7.1
-            }],
+    def test_populate_telemetry_payload(self):
+        test_monitor = VulnerabilitiesMonitor('vul_mon', Mock(), True)
+        mock_data = VulnerabilitiesData(
+            summary=VulnerabilitiesSummary(
+                total=1,
+                affected_products=['product'],
+                average_score=1.0
+            ),
+            items=["item1", "item2"]
+        )
+        test_monitor.data = mock_data
+        test_monitor.populate_telemetry_payload()
+        expected_payload = {
             'summary': {
                 'total': 1,
-                'affected-products': [self.openssh_ctr],
-                'average-score': 7.1
-            }
+                'affected-products': ['product'],
+                'average-score': 1.0
+            },
+            'items': ["item1", "item2"]
         }
-        self.assertEqual(body['vulnerabilities'], expected_out,
-                         'Status vulnerabilities do not match the real ones')
+        self.assertEqual(test_monitor.telemetry_data.vulnerabilities, expected_payload)

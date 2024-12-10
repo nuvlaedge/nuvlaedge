@@ -32,16 +32,14 @@ class GeoLocationMonitor(Monitor):
             "altitude_key": None
         }
     }
+    # GeoLocation relies on IP-based geolocation on third-party services. The maximum refresh rate is 3 hours
+    MAX_REFRESH_RATE: int = 60*60*3
 
-    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
+    def __init__(self, name: str, _, enable_monitor: bool = False, period: int = 60):
         # Default threaded monitor
-        super().__init__(name, GeoLocationData, enable_monitor, thread_period=3600)
-        self.is_thread = True
+        super().__init__(name, GeoLocationData, enable_monitor, thread_period=period)
 
         self.last_update: float = 0.0
-
-        if not telemetry.edge_status.inferred_location:
-            telemetry.edge_status.inferred_location = self.data
 
     def send_request(self, service: str) -> dict | None:
         """
@@ -98,9 +96,9 @@ class GeoLocationMonitor(Monitor):
         return inferred_location
 
     def update_data(self):
-        if not self.is_thread:
-            if (time.time() - self.last_update) < self.thread_period:
-                return
+
+        if (time.time() - self.last_update) < self.MAX_REFRESH_RATE:
+            return
 
         for service, info in self._LOCATION_SERVICES.items():
             it_response: dict = self.send_request(info['url'])
@@ -115,11 +113,9 @@ class GeoLocationMonitor(Monitor):
                 self.data.timestamp = \
                     int(datetime.datetime.timestamp(datetime.datetime.now()))
 
-                if not self.is_thread:
-                    self.last_update = time.time()
-
+                self.last_update = time.time()
                 break
 
-    def populate_nb_report(self, nuvla_report: dict):
+    def populate_telemetry_payload(self):
         if self.data.coordinates:
-            nuvla_report['inferred-location'] = self.data.coordinates
+            self.telemetry_data.inferred_location = self.data.coordinates

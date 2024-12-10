@@ -52,17 +52,14 @@ class PowerMonitor(Monitor):
         }
     }
 
-    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
-        super().__init__(name, PowerData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True, period: int = 60):
+        super().__init__(name, PowerData, enable_monitor, period)
 
         self.host_fs: str = CTE.HOST_FS
 
         if not self.available_power_drivers:
             self.logger.info(f'No power driver supported. Disabling {self.name}')
             self.enabled_monitor = False
-
-        if not telemetry.edge_status.power:
-            telemetry.edge_status.power = self.data
 
     def get_power_path(self, driver):
         return f'{self.host_fs}/sys/bus/i2c/drivers/{driver}'
@@ -173,7 +170,10 @@ class PowerMonitor(Monitor):
                 if it_data:
                     self.data.power_entries[it_data.metric_name] = it_data
 
-    def populate_nb_report(self, nuvla_report: dict):
-        data = self.data.model_dump(exclude_none=True, by_alias=True)
-        resources = nuvla_report.setdefault('resources', {})
-        resources['power-consumption'] = list(data.get('power-entries', {}).values())
+    def populate_telemetry_payload(self):
+        if self.data.power_entries:
+            # Only populate the telemetry data if we have power entries
+            # None values won't be included when merging the telemetry data
+            self.telemetry_data.resources = {
+                'power-consumption': [v.dict(exclude_none=True, by_alias=True) for v in self.data.power_entries.values()]
+            }

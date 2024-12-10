@@ -16,16 +16,13 @@ class TemperatureMonitor(Monitor):
     """
     Reads and updates the host node temperature available data
     """
-    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
-        super().__init__(name, TemperatureData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True, period: int = 60):
+        super().__init__(name, TemperatureData, enable_monitor, period)
 
         self.host_fs: str = CTE.HOST_FS
         self.thermal_fs_path = f'{self.host_fs}/sys/devices/virtual/thermal'
 
         self.local_temp_registry: dict[str, TemperatureZone] = {}
-
-        if not telemetry.edge_status.temperatures:
-            telemetry.edge_status.temperatures = self.data
 
     def update_temperature_entry(self, zone_name: str, temp_value: float):
         """
@@ -120,5 +117,6 @@ class TemperatureMonitor(Monitor):
         self.data.temperatures = [v.model_dump(exclude_none=True, by_alias=True)
                                   for v in self.local_temp_registry.values()]
 
-    def populate_nb_report(self, nuvla_report: dict):
-        ...
+    def populate_telemetry_payload(self):
+        if self.data.temperatures:
+            self.telemetry_data.temperatures = self.data.temperatures

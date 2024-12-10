@@ -19,7 +19,7 @@ from nuvlaedge.common.file_operations import write_file, read_file, file_exists_
 patch_file_path = 'nuvlaedge.common.file_operations.Path'
 
 
-class TestingModel(NuvlaEdgeStaticModel):
+class MockModel(NuvlaEdgeStaticModel):
     """
         This is a test class with basic params
         used for the test of file operations
@@ -91,7 +91,7 @@ class TestFileOperations(unittest.TestCase):
         write_file({'test': 'value'}, "empty_path", fail_if_error=True)
         mock_json.assert_called_once()
 
-        test_model = TestingModel(param1='value')
+        test_model = MockModel(param1='value')
 
         write_file(test_model, "empty_path", fail_if_error=True)
         mock_model.assert_called_once()

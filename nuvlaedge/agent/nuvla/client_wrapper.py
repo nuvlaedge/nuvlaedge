@@ -113,6 +113,7 @@ class NuvlaClientWrapper:
         # Dictionary containing the NuvlaEdge resources handled by the client
         # nuvlaedge, nuvlaedge-status, vpn-credential, vpn-server
         self._resources: dict[str, any] = {}
+        self._last_ne_resource_sync: str = ""
 
         # Create a different session for each type of resource handled by NuvlaEdge. e.g: nuvlabox, job, deployment
         self.nuvlaedge_client: NuvlaApi = NuvlaApi(endpoint=self._host,
@@ -209,6 +210,14 @@ class NuvlaClientWrapper:
         if not self._is_resource_available(_res_name):
             self._init_resource(_res_name, AutoInfrastructureServiceResource, self.nuvlaedge.vpn_server_id)
         return self._resources.get(_res_name)
+
+    def update_nuvlaedge_resource_if_changed(self, last_change: str) -> bool:
+        if self._last_ne_resource_sync == last_change:
+            return False
+        logger.debug(f"NuvlaEdge resource changed: {last_change} {self._last_ne_resource_sync}")
+        self._last_ne_resource_sync = last_change
+        self.nuvlaedge.force_update()
+        return True
 
     def _is_resource_available(self, res_name: str) -> bool:
         return res_name in self._resources and self._resources.get(res_name) is not None

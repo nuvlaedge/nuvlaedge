@@ -2,7 +2,7 @@
 Module for the security scanner class
 """
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, UTC
 import signal
 import logging
 import os
@@ -395,7 +395,7 @@ class Security:
         logger.info(f'External DB link: {self.config.external_vulnerabilities_db}')
         logger.info(f'Nuvla endpoint: {self.nuvlaedge_session.endpoint}')
         elapsed_time = \
-            (datetime.utcnow() - self.previous_external_db_update).total_seconds()
+            (datetime.now(UTC) - self.previous_external_db_update).total_seconds()
         logger.info(f'Elapsed time since last db update: {elapsed_time}')
 
         if elapsed_time > self.config.external_db_update_interval:

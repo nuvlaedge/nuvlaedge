@@ -3,7 +3,7 @@ import subprocess
 import logging
 from unittest import TestCase
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
 from mock import patch, Mock
 
 
@@ -420,7 +420,7 @@ class TestSecurity(TestCase):
 
         self.security.nuvlaedge_session = Mock()
         self.security.nuvlaedge_session.endpoint = 'nuvla.io'
-        self.security.previous_external_db_update = datetime(1970, 1, 1)
+        self.security.previous_external_db_update = datetime(1970, 1, 1, tzinfo=UTC)
         self.security.db_needs_update()
         mock_update.assert_called_once()
 

@@ -29,7 +29,7 @@ class Constants:
     MACHINE_ID: str = ''
 
     # Timed actions retries
-    TIMED_ACTIONS_TRIES: int = 3
+    TIMED_ACTIONS_TRIES: int = 0
 
     # NuvlaEdge Constants
     FALLBACK_IMAGE = 'sixsq/nuvlaedge:latest'

@@ -159,7 +159,7 @@ class Monitor(ABC, Thread):
             self.run_update_data()
 
             _wait_time = self._compute_wait_time(self._period)
-            logger.info(f"Monitor {self.name} waiting for {format(_wait_time, '.2f')} seconds")
+            logger.debug(f"Monitor {self.name} waiting for {format(_wait_time, '.2f')} seconds")
             if _wait_time < 0:
                 _wait_time = 0.0
                 self.logger.warning(f'Monitor {self.name} took too long to complete '

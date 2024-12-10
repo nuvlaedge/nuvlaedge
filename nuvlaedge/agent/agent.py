@@ -504,16 +504,19 @@ class Agent:
         """
 
         for job_href in jobs:
-            logger.info(f"Creating job {job_href}")
+            logger.info(f'Creating job {job_href}')
             job = Job(self.get_job_launcher(job_href),
                       self._nuvla_client,
                       job_href,
                       self._coe_engine.job_engine_lite_image)
-            if not job.do_nothing:
-                logger.info(f"Starting job {job_href}")
+            if job.is_job_running():
+                logger.debug(f'Job {job.job_id} already running, do nothing')
+                continue
+            logger.info(f'Starting job {job_href}')
+            try:
                 job.launch()
-            else:
-                logger.debug(f"Job {job.job_id} already running, do nothing")
+            except Exception as ex:
+                logger.error(f'Failed to launch job {job_href}: {ex}', exc_info=True)
 
     def stop(self):
         self._exit.set()

@@ -32,6 +32,10 @@ class TimeoutException(Exception):
     ...
 
 
+class JobAlreadyExistsException(Exception):
+    ...
+
+
 class KubernetesClient(COEClient):
     """
     Kubernetes client
@@ -55,7 +59,10 @@ class KubernetesClient(COEClient):
 
     def __init__(self):
         super().__init__()
-        config.load_incluster_config()
+        if os.getenv('KUBERNETES_SERVICE_HOST'):
+            config.load_incluster_config()
+        else:
+            config.load_config()
         self.client = client.CoreV1Api()
         self.client_network = client.NetworkingV1Api()
         self.client_apps = client.AppsV1Api()
@@ -441,6 +448,15 @@ class KubernetesClient(COEClient):
         log.debug('Run job %s in namespace %s', job.to_str(), namespace)
         try:
             self.client_batch_api.create_namespaced_job(namespace, job)
+        except ApiException as ex:
+            if ex.status == 409 and 'already exists' in ex.body:
+                log.warning('Job %s already exists in namespace %s.',
+                            job.metadata.name, namespace)
+                raise JobAlreadyExistsException(
+                    f'Job {job_id} is already exists in namespace {namespace}')
+            log.error('Failed creating job %s in namespace %s',
+                        job.to_str(), namespace, exc_info=ex)
+            raise ex
         except Exception as ex:
             log.error('Failed starting job %s in namespace %s', job.to_str(),
                       namespace, exc_info=ex)

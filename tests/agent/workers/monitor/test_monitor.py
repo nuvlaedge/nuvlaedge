@@ -8,7 +8,7 @@ from nuvlaedge.agent.workers.monitor import Monitor
 
 
 # Define a concrete subclass of Monitor for testing purposes
-class TestableMonitor(Monitor):
+class MockMonitor(Monitor):
     def update_data(self):
         pass
 
@@ -22,11 +22,11 @@ class TestMonitor(TestCase):
         self.data_type = Mock
         self.period = 60
         self.mock_logger = Mock()
-        self.monitor = TestableMonitor(self.monitor_name, self.data_type, True, self.period)
+        self.monitor = MockMonitor(self.monitor_name, self.data_type, True, self.period)
         self.monitor.logger = self.mock_logger
 
     def test_constructor(self):
-        monitor = TestableMonitor(self.monitor_name, self.data_type, True, 60)
+        monitor = MockMonitor(self.monitor_name, self.data_type, True, 60)
         self.assertEqual(self.monitor_name, monitor.name)
         self.assertTrue(monitor.enabled_monitor)
         self.assertEqual(60, monitor._period)
@@ -38,7 +38,7 @@ class TestMonitor(TestCase):
         self.assertIsNotNone(monitor._exit_event)
 
     def test_set_period(self):
-        monitor = TestableMonitor(self.monitor_name, self.data_type, True, 60)
+        monitor = MockMonitor(self.monitor_name, self.data_type, True, 60)
         monitor.set_period(30)
         self.assertEqual(30, monitor._period)
 
@@ -61,9 +61,9 @@ class TestMonitor(TestCase):
         self.mock_logger.debug.assert_called_with("Channel was empty, no need to discard data")
 
     @patch('nuvlaedge.agent.workers.monitor.time')
-    @patch('tests.agent.workers.monitor.test_monitor.TestableMonitor.update_data')
-    @patch('tests.agent.workers.monitor.test_monitor.TestableMonitor.populate_telemetry_payload')
-    @patch('tests.agent.workers.monitor.test_monitor.TestableMonitor.send_telemetry_data')
+    @patch('tests.agent.workers.monitor.test_monitor.MockMonitor.update_data')
+    @patch('tests.agent.workers.monitor.test_monitor.MockMonitor.populate_telemetry_payload')
+    @patch('tests.agent.workers.monitor.test_monitor.MockMonitor.send_telemetry_data')
     def test_run_update_data(self, mock_send_data, mock_populate, mock_update, mock_time):
         monitor_name = "mock_monitor"
 
@@ -94,8 +94,8 @@ class TestMonitor(TestCase):
         self.mock_logger.exception.assert_called_with(
             f'Something went wrong updating monitor {'new_name'}: {expected_ex}')
 
-    @patch('tests.agent.workers.monitor.test_monitor.TestableMonitor._compute_wait_time')
-    @patch('tests.agent.workers.monitor.test_monitor.TestableMonitor.run_update_data')
+    @patch('tests.agent.workers.monitor.test_monitor.MockMonitor._compute_wait_time')
+    @patch('tests.agent.workers.monitor.test_monitor.MockMonitor.run_update_data')
     def test_run(self, mock_run_update, mock_compute_wait_time):
         mock_compute_wait_time.side_effect = [1.0, 2.0]
         mock_event = Mock()

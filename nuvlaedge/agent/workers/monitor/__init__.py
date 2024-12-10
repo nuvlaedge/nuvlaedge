@@ -13,8 +13,11 @@ from typing import Type, Dict
 from pydantic import BaseModel, ConfigDict
 
 from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
+from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
+
+logger: logging = get_nuvlaedge_logger(__name__)
 
 def underscore_to_hyphen(field_name: str) -> str:
     """
@@ -28,21 +31,15 @@ def underscore_to_hyphen(field_name: str) -> str:
     return field_name.replace("_", "-")
 
 
-class BaseDataStructure(BaseModel):
+class BaseDataStructure(NuvlaEdgeBaseModel):
     """
     Base data structure for providing a common configuration for all the
     structures.
     """
     _telemetry_name: str = "BaseDataStructure"
 
-    """ Configuration class for base telemetry data """
-    model_config = ConfigDict(populate_by_name=True,
-                              alias_generator=underscore_to_hyphen,
-                              validate_assignment=True)
-
     def dict(self, exclude_none: bool = True, **kwargs):
         return super().model_dump(exclude_none=exclude_none, **kwargs)
-
 
 class Monitor(ABC, Thread):
     """
@@ -76,6 +73,7 @@ class Monitor(ABC, Thread):
         self._exit_event: Event = Event()
 
     def set_period(self, period: int):
+        logger.debug(f"Setting period for monitor {self.name} to {period}")
         self._period = period
 
 
@@ -161,6 +159,7 @@ class Monitor(ABC, Thread):
             self.run_update_data()
 
             _wait_time = self._compute_wait_time(self._period)
+            logger.info(f"Monitor {self.name} waiting for {format(_wait_time, '.2f')} seconds")
             if _wait_time < 0:
                 _wait_time = 0.0
                 self.logger.warning(f'Monitor {self.name} took too long to complete '

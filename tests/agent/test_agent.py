@@ -241,17 +241,28 @@ class TestAgent(TestCase):
         self.assertEqual(self.agent.telemetry_payload, new_telemetry)
         mock_data_gateway.send_telemetry.assert_called_with(new_telemetry)
 
-
-    def test_heartbeat(self):
+    @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
+    @patch('nuvlaedge.agent.agent.logger')
+    def test_heartbeat(self, mock_logger, mock_status_running):
         self.mock_nuvla_client.nuvlaedge.state = State.NEW
         self.assertIsNone(self.agent._heartbeat())
+        self.mock_nuvla_client.heartbeat.assert_not_called()
+        self.assertEqual(2, mock_logger.info.call_count)
+        mock_logger.reset_mock()
 
         self.mock_nuvla_client.nuvlaedge.state = 'NOTREGISTERD'
         self.assertIsNone(self.agent._heartbeat())
+        self.mock_nuvla_client.heartbeat.assert_not_called()
+        self.assertEqual(2, mock_logger.info.call_count)
+        mock_logger.reset_mock()
 
         self.mock_nuvla_client.nuvlaedge.state = 'COMMISSIONED'
         self.mock_nuvla_client.heartbeat.return_value = True
         self.assertTrue(self.agent._heartbeat())
+        self.mock_nuvla_client.heartbeat.assert_called_once()
+        self.assertEqual(2, mock_logger.info.call_count)
+        mock_logger.info.assert_called_with("Executing heartbeat... Success")
+        mock_status_running.assert_called_once()
 
         self.mock_nuvla_client.nuvlaedge.state = State.COMMISSIONED
         self.assertTrue(self.agent._heartbeat())

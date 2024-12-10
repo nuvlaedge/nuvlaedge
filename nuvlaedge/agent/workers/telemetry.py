@@ -176,7 +176,7 @@ class Telemetry:
         self._check_monitors_health()
 
     def run_once(self):
-        logger.info(f"Gathering metrics from monitors...")
+        logger.info("Gathering metrics from monitors...")
         t_time = time.time()
         for m in self.monitor_list.values():
             m.run_update_data()

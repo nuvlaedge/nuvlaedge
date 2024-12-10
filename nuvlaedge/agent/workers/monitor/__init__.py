@@ -127,7 +127,6 @@ class Monitor(ABC, Thread):
                 # It is highly unlikely that this will happen, but add this protection to prevent from
                 # exiting the monitor thread
                 self.logger.debug("Channel was empty, no need to discard data")
-                pass
 
         self.report_channel.put(self.telemetry_data, block=False)
         self.telemetry_data = TelemetryPayloadAttributes()
@@ -166,4 +165,3 @@ class Monitor(ABC, Thread):
                 _wait_time = 0.0
                 self.logger.warning(f'Monitor {self.name} took too long to complete '
                                     f'({self.last_process_duration} > {self._period})')
-                continue

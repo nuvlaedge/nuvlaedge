@@ -369,4 +369,3 @@ class NetworkMonitor(Monitor):
 
         if self.data.ips.swarm:
             self.telemetry_data.ip = str(self.data.ips.swarm)
-            return

@@ -59,10 +59,7 @@ class KubernetesClient(COEClient):
 
     def __init__(self):
         super().__init__()
-        if os.getenv('KUBERNETES_SERVICE_HOST'):
-            config.load_incluster_config()
-        else:
-            config.load_config()
+        config.load_incluster_config()
         self.client = client.CoreV1Api()
         self.client_network = client.NetworkingV1Api()
         self.client_apps = client.AppsV1Api()

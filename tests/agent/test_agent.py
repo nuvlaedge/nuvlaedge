@@ -190,6 +190,10 @@ class TestAgent(TestCase):
         self.agent._process_jobs(jobs)
         mocked_instance.launch.assert_called_once()
 
+        mocked_instance.launch.side_effect = Exception
+        self.agent._process_jobs(jobs)
+        self.assertLogs(level="ERROR")
+
     def test_stop(self):
         self.agent.stop()
         self.exit_event.set.assert_called_once()

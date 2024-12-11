@@ -23,7 +23,7 @@ class JobTestCase(unittest.TestCase):
         self.mock_nuvla_client._host = 'fake.nuvla.io'
         self.mock_nuvla_client._insecure = False
 
-        with mock.patch('nuvlaedge.agent.job.Job.check_job_is_running') as mock_job_is_running:
+        with mock.patch('nuvlaedge.agent.job.Job.is_job_running') as mock_job_is_running:
             mock_job_is_running.return_value = False
             self.obj = Job(self.mock_coe_client, self.mock_nuvla_client, self.job_id, self.job_engine_lite_image)
 
@@ -34,20 +34,17 @@ class JobTestCase(unittest.TestCase):
         logging.disable(logging.NOTSET)
 
     def test_init(self):
-        # according to setUp, do_nothing is False and job_id should have been cleaned
-        self.assertFalse(self.obj.do_nothing,
-                         'Failed to check if job is running at class instantiation')
         self.assertEqual(self.obj.job_id_clean, self.job_id.replace('/', '-'),
                          'Failed to convert job ID into container-friendly name')
 
-    def test_check_job_is_running(self):
+    def test_is_job_running(self):
         self.obj.coe_client.is_nuvla_job_running.return_value = False
         # simply return the output from the coe_client function
-        self.assertFalse(self.obj.check_job_is_running(),
+        self.assertFalse(self.obj.is_job_running(),
                          'Failed to check job is NOT running')
 
         self.obj.coe_client.is_nuvla_job_running.return_value = True
-        self.assertTrue(self.obj.check_job_is_running(),
+        self.assertTrue(self.obj.is_job_running(),
                         'Failed to check job is running')
 
 

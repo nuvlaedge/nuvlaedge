@@ -36,7 +36,7 @@ class Job:
         job_engine_lite_image: Docker image for Job Engine lite
     """
 
-    def __init__(self, 
+    def __init__(self,
                  coe_client: JobLauncher,
                  client_wrapper: NuvlaClientWrapper,
                  job_id,
@@ -49,10 +49,9 @@ class Job:
 
         self.job_id = job_id
         self.job_id_clean = job_id.replace('/', '-')
-        self.do_nothing = self.check_job_is_running()
         self.job_engine_lite_image = job_engine_lite_image
 
-    def check_job_is_running(self):
+    def is_job_running(self):
         """ Checks if the job is already running """
         return self.coe_client.is_nuvla_job_running(self.job_id, self.job_id_clean)
 
@@ -81,4 +80,3 @@ class Job:
             launch_params["api_secret"] = secret
 
         self.coe_client.launch_job(**launch_params)
-

@@ -236,10 +236,10 @@ class COEClientKubernetesTestCase(unittest.TestCase):
     @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.get_cluster_id')
     @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.get_node_info')
     def test_get_cluster_info(self, mock_get_node_info, mock_cluster_id, mock_list_nodes):
-        me = fake.mock_kubernetes_node(uid='myself-fake-id')
+        me = fake.mock_kubernetes_node(uid='myself-fake-id', worker=True)
         mock_cluster_id.return_value = 'fake-id'
         mock_get_node_info.return_value = me
-        mock_list_nodes.return_value = [me, fake.mock_kubernetes_node()]
+        mock_list_nodes.return_value = [me, fake.mock_kubernetes_node(worker=True)]
 
         expected_fields = ['cluster-id', 'cluster-orchestrator', 'cluster-managers', 'cluster-workers']
         # if all goes well, we should get the above keys
@@ -257,15 +257,51 @@ class COEClientKubernetesTestCase(unittest.TestCase):
                          'Got the wrong cluster-orchestrator')
 
         # but if one of the nodes is a master, then we should get 1 worker and 1 manager
-        me.metadata.labels = {'node-role.kubernetes.io/master': ''}
-        mock_get_node_info.return_value = me
-        mock_list_nodes.return_value = [me, fake.mock_kubernetes_node()]
+        manager = fake.mock_kubernetes_node(uid='manager', worker=False)
+        mock_list_nodes.return_value = [me, manager]
         self.assertEqual(len(self.obj.get_cluster_info()['cluster-workers']), 1,
                          'Expecting 1 k8s workers but got something else')
         self.assertEqual(len(self.obj.get_cluster_info()['cluster-managers']), 1,
                          'Expecting 1 k8s manager but got something else')
-        self.assertEqual(self.obj.get_cluster_info()['cluster-managers'][0], me.metadata.name,
-                         'Expecting 2 k8s workers but got something else')
+        self.assertEqual(self.obj.get_cluster_info()['cluster-managers'][0], manager.metadata.name,
+                         'Expecting the manager to be the same as the one we defined')
+
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.list_nodes')
+    def test_get_managers_workers(self, mock_list_nodes):
+        # control-plane nodes are managers
+        mock_list_nodes.return_value = [fake.mock_kubernetes_node()]
+        self.assertEqual(len(self.obj._get_managers_workers()[0]), 1,
+                         'Expecting 1 k8s manager but got something else')
+        self.assertEqual(len(self.obj._get_managers_workers()[1]), 0,
+                         'Expecting 0 k8s workers but got something else')
+
+        # master nodes are managers (pre Kubernetes v1.20)
+        node = fake.mock_kubernetes_node()
+        node.metadata.labels = {'node-role.kubernetes.io/master': ''}
+        mock_list_nodes.return_value = [node]
+        self.assertEqual(len(self.obj._get_managers_workers()[0]), 1,
+                         'Expecting 1 k8s manager but got something else')
+        self.assertEqual(len(self.obj._get_managers_workers()[1]), 0,
+                         'Expecting 0 k8s workers but got something else')
+
+        # worker nodes are workers
+        mock_list_nodes.return_value = [fake.mock_kubernetes_node(worker=True)]
+        self.assertEqual(len(self.obj._get_managers_workers()[1]), 1,
+                         'Expecting 1 k8s worker but got something else')
+        self.assertEqual(len(self.obj._get_managers_workers()[0]), 0,
+                         'Expecting 0 k8s managers but got something else')
+
+        master = fake.mock_kubernetes_node()
+        master.metadata.labels = {'node-role.kubernetes.io/master': ''}
+        mock_list_nodes.return_value = [
+            master,
+            fake.mock_kubernetes_node(), 
+            fake.mock_kubernetes_node(worker=True),
+            fake.mock_kubernetes_node(worker=True)]
+        self.assertEqual(len(self.obj._get_managers_workers()[0]), 2,
+                         'Expecting 2 k8s manager but got something else')
+        self.assertEqual(len(self.obj._get_managers_workers()[1]), 2,
+                         'Expecting 2 k8s worker but got something else')
 
     def test_get_api_ip_port(self):
         endpoint = fake.mock_kubernetes_endpoint('not-kubernetes')

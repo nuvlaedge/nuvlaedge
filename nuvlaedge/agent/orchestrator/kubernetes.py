@@ -243,16 +243,7 @@ class KubernetesClient(COEClient):
 
         cluster_id = self.get_cluster_id(node_info, default_cluster_name)
 
-        nodes = self.list_nodes()
-        managers = []
-        workers = []
-        for n in nodes:
-            workers.append(n.metadata.name)
-            for label in n.metadata.labels:
-                if 'node-role' in label and 'master' in label:
-                    workers.pop()
-                    managers.append(n.metadata.name)
-                    break
+        managers, workers = self._get_managers_workers()
 
         return {
             'cluster-id': cluster_id,
@@ -260,6 +251,24 @@ class KubernetesClient(COEClient):
             'cluster-managers': managers,
             'cluster-workers': workers
         }
+
+    def _get_managers_workers(self):
+        """Works with new and old (prior to v1.20) clusters. In old clusters the 
+        label name was "node-role.kubernetes.io/master". In new ones it's
+        "node-role.kubernetes.io/control-plane".
+        """
+        nodes = self.list_nodes()
+        managers = []
+        workers = []
+        for n in nodes:
+            workers.append(n.metadata.name)
+            for label in n.metadata.labels:
+                if 'node-role' in label and ('master' in label or
+                                             'control-plane' in label):
+                    workers.pop()
+                    managers.append(n.metadata.name)
+                    break
+        return managers, workers
 
     def get_api_ip_port(self):
         if self.host_node_ip:

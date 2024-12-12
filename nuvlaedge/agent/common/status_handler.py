@@ -53,9 +53,9 @@ class NuvlaEdgeStatusHandler:
             return int(diff)
 
         to_remove = [name for name, report in self.module_reports.items() if time_diff(report.date) > self.STATUS_TIMEOUT]
-        if to_remove:
-            logger.info(f"Removing modules that have not reported in the last {self.STATUS_TIMEOUT} minutes: {', '.join(to_remove)}")
-            _ = [self.module_reports.pop(name) for name in to_remove]
+        logger.debug(f"Removing modules that have not reported in the last {self.STATUS_TIMEOUT} minutes: {', '.join(to_remove)}")
+        for name in to_remove:
+            self.module_reports.pop(name)
 
         for module_name, module_report in self.module_reports.items():
 

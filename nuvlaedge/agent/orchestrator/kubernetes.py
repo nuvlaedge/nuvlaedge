@@ -450,7 +450,7 @@ class KubernetesClient(COEClient):
                 log.warning('Job %s already exists in namespace %s.',
                             job.metadata.name, namespace)
                 raise JobAlreadyExistsException(
-                    f'Job {job_id} is already exists in namespace {namespace}')
+                    f'Job {job_id} already exists in namespace {namespace}')
             log.error('Failed creating job %s in namespace %s',
                         job.to_str(), namespace, exc_info=ex)
             raise ex

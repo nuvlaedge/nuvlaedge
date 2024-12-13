@@ -709,12 +709,29 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(err, [],
                          'There should be no errors reported when blk stats are not given by Docker')
 
+    @mock.patch('tests.agent.utils.fake.MockContainer.stats')
+    @mock.patch('docker.models.containers.ContainerCollection.list')
+    def test_get_containers_stats(self, mock_containers_list, mock_container_stats):
+        fake_container = fake.MockContainer()
+        mock_containers_list.return_value = [fake_container]
+
+        self.obj.container_stats_one_shot = True
+        ex = docker.errors.InvalidVersion('one_shot is not supported for API version < 1.41')
+        mock_container_stats.side_effect = [ex, iter([])]
+        self.assertEqual(1, len(self.obj.get_containers_stats()))
+        self.assertIsNone(self.obj.container_stats_one_shot)
+
+        self.obj.container_stats_one_shot = True
+        ex = docker.errors.InvalidArgument('decode is only available in conjunction with stream=True')
+        mock_container_stats.side_effect = ex
+        self.assertEqual(0, len(self.obj.get_containers_stats()))
+        self.assertTrue(self.obj.container_stats_one_shot)
+
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_block')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_net')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_mem')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_cpu')
-    @mock.patch(
-        'tests.agent.utils.fake.MockContainer.stats')  #@mock.patch('docker.api.container.ContainerApiMixin.stats')
+    @mock.patch('tests.agent.utils.fake.MockContainer.stats')
     @mock.patch('docker.models.containers.ContainerCollection.list')
     def test_collect_container_metrics(self, mock_containers_list, mock_container_stats, mock_get_cpu,
                                        mock_get_mem, mock_get_net, mock_get_block):

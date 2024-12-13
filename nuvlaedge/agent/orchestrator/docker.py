@@ -814,17 +814,15 @@ class DockerClient(COEClient):
         for container in self.list_containers():
             try:
                 containers_stats.append((container, self._get_container_stats(container)))
-            except docker.errors.InvalidVersion as e:
-                if 'one_shot' in str(e):
+            except Exception as e:
+                if isinstance(e, docker.errors.InvalidVersion) and 'one_shot' in str(e):
                     logger.warning('Docker API version older than 1.41 (Docker Engine version older than 2.10). '
                                    'Container stats collection will be less efficient.')
                     self.container_stats_one_shot = None
                     containers_stats.append((container, self._get_container_stats(container)))
                 else:
-                    raise
-            except Exception as e:
-                logger.warning('Failed to get stats for container '
-                               f'{container.short_id} ({container.name}): {e}')
+                    logger.warning('Failed to get stats for container '
+                                   f'{container.short_id} ({container.name}): {e}')
         return containers_stats
 
     def collect_container_metrics(self, old_version=False) -> List[Dict]:

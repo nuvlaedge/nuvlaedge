@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from queue import Queue
 from typing import Literal
@@ -22,7 +23,7 @@ class StatusReport(BaseModel):
 
 
 class NuvlaEdgeStatusHandler:
-    STATUS_TIMEOUT: int = 5*60
+    STATUS_TIMEOUT: int = 60*60
 
     def __init__(self):
         self._status: Literal['OPERATIONAL', 'UNKNOWN', 'DEGRADED'] = 'UNKNOWN'
@@ -40,17 +41,24 @@ class NuvlaEdgeStatusHandler:
         if isinstance(module_name, StatusReport):
             module_name = module_name.origin_module
 
-        self.module_reports.pop(module_name)
+        if module_name in self.module_reports:
+            self.module_reports.pop(module_name)
 
     def process_status(self):
         temp_status = 'UNKNOWN'
         temp_notes = []
 
         def time_diff(date: datetime) -> int:
-            diff: timedelta = datetime.now() - date
-            return diff.seconds
+            diff: float = datetime.now().timestamp() - date.timestamp()
+            return int(diff)
+
+        to_remove = [name for name, report in self.module_reports.items() if time_diff(report.date) > self.STATUS_TIMEOUT]
+        logger.debug(f"Removing modules that have not reported in the last {self.STATUS_TIMEOUT} minutes: {', '.join(to_remove)}")
+        for name in to_remove:
+            self.module_reports.pop(name)
 
         for module_name, module_report in self.module_reports.items():
+
             logger.debug(f"Processing module {module_report}")
 
             if module_report.module_status in ['FAILING', 'FAILED']:
@@ -99,8 +107,15 @@ class NuvlaEdgeStatusHandler:
         Returns: None. Status is reported via the status_channel for consistency
 
         """
+        sm_module_name = "System Manager"
+        sm_enabled = os.getenv("NUVLAEDGE_SYSTEM_MANAGER_ENABLE", 0)
+        if not sm_enabled or not isinstance(sm_enabled, int) or sm_enabled < 1:
+            if sm_module_name in self.module_reports:
+                self.remove_module(sm_module_name)
+            return
+
         _status: str = read_file(FILE_NAMES.STATUS_FILE)
-        # Notes from the System Manager are suposed to already be a multiline string with \n separators
+        # Notes from the System Manager are supposed to already be a multiline string with \n separators
         _notes: str = read_file(FILE_NAMES.STATUS_NOTES)
 
         match _status:
@@ -111,7 +126,7 @@ class NuvlaEdgeStatusHandler:
             case _:
                 _module_status = "UNKNOWN"
         logger.debug(f"System Manager status: {_module_status} - {_notes}")
-        self.status_channel.put(StatusReport(origin_module='System Manager',
+        self.status_channel.put(StatusReport(origin_module=sm_module_name,
                                              module_status=_module_status,
                                              message=_notes if _notes is not None else '',
                                              date=datetime.now()))

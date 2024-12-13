@@ -111,7 +111,7 @@ def mock_kubernetes_deployment():
     return json.loads(json.dumps(depl), object_hook=lambda d: SimpleNamespace(**d))
 
 
-def mock_kubernetes_node(uid: str = None, ready: bool = True):
+def mock_kubernetes_node(uid: str = None, ready: bool = True, worker: bool = False):
     node = {
         'status': {
             'node_info': {
@@ -136,12 +136,16 @@ def mock_kubernetes_node(uid: str = None, ready: bool = True):
         'metadata': {
             'name': f'{uid} NAME' if uid else random.randint(100, 999),
             'uid': uid if uid else random.randint(100, 999),
-            'labels': [],
+            'labels': {},
             'cluster_name': None
         }
     }
-
-    return json.loads(json.dumps(node), object_hook=lambda d: SimpleNamespace(**d))
+    res = json.loads(json.dumps(node), object_hook=lambda d: SimpleNamespace(**d))
+    if worker:
+        res.metadata.labels = {}
+    else:
+        res.metadata.labels = {'node-role.kubernetes.io/control-plane': ''}
+    return res
 
 
 class Fake(object):

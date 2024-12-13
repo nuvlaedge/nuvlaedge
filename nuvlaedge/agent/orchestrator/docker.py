@@ -623,8 +623,8 @@ class DockerClient(COEClient):
         cs = container_stats
         online_cpus = None
         cpu_percent = None
-        container_id = cs.get('id') or '?'
-        container_name = (cs.get('name') or '?').lstrip('/')
+        container_id = metrics.get('id') or '?'
+        container_name = (metrics.get('name') or '?').lstrip('/')
         precpu_stats = self.container_stats_cpu_prev.get(container_id)
         container_msg = f'for container {container_id[:12]} ({container_name})'
 

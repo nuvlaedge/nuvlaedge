@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from datetime import datetime
 from types import SimpleNamespace
@@ -17,7 +16,9 @@ from kubernetes.client.exceptions import ApiException
 
 import tests.agent.utils.fake as fake
 os.environ['KUBERNETES_SERVICE_HOST'] = 'force-k8s-coe'
-from nuvlaedge.agent.orchestrator.kubernetes import KubernetesClient, TimeoutException
+from nuvlaedge.agent.orchestrator.kubernetes import (KubernetesClient, 
+                                                     TimeoutException, 
+                                                     JobAlreadyExistsException)
 
 
 class COEClientKubernetesTestCase(unittest.TestCase):
@@ -502,6 +503,43 @@ class COEClientKubernetesTestCase(unittest.TestCase):
             expected_command,
             mock.ANY)
 
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient._job_executor_job_def')
+    def test_launch_job_already_exists(self, mock_job_def):
+        mock_job_def.return_value = mock.Mock(metadata=mock.Mock(name="test-job"))
+
+        api_exception = ApiException()
+        api_exception.status = 409
+        api_exception.body = '{"message": "already exists"}'
+        self.obj.client_batch_api.create_namespaced_job.side_effect = api_exception
+
+        with self.assertRaises(JobAlreadyExistsException, 
+                               msg="Expected JobAlreadyExistsException but it was not raised."):
+            self.obj.launch_job(
+                job_id="test-job-id",
+                job_execution_id="test-job-execution-id",
+                nuvla_endpoint="test-endpoint")
+
+        self.obj.client_batch_api.create_namespaced_job.assert_called_once()
+        self.assertLogs(level="WARNING")
+
+    @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient._job_executor_job_def')
+    def test_launch_job_api_exception_raised(self, mock_job_def):
+        mock_job_def.return_value = mock.Mock(metadata=mock.Mock(name="test-job"))
+
+        api_exception = ApiException()
+        api_exception.status = 418
+        api_exception.body = '{"message": "I\'m a teapot"}'
+        self.obj.client_batch_api.create_namespaced_job.side_effect = api_exception
+
+        with self.assertRaises(ApiException, msg="Expected ApiException but it was not raised."):
+            self.obj.launch_job(
+                job_id="test-job-id",
+                job_execution_id="test-job-execution-id",
+                nuvla_endpoint="test-endpoint")
+
+        self.obj.client_batch_api.create_namespaced_job.assert_called_once()
+        self.assertLogs(level="ERROR")
+ 
     @mock.patch('kubernetes.client.CustomObjectsApi.list_cluster_custom_object')
     @mock.patch('nuvlaedge.agent.orchestrator.kubernetes.KubernetesClient.get_node_info')
     def test_collect_container_metrics(self, mock_get_node_info, mock_pod_metrics):

@@ -85,7 +85,9 @@ class JobLocal:
 
             if _job.get('state') == JOB_RUNNING:
                 logger.warning(f'Job {job_id} already in running state. Seems to be a zombie job. Set it to failed')
-                self.set_job_failed(self.running_job, 'Zombie job')
+                msg = 'This job has been picked up but it is already in running state so it seems that it has been ' \
+                      'already executed and stopped during execution.'
+                self.set_job_failed(self.running_job, msg)
                 continue
 
             logger.info(f'Running job {job_id} locally')

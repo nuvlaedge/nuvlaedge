@@ -611,7 +611,8 @@ class DockerClient(COEClient):
             container.remove(force=True)
             raise
 
-    def collect_container_metrics_cpu(self, container_stats: dict, metrics: dict, old_version=False):
+    @staticmethod
+    def collect_container_metrics_cpu(container_stats: dict, metrics: dict, old_version=False):
         """
         Args:
             container_stats (dict): A dictionary containing container statistics.
@@ -625,7 +626,7 @@ class DockerClient(COEClient):
         cpu_percent = None
         container_id = metrics.get('id') or '?'
         container_name = (metrics.get('name') or '?').lstrip('/')
-        precpu_stats = self.container_stats_cpu_prev.get(container_id)
+        precpu_stats = cs.get('precpu_stats')
         container_msg = f'for container {container_id[:12]} ({container_name})'
 
         try:
@@ -660,8 +661,6 @@ class DockerClient(COEClient):
                 metrics['cpu-usage'] = cpu_percent
             if online_cpus is not None:
                 metrics['cpu-capacity'] = online_cpus
-
-        self.container_stats_cpu_prev[container_id] = cs.get('cpu_stats')
 
     @staticmethod
     def collect_container_metrics_mem(cstats: dict, metrics: dict, old_version=False):
@@ -846,6 +845,7 @@ class DockerClient(COEClient):
 
         """
         containers_metrics = []
+        container_stats_cpu_prev = {}
 
         for container, stats in self.get_containers_stats():
             container_metric = {
@@ -868,7 +868,9 @@ class DockerClient(COEClient):
                 container_metric['cpu-limit'] = (nano_cpus / 1000000000) or None
 
             # CPU
+            stats['precpu_stats'] = self.container_stats_cpu_prev.get(container.id)
             self.collect_container_metrics_cpu(stats, container_metric, old_version)
+            container_stats_cpu_prev[container.id] = stats.get('cpu_stats')
             # RAM
             self.collect_container_metrics_mem(stats, container_metric, old_version)
             # NET
@@ -877,6 +879,8 @@ class DockerClient(COEClient):
             self.collect_container_metrics_block(stats, container_metric, old_version)
 
             containers_metrics.append(container_metric)
+
+        self.container_stats_cpu_prev = container_stats_cpu_prev
 
         return containers_metrics
 

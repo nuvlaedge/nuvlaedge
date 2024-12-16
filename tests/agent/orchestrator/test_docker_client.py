@@ -551,45 +551,58 @@ class COEClientDockerTestCase(unittest.TestCase):
             raise AssertionError('Unexpected logs found: {!r}'.format(log.output))
 
     def test_collect_container_metrics_cpu(self):
+        cpu_stat = {
+            "cpu_stats": {
+                "online_cpus": 2,
+                "cpu_usage": {
+                    "total_usage": "30"
+                },
+                "system_cpu_usage": "300",
+            },
+            "precpu_stats": {
+                "online_cpus": 2,
+                "cpu_usage": {
+                    "total_usage": "10"
+                },
+                "system_cpu_usage": "100",
+            },
+        }
 
-        def create_cpu_stats(total_usage=10, system_cpu_usage=100):
-            return {
-                "cpu_stats": {
-                    "online_cpus": 2,
-                    "cpu_usage": {
-                        "total_usage": total_usage
-                    },
-                    "system_cpu_usage": system_cpu_usage
-                }
-            }
+        first_cpu_stat = {'cpu_stats': cpu_stat['cpu_stats']}
 
         metrics = {}
 
-        self.obj.collect_container_metrics_cpu(create_cpu_stats(10, 100), metrics, True)
-        self.assertNotIn('cpu-percent', metrics)
+        self.obj.collect_container_metrics_cpu(first_cpu_stat, metrics)
+        self.assertEqual(metrics['cpu-capacity'], 2)
         self.assertNotIn('cpu-usage', metrics)
+        metrics.clear()
+
+        self.obj.collect_container_metrics_cpu(first_cpu_stat, metrics, True)
+        self.assertNotIn('cpu-percent', metrics)
+        metrics.clear()
 
         with self.assertNoLogs(level='WARNING') as log:
-            self.obj.collect_container_metrics_cpu(create_cpu_stats(30, 300), metrics, True)
+            self.obj.collect_container_metrics_cpu(cpu_stat, metrics, True)
             self.assertEqual(metrics.get('cpu-percent'), '10.00',
                              "Expecting a CPU usage of 10%, but got something else instead")
             self.assertNotIn('cpu-capacity', metrics, "Expecting no CPU capacity")
-
             metrics.clear()
-
-            self.obj.collect_container_metrics_cpu(create_cpu_stats(10, 100), metrics)
-            self.obj.collect_container_metrics_cpu(create_cpu_stats(30, 300), metrics)
+            self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
             self.assertEqual(metrics['cpu-usage'], 10.0,
                              "Expecting a CPU usage of 10%, but got something else instead")
             self.assertEqual(metrics['cpu-capacity'], 2,
                              "Expecting a CPU capacity of 2, but got something else instead")
 
-        # if online_cpus is not reported, then we get 'nan' usage
-        cpu_stat = create_cpu_stats()
         cpu_stat['cpu_stats'].pop('online_cpus')
         metrics.clear()
         self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
         self.assertEqual(metrics['cpu-capacity'], 0, "Expecting zero CPU capacity, but got something else instead")
+
+        # negative cpu usage
+        metrics.clear()
+        cpu_stat['cpu_stats']['cpu_usage']['total_usage'] = 1
+        self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
+        self.assertNotIn('cpu-usage', metrics)
 
         # if a mandatory attribute does not exist, then we get 'nan' again, but with an error
         cpu_stat.pop('cpu_stats')

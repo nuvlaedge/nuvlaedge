@@ -296,7 +296,7 @@ class TestAgent(TestCase):
     @patch('nuvlaedge.agent.agent.Job')
     def test_process_jobs(self, mock_job):
         mocked_instance = Mock(spec=Job)
-        mocked_instance.do_nothing = True
+        mocked_instance.is_job_running = Mock(return_value=True)
         mocked_instance.job_id = 'job/1'
         mocked_instance.launch.return_value = True
         mock_job.return_value = mocked_instance
@@ -318,9 +318,13 @@ class TestAgent(TestCase):
         mock_job.assert_called_once()
         mocked_instance.assert_not_called()
 
-        mocked_instance.do_nothing = False
+        mocked_instance.is_job_running = Mock(return_value=False)
         self.agent._process_jobs(jobs)
         mocked_instance.launch.assert_called_once()
+
+        mocked_instance.launch.side_effect = Exception
+        self.agent._process_jobs(jobs)
+        self.assertLogs(level="ERROR")
 
     def test_stop(self):
         self.agent.stop()

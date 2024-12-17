@@ -87,6 +87,16 @@ class COEClientDockerTestCase(unittest.TestCase):
         containers = list_raw_resources('containers')
         self.assertEqual(containers[0]['Name'], 'container')
 
+        # test service "status" not supported on api < 1.41
+        ex = docker.errors.InvalidVersion('status is not supported in API version < 1.41')
+        api_mock.services.side_effect = [ex, [{'ID': '1'}]]
+        self.assertTrue(self.obj.raw_resources_service_status)
+
+        services = list_raw_resources('services')
+        self.assertIsNone(self.obj.raw_resources_service_status)
+        self.assertEqual(len(services), 1)
+        api_mock.services.assert_called_with(status=None)
+
     def test_get_node_info(self):
         self.assertIn('ID', self.obj.node_info,
                       'Unable to retrieve Docker info')

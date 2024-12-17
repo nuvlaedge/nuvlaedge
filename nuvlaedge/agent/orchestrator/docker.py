@@ -57,6 +57,7 @@ class DockerClient(COEClient):
 
         self.container_stats_one_shot = True
         self.container_stats_cpu_prev = {}
+        self.raw_resources_service_status = True
 
     def list_raw_resources(self, resource_type) -> list[dict] | None:
 
@@ -98,7 +99,14 @@ class DockerClient(COEClient):
                         c['Name'] = names[0].lstrip('/')
                 return containers
             case 'services':
-                return sorted(api.services(status=True), key=get_keys('CreatedAt', 'ID'))
+                try:
+                    services = api.services(status=self.raw_resources_service_status)
+                except docker.errors.InvalidVersion:
+                    logger.warning('Docker API version older than 1.41 (Docker Engine version older than 2.10). '
+                                   'Service tasks count (running and desired) will not be available.')
+                    self.raw_resources_service_status = None
+                    services = api.services(status=self.raw_resources_service_status)
+                return sorted(services, key=get_keys('CreatedAt', 'ID'))
             case 'tasks':
                 return sorted(api.tasks(), key=get_keys('CreatedAt', 'ID'))
             case 'configs':

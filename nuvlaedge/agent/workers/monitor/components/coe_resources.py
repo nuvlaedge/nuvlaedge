@@ -20,8 +20,8 @@ class COEResourcesMonitor(Monitor):
     """
     Handles the retrieval of raw COE resources.
     """
-    def __init__(self, name: str, telemetry, enable_monitor=True):
-        super().__init__(name, COEResourcesData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor=True, period=60):
+        super().__init__(name, COEResourcesData, enable_monitor, period)
 
         if not telemetry.coe_resources_supported:
             self.logger.info(f'coe-resources not supported by Nuvla. Disabling {self.name}')
@@ -29,14 +29,12 @@ class COEResourcesMonitor(Monitor):
 
         self.coe_client: COEClient = telemetry.coe_client
 
-        # Initialize the corresponding data on the EdgeStatus class
-        if not telemetry.edge_status.coe_resources:
-            telemetry.edge_status.coe_resources = self.data
 
     def update_data(self) -> None:
         match self.coe_client.ORCHESTRATOR:
             case 'docker':
                 self._update_data_docker()
+
             case 'kubernetes':
                 self._update_data_kubernetes()
             case _:
@@ -71,8 +69,5 @@ class COEResourcesMonitor(Monitor):
                 self.logger.error(f'Failed to get k8s {object_type}: {e}')
         self.data.kubernetes = data
 
-    def populate_nb_report(self, nuvla_report: dict):
-        data = self.data.model_dump(exclude_none=True, by_alias=True)
-        nuvla_report['coe-resources'] = data
-
-
+    def populate_telemetry_payload(self):
+        self.telemetry_data.coe_resources = self.data.model_dump(exclude_none=True, by_alias=True)

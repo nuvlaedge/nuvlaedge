@@ -16,12 +16,6 @@ class TestGeoLocationMonitor(unittest.TestCase):
     _patch_parse_geo: str = 'nuvlaedge.agent.workers.monitor.components.geolocation.GeoLocationMonitor.' \
                             'parse_geolocation'
 
-    def test_constructor(self):
-        it_telemetry = Mock()
-        it_telemetry.edge_status.inferred_location = None
-        GeoLocationMonitor('geo_test', it_telemetry, True)
-        self.assertIsInstance(it_telemetry.edge_status.inferred_location, GeoLocationData)
-
     def test_send_request(self):
         test_geo: GeoLocationMonitor = GeoLocationMonitor('geo_test', self.mock_telemetry,
                                                           True)
@@ -137,35 +131,3 @@ class TestGeoLocationMonitor(unittest.TestCase):
             test_parse.side_effect = TypeError()
             test_geo.update_data()
             self.assertIsNone(test_geo.data.timestamp)
-
-    def test_populate_nb_report(self):
-        test_geo: GeoLocationMonitor = GeoLocationMonitor('geo_test', self.mock_telemetry,
-                                                          True)
-        body: dict = {}
-        with patch(self._patch_send_req, autospec=True) as test_send_req, \
-                patch(self._patch_parse_geo, autospec=True) as test_parse:
-            test_geo.populate_nb_report(body)
-
-            test_parse.return_value = [-1, -1]
-            test_send_req.return_value = 'not_none'
-
-            test_geo.update_data()
-            test_geo.populate_nb_report(body)
-            self.assertIn('inferred-location', body)
-            self.assertEqual([-1.0, -1.0], body.get('inferred-location', []))
-
-    @patch("time.sleep", side_effect=InterruptedError)
-    def test_run(self, _):
-        test_geo: GeoLocationMonitor = GeoLocationMonitor('geo_test', self.mock_telemetry,
-                                                          True)
-
-        with patch('nuvlaedge.agent.workers.monitor.components.geolocation.GeoLocationMonitor.update_data',
-                   autospec=True) as mocked_updater:
-            mocked_updater.return_value = 'TEST'
-            test_geo.update_data()
-            self.assertEqual(mocked_updater.call_count, 1)
-            try:
-                test_geo.run()
-            except InterruptedError:
-                ...
-

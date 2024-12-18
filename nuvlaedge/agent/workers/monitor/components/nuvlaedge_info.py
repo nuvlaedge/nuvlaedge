@@ -20,16 +20,13 @@ from ..components import monitor
 @monitor('nuvlaedge_info_monitor')
 class NuvlaEdgeInfoMonitor(Monitor):
     """ NuvlaEdge information monitor class. """
-    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
-        super().__init__(name, NuvlaInfo, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True, period: int = 60):
+        super().__init__(name, NuvlaInfo, enable_monitor, period)
 
         self.coe_client: COEClient = telemetry.coe_client
 
         self.ne_engine_version: str = util.extract_nuvlaedge_version(self.coe_client.current_image)
         self.installation_home: str = self.set_installation_home(FILE_NAMES.HOST_USER_HOME)
-
-        if not telemetry.edge_status.nuvlaedge_info:
-            telemetry.edge_status.nuvlaedge_info = self.data
 
     @staticmethod
     def set_installation_home(host_user_home_file: str) -> str:
@@ -75,5 +72,10 @@ class NuvlaEdgeInfoMonitor(Monitor):
         # Components running in the current NuvlaEdge deployment
         self.data.components = self.coe_client.get_all_nuvlaedge_components() or None
 
-    def populate_nb_report(self, nuvla_report: Dict):
-        nuvla_report.update(self.data.dict(by_alias=True, exclude_none=True))
+    def populate_telemetry_payload(self):
+        """
+        Populates the telemetry payload with the data from the NuvlaEdge monitor
+        """
+        self.telemetry_data.update(self.data.dict(
+            by_alias=True, exclude_none=True
+        ))

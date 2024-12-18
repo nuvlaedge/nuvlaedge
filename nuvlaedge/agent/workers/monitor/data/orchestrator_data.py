@@ -3,7 +3,6 @@
 """
 from typing import Union
 
-from nuvlaedge.common.nuvlaedge_base_model import NuvlaEdgeBaseModel
 from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
 
@@ -40,7 +39,7 @@ class ContainerStatsData(BaseDataStructure):
     net_out: int | None = None
 
 
-class ClusterStatusData(NuvlaEdgeBaseModel):
+class ClusterStatusData(BaseDataStructure):
     """
     Cluster related data structure
     """

@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 import socket
 import string
-from datetime import datetime
+from datetime import datetime, UTC
 
 import docker
 import docker.errors
@@ -212,7 +212,7 @@ class Docker(COEClient):
         project_name = self.get_compose_project_name_from_labels(myself_labels)
 
         random_identifier = ''.join(utils.random_choices(string.ascii_uppercase, 5))
-        now = datetime.strftime(datetime.utcnow(), '%d-%m-%Y_%H%M%S')
+        now = datetime.strftime(datetime.now(UTC), '%d-%m-%Y_%H%M%S')
         on_stop_container_name = f"{project_name}-on-stop-{random_identifier}-{now}"
 
         label = {

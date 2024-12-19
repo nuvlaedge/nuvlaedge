@@ -155,7 +155,7 @@ class Commissioner:
         if cluster_info:
             self._current_payload.update(cluster_info)
         logger.debug(f"Current payload: "
-                     f"{json.dumps(self._current_payload.model_dump(exclude_none=True, by_alias=True))}")
+                     f"{self._current_payload.model_dump_json(exclude_none=True, by_alias=True)}")
 
         # Current implementation requires not to commission cluster data until nuvlaedge-status has been updated with
         # node-id. Why not node-id here? Mysteries of life...
@@ -212,10 +212,10 @@ class Commissioner:
             None.
         """
         if self.nuvla_client.nuvlaedge_status.node_id is not None:
-            logger.debug("Updating Cluster data, node id present in NuvlaEdge-status")
+            logger.info("Updating Cluster data, node id present in NuvlaEdge-status")
             self._update_cluster_data()
         else:
-            logger.debug("Cluster data not yet pushed to telemetry. Waiting to commission it")
+            logger.info("Cluster data not yet pushed to telemetry. Waiting to commission it")
 
         self._current_payload.capabilities = self._get_nuvlaedge_capabilities()
         self._update_coe_data()

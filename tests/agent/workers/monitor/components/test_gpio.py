@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
+import logging
 import unittest
 
 from mock import Mock, patch
 
 from nuvlaedge.agent.workers.monitor.components.gpio import GpioMonitor
 from nuvlaedge.agent.workers.monitor.data.gpio_data import GpioData, GpioPin
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 gpio_output = '''+-----+-----+---------+------+---+---Pi 2---+---+------+---------+-----+-----+
@@ -38,10 +38,15 @@ gpio_output = '''+-----+-----+---------+------+---+---Pi 2---+---+------+-------
 
 class TestGpioMonitor(unittest.TestCase):
 
+    def setUp(self):
+        logging.disable(logging.CRITICAL)
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
+
     @staticmethod
     def get_base_monitor() -> GpioMonitor:
         mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
         with patch('nuvlaedge.agent.workers.monitor.components.gpio.execute_cmd') as mock_cmd:
             mock_cmd.return_value = True
             return GpioMonitor('test_monitor', mock_telemetry, True)
@@ -49,12 +54,8 @@ class TestGpioMonitor(unittest.TestCase):
     @patch('nuvlaedge.agent.workers.monitor.components.gpio.GpioMonitor.gpio_availability')
     def test_init(self, mock_availability):
         mock_availability.return_value = True
-        edge_status = EdgeStatus()
         mock_telemetry = Mock()
-        mock_telemetry.edge_status = edge_status
         gpio_monitor = GpioMonitor('test_monitor', mock_telemetry, True)
-        self.assertTrue(edge_status.gpio_pins)
-        self.assertIsInstance(edge_status.gpio_pins, GpioData)
         gpio_monitor.__init__('test_monitor', mock_telemetry)
 
     @patch('nuvlaedge.agent.workers.monitor.components.gpio.execute_cmd')
@@ -152,15 +153,9 @@ class TestGpioMonitor(unittest.TestCase):
         self.assertEqual(40, len(test_monitor.data.pins))
         test_monitor.update_data()
 
-    def test_populate_nb_report(self):
+    def test_populate_telemetry_payload(self):
         test_monitor: GpioMonitor = self.get_base_monitor()
-
-        test_monitor.data = GpioData(telemetry_name='test_monitor')
-        test_monitor.data.pins = {}
-        gpio_pin = GpioPin()
-        gpio_pin.pin = 1
-        test_monitor.data.pins[gpio_pin.pin] = gpio_pin
-
-        telemetry_data = {}
-        test_monitor.populate_nb_report(telemetry_data)
-        self.assertEqual({'gpio-pins': {1: {'pin': 1}}}, telemetry_data)
+        test_monitor.data.pins = {1: GpioPin(pin=1, name='GPIO. 1', bcm=4, mode='IN', voltage=1),
+                                  2: GpioPin(pin=2, name='GPIO. 2', bcm=5, mode='OUT', voltage=0)}
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.gpio_pins, test_monitor.data.pins)

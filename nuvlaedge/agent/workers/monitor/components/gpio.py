@@ -29,16 +29,13 @@ class GpioMonitor(Monitor):
     _second_pin_indexes = [14, 11, 10, 9, 8]
 
     # Class constructor
-    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
-        super().__init__(name, GpioData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True, period: int = 60):
+        super().__init__(name, GpioData, enable_monitor, period)
 
         # Check GPIO availability
         if not self.gpio_availability():
             self.logger.info(f'gpio not supported. Disabling {self.name}')
             self.enabled_monitor = False
-
-        if self.enabled_monitor and not telemetry.edge_status.gpio_pins:
-            telemetry.edge_status.gpio_pins = self.data
 
     def gpio_availability(self) -> bool:
         """
@@ -152,6 +149,5 @@ class GpioMonitor(Monitor):
             if pin_2:
                 self.data.pins[pin_2.pin] = pin_2
 
-    def populate_nb_report(self, nuvla_report: dict):
-        data = self.data.model_dump(exclude_none=True, by_alias=True)
-        nuvla_report['gpio-pins'] = data.get('pins')
+    def populate_telemetry_payload(self):
+        self.telemetry_data.gpio_pins = self.data.pins

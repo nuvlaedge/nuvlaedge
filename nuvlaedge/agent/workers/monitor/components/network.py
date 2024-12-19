@@ -37,8 +37,8 @@ class NetworkMonitor(Monitor):
     _PUBLIC_IP_UPDATE_RATE: int = 3600
     _NUVLAEDGE_COMPONENT_LABEL_KEY: str = util.base_label
 
-    def __init__(self, name: str, telemetry, enable_monitor=True):
-        super().__init__(name, NetworkingData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor=True, period: int = 60):
+        super().__init__(name, NetworkingData, enable_monitor, period)
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
@@ -53,14 +53,11 @@ class NetworkMonitor(Monitor):
         self._ip_route_image: str = self.coe_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()
-        self.logger.info(f'Running network monitor for project {self.engine_project_name}')
+
         self.iproute_container_name: str = f'{self.engine_project_name}-iproute'
 
         self.last_public_ip: float = 0.0
 
-        # Initialize the corresponding data on the EdgeStatus class
-        if not telemetry.edge_status.iface_data:
-            telemetry.edge_status.iface_data = self.data
 
     def get_engine_project_name(self) -> str:
         return self.coe_client.get_nuvlaedge_project_name(util.default_project_name)
@@ -342,37 +339,7 @@ class NetworkMonitor(Monitor):
         for updater in self.updaters:
             updater()
 
-    def populate_nb_report(self, nuvla_report: dict):
-        """
-                Network report structure:
-                network: {
-                    default_gw: str,
-                    ips: {
-                        local: str,
-                        public: str,
-                        swarm: str,
-                        vpn: str
-                        }
-                    interfaces: [
-                        {
-                            "interface": iface_name
-                            "ips": [{
-                                "address": "ip_Add"
-                            }]
-                        }
-                    ]
-                }
-                """
-        # Until server is adapted, we only return a single IP address as
-        #  a string following the next priority.
-        # 1.- VPN
-        # 2.- Default Local Gateway
-        # 3.- Public
-        # 4.- Swarm
-        self.logger.debug('Updating data in Network monitor')
-        if not nuvla_report.get('resources'):
-            nuvla_report['resources'] = {}
-
+    def populate_telemetry_payload(self):
         it_traffic: list = [x.dict(by_alias=True, exclude={'ips', 'default_gw'})
                             for _, x in self.data.interfaces.items()]
 
@@ -381,25 +348,24 @@ class NetworkMonitor(Monitor):
                                     'ips': [ip.dict() for ip in obj.ips]}
                                    for name, obj in self.data.interfaces.items()]
 
-        nuvla_report['network'] = it_report
+        self.telemetry_data.network = it_report
 
         if it_traffic:
-            nuvla_report['resources']['net-stats'] = it_traffic
+            self.telemetry_data.resources = {
+                'net-stats': it_traffic
+            }
 
         if self.data.ips.vpn:
-            nuvla_report['ip'] = str(self.data.ips.vpn)
-            return str(self.data.ips.vpn)
+            self.telemetry_data.ip = str(self.data.ips.vpn)
+            return
 
         if self.data.ips.local:
-            nuvla_report['ip'] = str(self.data.ips.local)
-            return str(self.data.ips.local)
+            self.telemetry_data.ip = str(self.data.ips.local)
+            return
 
         if self.data.ips.public:
-            nuvla_report['ip'] = str(self.data.ips.public)
-            return str(self.data.ips.public)
+            self.telemetry_data.ip = str(self.data.ips.public)
+            return
 
         if self.data.ips.swarm:
-            nuvla_report['ip'] = str(self.data.ips.swarm)
-            return str(self.data.ips.swarm)
-
-        return None
+            self.telemetry_data.ip = str(self.data.ips.swarm)

@@ -1,4 +1,4 @@
-from nuvlaedge.agent.workers.telemetry import TelemetryPayloadAttributes
+from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
 from nuvlaedge.models import model_diff
 
 

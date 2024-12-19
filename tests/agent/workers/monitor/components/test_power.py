@@ -6,7 +6,6 @@ from mock import Mock, patch, mock_open
 
 from nuvlaedge.agent.workers.monitor.components.power import PowerMonitor
 from nuvlaedge.agent.workers.monitor.data.power_data import PowerData, PowerEntry
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestPowerMonitor(unittest.TestCase):
@@ -14,20 +13,9 @@ class TestPowerMonitor(unittest.TestCase):
     @staticmethod
     def get_base_monitor() -> PowerMonitor:
         mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
-        mock_telemetry.edge_status.power = None
         power_monitor = PowerMonitor('test_monitor', mock_telemetry, True)
         setattr(power_monitor, 'available_power_drivers', ['ina3221x'])
         return power_monitor
-
-    def test_init(self):
-        mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
-        mock_telemetry.edge_status.power = None
-        power_monitor = PowerMonitor('test_monitor', mock_telemetry, True)
-        self.assertTrue(mock_telemetry.edge_status.power)
-        self.assertIsInstance(mock_telemetry.edge_status.power, PowerData)
-        power_monitor.__init__('test_monitor', mock_telemetry)
 
     @patch('os.listdir')
     @patch('os.path.exists')
@@ -136,15 +124,21 @@ class TestPowerMonitor(unittest.TestCase):
         test_monitor.update_data()
         self.assertEqual(test_monitor.data.power_entries['current'], test_entry)
 
-        telemetry_data = {}
-        test_monitor.populate_nb_report(telemetry_data)
-        self.assertEqual({
-            'resources': {
-                'power-consumption': [
-                    {'metric-name': 'current', 'energy-consumption': 1.0, 'unit': 'mA'}
-                ]
-            }
-        }, telemetry_data)
+    def test_populate_telemetry_payload(self):
+        mock_data = PowerData()
+        mock_data.power_entries = {'current': PowerEntry(metric_name='current',
+                                                         energy_consumption=1, unit='mA')}
+        test_monitor: PowerMonitor = self.get_base_monitor()
+        test_monitor.data = mock_data
 
-    def test_populate_nb_report(self):
-        ...
+        test_monitor.populate_telemetry_payload()
+        expected_resources = {
+            "power-consumption": [
+                {
+                    "energy-consumption": 1,
+                    "metric-name": "current",
+                    "unit": "mA"
+                }
+            ]
+        }
+        self.assertEqual(expected_resources, test_monitor.telemetry_data.resources)

@@ -1201,8 +1201,10 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_all_nuvlaedge_components(), ['fake-container'],
                          'Failed to get all NuvlaEdge containers')
 
+    @mock.patch.dict(os.environ, {'NUVLAEDGE_COMPUTE_API_ENABLE': '1'})
     @mock.patch('docker.models.containers.ContainerCollection.get')
     def test_find_compute_api_external_port(self, mock_container_get: MagicMock):
+
         # Container not found
         mock_container_get.side_effect = docker.errors.NotFound('')
         with self.assertLogs(logger=logger, level='DEBUG'):

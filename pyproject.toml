@@ -23,7 +23,7 @@ security = "nuvlaedge.security:main"
 
 [tool.poetry.dependencies]
 python = "~3.12.6"
-nuvla-api = "^4.2.2"
+nuvla-api = "^4.2.3"
 nuvla-job-engine = "^4.9.0"
 requests="^2.32.2"
 docker = "^7.1.0"

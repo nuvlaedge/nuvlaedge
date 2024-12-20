@@ -1,5 +1,43 @@
 # Changelog
 
+## [2.18.0](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.1...2.18.0) (2024-12-20)
+
+
+### Features
+
+* **job:** authenticate to Nuvla with cookies when starting job engine container ([#214](https://github.com/nuvlaedge/nuvlaedge/issues/214)) ([6887e61](https://github.com/nuvlaedge/nuvlaedge/commit/6887e61e1b1893b2577393d2a825f1fbc386437c))
+* **kubernetes-credential-manager:** by default use NE UUID in CSR name to support multiple NEs on k8s cluster ([#227](https://github.com/nuvlaedge/nuvlaedge/issues/227)) ([53d5db8](https://github.com/nuvlaedge/nuvlaedge/commit/53d5db8ab3b82f8ac6248b2e960e49326aa622c6))
+* **kubernetes:** add support for listing Helm releases ([#225](https://github.com/nuvlaedge/nuvlaedge/issues/225)) ([3629076](https://github.com/nuvlaedge/nuvlaedge/commit/362907612c0b8ad918f50cb3fea479432d0cc1b7))
+* **telemetry:** add raw coe resources for kubernetes ([#216](https://github.com/nuvlaedge/nuvlaedge/issues/216)) ([fa39833](https://github.com/nuvlaedge/nuvlaedge/commit/fa3983327e0033f8be37acbbe567205805273f60))
+
+
+### Bug Fixes
+
+* $CSR_NAME badly provided to wait for issued certificate ([53d5db8](https://github.com/nuvlaedge/nuvlaedge/commit/53d5db8ab3b82f8ac6248b2e960e49326aa622c6))
+* **agent:** don't fail in case same job is requested to be started ([#230](https://github.com/nuvlaedge/nuvlaedge/issues/230)) ([28a2ad5](https://github.com/nuvlaedge/nuvlaedge/commit/28a2ad50a2c366a6251388672ef385073cd9dbbf))
+* **agent:** fix status handler bugs ([#228](https://github.com/nuvlaedge/nuvlaedge/issues/228)) ([fdb487d](https://github.com/nuvlaedge/nuvlaedge/commit/fdb487d4d2c3512a7d117955ac053db722bc1464))
+* filtering out sensitive fields when logging VPN related informations ([#222](https://github.com/nuvlaedge/nuvlaedge/issues/222)) ([eff57a1](https://github.com/nuvlaedge/nuvlaedge/commit/eff57a19441d53825bb7d9d2365ae3509c44ab18))
+* **kubernetes:** detect manager nodes on new and old clusters ([#231](https://github.com/nuvlaedge/nuvlaedge/issues/231)) ([8c374c1](https://github.com/nuvlaedge/nuvlaedge/commit/8c374c1912c9b5008d521158a6d83ee702e0800d))
+* **telemetry:** send disk usage and capacity in bytes ([#233](https://github.com/nuvlaedge/nuvlaedge/issues/233)) ([cdce9ec](https://github.com/nuvlaedge/nuvlaedge/commit/cdce9ec20af846a2402fb5116f55dc3bf4ffa5ea))
+
+
+### Dependencies
+
+* nuvla-api ^4.2.3 ([6aa05bb](https://github.com/nuvlaedge/nuvlaedge/commit/6aa05bb06a8ac2e1b4319149626f6af30723473c))
+* nuvla-job-engine ^4.9.0 ([13fc256](https://github.com/nuvlaedge/nuvlaedge/commit/13fc256baf2c9d8b1424c1e861b54138b07d87be))
+* updated indirect dependencies ([13fc256](https://github.com/nuvlaedge/nuvlaedge/commit/13fc256baf2c9d8b1424c1e861b54138b07d87be))
+
+
+### Code Refactoring
+
+* **telemetry:** docker: improved collection of containers stats ([#232](https://github.com/nuvlaedge/nuvlaedge/issues/232)) ([807f25e](https://github.com/nuvlaedge/nuvlaedge/commit/807f25eb4474ae99fe36ced06edd216e65d28f92))
+* **telemetry:** multiple improvements ([#226](https://github.com/nuvlaedge/nuvlaedge/issues/226)) ([7c7c95b](https://github.com/nuvlaedge/nuvlaedge/commit/7c7c95b3f1be615d348eb30d30a8f68b94345f7c))
+
+
+### Continuous Integration
+
+* improve ci  ([#213](https://github.com/nuvlaedge/nuvlaedge/issues/213)) ([0a59d74](https://github.com/nuvlaedge/nuvlaedge/commit/0a59d743ee3a15d1b074de231cb72e1f0540aabf))
+
 ## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-11-02)
 
 

@@ -4,16 +4,20 @@
 
 Gathers all the requirements for status reporting
 """
+from typing import Literal
+
 from pydantic import Field
 
 from nuvlaedge.agent.workers.monitor import BaseDataStructure
 
+IPType = Literal["v4", "v6"]
 
 class IP(BaseDataStructure):
     """
     address: IP addresses
     """
     address: str = ''
+    type: IPType = 'v4'
 
     def __hash__(self):
         return hash(self.address)
@@ -30,7 +34,7 @@ class NetworkInterface(BaseDataStructure):
     """
 
     iface_name: str | None = Field(None, alias='interface')
-    ips: list[IP] = []
+    ips: list[IP] = Field(default_factory=list)
     default_gw: bool = Field(False, alias='default-gw')
 
     # Interface data traffic control

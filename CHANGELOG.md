@@ -13,10 +13,10 @@
 
 ### Bug Fixes
 
-* $CSR_NAME badly provided to wait for issued certificate ([53d5db8](https://github.com/nuvlaedge/nuvlaedge/commit/53d5db8ab3b82f8ac6248b2e960e49326aa622c6))
+* **kubernetes:** $CSR_NAME badly provided to wait for issued certificate ([53d5db8](https://github.com/nuvlaedge/nuvlaedge/commit/53d5db8ab3b82f8ac6248b2e960e49326aa622c6))
 * **agent:** don't fail in case same job is requested to be started ([#230](https://github.com/nuvlaedge/nuvlaedge/issues/230)) ([28a2ad5](https://github.com/nuvlaedge/nuvlaedge/commit/28a2ad50a2c366a6251388672ef385073cd9dbbf))
 * **agent:** fix status handler bugs ([#228](https://github.com/nuvlaedge/nuvlaedge/issues/228)) ([fdb487d](https://github.com/nuvlaedge/nuvlaedge/commit/fdb487d4d2c3512a7d117955ac053db722bc1464))
-* filtering out sensitive fields when logging VPN related informations ([#222](https://github.com/nuvlaedge/nuvlaedge/issues/222)) ([eff57a1](https://github.com/nuvlaedge/nuvlaedge/commit/eff57a19441d53825bb7d9d2365ae3509c44ab18))
+* **agent:** filtering out sensitive fields when logging VPN related informations ([#222](https://github.com/nuvlaedge/nuvlaedge/issues/222)) ([eff57a1](https://github.com/nuvlaedge/nuvlaedge/commit/eff57a19441d53825bb7d9d2365ae3509c44ab18))
 * **kubernetes:** detect manager nodes on new and old clusters ([#231](https://github.com/nuvlaedge/nuvlaedge/issues/231)) ([8c374c1](https://github.com/nuvlaedge/nuvlaedge/commit/8c374c1912c9b5008d521158a6d83ee702e0800d))
 * **telemetry:** send disk usage and capacity in bytes ([#233](https://github.com/nuvlaedge/nuvlaedge/issues/233)) ([cdce9ec](https://github.com/nuvlaedge/nuvlaedge/commit/cdce9ec20af846a2402fb5116f55dc3bf4ffa5ea))
 
@@ -31,12 +31,8 @@
 ### Code Refactoring
 
 * **telemetry:** docker: improved collection of containers stats ([#232](https://github.com/nuvlaedge/nuvlaedge/issues/232)) ([807f25e](https://github.com/nuvlaedge/nuvlaedge/commit/807f25eb4474ae99fe36ced06edd216e65d28f92))
-* **telemetry:** multiple improvements ([#226](https://github.com/nuvlaedge/nuvlaedge/issues/226)) ([7c7c95b](https://github.com/nuvlaedge/nuvlaedge/commit/7c7c95b3f1be615d348eb30d30a8f68b94345f7c))
+* **telemetry:** minor improvements ([#226](https://github.com/nuvlaedge/nuvlaedge/issues/226)) ([7c7c95b](https://github.com/nuvlaedge/nuvlaedge/commit/7c7c95b3f1be615d348eb30d30a8f68b94345f7c))
 
-
-### Continuous Integration
-
-* improve ci  ([#213](https://github.com/nuvlaedge/nuvlaedge/issues/213)) ([0a59d74](https://github.com/nuvlaedge/nuvlaedge/commit/0a59d743ee3a15d1b074de231cb72e1f0540aabf))
 
 ## [2.17.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.0...2.17.1) (2024-11-02)
 

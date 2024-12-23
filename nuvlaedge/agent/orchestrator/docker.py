@@ -55,6 +55,10 @@ class DockerClient(COEClient):
         self.last_node_info: float = 0.0
         self._node_info: dict = {}
 
+        self.container_stats_one_shot = True
+        self.container_stats_cpu_prev = {}
+        self.raw_resources_service_status = True
+
     def list_raw_resources(self, resource_type) -> list[dict] | None:
 
         def get_keys(*keys):
@@ -95,7 +99,14 @@ class DockerClient(COEClient):
                         c['Name'] = names[0].lstrip('/')
                 return containers
             case 'services':
-                return sorted(api.services(status=True), key=get_keys('CreatedAt', 'ID'))
+                try:
+                    services = api.services(status=self.raw_resources_service_status)
+                except docker.errors.InvalidVersion:
+                    logger.warning('Docker API version older than 1.41 (Docker Engine version older than 2.10). '
+                                   'Service tasks count (running and desired) will not be available.')
+                    self.raw_resources_service_status = None
+                    services = api.services(status=self.raw_resources_service_status)
+                return sorted(services, key=get_keys('CreatedAt', 'ID'))
             case 'tasks':
                 return sorted(api.tasks(), key=get_keys('CreatedAt', 'ID'))
             case 'configs':
@@ -237,10 +248,13 @@ class DockerClient(COEClient):
             The external port of the compute API container as a string.
             If the container is not found or the port cannot be inferred, an empty string is returned.
         """
+        if os.getenv('NUVLAEDGE_COMPUTE_API_ENABLE', '') != '1':
+            return ''
+
         try:
             container = self._get_component_container(util.compute_api_service_name)
         except (docker.errors.NotFound, docker.errors.APIError, TimeoutError) as ex:
-            logger.debug(f'Compute API container not found {ex}')
+            logger.debug(f'Compute API container not found: {ex}')
             return ''
 
         try:
@@ -526,11 +540,12 @@ class DockerClient(COEClient):
 
         # Get the compute-api network
         local_net = None
-        try:
-            compute_api = self._get_component_container(util.compute_api_service_name)
-            local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
-        except Exception as e:
-            logger.debug(f'Cannot infer compute-api network for local job {job_id}: {e}')
+        if os.getenv('NUVLAEDGE_COMPUTE_API_ENABLE', '') == '1':
+            try:
+                compute_api = self._get_component_container(util.compute_api_service_name)
+                local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
+            except Exception as e:
+                logger.debug(f'Cannot infer compute-api network for local job {job_id}: {e}')
 
         # Get environment variables and volumes from job-engine-lite container
         volumes = {
@@ -617,34 +632,47 @@ class DockerClient(COEClient):
                 If False, a tuple containing the CPU usage percentage and the number of online CPUs is added.
                 Defaults to False.
             metrics (dict): A dictionary containing the metrics data which needs to be populated
-
         """
         cs = container_stats
-        cpu_percent = float('nan')
+        online_cpus = None
+        cpu_percent = None
+        container_id = metrics.get('id') or '?'
+        container_name = (metrics.get('name') or '?').lstrip('/')
+        precpu_stats = cs.get('precpu_stats')
+        container_msg = f'for container {container_id[:12]} ({container_name})'
 
         try:
             online_cpus_alt = len(cs["cpu_stats"]["cpu_usage"].get("percpu_usage", []))
             online_cpus = cs["cpu_stats"].get('online_cpus', online_cpus_alt)
 
-            cpu_delta = \
-                float(cs["cpu_stats"]["cpu_usage"]["total_usage"]) - \
-                float(cs["precpu_stats"]["cpu_usage"]["total_usage"])
-            system_delta = \
-                float(cs["cpu_stats"]["system_cpu_usage"]) - \
-                float(cs["precpu_stats"]["system_cpu_usage"])
+            if precpu_stats:
+                cpu_delta = \
+                    float(cs["cpu_stats"]["cpu_usage"]["total_usage"]) - \
+                    float(precpu_stats["cpu_usage"]["total_usage"])
+                system_delta = \
+                    float(cs["cpu_stats"]["system_cpu_usage"]) - \
+                    float(precpu_stats["system_cpu_usage"])
 
-            if system_delta > 0.0:
-                cpu_percent = (cpu_delta / system_delta) * 100.0
+                if cpu_delta >= 0.0 and system_delta > 0.0:
+                    cpu_percent = (cpu_delta / system_delta) * 100.0
+                else:
+                    logger.debug(f'Invalid CPU usage {container_msg}: '
+                                 f'({cpu_delta} / {system_delta}) * 100\n'
+                                 f'cpu_stats: {cs["cpu_stats"]}\n'
+                                 f'precpu_stats: {precpu_stats}')
+            else:
+                logger.debug(f'CPU usage not yet available {container_msg}')
         except (IndexError, KeyError, ValueError, ZeroDivisionError) as e:
-            logger.warning('Failed to get CPU usage for container '
-                           f'{cs.get("id", "?")[:12]} ({cs.get("name")}): {e}')
-            return
+            logger.warning(f'Failed to get CPU usage for container {container_msg}: {e}')
 
         if old_version:
-            metrics['cpu-percent'] = f'{round(cpu_percent):.2f}'
+            if cpu_percent is not None:
+                metrics['cpu-percent'] = f'{round(cpu_percent):.2f}'
         else:
-            metrics['cpu-usage'] = cpu_percent
-            metrics['cpu-capacity'] = online_cpus
+            if cpu_percent is not None:
+                metrics['cpu-usage'] = cpu_percent
+            if online_cpus is not None:
+                metrics['cpu-capacity'] = online_cpus
 
     @staticmethod
     def collect_container_metrics_mem(cstats: dict, metrics: dict, old_version=False):
@@ -778,6 +806,9 @@ class DockerClient(COEClient):
                 if tries >= max_tries:
                     raise
 
+    def _get_container_stats(self, container):
+        return container.stats(stream=False, one_shot=self.container_stats_one_shot)
+
     def get_containers_stats(self):
         """
         Retrieves the statistics of all containers.
@@ -793,10 +824,16 @@ class DockerClient(COEClient):
         containers_stats = []
         for container in self.list_containers():
             try:
-                containers_stats.append((container, container.stats(stream=False)))
+                containers_stats.append((container, self._get_container_stats(container)))
             except Exception as e:
-                logger.warning('Failed to get stats for container '
-                               f'{container.short_id} ({container.name}): {e}')
+                if isinstance(e, docker.errors.InvalidVersion) and 'one_shot' in str(e):
+                    logger.warning('Docker API version older than 1.41 (Docker Engine version older than 2.10). '
+                                   'Container stats collection will be less efficient.')
+                    self.container_stats_one_shot = None
+                    containers_stats.append((container, self._get_container_stats(container)))
+                else:
+                    logger.warning('Failed to get stats for container '
+                                   f'{container.short_id} ({container.name}): {e}')
         return containers_stats
 
     def collect_container_metrics(self, old_version=False) -> List[Dict]:
@@ -820,6 +857,7 @@ class DockerClient(COEClient):
 
         """
         containers_metrics = []
+        container_stats_cpu_prev = {}
 
         for container, stats in self.get_containers_stats():
             container_metric = {
@@ -842,7 +880,9 @@ class DockerClient(COEClient):
                 container_metric['cpu-limit'] = (nano_cpus / 1000000000) or None
 
             # CPU
+            stats['precpu_stats'] = self.container_stats_cpu_prev.get(container.id)
             self.collect_container_metrics_cpu(stats, container_metric, old_version)
+            container_stats_cpu_prev[container.id] = stats.get('cpu_stats')
             # RAM
             self.collect_container_metrics_mem(stats, container_metric, old_version)
             # NET
@@ -851,6 +891,8 @@ class DockerClient(COEClient):
             self.collect_container_metrics_block(stats, container_metric, old_version)
 
             containers_metrics.append(container_metric)
+
+        self.container_stats_cpu_prev = container_stats_cpu_prev
 
         return containers_metrics
 

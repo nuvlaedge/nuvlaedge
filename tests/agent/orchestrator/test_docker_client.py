@@ -87,6 +87,16 @@ class COEClientDockerTestCase(unittest.TestCase):
         containers = list_raw_resources('containers')
         self.assertEqual(containers[0]['Name'], 'container')
 
+        # test service "status" not supported on api < 1.41
+        ex = docker.errors.InvalidVersion('status is not supported in API version < 1.41')
+        api_mock.services.side_effect = [ex, [{'ID': '1'}]]
+        self.assertTrue(self.obj.raw_resources_service_status)
+
+        services = list_raw_resources('services')
+        self.assertIsNone(self.obj.raw_resources_service_status)
+        self.assertEqual(len(services), 1)
+        api_mock.services.assert_called_with(status=None)
+
     def test_get_node_info(self):
         self.assertIn('ID', self.obj.node_info,
                       'Unable to retrieve Docker info')
@@ -568,7 +578,19 @@ class COEClientDockerTestCase(unittest.TestCase):
             },
         }
 
+        first_cpu_stat = {'cpu_stats': cpu_stat['cpu_stats']}
+
         metrics = {}
+
+        self.obj.collect_container_metrics_cpu(first_cpu_stat, metrics)
+        self.assertEqual(metrics['cpu-capacity'], 2)
+        self.assertNotIn('cpu-usage', metrics)
+        metrics.clear()
+
+        self.obj.collect_container_metrics_cpu(first_cpu_stat, metrics, True)
+        self.assertNotIn('cpu-percent', metrics)
+        metrics.clear()
+
         with self.assertNoLogs(level='WARNING') as log:
             self.obj.collect_container_metrics_cpu(cpu_stat, metrics, True)
             self.assertEqual(metrics.get('cpu-percent'), '10.00',
@@ -581,11 +603,16 @@ class COEClientDockerTestCase(unittest.TestCase):
             self.assertEqual(metrics['cpu-capacity'], 2,
                              "Expecting a CPU capacity of 2, but got something else instead")
 
-        # if online_cpus is not reported, then we get 'nan' usage
         cpu_stat['cpu_stats'].pop('online_cpus')
         metrics.clear()
         self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
         self.assertEqual(metrics['cpu-capacity'], 0, "Expecting zero CPU capacity, but got something else instead")
+
+        # negative cpu usage
+        metrics.clear()
+        cpu_stat['cpu_stats']['cpu_usage']['total_usage'] = 1
+        self.obj.collect_container_metrics_cpu(cpu_stat, metrics)
+        self.assertNotIn('cpu-usage', metrics)
 
         # if a mandatory attribute does not exist, then we get 'nan' again, but with an error
         cpu_stat.pop('cpu_stats')
@@ -705,12 +732,29 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(err, [],
                          'There should be no errors reported when blk stats are not given by Docker')
 
+    @mock.patch('tests.agent.utils.fake.MockContainer.stats')
+    @mock.patch('docker.models.containers.ContainerCollection.list')
+    def test_get_containers_stats(self, mock_containers_list, mock_container_stats):
+        fake_container = fake.MockContainer()
+        mock_containers_list.return_value = [fake_container]
+
+        self.obj.container_stats_one_shot = True
+        ex = docker.errors.InvalidVersion('one_shot is not supported for API version < 1.41')
+        mock_container_stats.side_effect = [ex, iter([])]
+        self.assertEqual(1, len(self.obj.get_containers_stats()))
+        self.assertIsNone(self.obj.container_stats_one_shot)
+
+        self.obj.container_stats_one_shot = True
+        ex = docker.errors.InvalidArgument('decode is only available in conjunction with stream=True')
+        mock_container_stats.side_effect = ex
+        self.assertEqual(0, len(self.obj.get_containers_stats()))
+        self.assertTrue(self.obj.container_stats_one_shot)
+
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_block')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_net')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_mem')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.collect_container_metrics_cpu')
-    @mock.patch(
-        'tests.agent.utils.fake.MockContainer.stats')  #@mock.patch('docker.api.container.ContainerApiMixin.stats')
+    @mock.patch('tests.agent.utils.fake.MockContainer.stats')
     @mock.patch('docker.models.containers.ContainerCollection.list')
     def test_collect_container_metrics(self, mock_containers_list, mock_container_stats, mock_get_cpu,
                                        mock_get_mem, mock_get_net, mock_get_block):
@@ -1157,8 +1201,10 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_all_nuvlaedge_components(), ['fake-container'],
                          'Failed to get all NuvlaEdge containers')
 
+    @mock.patch.dict(os.environ, {'NUVLAEDGE_COMPUTE_API_ENABLE': '1'})
     @mock.patch('docker.models.containers.ContainerCollection.get')
     def test_find_compute_api_external_port(self, mock_container_get: MagicMock):
+
         # Container not found
         mock_container_get.side_effect = docker.errors.NotFound('')
         with self.assertLogs(logger=logger, level='DEBUG'):

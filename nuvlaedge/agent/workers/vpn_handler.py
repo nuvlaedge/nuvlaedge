@@ -443,19 +443,20 @@ class VPNHandler:
         # So we need to move it to its corresponding field, then the CA will be automatically
         # replaced
         self.vpn_config.vpn_intermediate_ca_is = self.vpn_server.vpn_intermediate_ca
-        logger.debug(f"VPN Configured with VPN Server data \n"
-                     f" {self.vpn_config.model_dump_json(indent=4,
-                                                         exclude_none=True,
-                                                         exclude={"vpn_shared_key", "nuvlaedge_vpn_key"})}")
+        dump_vpn_config = self.vpn_config.model_dump_json(indent=4,
+                                                          exclude_none=True,
+                                                          exclude={"vpn_shared_key", "nuvlaedge_vpn_key"})
+        logger.debug(f"VPN Configured with VPN Server data \n{dump_vpn_config}")
 
         self.vpn_server = self.nuvla_client.vpn_server.model_copy()
 
         # Update Credentials data
         self.vpn_config.update(self.vpn_credential)
-        logger.debug(f"VPN Configured with VPN credential data \n"
-                     f" {self.vpn_config.model_dump_json(indent=4, 
-                                                         exclude_none=True,
-                                                         exclude={"vpn_shared_key", "nuvlaedge_vpn_key"})}")
+
+        dump_vpn_config = self.vpn_config.model_dump_json(indent=4,
+                                                          exclude_none=True,
+                                                          exclude={"vpn_shared_key", "nuvlaedge_vpn_key"})
+        logger.debug(f"VPN Configured with VPN credential data \n{dump_vpn_config}")
 
         # VPN interface name can be renamed from the agent settings, assign it here
         self.vpn_config.vpn_interface_name = self.interface_name
@@ -492,16 +493,16 @@ class VPNHandler:
 
         if not self.nuvla_client.nuvlaedge.vpn_server_id:
             NuvlaEdgeStatusHandler.stopped(self.status_channel, _status_module_name)
-            logger.info("VPN is disabled from Nuvla, Wait for next iteration")
+            logger.debug("VPN is disabled from Nuvla, Wait for next iteration")
+            return
+
+        if self.vpn_enable_flag == 0:
+            logger.debug("VPN is disabled from env. settings, Wait for next iteration")
+            NuvlaEdgeStatusHandler.stopped(self.status_channel, _status_module_name)
             return
 
         vpn_client_exists, _ = self._check_vpn_client_state()
         if not vpn_client_exists:
-            if self.vpn_enable_flag == 0:
-                logger.info("VPN is disabled from env. settings, Wait for next iteration")
-                NuvlaEdgeStatusHandler.stopped(self.status_channel, _status_module_name)
-                return
-
             NuvlaEdgeStatusHandler.failing(self.status_channel, _status_module_name,
                                            message="VPN Client container doesn't exist.")
             logger.warning("VPN Client container doesn't exist, cannot start VPN client. Waiting for next iteration...")
@@ -510,7 +511,7 @@ class VPNHandler:
         NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
 
         if not self._vpn_needs_commission():
-            logger.info("VPN credentials aligned. No need for commissioning")
+            logger.debug("VPN credentials aligned. No need for commissioning")
             return
 
         logger.info("Starting VPN commissioning and configuration...")
@@ -524,8 +525,8 @@ class VPNHandler:
 
         # Wait for VPN credential to show up in Nuvla (Timeout needs to be commissioner_period + sometime
         if not self._wait_credential_creation(timeout=60 + 15):
-            logger.info("VPN credential wasn't created in time. Cannot start the VPN client. Will try in the next"
-                        "iteration")
+            logger.warning("VPN credential wasn't created in time. Cannot start the VPN client. "
+                           "Will try in the next iteration")
             # VPN credential wasn't created in time. Do not continue
             raise VPNCredentialCreationTimeOut("VPN credential wasn't created in time. Cannot start the VPN client")
 

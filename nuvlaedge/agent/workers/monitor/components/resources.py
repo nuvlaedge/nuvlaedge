@@ -32,10 +32,13 @@ class ResourcesMonitor(Monitor):
         of the disk
 
         """
+        disk_usage = psutil.disk_usage('/')
+        capacity = disk_usage[0]
+        used = disk_usage[1]
         return [DiskDataStructure.model_validate({
             'device': 'overlay',
-            'capacity': int(psutil.disk_usage('/')[0] / 1024 / 1024 / 1024),
-            'used': int(psutil.disk_usage('/')[1] / 1024 / 1024 / 1024)
+            'capacity': int(capacity),
+            'used': int(used)
         })]
 
     @staticmethod
@@ -49,9 +52,8 @@ class ResourcesMonitor(Monitor):
             disk data report
         """
         try:
-            capacity: int = round(int(report['size']) / 1024 / 1024 / 1024)
-            fused = report['fsused'] if report.get('fsused') else 0
-            fused = round(int(fused) / 1024 / 1024 / 1024)
+            capacity: int = int(report['size'])
+            fused = int(report['fsused']) if report.get('fsused') else 0
             name: str = report.get('name')
 
             if not capacity or not isinstance(fused, int) or not name:

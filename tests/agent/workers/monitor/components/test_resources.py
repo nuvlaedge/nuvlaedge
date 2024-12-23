@@ -71,8 +71,8 @@ class TestResourcesMonitor(unittest.TestCase):
         # from the above devices
         expected = {
                 'device': 'mmcblk0p7',
-                'capacity': round(int(29239017472) / 1024 / 1024 / 1024),
-                'used': round(25306009600 / 1024 / 1024 / 1024)
+                'capacity': 29239017472,
+                'used': 25306009600
         }
 
         self.assertEqual(test_monitor.get_disks_usage()[0].

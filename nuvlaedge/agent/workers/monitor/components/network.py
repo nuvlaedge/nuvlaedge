@@ -135,7 +135,7 @@ class NetworkMonitor(Monitor):
         return is_loop or is_already_registered or not_complete
 
     @staticmethod
-    def _parse_ip_output(ip_str: str) -> dict | None:
+    def _parse_ip_output(ip_str: str) -> dict | list | None:
         """
         Parses the output of the IP command and returns a dictionary
         with the information of the interfaces and their corresponding
@@ -296,7 +296,7 @@ class NetworkMonitor(Monitor):
             return gw[-1] if gw else ''
         return ""
 
-    def _set_local_data_from_address(self, addresses: dict):
+    def _set_local_data_from_address(self, addresses: list):
         self.logger.debug(f"Local IP address data: {json.dumps(addresses, indent=4)}")
 
         self.data.default_gw = self._get_default_gw_locally()
@@ -337,7 +337,9 @@ class NetworkMonitor(Monitor):
 
             interfaces[iface_name] = iface
 
-    def _set_local_data_from_route(self, routes: dict) -> None:
+        self.data.interfaces = interfaces
+
+    def _set_local_data_from_route(self, routes: list) -> None:
         """
         Runs the auxiliary container that reads the host network interfaces and parses the
         output return

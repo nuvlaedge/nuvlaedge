@@ -26,6 +26,9 @@ class TestNetworkMonitor(unittest.TestCase):
     file_operations_read: str = "nuvlaedge.agent.workers.monitor.components.network.read_file"
     _path_json: str = 'json.loads'
 
+    def setUp(self):
+        self.network_monitor = monitor.NetworkMonitor("test_monitor", Mock(), Mock())
+
     def test_constructor(self):
         it_telemetry = Mock()
         it_telemetry.edge_status.iface_data = None
@@ -96,122 +99,151 @@ class TestNetworkMonitor(unittest.TestCase):
         test_attribute.pop("prefsrc")
         self.assertIsNone(test_ip_monitor.parse_host_ip_json(test_attribute))
 
-    def test_gather_host_route(self):
-        m = Mock()
-        m.return_value = ''
 
-        it_1 = Mock()
-        it_1.coe_client.container_run_command = m
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    def test_set_local_data_from_route_empty_routes(self, mock_read_traffic_data):
+        mock_read_traffic_data.return_value = []
+        self.network_monitor._set_local_data_from_route([])
+        self.assertEqual(self.network_monitor.data.interfaces, {})
 
-        test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", it_1, True)
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    def test_set_local_data_from_route_default_gw(self, mock_read_traffic_data):
+        mock_read_traffic_data.return_value = []
+        routes = [{'dst': 'default', 'dev': 'eth0', 'prefsrc': '192.168.1.1'}]
+        self.network_monitor._set_local_data_from_route(routes)
+        self.assertEqual(self.network_monitor.data.default_gw, 'eth0')
 
-        self.assertEqual('', test_ip_monitor._gather_host_ip_route())
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    def test_set_local_data_from_route_skip_route(self, mock_read_traffic_data):
+        mock_read_traffic_data.return_value = []
+        routes = [{'dst': '127.0.0.1', 'dev': 'lo', 'prefsrc': '127.0.0.1'}]
+        self.network_monitor._set_local_data_from_route(routes)
+        self.assertEqual(self.network_monitor.data.interfaces, {})
 
-        # network mode host
-        with patch('nuvlaedge.agent.common.util.execute_cmd') as patch_exec_cmd:
-            patch_exec_cmd.return_value = {'stdout': 'output',
-                                           'stderr': 'error',
-                                           'returncode': 0}
-            with patch.dict(os.environ, {'NUVLAEDGE_AGENT_NET_MODE': 'host'}):
-                self.assertEqual('output', test_ip_monitor._gather_host_ip_route())
-                patch_exec_cmd.assert_called_once()
-                patch_exec_cmd.return_value['returncode'] = 1
-                with self.assertLogs(logger=test_ip_monitor.__class__.__module__, level="ERROR") as log:
-                    self.assertEqual('', test_ip_monitor._gather_host_ip_route())
-                    self.assertTrue(any([('error' in i) for i in log.output]))
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    def test_set_local_data_from_route_add_interface(self, mock_read_traffic_data):
+        mock_read_traffic_data.return_value = []
+        routes = [{'dst': '192.168.1.0/24', 'dev': 'eth0', 'prefsrc': '192.168.1.2'}]
+        self.network_monitor._set_local_data_from_route(routes)
+        self.assertIn('eth0', self.network_monitor.data.interfaces)
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].iface_name, 'eth0')
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].ips[0].address, '192.168.1.2')
 
-    def test_set_local_data(self):
-        # Test no available route IP's
-        runtime_mock = Mock()
-        cont_mock = Mock()
-        cont_mock.labels = {'com.docker.compose.project': 'nuvlaedge_test'}
-        runtime_mock.client.containers.list.return_value = [cont_mock]
-        tel_mock = Mock()
-        tel_mock.coe_client = runtime_mock
-        test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", tel_mock, Mock())
-        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
-                   '_gather_host_ip_route') as test_gather:
-            test_gather.return_value = None
-            test_ip_monitor.set_local_data()
-            self.assertFalse(test_ip_monitor.data.ips.local)
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    def test_set_local_data_from_route_update_traffic(self, mock_read_traffic_data):
+        mock_read_traffic_data.return_value = [
+            {"interface": "eth0", "bytes-transmitted": 1000, "bytes-received": 2000}
+        ]
+        routes = [{'dst': '192.168.1.0/24', 'dev': 'eth0', 'prefsrc': '192.168.1.2'}]
+        self.network_monitor._set_local_data_from_route(routes)
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].tx_bytes, 1000)
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].rx_bytes, 2000)
 
-        # Test Skip routes
-        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
-                   'is_skip_route') as test_skip, \
-                patch(self._path_json) as json_dict:
-            json_dict.return_value = [{'Test': None}]
-            test_skip.return_value = True
-            test_ip_monitor.set_local_data()
-            self.assertFalse(test_ip_monitor.data.ips.local)
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor._get_default_gw_locally')
+    def test_set_local_data_from_address_no_addresses(self, mock_get_default_gw, mock_read_traffic_data):
+        mock_get_default_gw.return_value = 'eth0'
+        mock_read_traffic_data.return_value = []
+        self.network_monitor._set_local_data_from_address([])
+        self.assertEqual(self.network_monitor.data.interfaces, {})
 
-        status = Mock()
-        status.iface_data = None
-        it_1 = Mock()
-        it_1.coe_client.client.containers.list.return_value = []
-        test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", it_1, status)
-        mock_gather = Mock()
-        mock_gather = b''
-        test_ip_monitor.coe_client.container_run_command.return_value = mock_gather
-        test_ip_monitor.set_local_data()
-        self.assertFalse(test_ip_monitor.data.ips.local)
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor._get_default_gw_locally')
+    def test_set_local_data_from_address_with_addresses(self, mock_get_default_gw, mock_read_traffic_data):
+        mock_get_default_gw.return_value = 'eth0'
+        mock_read_traffic_data.return_value = [
+            {"interface": "eth0", "bytes-transmitted": 1000, "bytes-received": 2000}
+        ]
+        addresses = [
+            {
+                "ifname": "eth0",
+                "addr_info": [
+                    {"local": "192.168.1.2", "family": "inet"},
+                    {"local": "fe80::1", "family": "inet6"}
+                ]
+            }
+        ]
+        self.network_monitor._set_local_data_from_address(addresses)
+        self.assertIn('eth0', self.network_monitor.data.interfaces)
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].iface_name, 'eth0')
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].ips[0].address, '192.168.1.2')
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].ips[1].address, 'fe80::1')
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].tx_bytes, 1000)
+        self.assertEqual(self.network_monitor.data.interfaces['eth0'].rx_bytes, 2000)
 
-        # Test readable route
-        it_1 = Mock()
-        it_1.coe_client.client.containers.list.return_value = []
-        test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", it_1, True)
-        test_ip_monitor.is_skip_route = Mock(return_value=True)
-        test_ip_monitor._gather_host_ip_route = Mock(return_value='{}')
-        test_ip_monitor.set_local_data()
-        self.assertEqual(test_ip_monitor.data.ips.local, '')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.read_traffic_data')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor._get_default_gw_locally')
+    def test_set_local_data_from_address_no_ip_address(self, mock_get_default_gw, mock_read_traffic_data):
+        mock_get_default_gw.return_value = 'eth0'
+        mock_read_traffic_data.return_value = []
+        addresses = [
+            {
+                "ifname": "eth0",
+                "addr_info": []
+            }
+        ]
+        self.network_monitor._set_local_data_from_address(addresses)
+        self.assertNotIn('eth0', self.network_monitor.data.interfaces)
 
-        with patch(self._path_json) as json_dict:
-            test_ip_monitor: monitor.NetworkMonitor = \
-                monitor.NetworkMonitor("", Mock(), True)
-            test_ip_monitor.is_skip_route = Mock(return_value=False)
-            test_ip_monitor._gather_host_ip_route = Mock(return_value='{}')
-            it_address: str = generate_random_ip_address()
-            json_dict.return_value = [{'dst': 'default',
-                                       'dev': 'eth0',
-                                       'prefsrc': it_address}]
-            test_ip_monitor.set_local_data()
-            self.assertEqual(test_ip_monitor.data.ips.local, it_address)
+    @patch('nuvlaedge.agent.workers.monitor.components.network.util.execute_cmd')
+    def test_get_default_gw_locally_success(self, mock_execute_cmd):
+        mock_execute_cmd.return_value = {"stdout": b"default via 192.168.1.1 dev eth0"}
+        result = self.network_monitor._get_default_gw_locally()
+        self.assertEqual(result, "eth0")
 
-        # Test traffic readings
-        with patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor.'
-                   'read_traffic_data') as test_traffic, \
-                patch(self._path_json) as json_dict:
-            json_dict.return_value = None
-            test_traffic.return_value = [{'a': 'a'}]
-            test_ip_monitor: monitor.NetworkMonitor = \
-                monitor.NetworkMonitor("", Mock(), True)
-            test_ip_monitor.set_local_data()
-            self.assertFalse(test_ip_monitor.data.ips.local)
+    @patch('nuvlaedge.agent.workers.monitor.components.network.util.execute_cmd')
+    def test_get_default_gw_locally_no_output(self, mock_execute_cmd):
+        mock_execute_cmd.return_value = {"stdout": b""}
+        result = self.network_monitor._get_default_gw_locally()
+        self.assertEqual(result, "")
 
-        # Test multi routes&ips per interface
-        with patch(self._path_json) as json_dict:
-            test_ip_monitor: monitor.NetworkMonitor = \
-                monitor.NetworkMonitor("", Mock(), True)
-            test_ip_monitor._gather_host_ip_route = Mock(return_value='{}')
-            addr1: str = generate_random_ip_address()
-            addr2: str = generate_random_ip_address()
-            json_dict.return_value = [{'dst': 'default',
-                                       'dev': 'eth0',
-                                       'prefsrc': addr1},
-                                      {'dst': 'default',
-                                       'dev': 'eth0',
-                                       'prefsrc': addr2},
-                                      {'dst': 'default',
-                                       'dev': 'eth0',
-                                       'prefsrc': addr1}]
-            test_ip_monitor.set_local_data()
-            # TODO: Fix this test which fail from time to time with:
-            # AssertionError: Lists differ: [IP(address='40.40.40.40')] != [IP(address='40.40.40.40'), IP(address='40.40.40.40')]
-            self.assertEqual(test_ip_monitor.data.interfaces['eth0'].ips,
-                             [IP(address=addr1), IP(address=addr2)])
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor._set_local_data_from_address')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.util.execute_cmd')
+    def test_set_local_data_host_mode(self, mock_execute_cmd, mock_set_local_data_from_address):
+        os.environ['NUVLAEDGE_AGENT_NET_MODE'] = 'host'
+        mock_execute_cmd.return_value = {"returncode": 0, "stdout": b'[]'}
+        mock_set_local_data_from_address.return_value = None
+
+        self.network_monitor.set_local_data()
+        mock_execute_cmd.assert_called_once_with(['ip', '-j', 'address'], method_flag=False)
+        mock_set_local_data_from_address.assert_called_once_with([])
+
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor._parse_ip_output')
+    @patch('nuvlaedge.agent.workers.monitor.components.network.NetworkMonitor._set_local_data_from_route')
+    def test_set_local_data_container_mode(self, mock_set_local_data_from_route, mock_parse_ip_output):
+        os.environ['NUVLAEDGE_AGENT_NET_MODE'] = ''
+
+        # Create a mock for COEClient
+        mock_coe_client = Mock()
+        mock_coe_client.container_run_command.return_value = '[]'
+        mock_parse_ip_output.return_value = []  # Mock the parsed output as an empty list
+        mock_set_local_data_from_route.return_value = None
+
+        # Replace the coe_client object with the mock
+        self.network_monitor.coe_client = mock_coe_client
+
+        self.network_monitor.set_local_data()
+
+        # Perform assertions on the mock
+        mock_coe_client.container_remove.assert_called_once_with(self.network_monitor.iproute_container_name)
+        mock_coe_client.container_run_command.assert_called_once_with(
+            image=self.network_monitor._ip_route_image,
+            name=self.network_monitor.iproute_container_name,
+            args='-j route',
+            entrypoint='ip',
+            network='host'
+        )
+        mock_set_local_data_from_route.assert_called_once_with([])
+
+    @patch('nuvlaedge.agent.workers.monitor.components.network.util.execute_cmd')
+    def test_set_local_data_host_mode_failure(self, mock_execute_cmd):
+        os.environ['NUVLAEDGE_AGENT_NET_MODE'] = 'host'
+        mock_execute_cmd.return_value = {"returncode": 1, "stderr": b'error'}
+
+        result = self.network_monitor.set_local_data()
+        self.assertEqual(result, '')
+        mock_execute_cmd.assert_called_once_with(['ip', '-j', 'address'], method_flag=False)
+
 
     def test_is_skip_route(self):
         test_ip_monitor: monitor.NetworkMonitor = \
@@ -283,7 +315,6 @@ class TestNetworkMonitor(unittest.TestCase):
 
     @patch(atomic_write)
     def test_read_traffic_data(self, atomic_write_mock):
-
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", Mock(), True)
         with patch('os.listdir') as mock_ls:
@@ -308,7 +339,7 @@ class TestNetworkMonitor(unittest.TestCase):
                 mock_ls.return_value = ['iface1', 'iface2']
                 # try to open but if it fails, get []
                 mock_read.side_effect = [None, None,
-                                             None, None, MagicMock()]
+                                         None, None, MagicMock()]
                 self.assertEqual(
                     test_ip_monitor.read_traffic_data(),
                     [],

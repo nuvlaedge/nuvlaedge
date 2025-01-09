@@ -54,6 +54,7 @@ jobs:
       - name: Build library
         id: build
         run: |
+          poetry self add poetry-plugin-export
           poetry build --no-interaction --format=wheel
           poetry export -f requirements.txt --output requirements.txt --without-hashes --without-urls --only main
           poetry export -f requirements.txt --output requirements.agent.txt --without-hashes --without-urls --only agent

@@ -172,7 +172,7 @@ class Security:
         Called when the external databased is updated. It updates a local variable and
         persistent file with the update date of the external db
         """
-        self.previous_external_db_update = datetime.utcnow()
+        self.previous_external_db_update = datetime.now(UTC)
         if not os.path.exists(cte.SECURITY_FOLDER):
             os.mkdir(cte.SECURITY_FOLDER)
         write_file(content=self.previous_external_db_update.strftime(cte.DATE_FORMAT),
@@ -199,7 +199,7 @@ class Security:
         """
         logger.info('Retrieving previously updated db date')
         self.gather_external_db_file_names()
-        it_date = datetime(1970, 1, 1)
+        it_date = datetime(1970, 1, 1, tzinfo=UTC)
         if not self.vulscan_dbs:
             return it_date
         date_read = read_file(cte.EXTERNAL_DB_UPDATE_FILE, decode_json=False,
@@ -207,6 +207,7 @@ class Security:
         if date_read is None:
             return it_date
         it_date = datetime.strptime(date_read, cte.DATE_FORMAT)
+        it_date.replace(tzinfo=UTC)
         logger.info(f'Last update on external db: {it_date}')
         return it_date
 

@@ -62,6 +62,7 @@ jobs:
       - name: Build library
         id: build
         run: |
+          poetry self add poetry-plugin-export
           poetry build --no-interaction
           mkdir req/
           poetry export -f requirements.txt --output req/requirements.txt --without-hashes --without-urls --only main

@@ -193,6 +193,7 @@ class Agent:
         logger.info("Registering Telemetry")
         coe_resources_supported = self._nuvla_support_telemetry_field('coe-resources')
         new_container_stats_supported = self._nuvla_support_telemetry_field('resources.container-stats.item.cpu-usage')
+        ip_type_supported = self._nuvla_support_telemetry_field('network.ips.')
         self.worker_manager.add_worker(
             period=self.telemetry_period,
             worker_type=Telemetry,
@@ -202,6 +203,7 @@ class Agent:
                               'nuvlaedge_uuid': self._nuvla_client.nuvlaedge_uuid,
                               'excluded_monitors': self.settings.nuvlaedge_excluded_monitors,
                               'coe_resources_supported': coe_resources_supported,
+                              'ip_type_supported': ip_type_supported,
                               'new_container_stats_supported': new_container_stats_supported,
                               }),
             actions=['run'],

@@ -119,7 +119,10 @@ RUN pip install -r /tmp/requirements.gpu.txt
 # ------------------------------------------------------------------------
 # USB Peripheral builder
 # ------------------------------------------------------------------------
-FROM ${GO_BASE_IMAGE} AS golang-builder
+FROM --platform=$BUILDPLATFORM ${GO_BASE_IMAGE} AS golang-builder
+
+ARG TARGETOS 
+ARG TARGETARCH
 
 # Build Golang usb peripehral
 RUN apk update
@@ -129,7 +132,7 @@ COPY --link nuvlaedge/peripherals/usb/ /opt/usb/
 WORKDIR /opt/usb/
 
 RUN go mod tidy && \
-    go build && \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build && \
     upx --lzma /opt/usb/nuvlaedge
 
 

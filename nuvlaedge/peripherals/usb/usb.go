@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"runtime/debug"
@@ -97,16 +96,14 @@ func main() {
 
 	// Only one context should be needed for an application.  It should always be closed.
 	ctx := getUsbContext()
-	defer func(ctx *gousb.Context) {
-		ctx.Close()
-	}(ctx)
+	defer ctx.Close()
 
 	var available string = "True"
 	var devInterface string = "USB"
 	var videoFilesBasedir string = "/dev/"
 	checkFileSystem()
 
-	for true {
+	for {
 		// Default name for USB
 		name := "UNNAMED USB Device"
 		var message = map[string]interface{}{}
@@ -180,7 +177,7 @@ func main() {
 				peripheral["serial-number"] = serialNumber
 			}
 
-			devFiles, vfErr := ioutil.ReadDir(videoFilesBasedir)
+			devFiles, vfErr := os.ReadDir(videoFilesBasedir)
 			if vfErr != nil {
 				log.Errorf("Unable to read files under %s. Reason: %s", videoFilesBasedir, vfErr.Error())
 				return false

@@ -6,3 +6,4 @@ dist/
 test-report.xml
 coverage.xml
 .env
+

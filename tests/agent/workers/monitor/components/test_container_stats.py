@@ -5,22 +5,20 @@ import docker
 import docker.errors
 import requests
 import tests.agent.utils.fake as fake
+from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
 
 from nuvlaedge.agent.workers.monitor.components.container_stats import ContainerStatsMonitor
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
+from nuvlaedge.agent.workers.monitor.data.orchestrator_data import DeploymentData, ClusterStatusData, ContainerStatsData
 
 
 class TestContainerStatsMonitor(unittest.TestCase):
 
     @staticmethod
     def get_base_monitor() -> ContainerStatsMonitor:
-        mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
         return ContainerStatsMonitor('test_monitor', Mock(), True)
 
     def test_refresh_container_info(self):
         mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
         mock_telemetry.new_container_stats_supported = False
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
 
@@ -28,23 +26,6 @@ class TestContainerStatsMonitor(unittest.TestCase):
         # Container should stay empty when no containers available
         test_monitor.refresh_container_info()
         self.assertFalse(test_monitor.data.containers)
-
-    @patch('time.sleep', side_effect=InterruptedError)
-    def test_run(self, mock_sleep):
-        mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
-        mock_telemetry.new_container_stats_supported = False
-        test_monitor: ContainerStatsMonitor = self.get_base_monitor()
-        with patch('nuvlaedge.agent.workers.monitor.components.container_stats.'
-                   'ContainerStatsMonitor.refresh_container_info') as mock_refresh, \
-                patch('nuvlaedge.agent.workers.monitor.components.container_stats.'
-                      'ContainerStatsMonitor.update_data') as mock_update:
-
-            with self.assertRaises(InterruptedError):
-                test_monitor.run()
-                self.assertFalse(test_monitor.data.containers)
-                mock_update.assert_called_once()
-                mock_refresh.assert_called_once()
 
     def test_get_cluster_manager_attrs(self):
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
@@ -197,31 +178,35 @@ class TestContainerStatsMonitor(unittest.TestCase):
         test_monitor.update_data()
         self.assertEqual(test_monitor.data.swarm_node_cert_expiry_date, "Expired")
 
-    def test_populate_nb_report(self):
-        nb_report: dict = {}
+    def test_populate_telemetry_payload(self):
         test_monitor: ContainerStatsMonitor = self.get_base_monitor()
-        test_monitor.data = Mock()
-        test_monitor.data.containers = {}
-        test_monitor.data.cluster_data = None
-        test_monitor.data.swarm_node_cert_expiry_date = None
-        test_monitor.populate_nb_report(nb_report)
-        self.assertIsNotNone(nb_report.get('resources', None))
 
-        test_monitor.data.cluster_data = Mock()
-        test_monitor.data.cluster_data.dict.return_value = {'some_Data': 1}
-        test_monitor.populate_nb_report(nb_report)
-        self.assertIn('some_Data', nb_report)
+        test_monitor.telemetry_data = TelemetryPayloadAttributes()
+        test_container_stats = ContainerStatsData(id="1", name="mock_container", image="image", status="running")
+        test_monitor.data.containers = {
+            "1": test_container_stats
+        }
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.resources['container-stats'][0]['id'], "1")
+        self.assertEqual(test_monitor.telemetry_data.resources['container-stats'][0]['name'], "mock_container")
 
-        container_data = Mock()
-        container_data.name = 'container_name'
-        test_monitor.data.containers = {'container': container_data}
-        test_monitor.populate_nb_report(nb_report)
+        test_monitor.data.docker_server_version = "Docker_Version"
+        test_monitor.data.kubelet_version = "Kubelet_Version"
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.docker_server_version, "Docker_Version")
+        self.assertEqual(test_monitor.telemetry_data.kubelet_version, "Kubelet_Version")
 
-        test_monitor: ContainerStatsMonitor = self.get_base_monitor()
-        test_monitor.data = Mock()
-        test_monitor.data.cluster_data = None
-        test_monitor.data.containers = {}
-        test_monitor.data.swarm_node_cert_expiry_date = "A"
-        test_monitor.data.dict.return_value = {'more_data': 2}
-        test_monitor.populate_nb_report(nb_report)
-        self.assertIn('more_data', nb_report)
+        test_monitor.data.cluster_data = ClusterStatusData(node_id="node_id", cluster_id="cluster_id", orchestrator="orchestrator")
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.node_id, "node_id")
+        self.assertEqual(test_monitor.telemetry_data.cluster_id, "cluster_id")
+        self.assertEqual(test_monitor.telemetry_data.orchestrator, "orchestrator")
+
+        test_monitor.data.swarm_node_cert_expiry_date = ""
+        test_monitor.populate_telemetry_payload()
+        self.assertIsNone(test_monitor.telemetry_data.swarm_node_cert_expiry_date)
+
+        mock_date = "2022-02-06T05:41:00.000Z"
+        test_monitor.data.swarm_node_cert_expiry_date = mock_date
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.swarm_node_cert_expiry_date, mock_date)

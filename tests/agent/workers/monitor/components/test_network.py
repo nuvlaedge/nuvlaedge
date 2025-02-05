@@ -6,11 +6,10 @@ from random import SystemRandom
 from typing import List, Dict, Any
 
 import requests
-from mock import Mock, mock_open, patch, MagicMock
+from mock import Mock, patch, MagicMock
 
 from nuvlaedge.agent.workers.monitor.components import network as monitor
 from nuvlaedge.agent.workers.monitor.data.network_data import NetworkInterface, NetworkingData, IP
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 def generate_random_ip_address():
@@ -25,14 +24,6 @@ atomic_write: str = 'nuvlaedge.common.file_operations.write_file'
 class TestNetworkMonitor(unittest.TestCase):
     file_operations_read: str = "nuvlaedge.agent.workers.monitor.components.network.read_file"
     _path_json: str = 'json.loads'
-
-    def test_constructor(self):
-        it_telemetry = Mock()
-        it_telemetry.edge_status.iface_data = None
-        monitor.NetworkMonitor('geo_test', it_telemetry, True)
-        self.assertIsInstance(
-            it_telemetry.edge_status.iface_data,
-            NetworkingData)
 
     # -------------------- Public data tests -------------------- #
     def test_set_public_data(self):
@@ -65,7 +56,7 @@ class TestNetworkMonitor(unittest.TestCase):
         with patch('requests.get') as get:
             get.side_effect = requests.Timeout
             test_ip_monitor: monitor.NetworkMonitor = \
-                monitor.NetworkMonitor("file", Mock(), EdgeStatus())
+                monitor.NetworkMonitor("file", Mock(), True)
             test_ip_monitor.set_public_data()
             self.assertFalse(test_ip_monitor.data.ips.public)
 
@@ -283,7 +274,6 @@ class TestNetworkMonitor(unittest.TestCase):
 
     @patch(atomic_write)
     def test_read_traffic_data(self, atomic_write_mock):
-
         test_ip_monitor: monitor.NetworkMonitor = \
             monitor.NetworkMonitor("", Mock(), True)
         with patch('os.listdir') as mock_ls:
@@ -308,7 +298,7 @@ class TestNetworkMonitor(unittest.TestCase):
                 mock_ls.return_value = ['iface1', 'iface2']
                 # try to open but if it fails, get []
                 mock_read.side_effect = [None, None,
-                                             None, None, MagicMock()]
+                                         None, None, MagicMock()]
                 self.assertEqual(
                     test_ip_monitor.read_traffic_data(),
                     [],
@@ -458,56 +448,65 @@ class TestNetworkMonitor(unittest.TestCase):
                                  'first_net_stats did not change after system counters '
                                  'reset, having previous stats')
 
-    def test_populate_nb_report(self):
-        runtime_mock = Mock()
-        status = Mock()
-        status.iface_data = None
+    def test_populate_telemetry_payload(self):
         test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", runtime_mock, status)
-        test_body: dict = {}
-        # No data- return none
-        test_ip_monitor.populate_nb_report(test_body)
-        self.assertNotIn('ip', test_body)
+            monitor.NetworkMonitor("", Mock(), True)
 
-        test_ip_monitor.data.ips.vpn = "VPN_IP"
-        self.assertEqual("VPN_IP", test_ip_monitor.populate_nb_report(test_body))
-        self.assertIn('ip', test_body)
-        self.assertIn('resources', test_body)
-        #
-        test_ip_monitor.data.ips.vpn = ''
-        test_ip_monitor.data.ips.public = "PUB"
-        self.assertEqual('PUB', test_ip_monitor.populate_nb_report(test_body))
+        mock_data = NetworkingData()
+        mock_data.default_gw = "mock_gw"
+        mock_data.ips.local = "mock_local"
+        mock_data.ips.public = "mock_public"
+        mock_data.ips.swarm = "mock_swarm"
+        mock_data.ips.vpn = "mock_vpn"
+        test_ip_monitor.data = mock_data
 
-        # Test local IP report
-        test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", runtime_mock, status)
-        test_body: dict = {}
-        it_name = 'test_1'
-        it_rand_ip = generate_random_ip_address()
+        test_ip_monitor.populate_telemetry_payload()
+        expected_ips = {
+            "public": "mock_public",
+            "swarm": "mock_swarm",
+            "vpn": "mock_vpn",
+            "local": "mock_local"
+        }
 
-        test_ip_monitor.data.interfaces = {}
-        self.assertIsNone(test_ip_monitor.populate_nb_report(test_body))
+        self.assertEqual(test_ip_monitor.telemetry_data.network['ips'], expected_ips)
+        self.assertEqual(test_ip_monitor.telemetry_data.network['default-gw'], "mock_gw")
+        self.assertEqual(test_ip_monitor.telemetry_data.network['interfaces'], [])
+        self.assertEqual(test_ip_monitor.telemetry_data.ip, "mock_vpn")
 
-        test_ip_monitor.data.interfaces = {
-            'test_1': NetworkInterface(iface_name=it_name,
-                                       default_gw=True,
-                                       ips=[IP(address=it_rand_ip)])}
-        test_ip_monitor.data.ips.local = it_rand_ip
-        self.assertEqual(it_rand_ip, test_ip_monitor.populate_nb_report(test_body))
-        self.assertEqual(test_body['ip'], it_rand_ip)
-        self.assertEqual(len(test_body['network']['interfaces']), 1)
-        self.assertEqual(len(test_body['network']['interfaces'][0]['ips']), 1)
-        self.assertEqual(test_body['network']['interfaces'][0]['interface'], it_name)
-        self.assertEqual(test_body['network']['interfaces'][0]['ips'][0]['address'], it_rand_ip)
+        mock_data.ips.vpn = ""
+        test_ip_monitor.populate_telemetry_payload()
+        self.assertEqual(test_ip_monitor.telemetry_data.ip, "mock_local")
 
-        test_ip_monitor.data.ips.local = ''
-        self.assertIsNone(test_ip_monitor.populate_nb_report(test_body))
+        mock_data.ips.local = ""
+        test_ip_monitor.populate_telemetry_payload()
+        self.assertEqual(test_ip_monitor.telemetry_data.ip, "mock_public")
 
-        # Test Swarm IP report
-        test_ip_monitor: monitor.NetworkMonitor = \
-            monitor.NetworkMonitor("", runtime_mock, status)
-        test_body: dict = {}
-        test_ip_monitor.populate_nb_report(test_body)
-        test_ip_monitor.data.ips.swarm = 'SWARM'
-        self.assertEqual('SWARM', test_ip_monitor.populate_nb_report(test_body))
-        self.assertEqual('SWARM', test_body['ip'])
+        mock_data.ips.public = ""
+        test_ip_monitor.populate_telemetry_payload()
+        self.assertEqual(test_ip_monitor.telemetry_data.ip, "mock_swarm")
+
+        sample_interface = NetworkInterface(iface_name="mock_interface",
+                                            ips=[IP(address="1.1.1.1")],
+                                            default_gw=True,
+                                            tx_bytes=1,
+                                            rx_bytes=2)
+        mock_data.interfaces = {"mock_interface": sample_interface}
+        test_ip_monitor.populate_telemetry_payload()
+        expected_interfaces = [
+            {
+                "interface": "mock_interface",
+                "ips": [{"address": "1.1.1.1"}]
+            }
+        ]
+        self.assertEqual(test_ip_monitor.telemetry_data.network['interfaces'], expected_interfaces)
+
+        expected_resources = {
+            "net-stats": [
+                {
+                    "interface": "mock_interface",
+                    "bytes-transmitted": 1,
+                    "bytes-received": 2
+                }
+            ]
+        }
+        self.assertEqual(test_ip_monitor.telemetry_data.resources, expected_resources)

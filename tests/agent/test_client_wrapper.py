@@ -51,6 +51,22 @@ class TestClientWrapper(TestCase):
         mock_nuvlaedge.vpn_server_id = None
         self.assertIsNone(self.test_client.vpn_server)
 
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.logger')
+    @patch('nuvlaedge.agent.nuvla.client_wrapper.NuvlaClientWrapper.nuvlaedge', new_callable=mock.PropertyMock)
+    def test_update_nuvlaedge_resource_if_changed(self, mock_nuvlaedge_property, mock_logger):
+        self.test_client._last_ne_resource_sync = "Now"
+        self.assertFalse(self.test_client.update_nuvlaedge_resource_if_changed("Now"))
+        mock_logger.debug.assert_not_called()
+
+        mock_nuvlaedge = Mock()
+        mock_nuvlaedge_property.return_value = mock_nuvlaedge
+
+        self.assertTrue(self.test_client.update_nuvlaedge_resource_if_changed("Then"))
+        mock_logger.debug.assert_called_once()
+        mock_nuvlaedge.force_update.assert_called_once()
+        self.assertEqual("Then", self.test_client._last_ne_resource_sync)
+
+
     def test_supported_nuvla_telemetry_fields_property(self):
         metadata = {
             "attributes": [

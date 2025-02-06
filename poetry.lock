@@ -268,51 +268,15 @@ toml = ["tomli"]
 
 [[package]]
 name = "dbus-fast"
-version = "2.32.0"
+version = "2.33.0"
 description = "A faster version of dbus-next"
 optional = false
 python-versions = "<4.0,>=3.9"
 groups = ["bluetooth"]
 markers = "platform_system == \"Linux\""
 files = [
-    {file = "dbus_fast-2.32.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c52d1c8c95563f5a583264a8ff561564fd55af1a7546e4635d7413494d150709"},
-    {file = "dbus_fast-2.32.0-cp310-cp310-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:cd532d5e0d8dc28b936b36d4ac02c7e1c486b647f393e0ba390da12eaae3b05e"},
-    {file = "dbus_fast-2.32.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5053ebf011fa1e4754934b89c99c1bfb1686f751af9f05a10997be635c5b6e71"},
-    {file = "dbus_fast-2.32.0-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:7d58293cc994a76e6561b954117b74c83351736082c2c0f9bba844e4f35d7499"},
-    {file = "dbus_fast-2.32.0-cp310-cp310-musllinux_1_2_i686.whl", hash = "sha256:5b0be52f27995a53344ffe92aaf47e7df62b04c8b51dec73ecafa2fec0d23951"},
-    {file = "dbus_fast-2.32.0-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:126f54c208d7e711d0f5e0ba2e54fecec58fbfea8fc56875a1019c599adb551a"},
-    {file = "dbus_fast-2.32.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3eb4815475599aa437a805674fc88e93db76218257b5fb8aacff35bbbe8d5e00"},
-    {file = "dbus_fast-2.32.0-cp311-cp311-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:fa11c7a4e82dcc37e3dd72ca73fc619eb575d2c8c5016035de4299d38a90f46e"},
-    {file = "dbus_fast-2.32.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a9bb96ac5c8e564b250e318f2481ef5465e2f7160aba55b177f88229a7640cd8"},
-    {file = "dbus_fast-2.32.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:d033da7a1b0f80c62ca0fe0f0a582200883a49deaff6d3e52a34a95839f17b55"},
-    {file = "dbus_fast-2.32.0-cp311-cp311-musllinux_1_2_i686.whl", hash = "sha256:4b6576864ebcaaf18336ef75b8a9f36affdcefbbdade18613309bc4f8536003b"},
-    {file = "dbus_fast-2.32.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:29ff6e39e5950a4f5fa49199af83d916e22dc372380348ed103c8692b721eea0"},
-    {file = "dbus_fast-2.32.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:74ac784ce469ad81c2594924fc4eb3c99aa6d53072c1c3ad2078a3f579228656"},
-    {file = "dbus_fast-2.32.0-cp312-cp312-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:4273c7df8ff4a4555b42669e9f89e63b5ea11962ea6164b646b73a54f94ad68c"},
-    {file = "dbus_fast-2.32.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:241e7f8329eabd5ddcf75dd347e2073b999a4d3677435729ccca7268f625ad15"},
-    {file = "dbus_fast-2.32.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:ff8a57a050e3d3a981c66e11a3c1e14fdd1b17292085310418b58c6ae1a1e771"},
-    {file = "dbus_fast-2.32.0-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:2d719283799331f0a9329e316ea6f0c2b114f05cbc2b699015141c40b093676c"},
-    {file = "dbus_fast-2.32.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:ef6e948b29da6317f7538e01ef3e0f502929bb9d93a635a02f41cc6339e05153"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:608da9b8ab8c7c93a153be64cc1e7725706d64f40d21dc76238f4a4c4fd696e1"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:1f269881525245776a937191b4b65aa0a7a6cd800687425d54d40d697573fb00"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9a97f3130a8226ecbd94a9fe8f4b5f692b00f64e3087d5a8d4aee0115d7f93b1"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-manylinux_2_36_x86_64.whl", hash = "sha256:845425c5a6ccc9b12de9b42ad9edf7e15fdc3e0b9c5261aaf3318623131aa6c5"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:389f926dfc9b650078b3448276147f24f061eedf7214f58e2d2023543c3d972b"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:a1cb3d621471af90f2632937737292c39fd2ffa19e71485ca772de323bdffefc"},
-    {file = "dbus_fast-2.32.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:3b25567610d29f760c2971544f61387dbafe282571fd663d5caa9b2ae0703d19"},
-    {file = "dbus_fast-2.32.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a57b53f1d20a36bcf1c033960f8474e44c58b3535d1987b990876f65d12075e4"},
-    {file = "dbus_fast-2.32.0-cp39-cp39-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:09e9856d5200632042d02039c2d20a41f6973b2abddc03a48d65c0d28c25c843"},
-    {file = "dbus_fast-2.32.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e89435269f5e07a8bb352bf29454fe706362c17e8b27e75c66c84e669c59f29a"},
-    {file = "dbus_fast-2.32.0-cp39-cp39-musllinux_1_2_aarch64.whl", hash = "sha256:d2011d796810ca682c32005e15962763787d993f944029e1f18665f9ecc3be9d"},
-    {file = "dbus_fast-2.32.0-cp39-cp39-musllinux_1_2_i686.whl", hash = "sha256:23f9688a5b4d3c918e24686ba0cde1c929675612f4dd4d217f101cbe1cb0c96f"},
-    {file = "dbus_fast-2.32.0-cp39-cp39-musllinux_1_2_x86_64.whl", hash = "sha256:f24b0dc97a69e6d8291d1916e5eedc39630ab5bce7d953fe55a126a1938e6425"},
-    {file = "dbus_fast-2.32.0-pp310-pypy310_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ea6ce84db6ecb6bea29b5c208d60b7e31443dabb50b66f5c30c3df68c629ccb8"},
-    {file = "dbus_fast-2.32.0-pp310-pypy310_pp73-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:7a82ab4e3ea5d4253eea13b6425fd042323b3f90068c6945ccbb919b7a5e8602"},
-    {file = "dbus_fast-2.32.0-pp310-pypy310_pp73-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bffc5ffe1716cde9986eda72d0cbec667beb29aeb8bd56e2d19dc75113ffa864"},
-    {file = "dbus_fast-2.32.0-pp39-pypy39_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:8bcf99ca822788baa78d0ec9782db2907a13a007c95d0a4a5660420d5ee4e6eb"},
-    {file = "dbus_fast-2.32.0-pp39-pypy39_pp73-manylinux_2_17_i686.manylinux_2_5_i686.manylinux1_i686.manylinux2014_i686.whl", hash = "sha256:986d3d15e4030f87485a583db08f11a37989e24f08927cc582fafac738c3ce15"},
-    {file = "dbus_fast-2.32.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux_2_5_x86_64.manylinux1_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f48431e43fb31b506c74eab0eddfe7c4546fb00fdd856c176534508c2d21d003"},
-    {file = "dbus_fast-2.32.0.tar.gz", hash = "sha256:501b01387b8da5c9f1093f8405dadb4b9f2d2fb54ebc7ad5dd3667bcbc8f7d16"},
+    {file = "dbus_fast-2.33.0-cp313-cp313-manylinux_2_36_x86_64.whl", hash = "sha256:6490bc926f1e504f1f3b29d95a18cbf2d0e6379eee81c4397be252e47cbb0d19"},
+    {file = "dbus_fast-2.33.0.tar.gz", hash = "sha256:da2f3a2f2e10092c67a911578135c2244d04b52ec87dda80997bf65e78f79251"},
 ]
 
 [[package]]

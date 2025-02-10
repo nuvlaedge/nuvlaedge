@@ -56,6 +56,8 @@ class NetworkMonitor(Monitor):
         self.previous_net_stats_file: str = FILE_NAMES.PREVIOUS_NET_STATS_FILE
 
         self.coe_client: COEClient = telemetry.coe_client
+        self.excluded_field = {"type"} if not telemetry.ip_type_supported else set()
+
         self._ip_route_image: str = self.coe_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()
@@ -438,8 +440,10 @@ class NetworkMonitor(Monitor):
                             for _, x in self.data.interfaces.items()]
 
         it_report = self.data.dict(by_alias=True, exclude={'interfaces'}, exclude_none=True)
+
+
         it_report['interfaces'] = [{'interface': name,
-                                    'ips': [ip.dict() for ip in obj.ips]}
+                                    'ips': [ip.dict(exclude=self.excluded_field) for ip in obj.ips]}
                                    for name, obj in self.data.interfaces.items()]
 
         self.telemetry_data.network = it_report

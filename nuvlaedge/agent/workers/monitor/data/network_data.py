@@ -61,5 +61,5 @@ class NetworkingData(BaseDataStructure):
 
     """
     default_gw: str | None = None
-    interfaces: dict[str, NetworkInterface] = {}
+    interfaces: dict[str, NetworkInterface] = Field(default_factory=dict)
     ips: IPAddresses = IPAddresses()

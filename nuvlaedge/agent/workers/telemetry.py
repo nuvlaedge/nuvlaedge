@@ -41,6 +41,7 @@ class Telemetry:
                  nuvlaedge_uuid: NuvlaID,
                  excluded_monitors,
                  coe_resources_supported,
+                 ip_type_supported,
                  new_container_stats_supported,
                  telemetry_period: int = 60):
         """
@@ -71,6 +72,7 @@ class Telemetry:
 
         self.coe_resources_supported = coe_resources_supported
         self.new_container_stats_supported = new_container_stats_supported
+        self.ip_type_supported = ip_type_supported
 
         # Monitors modular system initialisation
         self.excluded_monitors: list[str] = excluded_monitors.replace("'", "").split(',') if excluded_monitors else []

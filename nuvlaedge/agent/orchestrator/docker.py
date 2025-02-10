@@ -248,10 +248,13 @@ class DockerClient(COEClient):
             The external port of the compute API container as a string.
             If the container is not found or the port cannot be inferred, an empty string is returned.
         """
+        if os.getenv('NUVLAEDGE_COMPUTE_API_ENABLE', '') != '1':
+            return ''
+
         try:
             container = self._get_component_container(util.compute_api_service_name)
         except (docker.errors.NotFound, docker.errors.APIError, TimeoutError) as ex:
-            logger.debug(f'Compute API container not found {ex}')
+            logger.debug(f'Compute API container not found: {ex}')
             return ''
 
         try:
@@ -537,11 +540,12 @@ class DockerClient(COEClient):
 
         # Get the compute-api network
         local_net = None
-        try:
-            compute_api = self._get_component_container(util.compute_api_service_name)
-            local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
-        except Exception as e:
-            logger.debug(f'Cannot infer compute-api network for local job {job_id}: {e}')
+        if os.getenv('NUVLAEDGE_COMPUTE_API_ENABLE', '') == '1':
+            try:
+                compute_api = self._get_component_container(util.compute_api_service_name)
+                local_net = list(compute_api.attrs['NetworkSettings']['Networks'].keys())[0]
+            except Exception as e:
+                logger.debug(f'Cannot infer compute-api network for local job {job_id}: {e}')
 
         # Get environment variables and volumes from job-engine-lite container
         volumes = {

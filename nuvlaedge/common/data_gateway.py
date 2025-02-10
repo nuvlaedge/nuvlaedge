@@ -12,7 +12,7 @@ from nuvlaedge.common.constants import CTE
 from .constant_files import FILE_NAMES
 from .file_operations import file_exists_and_not_empty, read_file
 from .nuvlaedge_logging import get_nuvlaedge_logger
-from ..agent.workers.telemetry import TelemetryPayloadAttributes
+from ..agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 

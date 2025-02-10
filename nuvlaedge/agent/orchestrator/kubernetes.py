@@ -764,7 +764,8 @@ class KubernetesClient(COEClient):
         return client.V1PodSpec(containers=[container],
                                 host_network=(network == 'host'),
                                 restart_policy=kwargs.get('restart_policy'),
-                                volumes=volumes)
+                                volumes=volumes,
+                                node_selector=kwargs.get('node_selector'))
 
     @staticmethod
     def _pod_template_spec(name: str,
@@ -824,6 +825,11 @@ class KubernetesClient(COEClient):
             ne_db_volume, ne_db_volume_mount = self._volume_mount_ne_db()
             container_volume_mounts = [ne_db_volume_mount]
             pod_volumes = [ne_db_volume]
+
+            # FIXME: Start using PVCs with cluster scoped storage classes.
+            # Now we are mounting the NE DB volume which is defined as a hostPath,
+            # we need to run the pod on the same node where the agent is running
+            kwargs['node_selector'] = {"kubernetes.io/hostname": self.host_node_name}
 
         container = self._container_def(image, name,
                                         volume_mounts=container_volume_mounts,

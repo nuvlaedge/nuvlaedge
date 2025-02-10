@@ -35,9 +35,10 @@ class NuvlaEdgeStaticModel(NuvlaEdgeBaseModel):
         if isinstance(data, BaseModel):
             data = data.model_dump(exclude_none=True, by_alias=False)
         for k, v in data.items():
-            if hasattr(self, k):
+            parsed_key = k.replace('-', '_')
+            if hasattr(self, parsed_key):
                 with self.update_lock:
-                    self.__setattr__(k, v)
-            elif hasattr(self, k.replace('-', '_')):
-                with self.update_lock:
-                    self.__setattr__(k.replace('-', '_'), v)
+                    if isinstance(v, dict) and getattr(self, parsed_key) is not None:
+                        getattr(self, parsed_key).update(v)
+                    else:
+                        self.__setattr__(parsed_key, v)

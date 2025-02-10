@@ -310,7 +310,7 @@ class TestVPNHandler(TestCase):
 
         mock_client_state.return_value = (True, False)
         mock_needs_commission.return_value = False
-        with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.info') as mock_info:
+        with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.debug') as mock_info:
             self.assertIsNone(self.test_vpn_handler.run())
             mock_info.assert_called_once_with("VPN credentials aligned. No need for commissioning")
 

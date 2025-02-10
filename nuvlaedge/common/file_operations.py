@@ -79,7 +79,7 @@ def file_exists_and_not_empty(filename: str | Path):
 def read_file(file: str | Path,
               decode_json=False,
               remove_file_on_error=True,
-              warn_on_missing: bool = True,
+              warn_on_missing: bool = False,
               **kwargs) -> dict | str | None:
     """
 

@@ -3,7 +3,7 @@ import subprocess
 import logging
 from unittest import TestCase
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, UTC
 from mock import patch, Mock
 
 
@@ -206,12 +206,12 @@ class TestSecurity(TestCase):
         self.security.gather_external_db_file_names = Mock()
 
         mock_exists.return_value = False
-        self.assertEqual(datetime(1970, 1, 1), self.security.get_previous_external_db_update())
+        self.assertEqual(datetime(1970, 1, 1, tzinfo=UTC), self.security.get_previous_external_db_update())
 
         mock_exists.return_value = True
         with patch('nuvlaedge.security.security.read_file') as mock_read:
             mock_read.side_effect = ['random_datatime']
-            self.assertEqual(datetime(1970, 1, 1), self.security.get_previous_external_db_update())
+            self.assertEqual(datetime(1970, 1, 1, tzinfo=UTC), self.security.get_previous_external_db_update())
 
         sample_date = "23-Aug-2023 (14:08:11.571703)"
         with patch('nuvlaedge.security.security.read_file') as mock_read:
@@ -221,7 +221,7 @@ class TestSecurity(TestCase):
                              self.security.get_previous_external_db_update())
 
             self.security.vulscan_dbs = False
-            self.assertEqual(datetime(1970, 1, 1), self.security.get_previous_external_db_update())
+            self.assertEqual(datetime(1970, 1, 1, tzinfo=UTC), self.security.get_previous_external_db_update())
 
     def test_extract_product_info(self):
         mock_service = {}
@@ -420,7 +420,7 @@ class TestSecurity(TestCase):
 
         self.security.nuvlaedge_session = Mock()
         self.security.nuvlaedge_session.endpoint = 'nuvla.io'
-        self.security.previous_external_db_update = datetime(1970, 1, 1)
+        self.security.previous_external_db_update = datetime(1970, 1, 1, tzinfo=UTC)
         self.security.db_needs_update()
         mock_update.assert_called_once()
 

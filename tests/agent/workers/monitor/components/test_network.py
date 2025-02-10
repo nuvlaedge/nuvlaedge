@@ -6,11 +6,10 @@ from random import SystemRandom
 from typing import List, Dict, Any
 
 import requests
-from mock import Mock, mock_open, patch, MagicMock
+from mock import Mock, patch, MagicMock
 
 from nuvlaedge.agent.workers.monitor.components import network as monitor
 from nuvlaedge.agent.workers.monitor.data.network_data import NetworkInterface, NetworkingData, IP
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 def generate_random_ip_address():
@@ -68,7 +67,7 @@ class TestNetworkMonitor(unittest.TestCase):
         with patch('requests.get') as get:
             get.side_effect = requests.Timeout
             test_ip_monitor: monitor.NetworkMonitor = \
-                monitor.NetworkMonitor("file", Mock(), EdgeStatus())
+                monitor.NetworkMonitor("file", Mock(), True)
             test_ip_monitor.set_public_data()
             self.assertFalse(test_ip_monitor.data.ips.public)
 

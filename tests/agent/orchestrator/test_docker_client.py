@@ -884,7 +884,7 @@ class COEClientDockerTestCase(unittest.TestCase):
 
         # we only take the config-files from the last updated container
         updated_container = fake.MockContainer()
-        updated_container.attrs['Created'] = datetime.datetime.utcnow().isoformat()
+        updated_container.attrs['Created'] = datetime.datetime.now(datetime.UTC).isoformat()
         updated_container.labels['com.docker.compose.project.config_files'] = 'c.yml'
         mock_containers_list.return_value = [new_agent_container, updated_container]
         self.assertEqual(sorted(self.obj.get_installation_parameters()['config-files']),
@@ -1201,8 +1201,10 @@ class COEClientDockerTestCase(unittest.TestCase):
         self.assertEqual(self.obj.get_all_nuvlaedge_components(), ['fake-container'],
                          'Failed to get all NuvlaEdge containers')
 
+    @mock.patch.dict(os.environ, {'NUVLAEDGE_COMPUTE_API_ENABLE': '1'})
     @mock.patch('docker.models.containers.ContainerCollection.get')
     def test_find_compute_api_external_port(self, mock_container_get: MagicMock):
+
         # Container not found
         mock_container_get.side_effect = docker.errors.NotFound('')
         with self.assertLogs(logger=logger, level='DEBUG'):

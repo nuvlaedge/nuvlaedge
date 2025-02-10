@@ -20,11 +20,8 @@ class ResourcesMonitor(Monitor):
     _DISK_INFO_COMMAND: list[str] = ["lsblk", "--json", "-o",
                                      "NAME,SIZE,MOUNTPOINT,FSUSED", "-b", "-a"]
 
-    def __init__(self, name: str, telemetry, enable_monitor: bool = True):
-        super().__init__(name, ResourcesData, enable_monitor)
-
-        if not telemetry.edge_status.resources:
-            telemetry.edge_status.resources = self.data
+    def __init__(self, name: str, telemetry, enable_monitor: bool = True, period: int = 60):
+        super().__init__(name, ResourcesData, enable_monitor, period)
 
     @staticmethod
     def get_static_disks() -> list[DiskDataStructure]:
@@ -35,10 +32,13 @@ class ResourcesMonitor(Monitor):
         of the disk
 
         """
+        disk_usage = psutil.disk_usage('/')
+        capacity = disk_usage[0]
+        used = disk_usage[1]
         return [DiskDataStructure.model_validate({
             'device': 'overlay',
-            'capacity': int(psutil.disk_usage('/')[0] / 1024 / 1024 / 1024),
-            'used': int(psutil.disk_usage('/')[1] / 1024 / 1024 / 1024)
+            'capacity': int(capacity),
+            'used': int(used)
         })]
 
     @staticmethod
@@ -52,9 +52,8 @@ class ResourcesMonitor(Monitor):
             disk data report
         """
         try:
-            capacity: int = round(int(report['size']) / 1024 / 1024 / 1024)
-            fused = report['fsused'] if report.get('fsused') else 0
-            fused = round(int(fused) / 1024 / 1024 / 1024)
+            capacity: int = int(report['size'])
+            fused = int(report['fsused']) if report.get('fsused') else 0
             name: str = report.get('name')
 
             if not capacity or not isinstance(fused, int) or not name:
@@ -162,11 +161,17 @@ class ResourcesMonitor(Monitor):
         self.data.cpu = self.get_cpu_data()
         self.data.ram = self.get_memory_data()
 
-    def populate_nb_report(self, nuvla_report: dict):
-        if not nuvla_report.get('resources'):
-            nuvla_report['resources'] = {}
+    def populate_telemetry_payload(self):
+        self.telemetry_data.resources = {}
 
-        nuvla_report['resources']['cpu'] = self.data.cpu.dict(by_alias=True)
-        nuvla_report['resources']['ram'] = self.data.ram.dict(by_alias=True)
-        nuvla_report['resources']['disks'] = \
-            [x.dict(by_alias=True) for x in self.data.disks]
+        if self.data.disks:
+            self.telemetry_data.resources['disks'] = [x.dict(by_alias=True) for x in self.data.disks]
+
+        if self.data.cpu:
+            self.telemetry_data.resources['cpu'] = self.data.cpu.dict(by_alias=True)
+
+        if self.data.ram:
+            self.telemetry_data.resources['ram'] = self.data.ram.dict(by_alias=True)
+
+        if len(self.telemetry_data.resources) == 0:
+            self.telemetry_data.resources = None

@@ -8,6 +8,8 @@ export IMAGE_TAG_NAME=$IMAGE_ORG/$IMAGE_REPO:${3:-$nuvlaedge_version}
 
 rm -rf dist/*
 
+poetry self add poetry-plugin-export
+
 poetry build --no-interaction --format=wheel
 poetry export --format requirements.txt --output requirements.txt --without-hashes --without-urls
 poetry export --format requirements.txt --output requirements.agent.txt --without-hashes --without-urls --with agent

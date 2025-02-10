@@ -43,8 +43,8 @@ class NetworkMonitor(Monitor):
     _PUBLIC_IP_UPDATE_RATE: int = 3600
     _NUVLAEDGE_COMPONENT_LABEL_KEY: str = util.base_label
 
-    def __init__(self, name: str, telemetry, enable_monitor=True):
-        super().__init__(name, NetworkingData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor=True, period: int = 60):
+        super().__init__(name, NetworkingData, enable_monitor, period)
         # list of network interfaces
         self.updaters: list = [self.set_public_data,
                                self.set_local_data,
@@ -59,14 +59,11 @@ class NetworkMonitor(Monitor):
         self._ip_route_image: str = self.coe_client.current_image
 
         self.engine_project_name: str = self.get_engine_project_name()
-        self.logger.info(f'Running network monitor for project {self.engine_project_name}')
+
         self.iproute_container_name: str = f'{self.engine_project_name}-iproute'
 
         self.last_public_ip: float = 0.0
 
-        # Initialize the corresponding data on the EdgeStatus class
-        if not telemetry.edge_status.iface_data:
-            telemetry.edge_status.iface_data = self.data
 
     def get_engine_project_name(self) -> str:
         return self.coe_client.get_nuvlaedge_project_name(util.default_project_name)

@@ -20,11 +20,8 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 @monitor('vulnerabilities_monitor')
 class VulnerabilitiesMonitor(Monitor):
     """ Vulnerabilities monitor class """
-    def __init__(self, name: str, telemetry, enable_monitor: bool):
-        super().__init__(name, VulnerabilitiesData, enable_monitor)
-
-        if not telemetry.edge_status.vulnerabilities:
-            telemetry.edge_status.vulnerabilities = self.data
+    def __init__(self, name: str, telemetry, enable_monitor: bool, period: int = 60):
+        super().__init__(name, VulnerabilitiesData, enable_monitor, period)
 
     @staticmethod
     def retrieve_security_vulnerabilities() -> dict | None:
@@ -61,6 +58,6 @@ class VulnerabilitiesMonitor(Monitor):
                 vulnerabilities,
                 key=lambda v: v.get('vulnerability-score', 0), reverse=True)[0:100]
 
-    def populate_nb_report(self, nuvla_report: dict):
+    def populate_telemetry_payload(self):
         if self.data.summary and self.data.items:
-            nuvla_report['vulnerabilities'] = self.data.dict(by_alias=True)
+            self.telemetry_data.vulnerabilities = self.data.dict(by_alias=True)

@@ -5,7 +5,6 @@ from mock import Mock, patch, MagicMock
 from nuvlaedge.agent.workers.monitor.components.resources import ResourcesMonitor
 from nuvlaedge.agent.workers.monitor.data.resources_data import ResourcesData, DiskDataStructure, \
     CPUDataStructure, MemoryDataStructure
-from nuvlaedge.agent.workers.monitor.edge_status import EdgeStatus
 
 
 class TestResourcesMonitor(unittest.TestCase):
@@ -13,14 +12,7 @@ class TestResourcesMonitor(unittest.TestCase):
     @staticmethod
     def get_test_monitor():
         mock_telemetry = Mock()
-        mock_telemetry.edge_status = EdgeStatus()
         return ResourcesMonitor('test_monitor', mock_telemetry, True)
-
-    def test_init(self):
-        mock_telemetry = Mock()
-        mock_telemetry.edge_status.resources = None
-        ResourcesMonitor('test_monitor', mock_telemetry, True)
-        self.assertIsInstance(mock_telemetry.edge_status.resources, ResourcesData)
 
     @patch('psutil.disk_usage')
     def test_get_static_disks(self, mock_disk):
@@ -79,8 +71,8 @@ class TestResourcesMonitor(unittest.TestCase):
         # from the above devices
         expected = {
                 'device': 'mmcblk0p7',
-                'capacity': round(int(29239017472) / 1024 / 1024 / 1024),
-                'used': round(25306009600 / 1024 / 1024 / 1024)
+                'capacity': 29239017472,
+                'used': 25306009600
         }
 
         self.assertEqual(test_monitor.get_disks_usage()[0].
@@ -120,13 +112,32 @@ class TestResourcesMonitor(unittest.TestCase):
         test_monitor.update_data()
         self.assertIsInstance(test_monitor.data.cpu, CPUDataStructure)
 
-    def test_populate_nb_report(self):
-        test_nb_report: dict = {}
+
+    def test_populate_telemetry_payload(self):
         test_monitor = self.get_test_monitor()
-        test_monitor.get_disk_resources = Mock()
-        test_monitor.get_disk_resources.return_value = [DiskDataStructure()]
-        test_monitor.update_data()
-        test_monitor.populate_nb_report(test_nb_report)
-        self.assertIn('resources', test_nb_report)
-        self.assertIn('ram', test_nb_report['resources'])
-        self.assertTrue(test_nb_report['resources']['ram'])
+        test_monitor.populate_telemetry_payload()
+        self.assertIsNone(test_monitor.telemetry_data.resources)
+
+        mock_data = ResourcesData()
+        mock_data.disks = [DiskDataStructure(
+            device='device',
+            capacity=1,
+            used=1
+        )]
+        mock_data.cpu = CPUDataStructure(
+            capacity=1,
+            load=1,
+            load_1=1,
+            load_5=1,
+            context_switches=1,
+            interrupts=1,
+            software_interrupts=1,
+            system_calls=1
+        )
+        mock_data.ram = MemoryDataStructure(
+            capacity=1,
+            used=1
+        )
+        test_monitor.data = mock_data
+        test_monitor.populate_telemetry_payload()
+        self.assertEqual(test_monitor.telemetry_data.resources, mock_data.dict(by_alias=True, exclude_none=True))

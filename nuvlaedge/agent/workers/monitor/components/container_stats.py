@@ -26,19 +26,15 @@ class ContainerStatsMonitor(Monitor):
     Provides asynchronous information gathering about containers.
 
     """
-    def __init__(self, name: str, telemetry, enable_monitor: bool):
-        super().__init__(name, DeploymentData, enable_monitor)
+    def __init__(self, name: str, telemetry, enable_monitor: bool, period: int = 60):
+        super().__init__(name, DeploymentData, enable_monitor, period)
 
-        self.is_thread = True
         self.coe_client: COEClient = telemetry.coe_client
 
         self.nuvlaedge_id: str = telemetry.nuvlaedge_uuid
         self.swarm_node_cert_path: str = CTE.SWARM_NODE_CERTIFICATE
 
         self.data.containers = {}
-
-        if not telemetry.edge_status.container_stats:
-            telemetry.edge_status.container_stats = self.data
 
         self._old_container_stats_version = not telemetry.new_container_stats_supported
 
@@ -155,23 +151,19 @@ class ContainerStatsMonitor(Monitor):
         self.data.swarm_node_cert_expiry_date = \
             self.get_swarm_certificate_expiration_date()
 
-    def populate_nb_report(self, nuvla_report: dict):
-        if not nuvla_report.get('resources'):
-            nuvla_report['resources'] = {}
-
-        nuvla_report['resources']['container-stats'] = \
-            [x.dict(by_alias=True) for x in self.data.containers.values()]
+    def populate_telemetry_payload(self):
+        self.telemetry_data.resources = {
+            'container-stats': [x.dict(by_alias=True) for x in self.data.containers.values()]}
 
         if self.data.docker_server_version:
-            nuvla_report['docker-server-version'] = self.data.docker_server_version
+            self.telemetry_data.docker_server_version = self.data.docker_server_version
 
         if self.data.kubelet_version:
-            nuvla_report['kubelet-version'] = self.data.kubelet_version
+            self.telemetry_data.kubelet_version = self.data.kubelet_version
 
         if self.data.cluster_data:
-            nuvla_report.update(self.data.cluster_data.dict(by_alias=True,
-                                                            exclude_none=True))
+            self.telemetry_data.update(self.data.cluster_data.dict(
+                by_alias=True, exclude_none=True))
 
         if self.data.swarm_node_cert_expiry_date:
-            nuvla_report.update(self.data.dict(
-                by_alias=True, include={'swarm_node_cert_expiry_date'}))
+            self.telemetry_data.swarm_node_cert_expiry_date = self.data.swarm_node_cert_expiry_date

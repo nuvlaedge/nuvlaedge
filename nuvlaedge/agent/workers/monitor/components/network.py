@@ -407,7 +407,7 @@ class NetworkMonitor(Monitor):
         for updater in self.updaters:
             updater()
 
-    def populate_nb_report(self, nuvla_report: dict):
+    def populate_telemetry_payload(self):
         """
         Network report structure:
         network: {
@@ -434,10 +434,6 @@ class NetworkMonitor(Monitor):
         # 2.- Default Local Gateway
         # 3.- Public
         # 4.- Swarm
-        self.logger.debug('Updating data in Network monitor')
-        if not nuvla_report.get('resources'):
-            nuvla_report['resources'] = {}
-
         it_traffic: list = [x.dict(by_alias=True, exclude={'ips', 'default_gw'})
                             for _, x in self.data.interfaces.items()]
 
@@ -446,25 +442,24 @@ class NetworkMonitor(Monitor):
                                     'ips': [ip.dict() for ip in obj.ips]}
                                    for name, obj in self.data.interfaces.items()]
 
-        nuvla_report['network'] = it_report
+        self.telemetry_data.network = it_report
 
         if it_traffic:
-            nuvla_report['resources']['net-stats'] = it_traffic
+            self.telemetry_data.resources = {
+                'net-stats': it_traffic
+            }
 
         if self.data.ips.vpn:
-            nuvla_report['ip'] = str(self.data.ips.vpn)
-            return str(self.data.ips.vpn)
+            self.telemetry_data.ip = str(self.data.ips.vpn)
+            return
 
         if self.data.ips.local:
-            nuvla_report['ip'] = str(self.data.ips.local)
-            return str(self.data.ips.local)
+            self.telemetry_data.ip = str(self.data.ips.local)
+            return
 
         if self.data.ips.public:
-            nuvla_report['ip'] = str(self.data.ips.public)
-            return str(self.data.ips.public)
+            self.telemetry_data.ip = str(self.data.ips.public)
+            return
 
         if self.data.ips.swarm:
-            nuvla_report['ip'] = str(self.data.ips.swarm)
-            return str(self.data.ips.swarm)
-
-        return None
+            self.telemetry_data.ip = str(self.data.ips.swarm)

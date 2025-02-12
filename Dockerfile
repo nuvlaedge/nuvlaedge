@@ -51,7 +51,7 @@ ARG PYTHON_SITE_PACKAGES
 ARG PYTHON_LOCAL_SITE_PACKAGES
 
 RUN apk update
-RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl
+RUN apk add gcc musl-dev linux-headers python3-dev libffi-dev upx curl git
 
 # Install pydantic form source to prevent bulding locally
 COPY --from=pre-builder-pydantic ${PYTHON_LOCAL_SITE_PACKAGES} ${PYTHON_LOCAL_SITE_PACKAGES}

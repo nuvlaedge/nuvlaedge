@@ -193,7 +193,7 @@ class Agent:
         logger.info("Registering Telemetry")
         coe_resources_supported = self._nuvla_support_telemetry_field('coe-resources')
         new_container_stats_supported = self._nuvla_support_telemetry_field('resources.container-stats.item.cpu-usage')
-        ip_type_supported = self._nuvla_support_telemetry_field('network.ips.')
+        ip_type_supported = self._nuvla_support_telemetry_field('network.interfaces.item.ips.item.type')
         self.worker_manager.add_worker(
             period=self.telemetry_period,
             worker_type=Telemetry,

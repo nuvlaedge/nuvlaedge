@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.19.0](https://github.com/nuvlaedge/nuvlaedge/compare/2.18.0...2.19.0) (2025-02-12)
+
+
+### Features
+
+* **telemetry:** Add IPv6 addresses of network interfaces into telemetry report ([#234](https://github.com/nuvlaedge/nuvlaedge/issues/234)) ([a7c902c](https://github.com/nuvlaedge/nuvlaedge/commit/a7c902ce265a6f1c6c5479c73cbc880c226e8c3c))
+
+
+### Bug Fixes
+
+* **build:** add git to base-builder to fix helm installation ([2389f90](https://github.com/nuvlaedge/nuvlaedge/commit/2389f90dfc633a665aeb338c4c9c72df3a23ac5d))
+* **kubernetes:** place job on the node along with NE when NE DB is needed by the job ([#238](https://github.com/nuvlaedge/nuvlaedge/issues/238)) ([d9058fc](https://github.com/nuvlaedge/nuvlaedge/commit/d9058fc5ea02a3f3d378f4f12764a6c586cff327))
+
+
+### Code Refactoring
+
+* **telemetry:** refactor monitors and telemetry coordination ([#229](https://github.com/nuvlaedge/nuvlaedge/issues/229)) ([5d8605a](https://github.com/nuvlaedge/nuvlaedge/commit/5d8605af12f57635879d8cec8cf39b02ff2c0963))
+
 ## [2.18.0](https://github.com/nuvlaedge/nuvlaedge/compare/2.17.1...2.18.0) (2024-12-20)
 
 

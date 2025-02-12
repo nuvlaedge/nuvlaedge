@@ -26,6 +26,7 @@ class TestTelemetry(TestCase):
                                             self.uuid,
                                             self.excluded_monitors,
                                             True,
+                                            True,
                                             True)
 
     def test_set_period(self):
@@ -46,6 +47,7 @@ class TestTelemetry(TestCase):
             self.mock_status_channel,
             self.uuid,
             excluded_monitors,
+            True,
             True,
             True)
         self.assertEqual(['gpio_monitor', 'power_monitor'], telemetry.excluded_monitors)

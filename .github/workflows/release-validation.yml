@@ -117,7 +117,7 @@ jobs:
 
   setup-matrix:
     runs-on: ubuntu-latest
-    needs: build-dev
+#    needs: build-dev
     outputs:
       boards: ${{ steps.set-boards.outputs.boards }}
       tests: ${{ steps.set-tests.outputs.tests }}

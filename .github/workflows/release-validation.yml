@@ -159,7 +159,10 @@ jobs:
         run: docker pull $VALIDATION_IMAGE_NAME
 
       - name: Image cleanup
-        run: docker image prune -f -a
+        run: |
+          for i in {1..5}; do
+            docker image prune -f -a && break || sleep 3
+          done
 
       - name: Reset results directory
         run: sudo rm -rf /home/runner/actions-runner/results/temp && sudo mkdir -p /home/runner/actions-runner/results/temp

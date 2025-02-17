@@ -138,8 +138,8 @@ jobs:
           script: |
         
             const latestRelease = await github.rest.repos.getLatestRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner: 'nuvlaedge',
+              repo: 'validation',
             });
             core.setOutput('latest_release_tag', latestRelease.data.tag_name);
 

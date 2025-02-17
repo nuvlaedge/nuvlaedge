@@ -152,7 +152,7 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.board-config }}
     env:
-      VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:${{ needs.setup-matrix.outputs.latest_release_tag }}"
+      VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:${{ needs.setup-matrix.outputs.latest_validation }}"
       BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
     steps:
       - name: Pull Validation Image

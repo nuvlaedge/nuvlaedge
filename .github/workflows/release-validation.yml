@@ -155,14 +155,14 @@ jobs:
       VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:${{ needs.setup-matrix.outputs.latest_validation }}"
       BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
     steps:
-      - name: Pull Validation Image
-        run: docker pull $VALIDATION_IMAGE_NAME
-
       - name: Image cleanup
         run: |
           for i in {1..5}; do
-            docker image prune -f -a && break || sleep 3
+            docker image prune -f && break || sleep 3
           done
+
+      - name: Pull Validation Image
+        run: docker pull $VALIDATION_IMAGE_NAME
 
       - name: Reset results directory
         run: sudo rm -rf /home/runner/actions-runner/results/temp && sudo mkdir -p /home/runner/actions-runner/results/temp

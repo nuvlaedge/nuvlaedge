@@ -11,10 +11,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
-env:
-  VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:latest"
-  BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
-
 jobs:
   build-dev:
     runs-on: ubuntu-latest
@@ -125,6 +121,7 @@ jobs:
     outputs:
       boards: ${{ steps.set-boards.outputs.boards }}
       tests: ${{ steps.set-tests.outputs.tests }}
+      latest_validation: ${{ steps.get_latest_release.outputs.latest_release_tag }}
     steps:
       - id: set-boards
         run: |
@@ -134,6 +131,18 @@ jobs:
         run: |
           echo "tests=${{ vars.VALIDATION_TESTS }}" >> $GITHUB_OUTPUT
 
+      - name: Get latest release tag
+        id: get_latest_release
+        uses: actions/github-script@v6
+        with:
+          script: |
+        
+            const latestRelease = await github.rest.repos.getLatestRelease({
+              owner: 'nuvlaedge',
+              repo: 'validation',
+            });
+            core.setOutput('latest_release_tag', latestRelease.data.tag_name);
+
   run-validation:
     needs: setup-matrix
     strategy:
@@ -142,8 +151,16 @@ jobs:
         validation-type: ${{ fromJSON(needs.setup-matrix.outputs.tests) }}
       fail-fast: false
     runs-on: ${{ matrix.board-config }}
-
+    env:
+      VALIDATION_IMAGE_NAME: "nuvladev/nuvlaedge-validation:${{ needs.setup-matrix.outputs.latest_validation }}"
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name || vars.GITHUB_REF_NAME }}
     steps:
+      - name: Image cleanup
+        run: |
+          for i in {1..5}; do
+            docker image prune -f && break || sleep 3
+          done
+
       - name: Pull Validation Image
         run: docker pull $VALIDATION_IMAGE_NAME
 

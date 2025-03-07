@@ -9,7 +9,7 @@ timestamp_nb_updated=$timestamp_nb_conf
 while [[ "$timestamp_nb_updated" -le "$timestamp_nb_conf" ]]
 do
     timestamp_nb_updated=$(stat -c %Y ${VPN_CONF})
-    sleep 1
+    sleep 60
 done
 
 # if we got here, then the nb.conf was updated and we must restart the openvpn-client

@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.0...2.19.1) (2025-03-07)
+
+
+### Bug Fixes
+
+* **vpn:** reduce background cpu usage ([921e233](https://github.com/nuvlaedge/nuvlaedge/commit/921e2337337825b71d3800a876e13e287d045091))
+
 ## [2.19.0](https://github.com/nuvlaedge/nuvlaedge/compare/2.18.0...2.19.0) (2025-02-12)
 
 

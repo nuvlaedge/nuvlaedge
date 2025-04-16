@@ -81,7 +81,7 @@ class JobLocal:
             self.running_job = job_id
             self.running_job_since = datetime.datetime.now()
             self.log_state()
-            _job = Job(self.api, LocalOneJobQueue(job_id), FILE_NAMES.root_fs)
+            _job = Job(job_id, self.api, FILE_NAMES.root_fs)
 
             if _job.get('state') == JOB_RUNNING:
                 logger.warning(f'Job {job_id} already in running state. Seems to be a zombie job. Set it to failed')
@@ -91,7 +91,7 @@ class JobLocal:
                 continue
 
             logger.info(f'Running job {job_id} locally')
-            Executor.process_job(_job)
+            Executor.process_job(self.api, LocalOneJobQueue(job_id), FILE_NAMES.root_fs, job_id)
 
             self.running_job_since = None
             self.previous_jobs.append(job_id)

@@ -10,11 +10,14 @@ from mock import MagicMock, Mock, patch
 
 from nuvlaedge.agent.orchestrator.job_local import JobLocal, get_job_local_timeout, job_timeout_default
 
+from nuvla.api.models import CimiResource
+
 
 class JobLocalTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         api = MagicMock()
+        api.get.return_value = CimiResource({'version': '2'})
         self.obj = JobLocal(api)
 
     def test_init(self):

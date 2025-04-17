@@ -94,7 +94,7 @@ jobs:
           gh release upload ${{ needs.trigger-release.outputs.tag_name }} ./dist/*
 
   nuvlaedge-image:
-    needs: nuvlaedge-package
+    needs: [trigger-release, nuvlaedge-package]
     if: needs.trigger-release.outputs.release_created
     runs-on: ubuntu-latest
 

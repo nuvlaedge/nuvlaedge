@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.19.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.0...2.19.1) (2025-04-17)
+
+
+### Bug Fixes
+
+* **vpn:** reduce background cpu usage ([921e233](https://github.com/nuvlaedge/nuvlaedge/commit/921e2337337825b71d3800a876e13e287d045091))
+
+
+### Dependencies
+
+* **job_local.py:** Update code to be compatible with job-engine v5. ([4ed2058](https://github.com/nuvlaedge/nuvlaedge/commit/4ed2058d462b216848c02cd4966adee605a9bf52))
+* nuvla-job-engine ^5.0.1. ([4ed2058](https://github.com/nuvlaedge/nuvlaedge/commit/4ed2058d462b216848c02cd4966adee605a9bf52))
+* updated indirect dependencies. ([4ed2058](https://github.com/nuvlaedge/nuvlaedge/commit/4ed2058d462b216848c02cd4966adee605a9bf52))
+
 ## [2.19.0](https://github.com/nuvlaedge/nuvlaedge/compare/2.18.0...2.19.0) (2025-02-12)
 
 

@@ -22,7 +22,7 @@ class StatusReport(BaseModel):
 
 
 class NuvlaEdgeStatusHandler:
-    STATUS_TIMEOUT: int = 60*60
+    STATUS_TIMEOUT: int = 60*60 # Timeout in seconds for module status reports, default is 1 hour
 
     def __init__(self):
         self._status: Literal['OPERATIONAL', 'UNKNOWN', 'DEGRADED'] = 'UNKNOWN'
@@ -49,7 +49,7 @@ class NuvlaEdgeStatusHandler:
 
         def time_diff(date: datetime) -> int:
             diff: float = datetime.now().timestamp() - date.timestamp()
-            return int(diff)
+            return int(diff) if diff > 0 else 0
 
         to_remove = [name for name, report in self.module_reports.items() if time_diff(report.date) > self.STATUS_TIMEOUT]
         logger.debug(f"Removing modules that have not reported in the last {self.STATUS_TIMEOUT} minutes: {', '.join(to_remove)}")

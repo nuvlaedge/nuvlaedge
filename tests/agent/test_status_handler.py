@@ -156,3 +156,77 @@ class TestStatusHandler(TestCase):
         coe_client.read_system_issues.return_value = (None, None)
         self.test_status_handler._get_coe_status(coe_client)
         self.assertTrue(self.test_status_handler.status_channel.empty())
+
+    def test_send_status(self):
+        mock_queue = Mock()
+        date_now = datetime.now()
+        self.test_status_handler.send_status(
+            mock_queue,
+            'test_module',
+            'RUNNING',
+            'Test message',
+            date=date_now
+        )
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='RUNNING',
+            message='Test message',
+            date=date_now
+        ))
+
+    def test_status_methods(self):
+        mock_queue = Mock()
+        date_now = datetime.now()
+
+        self.test_status_handler.starting(mock_queue, 'test_module', 'Starting...', date_now)
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='STARTING',
+            message='Starting...',
+            date=date_now
+        ))
+
+        mock_queue.put.reset_mock()
+        self.test_status_handler.running(mock_queue, 'test_module', 'Running...', date_now)
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='RUNNING',
+            message='Running...',
+            date=date_now
+        ))
+
+        mock_queue.put.reset_mock()
+        self.test_status_handler.stopped(mock_queue, 'test_module', 'Stopped.', date_now)
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='STOPPED',
+            message='Stopped.',
+            date=date_now
+        ))
+
+        mock_queue.put.reset_mock()
+        self.test_status_handler.failing(mock_queue, 'test_module', 'Failing...', date_now)
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='FAILING',
+            message='Failing...',
+            date=date_now
+        ))
+
+        mock_queue.put.reset_mock()
+        self.test_status_handler.failed(mock_queue, 'test_module', 'Failed!', date_now)
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='FAILED',
+            message='Failed!',
+            date=date_now
+        ))
+
+        mock_queue.put.reset_mock()
+        self.test_status_handler.warning(mock_queue, 'test_module', 'Warning!', date_now)
+        mock_queue.put.assert_called_once_with(StatusReport(
+            origin_module='test_module',
+            module_status='WARNING',
+            message='Warning!',
+            date=date_now
+        ))

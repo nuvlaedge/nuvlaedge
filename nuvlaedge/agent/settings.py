@@ -1,8 +1,10 @@
 import logging
 
 from argparse import ArgumentParser, Namespace
+from datetime import datetime
 from typing import Optional
 
+from dateutil.relativedelta import relativedelta
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from nuvlaedge.agent.nuvla.resources import NuvlaID
@@ -228,7 +230,8 @@ class AgentSettings(NuvlaEdgeBaseSettings):
                 self.status_handler.status_channel,
                 "Agent Settings",
                 "Trying to start a NuvlaEdge with an env UUID different from the "
-                "stored one. Running on stored ID and credentials... ")
+                "stored one. Running on stored ID and credentials... ",
+                date=datetime.now() + relativedelta(years=1))
             logging.warning(
                 f'You are trying to install a new NuvlaEdge {env_nuvlaedge_id} even '
                 f'though a previous NuvlaEdge installation ({stored_nuvlaedge_id}) '

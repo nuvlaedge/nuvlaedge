@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from queue import Queue
 from typing import Literal
 
@@ -14,7 +14,6 @@ from nuvlaedge.common.nuvlaedge_logging import get_nuvlaedge_logger
 
 logger: logging.Logger = get_nuvlaedge_logger(__name__)
 
-
 class StatusReport(BaseModel):
     origin_module: str
     module_status: Literal['STARTING', 'RUNNING', 'STOPPED', 'WARNING', 'FAILING', 'FAILED', 'UNKNOWN']
@@ -23,7 +22,7 @@ class StatusReport(BaseModel):
 
 
 class NuvlaEdgeStatusHandler:
-    STATUS_TIMEOUT: int = 60*60
+    STATUS_TIMEOUT: int = 60*60 # Timeout in seconds for module status reports, default is 1 hour
 
     def __init__(self):
         self._status: Literal['OPERATIONAL', 'UNKNOWN', 'DEGRADED'] = 'UNKNOWN'
@@ -50,7 +49,7 @@ class NuvlaEdgeStatusHandler:
 
         def time_diff(date: datetime) -> int:
             diff: float = datetime.now().timestamp() - date.timestamp()
-            return int(diff)
+            return int(diff) if diff > 0 else 0
 
         to_remove = [name for name, report in self.module_reports.items() if time_diff(report.date) > self.STATUS_TIMEOUT]
         logger.debug(f"Removing modules that have not reported in the last {self.STATUS_TIMEOUT} minutes: {', '.join(to_remove)}")
@@ -139,32 +138,35 @@ class NuvlaEdgeStatusHandler:
         return self._status, self._notes
 
     @staticmethod
-    def send_status(channel: Queue, module_name: str, module_status: str, message: str = ''):
+    def send_status(channel: Queue, module_name: str, module_status: str, message: str = '', date: datetime = None):
+        if date is None:
+            date = datetime.now()
+
         channel.put(StatusReport(origin_module=module_name,
                                  module_status=module_status,
                                  message=message,
-                                 date=datetime.now()))
+                                 date=date))
 
     @classmethod
-    def starting(cls, channel: Queue, module_name: str, message: str = ''):
-        cls.send_status(channel, module_name, 'STARTING', message)
+    def starting(cls, channel: Queue, module_name: str, message: str = '', date: datetime = None):
+        cls.send_status(channel, module_name, 'STARTING', message, date)
 
     @classmethod
-    def running(cls, channel: Queue, module_name: str, message: str = ''):
-        cls.send_status(channel, module_name, 'RUNNING', message)
+    def running(cls, channel: Queue, module_name: str, message: str = '', date: datetime = None):
+        cls.send_status(channel, module_name, 'RUNNING', message, date)
 
     @classmethod
-    def stopped(cls, channel: Queue, module_name: str, message: str = ''):
-        cls.send_status(channel, module_name, 'STOPPED', message)
+    def stopped(cls, channel: Queue, module_name: str, message: str = '', date: datetime = None):
+        cls.send_status(channel, module_name, 'STOPPED', message, date)
 
     @classmethod
-    def failing(cls, channel: Queue, module_name: str, message: str = ''):
-        cls.send_status(channel, module_name, 'FAILING', message)
+    def failing(cls, channel: Queue, module_name: str, message: str = '', date: datetime = None):
+        cls.send_status(channel, module_name, 'FAILING', message, date)
 
     @classmethod
-    def failed(cls, channel: Queue, module_name: str, message: str = ''):
-        cls.send_status(channel, module_name, 'FAILED', message)
+    def failed(cls, channel: Queue, module_name: str, message: str = '', date: datetime = None):
+        cls.send_status(channel, module_name, 'FAILED', message, date)
 
     @classmethod
-    def warning(cls, channel: Queue, module_name: str, message: str = ''):
-        cls.send_status(channel, module_name, 'WARNING', message)
+    def warning(cls, channel: Queue, module_name: str, message: str = '', date: datetime = None):
+        cls.send_status(channel, module_name, 'WARNING', message, date)

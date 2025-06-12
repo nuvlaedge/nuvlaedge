@@ -140,7 +140,7 @@ jobs:
       # Build images for nuvlaedge
       # ------------------------------------------------
       - name: Build and push ${{ matrix.platform }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -165,7 +165,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push slim-docker ${{ matrix.platform }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.slim-docker

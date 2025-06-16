@@ -1184,8 +1184,12 @@ class DockerClient(COEClient):
             except yaml.YAMLError:
                 return k3s_cluster_info
 
-        k3s_port = k3s['clusters'][0]['cluster']['server'].split(':')[-1]
-        k3s_cluster_info['kubernetes-endpoint'] = f'https://{k3s_address}:{k3s_port}'
+        # We don't want to use the Swarm endpoint. K3s certificates are linked to specific IPs.
+        # (Local, 127.0.0.1, K3s IP 10.43.0.1 )
+        if vpn_ip:
+            k3s_port = k3s['clusters'][0]['cluster']['server'].split(':')[-1]
+            k3s_cluster_info['kubernetes-endpoint'] = f'https://{vpn_ip}:{k3s_port}'
+
         try:
             ca = k3s["clusters"][0]["cluster"]["certificate-authority-data"]
             cert = k3s["users"][0]["user"]["client-certificate-data"]

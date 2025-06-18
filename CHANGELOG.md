@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.19.2](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.1...2.19.2) (2025-06-18)
+
+
+### Bug Fixes
+
+* fix issues with vpn handling ([#247](https://github.com/nuvlaedge/nuvlaedge/issues/247)) ([608e23f](https://github.com/nuvlaedge/nuvlaedge/commit/608e23f34c17b0c6803653a21e179105056d11cf))
+* improve Helm and Kubernetes credentials usage ([cb82887](https://github.com/nuvlaedge/nuvlaedge/commit/cb82887064a2e81391a839e87d8a88443635b066))
+* Status report: allow to set expiration date ([#244](https://github.com/nuvlaedge/nuvlaedge/issues/244)) ([97fe696](https://github.com/nuvlaedge/nuvlaedge/commit/97fe696cd3b2ad8d503d99f7076c3d21daf2abcb))
+
+
+### Dependencies
+
+* nuvla-job-engine ^5.1.0. ([e950b61](https://github.com/nuvlaedge/nuvlaedge/commit/e950b61c308e3da3a86c14bc73d4653b04cba6fa))
+* nuvla-job-engine ^5.1.1. ([cb82887](https://github.com/nuvlaedge/nuvlaedge/commit/cb82887064a2e81391a839e87d8a88443635b066))
+
 ## [2.19.1](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.0...2.19.1) (2025-04-17)
 
 

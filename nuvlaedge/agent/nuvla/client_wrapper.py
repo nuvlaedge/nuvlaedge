@@ -185,7 +185,7 @@ class NuvlaClientWrapper:
         return self._resources.get(_res_name)
 
     @property
-    def vpn_credential(self) -> CredentialResource | None:
+    def vpn_credential(self) -> AutoCredentialResource | None:
         if self.nuvlaedge.vpn_server_id is None:
             # This is a safety check. VPN server resource should only be requested if the NuvlaEdge has a VPN server
             logger.warning(f"VPN server not found in NuvlaEdge {self.nuvlaedge_uuid}. This point should not be reached")

@@ -149,6 +149,9 @@ up /opt/nuvlaedge/scripts/vpn-client/get_ip.sh
 auth-nocache
 auth-retry nointeract
 
+connect-retry 15
+connect-retry-max 4
+
 ping 60
 ping-restart 120
 compress lz4

@@ -7,7 +7,8 @@ import docker.errors
 
 from nuvlaedge.agent.workers.vpn_handler import (VPNHandler,
                                                  VPNConfig,
-                                                 VPNCredentialCreationTimeOut)
+                                                 VPNCredentialCreationTimeOut,
+                                                 VPNSigningRequestError)
 from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent.nuvla.resources import (InfrastructureServiceResource,
                                              CredentialResource)
@@ -126,20 +127,20 @@ class TestVPNHandler(TestCase):
 
     @patch('nuvlaedge.agent.workers.vpn_handler.time')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._save_vpn_credential')
-    def test_wait_credential_creation(self, mock_save_creds, mock_time):
-        mock_time.perf_counter.side_effect = [0, 25]
-        self.assertFalse(self.test_vpn_handler._wait_credential_creation())
+    def test_wait_credential_creation_and_save(self, mock_save_creds, mock_time):
+        mock_time.perf_counter.side_effect = [0, 60]
+        self.assertFalse(self.test_vpn_handler._wait_credential_creation_and_save())
         mock_save_creds.assert_not_called()
 
-        mock_time.perf_counter.side_effect = [0, 3, 5, 25]
+        mock_time.perf_counter.side_effect = [0, 20, 40, 60]
         self.mock_nuvla_client.vpn_credential.model_copy.return_value = {'mock_key': 'mock_value'}
-        self.assertTrue(self.test_vpn_handler._wait_credential_creation())
+        self.assertTrue(self.test_vpn_handler._wait_credential_creation_and_save())
         self.assertEqual(self.test_vpn_handler.vpn_credential, {'mock_key': 'mock_value'})
         mock_time.sleep.assert_not_called()
 
         mock_time.perf_counter.side_effect = [0, 1, 3]
         self.mock_nuvla_client.vpn_credential.vpn_certificate = None
-        self.assertFalse(self.test_vpn_handler._wait_credential_creation(2))
+        self.assertFalse(self.test_vpn_handler._wait_credential_creation_and_save(2))
         mock_time.sleep.assert_called()
 
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._wait_certificates_ready')
@@ -185,7 +186,8 @@ class TestVPNHandler(TestCase):
 
         self.mock_nuvla_client.commission.return_value = None
         with patch('nuvlaedge.agent.workers.vpn_handler.logging.Logger.error') as mock_error:
-            self.test_vpn_handler._trigger_commission()
+            with self.assertRaises(VPNSigningRequestError):
+                self.test_vpn_handler._trigger_commission()
             mock_error.assert_called_once_with("Error commissioning VPN.")
             mock_status_handler.failing.assert_called_once()
         # self.mock_vpn_channel.put.assert_called_with('read_data')
@@ -288,7 +290,7 @@ class TestVPNHandler(TestCase):
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._vpn_needs_commission')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._generate_certificates')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._trigger_commission')
-    @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._wait_credential_creation')
+    @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._wait_credential_creation_and_save')
     @patch('nuvlaedge.agent.workers.vpn_handler.VPNHandler._configure_vpn_client')
     def test_run(self,
                  mock_configure_vpn_client,
@@ -330,6 +332,15 @@ class TestVPNHandler(TestCase):
         self.test_vpn_handler.vpn_enable_flag = 0
         self.test_vpn_handler.run()
         mock_status.stopped.assert_called_once()
+
+        mock_configure_vpn_client.reset_mock()
+        mock_trigger_commission.reset_mock()
+        mock_trigger_commission.side_effect = [VPNSigningRequestError]
+        mock_client_state.return_value = (True, False)
+        self.test_vpn_handler.vpn_enable_flag = 1
+        self.test_vpn_handler.run()
+        mock_trigger_commission.assert_called_once()
+        mock_configure_vpn_client.assert_not_called()
 
     @patch('nuvlaedge.agent.workers.vpn_handler.file_operations.read_file')
     def test_load_vpn_config(self, mock_read_file):

@@ -27,6 +27,11 @@ logger: logging.Logger = get_nuvlaedge_logger(__name__)
 _status_module_name = 'VPN Handler'
 
 
+class VPNSigningRequestError(Exception):
+    """ Raised when signing request made to Nuvla, fail"""
+    ...
+
+
 class VPNConfigurationMissmatch(Exception):
     """ Raised when VPN handler, nuvlabox resource and nuvlaedge engine configurations do not match"""
     ...
@@ -226,7 +231,7 @@ class VPNHandler:
                            f"KEY: {self.VPN_KEY_FILE} \n"
                            f"CSR: {self.VPN_CSR_FILE}")
 
-    def _wait_credential_creation(self, timeout: int = 25):
+    def _wait_credential_creation_and_save(self, timeout: int = 60):
         """
         Waits for the creation of VPN credentials in Nuvla for a given timeout period.
 
@@ -240,12 +245,13 @@ class VPNHandler:
         start_time: float = time.perf_counter()
 
         while time.perf_counter() - start_time < timeout:
+            self.nuvla_client.vpn_credential.force_update()
             if self.nuvla_client.vpn_credential.vpn_certificate is not None:
                 self.vpn_credential = self.nuvla_client.vpn_credential.model_copy()
                 logger.debug(f"VPN credential {self.nuvla_client.vpn_credential.id} created in Nuvla")
                 self._save_vpn_credential()
                 return True
-            time.sleep(1)
+            time.sleep(18)
 
         logger.warning(f"VPN credential not created in time with timeout {timeout}")
         return False
@@ -309,6 +315,7 @@ class VPNHandler:
             NuvlaEdgeStatusHandler.failing(self.status_channel,
                                            _status_module_name,
                                            "Error commissioning VPN. Will retry in 60s")
+            raise VPNSigningRequestError('Failed to sign VPN CSR')
         else:
             logger.info("Commissioning VPN... Success")
             NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
@@ -521,18 +528,23 @@ class VPNHandler:
         self._generate_certificates()
 
         logger.debug("Conform the certificate sign request and send it to Nuvla via commissioning")
-        self._trigger_commission()
+        try:
+            self._trigger_commission()
 
-        # Wait for VPN credential to show up in Nuvla (Timeout needs to be commissioner_period + sometime
-        if not self._wait_credential_creation(timeout=60 + 15):
-            logger.warning("VPN credential wasn't created in time. Cannot start the VPN client. "
-                           "Will try in the next iteration")
-            # VPN credential wasn't created in time. Do not continue
-            raise VPNCredentialCreationTimeOut("VPN credential wasn't created in time. Cannot start the VPN client")
+            # Wait for VPN credential to show up in Nuvla (Timeout needs to be commissioner_period + sometime
+            if not self._wait_credential_creation_and_save(timeout=60 + 15):
+                logger.warning("VPN credential wasn't created in time. Cannot start the VPN client. "
+                               "Will try in the next iteration")
+                # VPN credential wasn't created in time. Do not continue
+                raise VPNCredentialCreationTimeOut("VPN credential wasn't created in time. Cannot start the VPN client")
 
-        # Then we need to (re)configure the VPN client
-        self._configure_vpn_client()
-        logger.info("Starting VPN commissioning and configuration... Success")
+            # Then we need to (re)configure the VPN client
+            self._configure_vpn_client()
+            logger.info("Starting VPN commissioning and configuration... Success")
+        except VPNSigningRequestError:
+            msg = 'VPN (re)commissioning failed.'
+            logger.error(msg)
+            NuvlaEdgeStatusHandler.warning(self.status_channel, _status_module_name, message=msg)
 
     def _load_vpn_config(self):
         """ Loads the VPN configuration from the file system."""

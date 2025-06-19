@@ -1186,6 +1186,7 @@ class DockerClient(COEClient):
 
         # We don't want to use the Swarm endpoint. K3s certificates are linked to specific IPs.
         # (Local, 127.0.0.1, K3s IP 10.43.0.1 )
+        k3s_cluster_info['kubernetes-endpoint'] = k3s['clusters'][0]['cluster']['server']
         if vpn_ip:
             k3s_port = k3s['clusters'][0]['cluster']['server'].split(':')[-1]
             k3s_cluster_info['kubernetes-endpoint'] = f'https://{vpn_ip}:{k3s_port}'

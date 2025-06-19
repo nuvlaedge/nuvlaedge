@@ -1140,7 +1140,8 @@ class COEClientDockerTestCase(unittest.TestCase):
                 'kubernetes-client-key': key.decode(),
                 'kubernetes-endpoint': f'https://{mock_ip.return_value}:6443'
             }
-            self.assertEqual(self.obj.get_k3s_commissioning_info(), comm_info)
+            k3s_info = self.obj.get_k3s_commissioning_info()
+            self.assertEqual(k3s_info, comm_info)
 
     @mock.patch('nuvlaedge.agent.orchestrator.docker.run')
     @mock.patch('nuvlaedge.agent.orchestrator.docker.DockerClient.get_k3s_commissioning_info')

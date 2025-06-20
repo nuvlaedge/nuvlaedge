@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.3](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.2...2.19.3) (2025-06-20)
+
+
+### Bug Fixes
+
+* slim docker image missing python-dateutil dependency ([994b53b](https://github.com/nuvlaedge/nuvlaedge/commit/994b53bf4693177952d2fc12bf28c020d2bd6a8e))
+
 ## [2.19.2](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.1...2.19.2) (2025-06-18)
 
 

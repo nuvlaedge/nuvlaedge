@@ -161,8 +161,8 @@ jobs:
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest,
             sixsq/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }},
             sixsq/${{ github.event.repository.name }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,timeout=60m
+          cache-to: type=gha,mode=max,ignore-error=true,timeout=60m
 
       - name: Build and push slim-docker ${{ matrix.platform }}
         uses: docker/build-push-action@v6
@@ -186,5 +186,5 @@ jobs:
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:latest-slim-docker,
             sixsq/${{ github.event.repository.name }}:${{ needs.trigger-release.outputs.tag_name }}-slim-docker,
             sixsq/${{ github.event.repository.name }}:latest-slim-docker
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,timeout=60m
+          cache-to: type=gha,mode=max,ignore-error=true,timeout=60m

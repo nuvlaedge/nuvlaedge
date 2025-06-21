@@ -115,8 +115,8 @@ jobs:
           tags: >
             nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }},
             nuvladev/${{ github.event.repository.name }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,timeout=60m
+          cache-to: type=gha,mode=max,ignore-error=true,timeout=60m
 
       - name: Build and push slim-docker
         uses: docker/build-push-action@v6
@@ -137,7 +137,7 @@ jobs:
           tags: >
             nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }}-slim-docker,
             nuvladev/${{ github.event.repository.name }}:latest-slim-docker
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,timeout=60m
+          cache-to: type=gha,mode=max,ignore-error=true,timeout=60m
 
 

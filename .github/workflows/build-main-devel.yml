@@ -25,6 +25,12 @@ on:
       - 'Dockerfile'
 
   workflow_dispatch:
+    inputs:
+      build_slim_docker:
+        description: 'Build nuvlaedge-slim-docker image'
+        required: false
+        type: boolean
+        default: false
 
 
 jobs:
@@ -114,6 +120,7 @@ jobs:
 
       - name: Build and push slim-docker
         uses: docker/build-push-action@v6
+        if: ${{ inputs.build_slim_docker }}
         with:
           context: .
           file: ./Dockerfile.slim-docker

@@ -122,12 +122,8 @@ jobs:
           tags: >
             nuvladev/${{ github.event.repository.name }}:${{ github.head_ref || github.ref_name }},
             nuvladev/${{ github.event.repository.name }}:latest
-          # cache-from: type=gha,timeout=60m
-          cache-from: |
-            type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache
-          # cache-to: type=gha,mode=max,ignore-error=true,timeout=60m
-          cache-to: |
-            type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache,mode=max
+          cache-from: type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache
+          cache-to: type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache,mode=max
 
       - name: Build and push slim-docker
         uses: docker/build-push-action@v6

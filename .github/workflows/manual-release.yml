@@ -19,6 +19,11 @@ on:
         required: true
         type: text
         default: '3.11'
+      build_slim_docker:
+        description: 'Build nuvlaedge-slim-docker image'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   set-version:
@@ -232,11 +237,12 @@ jobs:
             nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }},
             sixsq/${{ github.event.repository.name }}:${{ github.ref_name }},
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache
+          cache-to: type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache,mode=max
 
       - name: Build and push slim-docker ${{ matrix.platform }}
         uses: docker/build-push-action@v6
+        if: ${{ inputs.build_slim_docker }}
         with:
           context: .
           file: ./Dockerfile.slim-docker
@@ -254,6 +260,6 @@ jobs:
             nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
             ghcr.io/nuvlaedge/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
             sixsq/${{ github.event.repository.name }}:${{ github.ref_name }}-slim-docker,
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache-slim-docker
+          cache-to: type=registry,ref=ghcr.io/nuvlaedge/nuvlaedge-buildcache:buildcache-slim-docker,mode=max
 

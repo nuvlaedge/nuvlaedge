@@ -204,6 +204,7 @@ class Agent:
                               'coe_resources_supported': coe_resources_supported,
                               'ip_type_supported': ip_type_supported,
                               'new_container_stats_supported': new_container_stats_supported,
+                              'telemetry_period': self.telemetry_period,
                               }),
             actions=['run'],
             initial_delay=8

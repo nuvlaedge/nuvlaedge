@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -13,6 +14,7 @@ class TimedAction:
     name: str
     action: callable
     period: int
+    timeout: int  # Defines the maximum execution time for each action. This will allow to
     remaining_time: float = 0  # Allow configurability for delayed starts
     args: tuple[any] = field(default_factory=tuple)
     kwargs: dict[str, any] = field(default_factory=dict)
@@ -29,6 +31,8 @@ class TimedAction:
         Raises: The exceptions raised during the execution, including retries
 
         """
+        threading.current_thread().name = self.name
+
         try:
             self.tries += 1
             ret = self.action(*self.args, **self.kwargs)

@@ -24,6 +24,8 @@ Engine (COE) client, worker manager, action handler, and the queues for telemetr
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
 import json
+from concurrent.futures.thread import ThreadPoolExecutor
+
 import jsonpatch
 import logging
 import sys
@@ -123,8 +125,12 @@ class Agent:
         # Status channel connecting any module and the status handler
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
+        # Action timeout executor
+        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+
         # Report initial status
         NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
+
 
     def _assert_current_state(self) -> State:
         """
@@ -249,6 +255,7 @@ class Agent:
                 name='heartbeat',
                 period=self.heartbeat_period,
                 action=self._heartbeat,
+                timeout=5,
                 remaining_time=CTE.HEARTBEAT_INTERVAL
             )
         )
@@ -259,6 +266,7 @@ class Agent:
                 name='telemetry',
                 period=self.telemetry_period,
                 action=self._telemetry,
+                timeout=30,
                 remaining_time=CTE.REFRESH_INTERVAL
             )
         )
@@ -281,6 +289,7 @@ class Agent:
                 name='watch_workers',
                 period=45,
                 action=self._watch_workers,
+                timeout=10,
                 remaining_time=45
             )
         )
@@ -576,6 +585,10 @@ class Agent:
             None
 
         """
+        def run_with_timeout(action: TimedAction) -> any:
+            future = self._executor.submit(action)
+            return future.result(timeout=action.timeout)
+
         self.worker_manager.start()
 
         next_cycle_in = self.action_handler.sleep_time()
@@ -589,7 +602,13 @@ class Agent:
 
             next_action = self.action_handler.next
 
-            response = next_action()
+            try:
+                response = run_with_timeout(next_action)
+            except TimedAction:
+                logger.warning(f"Action {next_action.name} didn't execute in time ({next_action.timeout}s timeout). Something is wrong")
+                continue
+            except Exception as ex:
+                logger.error(f"Unknown error occured while running {next_action.name}: {ex}")
 
             if response:
                 self._process_response(response, next_action.name)

@@ -604,11 +604,12 @@ class Agent:
 
             try:
                 response = run_with_timeout(next_action)
-            except TimedAction:
+            except TimeoutError:
                 logger.warning(f"Action {next_action.name} didn't execute in time ({next_action.timeout}s timeout). Something is wrong")
                 continue
             except Exception as ex:
                 logger.error(f"Unknown error occured while running {next_action.name}: {ex}")
+                continue
 
             if response:
                 self._process_response(response, next_action.name)

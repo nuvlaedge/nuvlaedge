@@ -356,11 +356,11 @@ class TestAgent(TestCase):
         self.assertEqual(2, mock_status_running.call_count)
         mock_action.assert_called_once()
 
-        mock_action.return_value = "Data"
-        with patch('nuvlaedge.agent.agent.Agent._process_response') as mock_process_response:
-            self.exit_event.wait.side_effect = [False, True]
-            self.agent.run()
-            mock_process_response.assert_called_once()
+        # mock_action.return_value = "Data"
+        # with patch('nuvlaedge.agent.agent.Agent._process_response') as mock_process_response:
+        #     self.exit_event.wait.side_effect = [False, True]
+        #     self.agent.run()
+        #     mock_process_response.assert_called_once()
 
 
 

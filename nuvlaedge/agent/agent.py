@@ -255,7 +255,7 @@ class Agent:
                 name='heartbeat',
                 period=self.heartbeat_period,
                 action=self._heartbeat,
-                timeout=5,
+                timeout=self.heartbeat_period - 5,
                 remaining_time=CTE.HEARTBEAT_INTERVAL
             )
         )
@@ -266,7 +266,7 @@ class Agent:
                 name='telemetry',
                 period=self.telemetry_period,
                 action=self._telemetry,
-                timeout=30,
+                timeout=self.telemetry_period - 5,
                 remaining_time=CTE.REFRESH_INTERVAL
             )
         )
@@ -289,7 +289,7 @@ class Agent:
                 name='watch_workers',
                 period=45,
                 action=self._watch_workers,
-                timeout=10,
+                timeout=40, # Timeout is period - 5 secs
                 remaining_time=45
             )
         )
@@ -512,7 +512,6 @@ class Agent:
         if response:
             logger.info("Executing heartbeat... Success")
             NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-
         return response
 
     def _process_response(self, response: dict, operation: str):
@@ -598,10 +597,11 @@ class Agent:
             NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
             start_cycle: float = time.perf_counter()
 
-            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-
+            # Extracts next action from the scheduler
             next_action = self.action_handler.next
 
+            # Executes the next action given from the scheduler. The execution is done in a Thread but waits for it to
+            # finish. Timeouts 5 seconds before the fixed period.
             try:
                 response = run_with_timeout(next_action)
             except TimeoutError:
@@ -611,16 +611,15 @@ class Agent:
                 logger.error(f"Unknown error occured while running {next_action.name}: {ex}")
                 continue
 
+            # Process the responses from Heartbeat and Telemetry (Heal workers action should not return anything)
+            # There are two expected information as response from the actions:
+            # 1. last-update field from nuvlabox and nuvlabox-status resources.
+            # 2. A job list
             if response:
                 self._process_response(response, next_action.name)
 
             # Account cycle time
             cycle_duration = time.perf_counter() - start_cycle
-            logger.debug(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
-            logger.debug(self.action_handler.actions_summary())
 
-            # Cycle next action time and function
-            next_cycle_in = self.action_handler.sleep_time()
-            next_action = self.action_handler.next
-            logger.debug(self.action_handler.actions_summary())
-            logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
+            # Calculates the sleep time for the next operation and prints action debug messages
+            next_cycle_in = self.action_handler.action_finished(cycle_duration, next_action)

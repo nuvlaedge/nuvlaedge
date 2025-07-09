@@ -353,7 +353,7 @@ class TestAgent(TestCase):
         mock_actions.next = mock_action
 
         self.agent.run()
-        self.assertEqual(2, mock_status_running.call_count)
+        self.assertEqual(1, mock_status_running.call_count)
         mock_action.assert_called_once()
 
         # mock_action.return_value = "Data"

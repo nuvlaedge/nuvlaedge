@@ -145,3 +145,35 @@ class TestActionHandler(TestCase):
 
     def test_actions_summary(self):
         self.assertTrue(len(self.handler.actions_summary().splitlines()) == 4)
+
+    @patch('nuvlaedge.common.timed_actions.logger')
+    def test_action_finished(self, mock_logger):
+        # Arrange
+        last_action = TimedAction(
+            name='TestCase2',
+            period=2,
+            action=self.mock_callable_bis,
+            timeout=1,
+            remaining_time=1
+        )
+
+        # ensure actions are sorted so 'TestCase2' is first
+        self.handler._actions = [
+            TimedAction(
+                name='TestCase',
+                period=4,
+                action=self.mock_callable,
+                timeout=5,
+                remaining_time=3),
+            last_action
+        ]
+
+        # Act
+        returned_sleep_time = self.handler.action_finished(1.23, last_action)
+
+        # Assert
+        self.assertAlmostEqual(returned_sleep_time, 1.0, places=2)
+        self.assertIn("Action TestCase2 completed in 1.23 seconds",
+                      [call.args[0] for call in mock_logger.debug.call_args_list])
+        self.assertIn("Next action TestCase2 will be run in 1.00 seconds",
+                      [call.args[0] for call in mock_logger.info.call_args_list])

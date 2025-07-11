@@ -576,6 +576,10 @@ class Agent:
     def stop(self):
         self._exit.set()
 
+    def _run_with_timeout(self, action: TimedAction) -> any:
+        future = self._executor.submit(action)
+        return future.result(timeout=action.timeout)
+
     def run(self):
         """
         Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
@@ -584,9 +588,7 @@ class Agent:
             None
 
         """
-        def run_with_timeout(action: TimedAction) -> any:
-            future = self._executor.submit(action)
-            return future.result(timeout=action.timeout)
+
 
         self.worker_manager.start()
 
@@ -603,7 +605,7 @@ class Agent:
             # Executes the next action given from the scheduler. The execution is done in a Thread but waits for it to
             # finish. Timeouts 5 seconds before the fixed period.
             try:
-                response = run_with_timeout(next_action)
+                response = self._run_with_timeout(next_action)
             except TimeoutError:
                 logger.warning(f"Action {next_action.name} didn't execute in time ({next_action.timeout}s timeout). Something is wrong")
                 continue

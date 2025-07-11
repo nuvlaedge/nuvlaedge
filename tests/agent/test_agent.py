@@ -1,4 +1,5 @@
 import logging
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from threading import Event
 from unittest import TestCase
 from unittest.mock import Mock, patch, PropertyMock
@@ -12,6 +13,7 @@ from nuvlaedge.agent.nuvla.client_wrapper import NuvlaClientWrapper
 from nuvlaedge.agent import AgentSettings
 from nuvlaedge.agent.agent import Agent
 from nuvlaedge.common.constant_files import FILE_NAMES
+from nuvlaedge.common.timed_actions import ActionHandler
 
 
 class TestAgent(TestCase):
@@ -362,5 +364,80 @@ class TestAgent(TestCase):
         #     self.agent.run()
         #     mock_process_response.assert_called_once()
 
+    @patch('nuvlaedge.agent.agent.Agent._process_response')
+    @patch('nuvlaedge.agent.agent.Agent._run_with_timeout')
+    @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
+    def test_run_with_action_handling(self, mock_status_running, mock_run_with_timeout, mock_process_response):
+        mock_manager = Mock()
+        mock_actions = Mock()
+
+        self.agent.worker_manager = mock_manager
+        self.agent.action_handler = mock_actions
+        self.exit_event.wait.side_effect = [False, True]
+
+        mock_action = Mock()
+        mock_action.name = 'mock_action'
+        mock_actions.sleep_time.return_value = 1
+        mock_actions.next = mock_action
+        mock_actions.action_finished.return_value = 1
+
+        # Case: successful response
+        mock_run_with_timeout.return_value = {"jobs": []}
+
+        self.agent.run()
+        mock_manager.start.assert_called_once()
+        mock_status_running.assert_called_once()
+        mock_run_with_timeout.assert_called_once_with(mock_action)
+        mock_process_response.assert_called_once_with({"jobs": []}, 'mock_action')
+        mock_actions.action_finished.assert_called_once()
+
+    from unittest.mock import patch, PropertyMock, Mock
+
+    @patch('nuvlaedge.agent.agent.Agent._run_with_timeout')
+    @patch('nuvlaedge.agent.agent.logger')
+    @patch.object(ActionHandler, 'next', new_callable=PropertyMock)
+    @patch.object(ActionHandler, 'sleep_time', return_value=1)
+    def test_run_with_timeout_error_handling(self, mock_sleep_time, mock_next, mock_logger, mock_run_with_timeout):
+        self.exit_event.wait.side_effect = [False, True]
+
+        mock_action = Mock()
+        mock_action.name = "timed"
+        mock_action.timeout = 42
+
+        mock_next.return_value = mock_action
+
+        self.agent.worker_manager = Mock()
+
+        mock_run_with_timeout.side_effect = TimeoutError()
+
+        self.agent.run()
+
+        mock_logger.warning.assert_any_call(
+            "Action timed didn't execute in time (42s timeout). Something is wrong"
+        )
+
+    def test_run_with_timeout_success(self):
+        mock_action = Mock()
+        mock_action.timeout = 5
+        self.agent._executor = Mock()
+        future = Mock()
+        future.result.return_value = "result"
+        self.agent._executor.submit.return_value = future
+
+        result = self.agent._run_with_timeout(mock_action)
+        self.assertEqual(result, "result")
+        self.agent._executor.submit.assert_called_once_with(mock_action)
+        future.result.assert_called_once_with(timeout=5)
+
+    def test_run_with_timeout_timeout_error(self):
+        mock_action = Mock()
+        mock_action.timeout = 5
+        self.agent._executor = Mock()
+        future = Mock()
+        future.result.side_effect = FutureTimeoutError()
+        self.agent._executor.submit.return_value = future
+
+        with self.assertRaises(FutureTimeoutError):
+            self.agent._run_with_timeout(mock_action)
 
 

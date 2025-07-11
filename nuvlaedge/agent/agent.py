@@ -255,7 +255,6 @@ class Agent:
                 name='heartbeat',
                 period=self.heartbeat_period,
                 action=self._heartbeat,
-                timeout=self.heartbeat_period - 5,
                 remaining_time=CTE.HEARTBEAT_INTERVAL
             )
         )
@@ -266,7 +265,6 @@ class Agent:
                 name='telemetry',
                 period=self.telemetry_period,
                 action=self._telemetry,
-                timeout=self.telemetry_period - 5,
                 remaining_time=CTE.REFRESH_INTERVAL
             )
         )
@@ -289,7 +287,6 @@ class Agent:
                 name='watch_workers',
                 period=45,
                 action=self._watch_workers,
-                timeout=40, # Timeout is period - 5 secs
                 remaining_time=45
             )
         )
@@ -576,10 +573,6 @@ class Agent:
     def stop(self):
         self._exit.set()
 
-    def _run_with_timeout(self, action: TimedAction) -> any:
-        future = self._executor.submit(action)
-        return future.result(timeout=action.timeout)
-
     def run(self):
         """
         Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
@@ -603,12 +596,15 @@ class Agent:
             next_action = self.action_handler.next
 
             # Executes the next action given from the scheduler. The execution is done in a Thread but waits for it to
-            # finish. Timeouts 5 seconds before the fixed period.
+            # finish.
+            future = self._executor.submit(next_action)
+
             try:
-                response = self._run_with_timeout(next_action)
+                response = future.result(timeout=next_action.period)
             except TimeoutError:
-                logger.warning(f"Action {next_action.name} didn't execute in time ({next_action.timeout}s timeout). Something is wrong")
-                continue
+                logger.warning(f"Action {next_action.name} didn't execute in time ({next_action.period}s timeout). Retrying once...")
+                response = future.result(timeout=next_action.period)
+
             except Exception as ex:
                 logger.error(f"Unknown error occured while running {next_action.name}: {ex}")
                 continue

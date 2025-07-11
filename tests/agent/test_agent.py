@@ -364,80 +364,87 @@ class TestAgent(TestCase):
         #     self.agent.run()
         #     mock_process_response.assert_called_once()
 
-    @patch('nuvlaedge.agent.agent.Agent._process_response')
-    @patch('nuvlaedge.agent.agent.Agent._run_with_timeout')
     @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
-    def test_run_with_action_handling(self, mock_status_running, mock_run_with_timeout, mock_process_response):
-        mock_manager = Mock()
-        mock_actions = Mock()
-
-        self.agent.worker_manager = mock_manager
-        self.agent.action_handler = mock_actions
-        self.exit_event.wait.side_effect = [False, True]
-
-        mock_action = Mock()
-        mock_action.name = 'mock_action'
-        mock_actions.sleep_time.return_value = 1
-        mock_actions.next = mock_action
-        mock_actions.action_finished.return_value = 1
-
-        # Case: successful response
-        mock_run_with_timeout.return_value = {"jobs": []}
-
-        self.agent.run()
-        mock_manager.start.assert_called_once()
-        mock_status_running.assert_called_once()
-        mock_run_with_timeout.assert_called_once_with(mock_action)
-        mock_process_response.assert_called_once_with({"jobs": []}, 'mock_action')
-        mock_actions.action_finished.assert_called_once()
-
-    from unittest.mock import patch, PropertyMock, Mock
-
-    @patch('nuvlaedge.agent.agent.Agent._run_with_timeout')
     @patch('nuvlaedge.agent.agent.logger')
-    @patch.object(ActionHandler, 'next', new_callable=PropertyMock)
-    @patch.object(ActionHandler, 'sleep_time', return_value=1)
-    def test_run_with_timeout_error_handling(self, mock_sleep_time, mock_next, mock_logger, mock_run_with_timeout):
+    def test_run_normal_execution(self, mock_logger, mock_status):
+        mock_action = Mock()
+        mock_action.name = "test_action"
+        mock_action.period = 5
+        mock_action.return_value = {"doc-last-updated": "mock"}
+
+        self.agent.action_handler = Mock()
+        self.agent.action_handler.sleep_time.return_value = 1
+        self.agent.action_handler.next = mock_action
+        self.agent.action_handler.action_finished.return_value = 1
+
         self.exit_event.wait.side_effect = [False, True]
 
-        mock_action = Mock()
-        mock_action.name = "timed"
-        mock_action.timeout = 42
+        # Patch _executor with a mock that has .submit returning a mock future
+        mock_future = Mock()
+        mock_future.result.return_value = mock_action.return_value
 
-        mock_next.return_value = mock_action
+        self.agent._executor = Mock()
+        self.agent._executor.submit.return_value = mock_future
 
-        self.agent.worker_manager = Mock()
-
-        mock_run_with_timeout.side_effect = TimeoutError()
+        self.agent._process_response = Mock()
 
         self.agent.run()
 
-        mock_logger.warning.assert_any_call(
-            "Action timed didn't execute in time (42s timeout). Something is wrong"
-        )
-
-    def test_run_with_timeout_success(self):
-        mock_action = Mock()
-        mock_action.timeout = 5
-        self.agent._executor = Mock()
-        future = Mock()
-        future.result.return_value = "result"
-        self.agent._executor.submit.return_value = future
-
-        result = self.agent._run_with_timeout(mock_action)
-        self.assertEqual(result, "result")
+        mock_status.assert_called_once()
         self.agent._executor.submit.assert_called_once_with(mock_action)
-        future.result.assert_called_once_with(timeout=5)
+        self.agent._process_response.assert_called_once_with(mock_action.return_value, mock_action.name)
 
-    def test_run_with_timeout_timeout_error(self):
+    @patch('nuvlaedge.agent.agent.logger')
+    @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
+    def test_run_timeout_once_then_success(self, mock_status, mock_logger):
         mock_action = Mock()
-        mock_action.timeout = 5
-        self.agent._executor = Mock()
+        mock_action.name = "test_action"
+        mock_action.period = 3
+        mock_action.return_value = {"doc-last-updated": "mock"}
+
+        self.agent.action_handler = Mock()
+        self.agent.action_handler.sleep_time.return_value = 1
+        self.agent.action_handler.next = mock_action
+        self.agent.action_handler.action_finished.return_value = 1
+
+        self.exit_event.wait.side_effect = [False, True]
+
         future = Mock()
-        future.result.side_effect = FutureTimeoutError()
+        future.result.side_effect = [FutureTimeoutError(), mock_action.return_value]
+        self.agent._executor = Mock()
         self.agent._executor.submit.return_value = future
+        self.agent._process_response = Mock()
 
-        with self.assertRaises(FutureTimeoutError):
-            self.agent._run_with_timeout(mock_action)
+        self.agent.run()
 
+        self.assertEqual(future.result.call_count, 2)
+        mock_logger.warning.assert_called_with(
+            f"Action {mock_action.name} didn't execute in time ({mock_action.period}s timeout). Retrying once..."
+        )
+        self.agent._process_response.assert_called_once_with(mock_action.return_value, mock_action.name)
 
+    @patch('nuvlaedge.agent.agent.logger')
+    @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
+    def test_run_generic_exception_handled(self, mock_status, mock_logger):
+        mock_action = Mock()
+        mock_action.name = "test_action"
+        mock_action.period = 3
+
+        self.agent.action_handler = Mock()
+        self.agent.action_handler.sleep_time.return_value = 1
+        self.agent.action_handler.next = mock_action
+
+        self.exit_event.wait.side_effect = [False, True]
+
+        future = Mock()
+        future.result.side_effect = Exception("Unhandled error")
+        self.agent._executor = Mock()
+        self.agent._executor.submit.return_value = future
+        self.agent._process_response = Mock()
+
+        self.agent.run()
+
+        mock_logger.error.assert_called_with(
+            f"Unknown error occured while running {mock_action.name}: Unhandled error"
+        )
+        self.agent._process_response.assert_not_called()

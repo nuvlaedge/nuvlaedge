@@ -19,7 +19,6 @@ class TestTimedAction(TestCase):
             name='TestCase',
             period=4,
             action=dummy_function,
-            timeout=2,
         )
 
     def test_execute_action(self):
@@ -67,7 +66,6 @@ class TestTimedAction(TestCase):
             name='Dummy',
             period=4,
             action=dummy_function,
-            timeout=2,
             remaining_time=5
         )
         self.assertFalse(self.action > dummy_action)
@@ -90,13 +88,11 @@ class TestActionHandler(TestCase):
                 name='TestCase',
                 period=4,
                 action=self.mock_callable,
-                timeout=5,
                 remaining_time=3),
             TimedAction(
                 name='TestCase2',
                 period=2,
                 action=self.mock_callable_bis,
-                timeout=1,
                 remaining_time=1)
         ]
         self.handler = ActionHandler(actions=self.actions_sample)
@@ -116,7 +112,6 @@ class TestActionHandler(TestCase):
             name='TestCase3',
             period=2,
             action=dummy_function,
-            timeout=1,
             remaining_time=1)
         self.handler.add(dummy_action)
         self.assertEqual(3, len(self.handler.actions))
@@ -153,7 +148,6 @@ class TestActionHandler(TestCase):
             name='TestCase2',
             period=2,
             action=self.mock_callable_bis,
-            timeout=1,
             remaining_time=1
         )
 
@@ -163,7 +157,6 @@ class TestActionHandler(TestCase):
                 name='TestCase',
                 period=4,
                 action=self.mock_callable,
-                timeout=5,
                 remaining_time=3),
             last_action
         ]

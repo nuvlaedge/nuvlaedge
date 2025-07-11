@@ -14,7 +14,6 @@ class TimedAction:
     name: str
     action: callable
     period: int
-    timeout: int  # Defines the maximum execution time for each action. This will allow to
     remaining_time: float = 0  # Allow configurability for delayed starts
     args: tuple[any] = field(default_factory=tuple)
     kwargs: dict[str, any] = field(default_factory=dict)
@@ -31,7 +30,7 @@ class TimedAction:
         Raises: The exceptions raised during the execution, including retries
 
         """
-        threading.current_thread().name = self.name
+        threading.current_thread().name = f'{self.name}-TimedAction'
 
         try:
             self.tries += 1
@@ -124,7 +123,6 @@ class ActionHandler:
         for e in self._actions:
             if e.uuid == action_id or e.name == action_id:
                 e.period = new_period
-                e.timeout = new_period - 5
 
     def action_finished(self, cycle_duration: float, last_action: TimedAction) -> float:
         logger.debug(f"Action {last_action.name} completed in {cycle_duration:.2f} seconds")

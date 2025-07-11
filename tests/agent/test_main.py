@@ -79,6 +79,85 @@ class TestMainFunction(unittest.TestCase):
         mock_print_threads.assert_called_once()
         mock_agent.run.assert_called()
 
+    @patch("nuvlaedge.agent.__init__.print_threads")
+    @patch("nuvlaedge.agent.__init__.time.sleep")
+    @patch("nuvlaedge.agent.__init__.os.getenv", return_value="True")
+    @patch("nuvlaedge.agent.__init__.Thread")
+    @patch("nuvlaedge.agent.agent.Agent")
+    @patch("nuvlaedge.agent.__init__.get_agent_settings")
+    def test_main_keyboard_interrupt(self, mock_get_settings, mock_agent_cls,
+                                     mock_thread_cls, mock_getenv,
+                                     mock_sleep, mock_print_threads):
+        # Agent settings mock
+        dummy_settings = MagicMock()
+        dummy_settings.nuvlaedge_debug = False
+        dummy_settings.nuvlaedge_log_level = "INFO"
+        dummy_settings.nuvlaedge_logging_directory = "/tmp"
+        dummy_settings.disable_file_logging = False
+        mock_get_settings.return_value = dummy_settings
+
+        # Agent mock
+        mock_agent = Mock()
+        mock_agent_cls.return_value = mock_agent
+
+        # Thread mock: thread is alive once
+        mock_thread = Mock()
+        mock_thread.is_alive.side_effect = [True, True]  # Still alive
+        mock_thread_cls.return_value = mock_thread
+
+        # Sleep raises KeyboardInterrupt AFTER print_threads is called
+        def sleep_side_effect(_):
+            raise KeyboardInterrupt()
+
+        mock_sleep.side_effect = sleep_side_effect
+
+        from nuvlaedge.agent.__init__ import main
+        main()
+
+        # Assert that it ran the thread and debug print
+        mock_agent.start_agent.assert_called_once()
+        mock_thread.start.assert_called_once()
+        mock_print_threads.assert_called_once()
+        mock_sleep.assert_called_once()
+
+    @patch("builtins.print")
+    @patch("nuvlaedge.agent.__init__.time.sleep", side_effect=Exception("Simulated exception"))
+    @patch("nuvlaedge.agent.__init__.os.getenv", return_value="True")
+    @patch("nuvlaedge.agent.__init__.Thread")
+    @patch("nuvlaedge.agent.agent.Agent")
+    @patch("nuvlaedge.agent.__init__.get_agent_settings")
+    def test_main_generic_exception(self, mock_get_settings, mock_agent_cls,
+                                    mock_thread_cls, mock_getenv,
+                                    mock_sleep, mock_print):
+        # Agent settings mock
+        dummy_settings = MagicMock()
+        dummy_settings.nuvlaedge_debug = False
+        dummy_settings.nuvlaedge_log_level = "INFO"
+        dummy_settings.nuvlaedge_logging_directory = "/tmp"
+        dummy_settings.disable_file_logging = False
+        mock_get_settings.return_value = dummy_settings
+
+        # Agent mock
+        mock_agent = Mock()
+        mock_agent_cls.return_value = mock_agent
+
+        # Thread mock
+        mock_thread = Mock()
+        mock_thread.is_alive.return_value = True
+        mock_thread_cls.return_value = mock_thread
+
+        from nuvlaedge.agent.__init__ import main
+        main()
+
+        # ✅ Check that the generic exception message was printed
+        mock_print.assert_any_call("\n[UNKNOWN ERROR] An unknown error triggered agent exit: \n\n")
+        mock_print.assert_any_call("\n Simulated exception")
+
+        # Ensure the thread was started and is_alive was called
+        mock_thread.start.assert_called_once()
+        mock_thread.is_alive.assert_called()
+
+
 class TestPrintThreads(unittest.TestCase):
 
     @patch('nuvlaedge.agent.threading.enumerate')

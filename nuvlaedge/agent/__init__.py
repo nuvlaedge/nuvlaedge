@@ -80,5 +80,3 @@ def main():
         agent_event.set()
         agent_thread.join(timeout=120)
 
-
-    nuvlaedge_agent.run()

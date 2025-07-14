@@ -67,7 +67,8 @@ def main():
     try:
         # Give some time for the startup of the agent
         while agent_thread.is_alive():
-            if os.getenv("DEBUG_THREADS", "True") == "True":
+            debug_threads = os.getenv("DEBUG_THREADS", "False").lower().strip()
+            if debug_threads in ('1', 'on', 't', 'true', 'y', 'yes'):
                 print_threads()
             time.sleep(10)
     except KeyboardInterrupt:

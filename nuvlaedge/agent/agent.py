@@ -23,8 +23,8 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
+import asyncio
 import json
-from concurrent.futures.thread import ThreadPoolExecutor
 
 import jsonpatch
 import logging
@@ -32,7 +32,7 @@ import sys
 import time
 from functools import cached_property
 from queue import Queue
-from threading import Event
+from threading import Event, Thread
 from typing import cast
 
 from nuvla.api.models import CimiResponse
@@ -126,7 +126,9 @@ class Agent:
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
         # Action timeout executor
-        self._executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+        self._heartbeat_thread: Thread | None = None
+        self._telemetry_thread: Thread = Thread(target=self._telemetry, name="Telemetry-Operation", daemon=True)
+        self._heal_workers_thread: Thread = Thread(target=self._watch_workers, name="Workers-Keepalive", daemon=True)
 
         # Report initial status
         NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
@@ -573,51 +575,79 @@ class Agent:
     def stop(self):
         self._exit.set()
 
-    def run(self):
+    async def _periodic_action(self, name: str, get_period: callable, action: callable, exit_event: asyncio.Event):
         """
-        Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
+        Runs a periodic action using asyncio.
 
-        Returns:
-            None
+        Args:
+            name (str): The name of the action.
+            get_period (callable): A function to get the period for the action.
+            action (callable): The action to be executed periodically.
 
         """
-
-
-        self.worker_manager.start()
-
-        next_cycle_in = self.action_handler.sleep_time()
-        logger.debug(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
-
-        while not self._exit.wait(next_cycle_in):
-            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-            start_cycle: float = time.perf_counter()
-
-            # Extracts next action from the scheduler
-            next_action = self.action_handler.next
-
-            # Executes the next action given from the scheduler. The execution is done in a Thread but waits for it to
-            # finish.
-            future = self._executor.submit(next_action)
+        while not exit_event.is_set():
+            # Setup execution parameters
+            period = get_period()
+            start_time = time.perf_counter()
 
             try:
-                response = future.result(timeout=next_action.period)
-            except TimeoutError:
-                logger.warning(f"Action {next_action.name} didn't execute in time ({next_action.period}s timeout). Retrying once...")
-                response = future.result(timeout=next_action.period)
+                logger.info("Starting periodic action: %s with period: %s seconds", name, period)
+                result = await asyncio.wait_for(asyncio.to_thread(action), timeout=period)
+                if result:
+                    self._process_response(result, name)
 
-            except Exception as ex:
-                logger.error(f"Unknown error occured while running {next_action.name}: {ex}")
-                continue
+            except asyncio.TimeoutError:
+                logger.warning(f"Action {name} did not complete in time, retrying...")
+                # Second try, let any exception propagate
+                result = await asyncio.wait_for(asyncio.to_thread(action), timeout=period)
+                if result:
+                    self._process_response(result, name)
 
-            # Process the responses from Heartbeat and Telemetry (Heal workers action should not return anything)
-            # There are two expected information as response from the actions:
-            # 1. last-update field from nuvlabox and nuvlabox-status resources.
-            # 2. A job list
-            if response:
-                self._process_response(response, next_action.name)
+            except Exception as e:
+                logger.error(f"Error in action {name}: {e}", exc_info=True)
+                raise
 
-            # Account cycle time
-            cycle_duration = time.perf_counter() - start_cycle
+            elapsed = time.perf_counter() - start_time
+            sleep_time = max(0, period - elapsed)
+            logger.info(f"Action {name} completed in {elapsed:.2f} seconds. Sleeping for {sleep_time:.2f} seconds")
+            await asyncio.sleep(sleep_time)
 
-            # Calculates the sleep time for the next operation and prints action debug messages
-            next_cycle_in = self.action_handler.action_finished(cycle_duration, next_action)
+    def run(self):
+        """
+        Uses asyncio to run the periodic actions
+
+        """
+        self.worker_manager.start()
+        exit_event = asyncio.Event()
+
+        async def main():
+            tasks = [
+                asyncio.create_task(self._periodic_action(
+                    "heartbeat",
+                    lambda: self.heartbeat_period,
+                    self._heartbeat,
+                    exit_event
+                )),
+                asyncio.create_task(self._periodic_action(
+                    "telemetry",
+                    lambda: self.telemetry_period,
+                    self._telemetry,
+                    exit_event
+                )),
+                asyncio.create_task(self._periodic_action(
+                    "watch_workers",
+                    lambda: 45,
+                    self._watch_workers,
+                    exit_event
+                )),
+            ]
+            try:
+                await asyncio.gather(*tasks)
+            except Exception as e:
+                logger.error(f"Critical exception: {e}", exc_info=True)
+            finally:
+                for t in tasks:
+                    t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        asyncio.run(main())

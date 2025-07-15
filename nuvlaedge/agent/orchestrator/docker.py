@@ -827,7 +827,7 @@ class DockerClient(COEClient):
                 containers_stats.append((container, self._get_container_stats(container)))
             except Exception as e:
                 if isinstance(e, docker.errors.InvalidVersion) and 'one_shot' in str(e):
-                    logger.warning('Docker API version older than 1.41 (Docker Engine version older than 2.10). '
+                    logger.warning('Docker API version older than 1.41 (Docker Engine version older than 20.10). '
                                    'Container stats collection will be less efficient.')
                     self.container_stats_one_shot = None
                     containers_stats.append((container, self._get_container_stats(container)))

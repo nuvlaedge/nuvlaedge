@@ -73,11 +73,8 @@ def main():
             time.sleep(10)
     except KeyboardInterrupt:
         print("\n[INTERRUPT] Shutting down... ")
+
     except Exception as ex:
-        print("\n[UNKNOWN ERROR] An unknown error triggered agent exit: \n\n")
-        print(f"\n {ex}")
+        print(f"\n\n {ex} \n\n[UNKNOWN ERROR] An unknown error triggered agent exit \n\n ")
 
-    if agent_thread.is_alive():
-        agent_event.set()
-        agent_thread.join(timeout=120)
-
+    print("\n[SHUTDOWN] Agent is shutting down... although it should not happen in normal operation.\n")

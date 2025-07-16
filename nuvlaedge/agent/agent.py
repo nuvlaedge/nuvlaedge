@@ -37,6 +37,7 @@ from typing import cast
 
 from nuvla.api.models import CimiResponse
 
+from nuvlaedge.agent.common.exceptions import ActionTimeoutError
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
@@ -599,7 +600,12 @@ class Agent:
             except asyncio.TimeoutError:
                 logger.warning(f"Action {name} did not complete in time, retrying...")
                 # Second try, let any exception propagate
-                result = await asyncio.wait_for(asyncio.to_thread(action), timeout=period)
+                try:
+                    result = await asyncio.wait_for(asyncio.to_thread(action), timeout=period)
+                except asyncio.TimeoutError as ex:
+                    logger.error(f"Action {name} timed out again after retrying, skipping this cycle")
+                    raise ActionTimeoutError(name, period) from ex
+
                 if result:
                     self._process_response(result, name)
 
@@ -643,11 +649,25 @@ class Agent:
             ]
             try:
                 await asyncio.gather(*tasks)
+            except ActionTimeoutError as e:
+                logger.error(f"Timeout error running action {e.name}: {e}", exc_info=True)
+
             except Exception as e:
                 logger.error(f"Critical exception: {e}", exc_info=True)
-            finally:
-                for t in tasks:
-                    t.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
 
-        asyncio.run(main())
+            logger.error("Forcing system exit...")
+            sys.exit(1)
+
+        logger.info("\n\n Staring async main")
+        loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            loop.run_until_complete(main())
+        except Exception as e:
+            logger.error(f"Exception in async main: {e}", exc_info=True)
+            loop.stop()
+        finally:
+            loop.close()
+
+        logger.info("\n\n Closing async main")

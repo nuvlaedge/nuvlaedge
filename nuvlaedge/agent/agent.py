@@ -618,6 +618,38 @@ class Agent:
             logger.info(f"Action {name} completed in {elapsed:.2f} seconds. Sleeping for {sleep_time:.2f} seconds")
             await asyncio.sleep(sleep_time)
 
+    async def main(self, exit_event: asyncio.Event):
+        tasks = [
+            asyncio.create_task(self._periodic_action(
+                "heartbeat",
+                lambda: self.heartbeat_period,
+                self._heartbeat,
+                exit_event
+            )),
+            asyncio.create_task(self._periodic_action(
+                "telemetry",
+                lambda: self.telemetry_period,
+                self._telemetry,
+                exit_event
+            )),
+            asyncio.create_task(self._periodic_action(
+                "watch_workers",
+                lambda: 45,
+                self._watch_workers,
+                exit_event
+            )),
+        ]
+        try:
+            await asyncio.gather(*tasks)
+        except ActionTimeoutError as e:
+            logger.error(f"Timeout error running action {e.name}: {e}", exc_info=True)
+
+        except Exception as e:
+            logger.error(f"Critical exception: {e}", exc_info=True)
+
+        logger.error("Forcing system exit...")
+        sys.exit(1)
+
     def run(self):
         """
         Uses asyncio to run the periodic actions
@@ -626,44 +658,12 @@ class Agent:
         self.worker_manager.start()
         exit_event = asyncio.Event()
 
-        async def main():
-            tasks = [
-                asyncio.create_task(self._periodic_action(
-                    "heartbeat",
-                    lambda: self.heartbeat_period,
-                    self._heartbeat,
-                    exit_event
-                )),
-                asyncio.create_task(self._periodic_action(
-                    "telemetry",
-                    lambda: self.telemetry_period,
-                    self._telemetry,
-                    exit_event
-                )),
-                asyncio.create_task(self._periodic_action(
-                    "watch_workers",
-                    lambda: 45,
-                    self._watch_workers,
-                    exit_event
-                )),
-            ]
-            try:
-                await asyncio.gather(*tasks)
-            except ActionTimeoutError as e:
-                logger.error(f"Timeout error running action {e.name}: {e}", exc_info=True)
-
-            except Exception as e:
-                logger.error(f"Critical exception: {e}", exc_info=True)
-
-            logger.error("Forcing system exit...")
-            sys.exit(1)
-
         logger.info("\n\n Staring async main")
         loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
         try:
-            loop.run_until_complete(main())
+            loop.run_until_complete(self.main(exit_event))
         except Exception as e:
             logger.error(f"Exception in async main: {e}", exc_info=True)
             loop.stop()

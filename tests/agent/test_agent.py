@@ -3,6 +3,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from threading import Event
 from unittest import TestCase
 from unittest.mock import Mock, patch, PropertyMock
+import pytest
 
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.nuvla.resources import NuvlaID
@@ -332,119 +333,91 @@ class TestAgent(TestCase):
         self.agent.stop()
         self.exit_event.set.assert_called_once()
 
-    # @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
-    # def test_run(self, mock_status_running):
-    #     mock_manager = Mock()
-    #     mock_actions = Mock()
-    #     self.agent.worker_manager = mock_manager
-    #     self.agent.action_handler = mock_actions
-    #     self.exit_event.wait.return_value = True
-    #     self.agent.run()
-    #
-    #     # Test once for each call before the infinite loop
-    #     mock_manager.start.assert_called_once()
-    #     mock_actions.sleep_time.assert_called_once()
-    #     mock_status_running.reset_mock()
-    #
-    #     # Enter the infinite loop once
-    #     self.exit_event.wait.side_effect = [False, True]
-    #     mock_action = Mock()
-    #     mock_action.return_value = None
-    #     mock_action.name = 'mock_action'
-    #     mock_actions.sleep_time.return_value = 10
-    #     mock_actions.next = mock_action
-    #
-    #     self.agent.run()
-    #     self.assertEqual(1, mock_status_running.call_count)
-    #     mock_action.assert_called_once()
-    #
-    #     # mock_action.return_value = "Data"
-    #     # with patch('nuvlaedge.agent.agent.Agent._process_response') as mock_process_response:
-    #     #     self.exit_event.wait.side_effect = [False, True]
-    #     #     self.agent.run()
-    #     #     mock_process_response.assert_called_once()
-    #
-    # @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
-    # @patch('nuvlaedge.agent.agent.logger')
-    # def test_run_normal_execution(self, mock_logger, mock_status):
-    #     mock_action = Mock()
-    #     mock_action.name = "test_action"
-    #     mock_action.period = 5
-    #     mock_action.return_value = {"doc-last-updated": "mock"}
-    #
-    #     self.agent.action_handler = Mock()
-    #     self.agent.action_handler.sleep_time.return_value = 1
-    #     self.agent.action_handler.next = mock_action
-    #     self.agent.action_handler.action_finished.return_value = 1
-    #
-    #     self.exit_event.wait.side_effect = [False, True]
-    #
-    #     # Patch _executor with a mock that has .submit returning a mock future
-    #     mock_future = Mock()
-    #     mock_future.result.return_value = mock_action.return_value
-    #
-    #     self.agent._executor = Mock()
-    #     self.agent._executor.submit.return_value = mock_future
-    #
-    #     self.agent._process_response = Mock()
-    #
-    #     self.agent.run()
-    #
-    #     mock_status.assert_called_once()
-    #     self.agent._executor.submit.assert_called_once_with(mock_action)
-    #     self.agent._process_response.assert_called_once_with(mock_action.return_value, mock_action.name)
-    #
-    # @patch('nuvlaedge.agent.agent.logger')
-    # @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
-    # def test_run_timeout_once_then_success(self, mock_status, mock_logger):
-    #     mock_action = Mock()
-    #     mock_action.name = "test_action"
-    #     mock_action.period = 3
-    #     mock_action.return_value = {"doc-last-updated": "mock"}
-    #
-    #     self.agent.action_handler = Mock()
-    #     self.agent.action_handler.sleep_time.return_value = 1
-    #     self.agent.action_handler.next = mock_action
-    #     self.agent.action_handler.action_finished.return_value = 1
-    #
-    #     self.exit_event.wait.side_effect = [False, True]
-    #
-    #     future = Mock()
-    #     future.result.side_effect = [FutureTimeoutError(), mock_action.return_value]
-    #     self.agent._executor = Mock()
-    #     self.agent._executor.submit.return_value = future
-    #     self.agent._process_response = Mock()
-    #
-    #     self.agent.run()
-    #
-    #     self.assertEqual(future.result.call_count, 2)
-    #     mock_logger.warning.assert_called_with(
-    #         f"Action {mock_action.name} didn't execute in time ({mock_action.period}s timeout). Retrying once..."
-    #     )
-    #     self.agent._process_response.assert_called_once_with(mock_action.return_value, mock_action.name)
-    #
-    # @patch('nuvlaedge.agent.agent.logger')
-    # @patch('nuvlaedge.agent.agent.NuvlaEdgeStatusHandler.running')
-    # def test_run_generic_exception_handled(self, mock_status, mock_logger):
-    #     mock_action = Mock()
-    #     mock_action.name = "test_action"
-    #     mock_action.period = 3
-    #
-    #     self.agent.action_handler = Mock()
-    #     self.agent.action_handler.sleep_time.return_value = 1
-    #     self.agent.action_handler.next = mock_action
-    #
-    #     self.exit_event.wait.side_effect = [False, True]
-    #
-    #     future = Mock()
-    #     future.result.side_effect = Exception("Unhandled error")
-    #     self.agent._executor = Mock()
-    #     self.agent._executor.submit.return_value = future
-    #     self.agent._process_response = Mock()
-    #
-    #     self.agent.run()
-    #
-    #     mock_logger.error.assert_called_with(
-    #         f"Unknown error occured while running {mock_action.name}: Unhandled error"
-    #     )
-    #     self.agent._process_response.assert_not_called()
+    @patch("nuvlaedge.agent.agent.asyncio")
+    def test_run(self, mock_asyncio):
+        mock_worker_manager = Mock()
+        mock_event = Mock()
+        mock_loop = Mock()
+        mock_asyncio.new_event_loop.return_value = mock_loop
+        mock_asyncio.Event.return_value = mock_event
+
+        self.agent.worker_manager = mock_worker_manager
+        self.agent.main = Mock()
+
+        def run_until_complete(coro):
+            return coro
+
+        mock_loop.run_until_complete.side_effect = run_until_complete
+
+        self.agent.run()
+
+        mock_worker_manager.start.assert_called_once()
+        mock_asyncio.new_event_loop.assert_called_once()
+        mock_asyncio.set_event_loop.assert_called_once_with(mock_loop)
+        self.agent.main.assert_called_once()  # Only check it was called
+        mock_loop.close.assert_called_once()
+
+    @patch("nuvlaedge.agent.agent.asyncio")
+    def test_run_exception_handling(self, mock_asyncio):
+        mock_worker_manager = Mock()
+        mock_loop = Mock()
+        mock_asyncio.new_event_loop.return_value = mock_loop
+        mock_asyncio.Event.return_value = Mock()
+
+        self.agent.worker_manager = mock_worker_manager
+        self.agent.main = Mock(side_effect=Exception("Test exception"))
+
+        mock_loop.run_until_complete.side_effect = lambda coro: coro
+
+        with patch("nuvlaedge.agent.agent.logger") as mock_logger:
+            self.agent.run()
+            mock_logger.error.assert_any_call(
+                "Exception in async main: Test exception", exc_info=True
+            )
+            mock_loop.stop.assert_called_once()
+            mock_loop.close.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_main_handles_action_timeout():
+    agent = Agent(exit_event=Mock(), settings=Mock())
+
+    async def fake_periodic_action(*args, **kwargs):
+        raise agent.__class__.__bases__[0].__dict__.get('ActionTimeoutError', Exception)("heartbeat", 10)
+
+    agent._periodic_action = fake_periodic_action
+
+    with patch("nuvlaedge.agent.agent.sys.exit") as mock_exit, \
+            patch("nuvlaedge.agent.agent.logger") as mock_logger:
+        await agent.main(Mock())
+        mock_logger.error.assert_any_call("Forcing system exit...")
+        mock_exit.assert_called_once_with(1)
+
+@pytest.mark.asyncio
+async def test_main_handles_generic_exception():
+    agent = Agent(exit_event=Mock(), settings=Mock())
+
+    async def fake_periodic_action(*args, **kwargs):
+        raise Exception("Critical error")
+
+    agent._periodic_action = fake_periodic_action
+
+    with patch("nuvlaedge.agent.agent.sys.exit") as mock_exit, \
+            patch("nuvlaedge.agent.agent.logger") as mock_logger:
+        await agent.main(Mock())
+        mock_logger.error.assert_any_call("Forcing system exit...")
+        mock_exit.assert_called_once_with(1)
+
+@pytest.mark.asyncio
+async def test_main_normal_exit():
+    agent = Agent(exit_event=Mock(), settings=Mock())
+
+    async def fake_periodic_action(*args, **kwargs):
+        return None  # Simulate normal completion
+
+    agent._periodic_action = fake_periodic_action
+
+    with patch("nuvlaedge.agent.agent.sys.exit") as mock_exit, \
+            patch("nuvlaedge.agent.agent.logger") as mock_logger:
+        await agent.main(Mock())
+        mock_logger.error.assert_any_call("Forcing system exit...")
+        mock_exit.assert_called_once_with(1)

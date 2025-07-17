@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.19.3](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.2...2.19.3) (2025-07-15)
+
+
+### Bug Fixes
+
+* **helm:** support user defined namespace with nuvlaNamespaceOverride value ([45e10a3](https://github.com/nuvlaedge/nuvlaedge/commit/45e10a39bd0bd0beb45ba05dfcd11fa10427436b))
+* slim docker image missing python-dateutil dependency ([994b53b](https://github.com/nuvlaedge/nuvlaedge/commit/994b53bf4693177952d2fc12bf28c020d2bd6a8e))
+
+
+### Dependencies
+
+* nuvla-job-engine ^5.1.3 ([45e10a3](https://github.com/nuvlaedge/nuvlaedge/commit/45e10a39bd0bd0beb45ba05dfcd11fa10427436b))
+
 ## [2.19.2](https://github.com/nuvlaedge/nuvlaedge/compare/2.19.1...2.19.2) (2025-06-18)
 
 

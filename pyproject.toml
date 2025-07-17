@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nuvlaedge"
-version = "2.19.2"
+version = "2.19.3"
 description = "NuvlaEdge source code"
 authors = ["SixSq SA <support@sixsq.com>"]
 maintainers = ["Nacho <nacho@sixsq.com>"]
@@ -24,7 +24,7 @@ security = "nuvlaedge.security:main"
 [tool.poetry.dependencies]
 python = "~3.12.6"
 nuvla-api = "^4.2.3"
-nuvla-job-engine = "^5.1.1"
+nuvla-job-engine = "^5.1.3"
 requests="^2.32.2"
 docker = "^7.1.0"
 paho-mqtt = "^2"

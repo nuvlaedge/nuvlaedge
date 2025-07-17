@@ -1,4 +1,5 @@
 import logging
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -29,6 +30,8 @@ class TimedAction:
         Raises: The exceptions raised during the execution, including retries
 
         """
+        threading.current_thread().name = f'{self.name}-TimedAction'
+
         try:
             self.tries += 1
             ret = self.action(*self.args, **self.kwargs)
@@ -120,6 +123,17 @@ class ActionHandler:
         for e in self._actions:
             if e.uuid == action_id or e.name == action_id:
                 e.period = new_period
+
+    def action_finished(self, cycle_duration: float, last_action: TimedAction) -> float:
+        logger.debug(f"Action {last_action.name} completed in {cycle_duration:.2f} seconds")
+        logger.debug(self.actions_summary())
+
+        # Cycle next action time and function
+        next_cycle_in = self.sleep_time()
+        next_action = self.next
+        logger.debug(self.actions_summary())
+        logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
+        return next_cycle_in
 
     def actions_summary(self):
         summary = f'Actions: \n{"Name":<15} {"Period":>10} {"Rem. Time":>10} \n'

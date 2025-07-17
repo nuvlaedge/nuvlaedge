@@ -23,18 +23,21 @@ The class attributes represent various components of the system including the Nu
 Engine (COE) client, worker manager, action handler, and the queues for telemetry and VPN data.
 The WorkerManagerclass supervises worker initialization and operation, whereasAction
 """
+import asyncio
 import json
+
 import jsonpatch
 import logging
 import sys
 import time
 from functools import cached_property
 from queue import Queue
-from threading import Event
+from threading import Event, Thread
 from typing import cast
 
 from nuvla.api.models import CimiResponse
 
+from nuvlaedge.agent.common.exceptions import ActionTimeoutError
 from nuvlaedge.agent.common.status_handler import NuvlaEdgeStatusHandler, StatusReport
 from nuvlaedge.agent.job import Job, JobLauncher
 from nuvlaedge.common.constants import CTE
@@ -126,6 +129,7 @@ class Agent:
         # Report initial status
         NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
+
     def _assert_current_state(self) -> State:
         """
         This method has two main functions: assert the state of NuvlaEdge and in the process instantiate a
@@ -204,6 +208,7 @@ class Agent:
                               'coe_resources_supported': coe_resources_supported,
                               'ip_type_supported': ip_type_supported,
                               'new_container_stats_supported': new_container_stats_supported,
+                              'telemetry_period': self.telemetry_period,
                               }),
             actions=['run'],
             initial_delay=8
@@ -502,7 +507,6 @@ class Agent:
         if response:
             logger.info("Executing heartbeat... Success")
             NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-
         return response
 
     def _process_response(self, response: dict, operation: str):
@@ -567,39 +571,98 @@ class Agent:
     def stop(self):
         self._exit.set()
 
+    async def _periodic_action(self, name: str, get_period: callable, action: callable, exit_event: asyncio.Event):
+        """
+        Runs a periodic action using asyncio.
+
+        Args:
+            name (str): The name of the action.
+            get_period (callable): A function to get the period for the action.
+            action (callable): The action to be executed periodically.
+
+        """
+        while not exit_event.is_set():
+            # Setup execution parameters
+            period = get_period()
+            start_time = time.perf_counter()
+
+            try:
+                logger.info("Starting periodic action: %s with period: %s seconds", name, period)
+                result = await asyncio.wait_for(asyncio.to_thread(action), timeout=period)
+                if result:
+                    self._process_response(result, name)
+
+            except asyncio.TimeoutError:
+                logger.warning(f"Action {name} did not complete in time, retrying...")
+                # Second try, let any exception propagate
+                try:
+                    result = await asyncio.wait_for(asyncio.to_thread(action), timeout=period)
+                except asyncio.TimeoutError as ex:
+                    logger.error(f"Action {name} timed out again after retrying, skipping this cycle")
+                    raise ActionTimeoutError(name, period) from ex
+
+                if result:
+                    self._process_response(result, name)
+
+            except Exception as e:
+                logger.error(f"Error in action {name}: {e}", exc_info=True)
+                raise
+
+            elapsed = time.perf_counter() - start_time
+            sleep_time = max(0, period - elapsed)
+            logger.info(f"Action {name} completed in {elapsed:.2f} seconds. Sleeping for {sleep_time:.2f} seconds")
+            await asyncio.sleep(sleep_time)
+
+    async def main(self, exit_event: asyncio.Event):
+        tasks = [
+            asyncio.create_task(self._periodic_action(
+                "heartbeat",
+                lambda: self.heartbeat_period,
+                self._heartbeat,
+                exit_event
+            )),
+            asyncio.create_task(self._periodic_action(
+                "telemetry",
+                lambda: self.telemetry_period,
+                self._telemetry,
+                exit_event
+            )),
+            asyncio.create_task(self._periodic_action(
+                "watch_workers",
+                lambda: 45,
+                self._watch_workers,
+                exit_event
+            )),
+        ]
+        try:
+            await asyncio.gather(*tasks)
+        except ActionTimeoutError as e:
+            logger.error(f"Timeout error running action {e.name}: {e}", exc_info=True)
+
+        except Exception as e:
+            logger.error(f"Critical exception: {e}", exc_info=True)
+
+        logger.error("Forcing system exit...")
+        sys.exit(1)
+
     def run(self):
         """
-        Runs the agent by starting the worker manager and executing the actions based on the action handler's schedule.
-
-        Returns:
-            None
+        Uses asyncio to run the periodic actions
 
         """
         self.worker_manager.start()
+        exit_event = asyncio.Event()
 
-        next_cycle_in = self.action_handler.sleep_time()
-        logger.debug(f"Starting agent with action {self.action_handler.next.name} in {next_cycle_in}s")
+        logger.info("\n\n Staring async main")
+        loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-        while not self._exit.wait(next_cycle_in):
-            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-            start_cycle: float = time.perf_counter()
+        try:
+            loop.run_until_complete(self.main(exit_event))
+        except Exception as e:
+            logger.error(f"Exception in async main: {e}", exc_info=True)
+            loop.stop()
+        finally:
+            loop.close()
 
-            NuvlaEdgeStatusHandler.running(self.status_channel, _status_module_name)
-
-            next_action = self.action_handler.next
-
-            response = next_action()
-
-            if response:
-                self._process_response(response, next_action.name)
-
-            # Account cycle time
-            cycle_duration = time.perf_counter() - start_cycle
-            logger.debug(f"Action {next_action.name} completed in {cycle_duration:.2f} seconds")
-            logger.debug(self.action_handler.actions_summary())
-
-            # Cycle next action time and function
-            next_cycle_in = self.action_handler.sleep_time()
-            next_action = self.action_handler.next
-            logger.debug(self.action_handler.actions_summary())
-            logger.info(f"Next action {next_action.name} will be run in {next_cycle_in:.2f} seconds")
+        logger.info("\n\n Closing async main")

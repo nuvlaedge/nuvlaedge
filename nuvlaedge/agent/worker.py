@@ -127,7 +127,7 @@ class Worker:
         The target of the thread is the `run` method of the worker.
         After initializing the thread, it immediately starts it.
         """
-        self.run_thread = threading.Thread(target=self.run, daemon=True)
+        self.run_thread = threading.Thread(target=self.run, name=f'{self.worker_name}-Worker', daemon=True)
         self.run_thread.start()
 
     def _process_exception(self, ex: Exception, is_exit: bool = False):

@@ -52,7 +52,7 @@ class TestWorker(TestCase):
         mock_start = Mock()
         mock_thread.return_value = mock_start
         self.test_worker._init_thread()
-        mock_thread.assert_called_once_with(target=self.test_worker.run, daemon=True)
+        mock_thread.assert_called_once_with(target=self.test_worker.run, name=f"{self.test_worker.worker_name}-Worker", daemon=True)
         mock_start.start.assert_called_once()
 
     def test_process_exception(self):

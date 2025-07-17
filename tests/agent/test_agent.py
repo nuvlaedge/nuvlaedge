@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from concurrent.futures import TimeoutError as FutureTimeoutError
 from threading import Event
@@ -5,6 +6,7 @@ from unittest import TestCase
 from unittest.mock import Mock, patch, PropertyMock
 import pytest
 
+from nuvlaedge.agent.common.exceptions import ActionTimeoutError
 from nuvlaedge.agent.job import Job
 from nuvlaedge.agent.nuvla.resources import NuvlaID
 from nuvlaedge.agent.nuvla.resources.telemetry_payload import TelemetryPayloadAttributes
@@ -421,3 +423,125 @@ async def test_main_normal_exit():
         await agent.main(Mock())
         mock_logger.error.assert_any_call("Forcing system exit...")
         mock_exit.assert_called_once_with(1)
+
+@pytest.mark.asyncio
+async def test_periodic_action_success_once():
+    agent = Agent(Mock(), Mock())
+
+    mock_action = Mock(return_value={"jobs": []})
+    mock_get_period = Mock(return_value=0.01)
+    mock_exit_event = asyncio.Event()
+
+    with patch.object(agent, "_process_response") as mock_process:
+        async def exit_after_first(*args, **kwargs):
+            mock_exit_event.set()
+
+        # Patch asyncio.sleep to skip actual sleep and simulate exit
+        with patch("nuvlaedge.agent.agent.asyncio.sleep", side_effect=exit_after_first):
+            await agent._periodic_action("test", mock_get_period, mock_action, mock_exit_event)
+
+        mock_action.assert_called_once()
+        mock_process.assert_called_once_with({"jobs": []}, "test")
+
+@pytest.mark.asyncio
+async def test_periodic_action_no_result():
+    agent = Agent(Mock(), Mock())
+
+    mock_action = Mock(return_value=None)
+    mock_get_period = Mock(return_value=0.01)
+    mock_exit_event = asyncio.Event()
+
+    async def exit_soon(*args, **kwargs):
+        mock_exit_event.set()
+
+    with patch("nuvlaedge.agent.agent.asyncio.sleep", side_effect=exit_soon), \
+         patch.object(agent, "_process_response") as mock_process:
+        await agent._periodic_action("noop", mock_get_period, mock_action, mock_exit_event)
+
+    mock_action.assert_called_once()
+    mock_process.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_periodic_action_first_timeout_then_success():
+    agent = Agent(Mock(), Mock())
+    mock_exit_event = asyncio.Event()
+    mock_get_period = Mock(return_value=0.01)
+
+    # A real function (not a mock), to avoid un-awaited coroutine warnings
+    def action():
+        return {"jobs": []}
+
+    # Counter to simulate first timeout, then success
+    call_count = 0
+
+    async def wait_for_mock(coro, timeout):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise asyncio.TimeoutError()
+        return await coro
+
+    async def mock_to_thread(func, *args, **kwargs):
+        return func()
+
+    with patch("nuvlaedge.agent.agent.asyncio.to_thread", side_effect=mock_to_thread), \
+         patch("nuvlaedge.agent.agent.asyncio.wait_for", side_effect=wait_for_mock), \
+         patch.object(agent, "_process_response", new=Mock()) as mock_process, \
+         patch("nuvlaedge.agent.agent.asyncio.sleep", side_effect=lambda s: mock_exit_event.set()):
+
+        await agent._periodic_action("test", mock_get_period, action, mock_exit_event)
+
+    assert call_count == 2
+    mock_process.assert_called_once_with({"jobs": []}, "test")
+
+@pytest.mark.asyncio
+async def test_periodic_action_timeout_twice_raises():
+    agent = Agent(Mock(), Mock())
+    mock_exit_event = asyncio.Event()
+    mock_get_period = Mock(return_value=0.01)
+
+    with patch("nuvlaedge.agent.agent.asyncio.wait_for", side_effect=asyncio.TimeoutError), \
+         patch("nuvlaedge.agent.agent.asyncio.to_thread", return_value=Mock()), \
+         patch("nuvlaedge.agent.agent.logger") as mock_logger:
+        with pytest.raises(ActionTimeoutError):
+            await agent._periodic_action("test", mock_get_period, Mock(), mock_exit_event)
+
+        assert mock_logger.warning.call_count == 1
+        assert mock_logger.error.call_count == 1
+
+@pytest.mark.asyncio
+async def test_periodic_action_unexpected_exception():
+    agent = Agent(Mock(), Mock())
+    mock_exit_event = asyncio.Event()
+    mock_get_period = Mock(return_value=0.01)
+
+    def raise_unexpected():
+        raise ValueError("Unexpected failure")
+
+    async def mock_to_thread(*args, **kwargs):
+        raise_unexpected()
+
+    async def mock_wait_for(coro, timeout):
+        return await coro
+
+    with patch("nuvlaedge.agent.agent.asyncio.to_thread", side_effect=mock_to_thread), \
+         patch("nuvlaedge.agent.agent.asyncio.wait_for", side_effect=mock_wait_for), \
+         patch("nuvlaedge.agent.agent.logger") as mock_logger:
+        with pytest.raises(ValueError, match="Unexpected failure"):
+            await agent._periodic_action("fail", mock_get_period, raise_unexpected, mock_exit_event)
+
+    # Optional: check logger was called with error
+    mock_logger.error.assert_any_call("Error in action fail: Unexpected failure", exc_info=True)
+
+@pytest.mark.asyncio
+async def test_periodic_action_exit_event_set_immediately():
+    agent = Agent(Mock(), Mock())
+    mock_exit_event = asyncio.Event()
+    mock_exit_event.set()
+
+    mock_action = Mock()
+    mock_get_period = Mock(return_value=0.1)
+
+    await agent._periodic_action("exit_immediately", mock_get_period, mock_action, mock_exit_event)
+
+    mock_action.assert_not_called()

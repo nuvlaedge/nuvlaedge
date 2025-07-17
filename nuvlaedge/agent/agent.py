@@ -126,11 +126,6 @@ class Agent:
         # Status channel connecting any module and the status handler
         self.status_channel: Queue[StatusReport] = self.status_handler.status_channel
 
-        # Action timeout executor
-        self._heartbeat_thread: Thread | None = None
-        self._telemetry_thread: Thread = Thread(target=self._telemetry, name="Telemetry-Operation", daemon=True)
-        self._heal_workers_thread: Thread = Thread(target=self._watch_workers, name="Workers-Keepalive", daemon=True)
-
         # Report initial status
         NuvlaEdgeStatusHandler.starting(self.status_channel, _status_module_name)
 
